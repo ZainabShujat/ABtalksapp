@@ -10,6 +10,11 @@ import { CommunityCollage } from "./hub/community-collage";
 import { HubTestimonials } from "./hub/hub-testimonials";
 import { GhostCursor } from "./hub/ghost-cursor";
 import "./hub/landing-hub.css";
+import { cn } from "@/lib/utils";
+import { LandingUserMenu } from "./landing-user-menu";
+import { TrackCard } from "./track-card";
+import { TestimonialsCarousel } from "./testimonials-carousel";
+import { WaitlistTrackCard } from "./waitlist-track-card";
 
 const WHATSAPP_LINK = "https://chat.whatsapp.com/LSru1BgvifpEB4OMZsaZEi";
 
@@ -86,6 +91,60 @@ const PROGRAMS: {
 ];
 
 const FAQS = [
+const CLAUDE_TRACK = {
+  key: "claude" as const,
+  accent: "amber" as const,
+  title: "Claude Challenge",
+  blurb:
+    "Master Claude through focused prompt-engineering tasks and build practical AI workflows.",
+  pill: "New",
+  chips: ["60 days", "AI mastery"],
+  href: "/claude-signup",
+  ctaLabel: "Join the Claude track",
+};
+
+const WAITLIST_TRACKS = [
+  {
+    accent: "orange" as const,
+    title: "Databricks",
+    blurb: "Lakehouse, Spark, Unity Catalog, and production data pipelines.",
+    pill: "New",
+    chips: ["Cohort"],
+    ctaLabel: "Enroll now",
+  },
+  {
+    accent: "indigo" as const,
+    title: "Google Cloud (GCP)",
+    blurb: "BigQuery, Cloud Run, and cloud data engineering.",
+    pill: "New",
+    chips: ["Cohort"],
+    ctaLabel: "Enroll now",
+  },
+  {
+    accent: "violet" as const,
+    title: "Snowflake",
+    blurb: "Cloud data warehouse skills — SQL, pipelines, and analytics.",
+    pill: "New",
+    chips: ["Cohort"],
+    ctaLabel: "Enroll now",
+  },
+  {
+    accent: "amber" as const,
+    title: "Cyber Security",
+    blurb: "Practical security fundamentals — threats, hardening, and defense.",
+    pill: "New",
+    chips: ["Cohort"],
+    ctaLabel: "Enroll now",
+  },
+];
+
+const STATS = [
+  { value: "10,000+", label: "members" },
+  { value: "500+", label: "projects" },
+  { value: "100+", label: "hiring partners" },
+];
+
+const STEPS = [
   {
     q: "Does it cost anything to join a cohort?",
     a: "Taking part is free for candidates. Companies pay us when they hire, so nobody is ever charged for the chance to be seen.",
@@ -315,6 +374,24 @@ export function LandingHub({
         </div>
         <ConsentTiltCard />
       </section>
+        <section
+          aria-label="Choose an ABTalks track"
+          className="mx-auto grid max-w-7xl gap-5 px-5 md:grid-cols-3 md:px-8 lg:grid-cols-4"
+        >
+          {TRACKS.map(({ key, ...track }) => (
+            <TrackCard key={track.title} {...track} {...(ctaByKey[key] ?? {})} />
+          ))}
+          {claudeEnabled ? (
+            <TrackCard {...claudeTrackProps} {...(ctaByKey.claude ?? {})} />
+          ) : null}
+          {WAITLIST_TRACKS.map((track) => (
+            <WaitlistTrackCard
+              key={track.title}
+              {...track}
+              isAuthenticated={Boolean(state.user)}
+            />
+          ))}
+        </section>
 
       {/* —— programs —— */}
       <section id="programs" style={{ padding: "56px 0 72px" }}>

@@ -2,8 +2,10 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+export type TrackAccent = "violet" | "indigo" | "orange" | "amber";
+
 type TrackCardProps = {
-  accent: "violet" | "indigo" | "orange" | "amber";
+  accent: TrackAccent;
   title: string;
   blurb: string;
   pill: string;
@@ -12,7 +14,7 @@ type TrackCardProps = {
   ctaLabel: string;
 };
 
-const accentClasses = {
+export const accentClasses = {
   violet: {
     border: "border-violet-500/25 hover:border-violet-500/50",
     glow: "from-violet-500/20",

@@ -1,3 +1,5 @@
+import { CertificateType } from "@prisma/client";
+import { CERTIFICATE_TYPES } from "@/features/certificate/constants";
 import { getPublicCertificate } from "@/features/certificate/get-certificate";
 import { renderCertificatePdf } from "@/features/certificate/render-certificate-pdf";
 import { logger } from "@/lib/logger";
@@ -5,14 +7,17 @@ import { logger } from "@/lib/logger";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function safePdfFilename(fullName: string, certificateId: string): string {
+function safePdfFilename(
+  fullName: string,
+  cert: { type: CertificateType; certificateId: string },
+): string {
   const namePart =
     fullName
       .trim()
       .replace(/[^\w\s-]/g, "")
       .replace(/\s+/g, "-")
       .slice(0, 80) || "recipient";
-  return `ABTalks-Claude-Challenge-${namePart}-${certificateId}.pdf`;
+  return `ABTalks-${CERTIFICATE_TYPES[cert.type].fileSlug}-${namePart}-${cert.certificateId}.pdf`;
 }
 
 export async function GET(
@@ -40,6 +45,7 @@ export async function GET(
 
   try {
     const bytes = await renderCertificatePdf({
+      type: cert.type,
       recipientName: cert.recipientName,
       certificateId: cert.certificateId,
       issuedOn: cert.issuedOn,
@@ -47,10 +53,7 @@ export async function GET(
       debugGrid,
     });
 
-    const safeFilename = safePdfFilename(
-      cert.recipientName,
-      cert.certificateId,
-    );
+    const safeFilename = safePdfFilename(cert.recipientName, cert);
 
     return new Response(new Uint8Array(bytes), {
       headers: {

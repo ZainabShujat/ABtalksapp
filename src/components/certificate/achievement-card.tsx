@@ -37,7 +37,7 @@ export function AchievementCard({ achievement, verifyBaseUrl }: Props) {
                 <Badge variant="destructive">Revoked</Badge>
               ) : (
                 <Badge className="bg-green-600 text-white hover:bg-green-600/90">
-                  Completed
+                  {achievement.statusLabel}
                 </Badge>
               )}
             </div>
@@ -57,14 +57,12 @@ export function AchievementCard({ achievement, verifyBaseUrl }: Props) {
             <dt className="text-muted-foreground">Issued on</dt>
             <dd className="font-medium">{achievement.issuedOn}</dd>
           </div>
-          <div>
-            <dt className="text-muted-foreground">Days completed</dt>
-            <dd className="font-medium">{achievement.daysCompleted}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Longest streak</dt>
-            <dd className="font-medium">{achievement.longestStreak}</dd>
-          </div>
+          {achievement.stats.map((stat) => (
+            <div key={stat.label}>
+              <dt className="text-muted-foreground">{stat.label}</dt>
+              <dd className="font-medium">{stat.value}</dd>
+            </div>
+          ))}
         </dl>
 
         <div className="flex flex-wrap gap-2">

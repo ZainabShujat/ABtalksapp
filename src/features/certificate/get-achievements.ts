@@ -1,5 +1,5 @@
 import "server-only";
-import { CertificateStatus } from "@prisma/client";
+import { CertificateStatus, CertificateType } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { formatDateIST } from "@/lib/date-utils";
 import { logger } from "@/lib/logger";
@@ -12,8 +12,8 @@ export type AchievementView = {
   subtitle: string;
   certificateId: string;
   issuedOn: string;
-  daysCompleted: number;
-  longestStreak: number;
+  statusLabel: string;
+  stats: { label: string; value: string }[];
   status: "COMPLETED" | "REVOKED";
 };
 
@@ -47,11 +47,34 @@ export async function getAchievements(userId: string): Promise<AchievementView[]
       !Array.isArray(cert.metadata)
         ? (cert.metadata as Record<string, unknown>)
         : {};
-    const daysCompleted =
-      typeof meta.daysCompleted === "number" ? meta.daysCompleted : 0;
-    const longestStreak =
-      typeof meta.longestStreak === "number" ? meta.longestStreak : 0;
     const typeConfig = CERTIFICATE_TYPES[cert.type];
+
+    let statusLabel = "Issued";
+    let stats: { label: string; value: string }[] = [];
+
+    if (cert.type === CertificateType.CLAUDE_CHALLENGE) {
+      statusLabel = "Completed";
+      const daysCompleted =
+        typeof meta.daysCompleted === "number" ? meta.daysCompleted : 0;
+      const longestStreak =
+        typeof meta.longestStreak === "number" ? meta.longestStreak : 0;
+      stats = [
+        { label: "Days completed", value: String(daysCompleted) },
+        { label: "Longest streak", value: String(longestStreak) },
+      ];
+    } else if (cert.type === CertificateType.HACKATHON) {
+      statusLabel = "Participated";
+      stats = [
+        {
+          label: "Team",
+          value: typeof meta.teamName === "string" ? meta.teamName : "Solo entry",
+        },
+        {
+          label: "Brief",
+          value: typeof meta.problemTitle === "string" ? meta.problemTitle : "—",
+        },
+      ];
+    }
 
     return {
       key: cert.id,
@@ -59,8 +82,8 @@ export async function getAchievements(userId: string): Promise<AchievementView[]
       subtitle: typeConfig.subtitle,
       certificateId: cert.certificateId,
       issuedOn: formatDateIST(cert.issuedAt),
-      daysCompleted,
-      longestStreak,
+      statusLabel,
+      stats,
       status:
         cert.status === CertificateStatus.REVOKED ? "REVOKED" : "COMPLETED",
     };

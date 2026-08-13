@@ -7,10 +7,15 @@ import {
   type PDFPage,
 } from "pdf-lib";
 import QRCode from "qrcode";
-import { CLAUDE_CERT_LAYOUT } from "./constants";
+import type { CertificateType } from "@prisma/client";
+import {
+  CERTIFICATE_LAYOUTS,
+  CERTIFICATE_TYPES,
+  type CertificateTextStamp,
+} from "./constants";
 import { loadCertificateTemplate } from "./template-source";
 
-function toWinAnsiSafe(name: string): string {
+export function toWinAnsiSafe(name: string): string {
   return name
     .normalize("NFKD")
     .replace(/[‘’]/g, "'")
@@ -57,12 +62,13 @@ function drawCalibrationGrid(page: PDFPage, font: PDFFont): void {
 }
 
 export async function renderCertificatePdf(input: {
+  type: CertificateType;
   recipientName: string;
   certificateId: string;
   /** Already formatted IST string, e.g. "12 Mar 2026". Formatted by the caller. */
   issuedOn: string;
   verifyUrl: string;
-  /** Draws a calibration grid over the page. Dev only — see Step 9a. */
+  /** Draws a calibration grid over the page. Dev only. */
   debugGrid?: boolean;
 }): Promise<Uint8Array> {
   const { recipientName, certificateId, issuedOn, verifyUrl, debugGrid } =
@@ -72,7 +78,11 @@ export async function renderCertificatePdf(input: {
     throw new Error("UNRENDERABLE_NAME");
   }
 
-  const pdfDoc = await PDFDocument.load(await loadCertificateTemplate(), {
+  const layout = CERTIFICATE_LAYOUTS[input.type];
+  if (!layout) {
+    throw new Error(`No certificate layout for type ${input.type}`);
+  }
+  const pdfDoc = await PDFDocument.load(await loadCertificateTemplate(input.type), {
     updateMetadata: false,
   });
   const page = pdfDoc.getPages()[0];
@@ -81,58 +91,41 @@ export async function renderCertificatePdf(input: {
   }
   const { width, height } = page.getSize();
 
-  const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const L = CLAUDE_CERT_LAYOUT;
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-  function drawCentered(
-    text: string,
-    font: PDFFont,
-    size: number,
-    centerXRatio: number,
-    baselineYRatio: number,
-    color: { r: number; g: number; b: number },
-  ) {
-    const textWidth = font.widthOfTextAtSize(text, size);
+  function drawStamp(text: string, stamp: CertificateTextStamp) {
+    const font = stamp.bold ? boldFont : regularFont;
+    const x =
+      stamp.align === "center"
+        ? width * stamp.centerXRatio - font.widthOfTextAtSize(text, stamp.fontSize) / 2
+        : width * stamp.xRatio;
     page.drawText(text, {
-      x: width * centerXRatio - textWidth / 2,
-      y: height * baselineYRatio,
-      size,
+      x,
+      y: height * stamp.baselineYRatio,
+      size: stamp.fontSize,
       font,
-      color: rgb(color.r, color.g, color.b),
+      color: rgb(stamp.color.r, stamp.color.g, stamp.color.b),
     });
   }
 
-  drawCentered(
-    issuedOn,
-    regular,
-    L.issuedOn.fontSize,
-    L.issuedOn.centerXRatio,
-    L.issuedOn.baselineYRatio,
-    L.issuedOn.color,
-  );
-  drawCentered(
-    certificateId,
-    bold,
-    L.certificateId.fontSize,
-    L.certificateId.centerXRatio,
-    L.certificateId.baselineYRatio,
-    L.certificateId.color,
-  );
+  drawStamp(issuedOn, layout.issuedOn);
+  drawStamp(certificateId, layout.certificateId);
 
-  const maxWidth = width * L.name.maxWidthRatio;
-  let size = L.name.fontSize;
-  let textWidth = bold.widthOfTextAtSize(safeName, size);
-  while (textWidth > maxWidth && size > L.name.minFontSize) {
+  const nameFont = layout.name.bold ? boldFont : regularFont;
+  const maxWidth = width * layout.name.maxWidthRatio;
+  let size = layout.name.fontSize;
+  let textWidth = nameFont.widthOfTextAtSize(safeName, size);
+  while (textWidth > maxWidth && size > layout.name.minFontSize) {
     size -= 1;
-    textWidth = bold.widthOfTextAtSize(safeName, size);
+    textWidth = nameFont.widthOfTextAtSize(safeName, size);
   }
   page.drawText(safeName, {
-    x: width * L.name.centerXRatio - textWidth / 2,
-    y: height * L.name.baselineYRatio,
+    x: width * layout.name.centerXRatio - textWidth / 2,
+    y: height * layout.name.baselineYRatio,
     size,
-    font: bold,
-    color: rgb(L.name.color.r, L.name.color.g, L.name.color.b),
+    font: nameFont,
+    color: rgb(layout.name.color.r, layout.name.color.g, layout.name.color.b),
   });
 
   const qrPng = await QRCode.toBuffer(verifyUrl, {
@@ -143,34 +136,36 @@ export async function renderCertificatePdf(input: {
     color: { dark: "#000000FF", light: "#FFFFFFFF" },
   });
   const qrImage = await pdfDoc.embedPng(qrPng);
-  const qrSize = width * L.qr.sizeRatio;
+  const qrSize = width * layout.qr.sizeRatio;
   page.drawImage(qrImage, {
-    x: width * L.qr.xRatio,
-    y: height * L.qr.yRatio,
+    x: width * layout.qr.xRatio,
+    y: height * layout.qr.yRatio,
     width: qrSize,
     height: qrSize,
   });
 
-  page.drawText(verifyUrl.replace(/^https?:\/\//, ""), {
-    x: width * L.verifyText.xRatio,
-    y: height * L.verifyText.baselineYRatio,
-    size: L.verifyText.fontSize,
-    font: regular,
-    color: rgb(
-      L.verifyText.color.r,
-      L.verifyText.color.g,
-      L.verifyText.color.b,
-    ),
-  });
+  if (layout.verifyText) {
+    page.drawText(verifyUrl.replace(/^https?:\/\//, ""), {
+      x: width * layout.verifyText.xRatio,
+      y: height * layout.verifyText.baselineYRatio,
+      size: layout.verifyText.fontSize,
+      font: layout.verifyText.bold ? boldFont : regularFont,
+      color: rgb(
+        layout.verifyText.color.r,
+        layout.verifyText.color.g,
+        layout.verifyText.color.b,
+      ),
+    });
+  }
 
   pdfDoc.setTitle(`ABTalks Certificate — ${certificateId}`);
   pdfDoc.setAuthor("ABTalks");
-  pdfDoc.setSubject("60-Day Claude Challenge Certificate");
+  pdfDoc.setSubject(`${CERTIFICATE_TYPES[input.type].title} Certificate`);
   pdfDoc.setKeywords([certificateId]);
   pdfDoc.setProducer("ABTalks");
 
   if (debugGrid) {
-    drawCalibrationGrid(page, bold);
+    drawCalibrationGrid(page, boldFont);
   }
 
   return await pdfDoc.save();

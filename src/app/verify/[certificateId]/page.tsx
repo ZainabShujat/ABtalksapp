@@ -107,10 +107,6 @@ export default async function VerifyCertificatePage({ params }: PageProps) {
                 <dd className="font-medium">{cert.title}</dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Track</dt>
-                <dd className="font-medium">{cert.domainLabel}</dd>
-              </div>
-              <div>
                 <dt className="text-muted-foreground">Issued on</dt>
                 <dd className="font-medium">{cert.issuedOn}</dd>
               </div>
@@ -122,22 +118,16 @@ export default async function VerifyCertificatePage({ params }: PageProps) {
                 <dt className="text-muted-foreground">Status</dt>
                 <dd>
                   <Badge className="bg-green-600 text-white hover:bg-green-600/90">
-                    Completed
+                    {cert.statusLabel}
                   </Badge>
                 </dd>
               </div>
-              {cert.daysCompleted != null ? (
-                <div>
-                  <dt className="text-muted-foreground">Days completed</dt>
-                  <dd className="font-medium">{cert.daysCompleted}</dd>
+              {cert.details.map((detail) => (
+                <div key={detail.label}>
+                  <dt className="text-muted-foreground">{detail.label}</dt>
+                  <dd className="font-medium">{detail.value}</dd>
                 </div>
-              ) : null}
-              {cert.longestStreak != null ? (
-                <div>
-                  <dt className="text-muted-foreground">Longest streak</dt>
-                  <dd className="font-medium">{cert.longestStreak}</dd>
-                </div>
-              ) : null}
+              ))}
             </dl>
 
             <div className="flex justify-center">

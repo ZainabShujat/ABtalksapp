@@ -25,6 +25,7 @@
     "db:cleanup:real": "tsx prisma/cleanup.ts real",
     "db:cleanup:all": "tsx prisma/cleanup.ts all",
     "db:backfill:certificates": "tsx prisma/scripts/backfill-certificates.ts",
+    "db:backfill:certificates:hackathon": "tsx prisma/scripts/backfill-hackathon-certificates.ts",
     "hackathon:migrate": "tsx scripts/migrate-hackathon-to-neon.ts",
     "hackathon:verify": "tsx scripts/migrate-hackathon-to-neon.ts --verify",
     "hackathon:preflight": "tsx scripts/migrate-hackathon-to-neon.ts --preflight"
