@@ -289,6 +289,7 @@ model User {
   workshopRegistrations WorkshopRegistration[]
   legalConsents         LegalConsent[]
   dataRightsRequests    DataRightsRequest[]
+  generalInterviews     GeneralInterview[]
 
   @@index([createdAt(sort: Desc)])
 }
@@ -1107,3 +1108,75 @@ model WorkshopRegistration {
 
 // NOTE: `workshop_config` deliberately stays in Supabase — only registrations
 // migrated. See src/lib/workshop-supabase.ts for the config reader.
+
+/// General AB Talks AI Interview — a standardized, comparable talent signal
+/// built from a candidate's own verified challenge work. Separate from
+/// `ProgramInterview` (the 31-day AI Cohort exit interview), which is unrelated
+/// and must keep working independently.
+model GeneralInterview {
+  id     String @id @default(cuid())
+  userId String
+
+  /// Assigned ONLY when an attempt completes, inside a transaction guarded by a
+  /// per-user advisory lock. Null while in progress and for abandoned/invalid
+  /// sessions, so a technical failure structurally cannot consume an attempt.
+  /// Postgres treats NULLs as distinct in unique indexes, so any number of
+  /// unfinished attempts may coexist.
+  attemptNumber Int?
+  status        GeneralInterviewStatus @default(NOT_STARTED)
+
+  /// Frozen at session start: planned questions, rubric snapshot, context summary.
+  /// The rubric snapshot keeps historical scores interpretable if weights change.
+  plan       Json
+  transcript Json?
+  /// Merged per-question evidence, keyed by question id.
+  evidence   Json?
+
+  /// Authoritative runtime state (question index, follow-up budget, stuck count,
+  /// transcript, evidence). Held server-side and never accepted from the client:
+  /// a candidate who could edit it could skip questions or inject evidence and
+  /// manipulate their own score. `transcript`/`evidence` above are read-optimized
+  /// projections of this, written from the same object.
+  state Json?
+
+  /// Frozen when the attempt opens: the submissions this attempt is entitled to
+  /// consume. Server-side so a client cannot submit an empty set and complete an
+  /// interview without spending challenge progress.
+  eligibleSubmissionIds String[] @default([])
+
+  /// Submission ids this attempt consumed. Copied from `eligibleSubmissionIds`
+  /// inside the completing transaction, and written ONLY on the transition to
+  /// COMPLETED — this is what makes the 30-new-days retake rule a set difference.
+  consumedSubmissionIds String[] @default([])
+
+  conceptualScore     Int?
+  practicalScore      Int?
+  problemSolvingScore Int?
+  technicalDepthScore Int?
+  communicationScore  Int?
+  overallScore        Int?
+  summary             String?
+
+  durationSec   Int?
+  invalidReason String?
+
+  startedAt   DateTime?
+  endedAt     DateTime?
+  evaluatedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, attemptNumber])
+  @@index([userId, status])
+}
+
+enum GeneralInterviewStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+  /// Technical failure or invalid session. Never consumes an attempt.
+  INVALID
+}
