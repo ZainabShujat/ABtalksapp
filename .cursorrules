@@ -8,6 +8,10 @@ the exact error — do not improvise a workaround.
 
 Never edit CLAUDE.md or docs/project-context.md. Those are maintained elsewhere — leave them alone.
 
+Neon database safety (hard rule):
+- Before any Neon schema or data mutation (migration, seed, backfill, cleanup, or ad-hoc SQL), create a child branch from production and explicitly target only that child by branch ID or child connection string.
+- Never write to the default/production branch unless the user explicitly authorizes that exact production write in the current request. If the target cannot be proven to be the child, stop.
+
 After any architecturally significant change — a Prisma/schema change, a new or changed
 business rule, a new env var, or a new convention — append ONE dated line to
 docs/CHANGELOG.md under the "## Pending reconcile" heading (create the file and heading

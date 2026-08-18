@@ -3,7 +3,7 @@ import { CertificateStatus, CertificateType } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { formatDateIST } from "@/lib/date-utils";
 import { logger } from "@/lib/logger";
-import { CERTIFICATE_TYPES } from "./constants";
+import { CERTIFICATE_TYPES, HACKATHON_VARIANT_LABELS, parseHackathonVariant } from "./constants";
 import { ensureClaudeCertificate } from "./issue-certificate";
 
 export type AchievementView = {
@@ -63,8 +63,19 @@ export async function getAchievements(userId: string): Promise<AchievementView[]
         { label: "Longest streak", value: String(longestStreak) },
       ];
     } else if (cert.type === CertificateType.HACKATHON) {
-      statusLabel = "Participated";
+      const hackathonVariant = parseHackathonVariant(meta.hackathonVariant);
+      statusLabel = hackathonVariant
+        ? HACKATHON_VARIANT_LABELS[hackathonVariant]
+        : "Participated";
       stats = [
+        ...(hackathonVariant
+          ? [
+              {
+                label: "Placement",
+                value: HACKATHON_VARIANT_LABELS[hackathonVariant],
+              },
+            ]
+          : []),
         {
           label: "Team",
           value: typeof meta.teamName === "string" ? meta.teamName : "Solo entry",

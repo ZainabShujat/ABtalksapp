@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { auth } from "@/auth";
 import { AccountMenu } from "@/components/hackathon/account-menu";
+import { SynergyChip } from "@/components/shared/synergy-chip";
 
 export async function HackathonHeader() {
   const session = await auth();
@@ -22,7 +23,10 @@ export async function HackathonHeader() {
         </Link>
 
         {email ? (
-          <AccountMenu email={email} />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <SynergyChip />
+            <AccountMenu email={email} />
+          </div>
         ) : (
           <Link
             href="/login?from=/hackathon/register"

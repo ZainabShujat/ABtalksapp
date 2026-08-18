@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import { ThemeProvider } from "@/components/theme-provider";
 import { MotionProvider } from "@/components/shared/motion-provider";
 import { SynergyProvider } from "@/components/shared/synergy-provider";
+import { NotificationProvider } from "@/components/shared/notification-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { AppFooter } from "@/components/shared/app-footer";
 import { BottomNavGate } from "@/components/shared/bottom-nav-gate";
@@ -140,16 +141,20 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <CookieConsentProvider>
-            <SynergyProvider>
-              <MotionProvider>
-                <MainShell>{children}</MainShell>
-              </MotionProvider>
-            </SynergyProvider>
-            <AppFooter />
-            <BottomNavGate />
-            <Toaster />
-            <CookieConsentModal />
-            {isChatbotEnabled() && <ChatWidget />}
+            {/* Above SynergyProvider on purpose: BottomNavGate renders one of
+                the two bell triggers and sits outside SynergyProvider. */}
+            <NotificationProvider>
+              <SynergyProvider>
+                <MotionProvider>
+                  <MainShell>{children}</MainShell>
+                </MotionProvider>
+              </SynergyProvider>
+              <AppFooter />
+              <BottomNavGate />
+              <Toaster />
+              <CookieConsentModal />
+              {isChatbotEnabled() && <ChatWidget />}
+            </NotificationProvider>
           </CookieConsentProvider>
         </ThemeProvider>
       </body>

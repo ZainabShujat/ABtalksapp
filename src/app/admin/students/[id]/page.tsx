@@ -16,6 +16,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RejectSubmissionButton } from "@/components/admin/reject-submission-button";
 import { StudentActionPanel } from "@/components/admin/student-action-panel";
+import { GrantSynergyDialog } from "@/components/admin/grant-synergy-dialog";
 import { StudentRemarksPanel } from "@/components/admin/student-remarks-panel";
 import { formatDateIST, formatDateTimeIST } from "@/lib/date-utils";
 import { RecruiterReviewPanel } from "@/components/admin/recruiter-review-panel";
@@ -69,6 +70,18 @@ export default async function AdminStudentDetailPage({
                 <Badge>{data.hackathon.entryType}</Badge>
               </div>
             </div>
+          </div>
+          <div className="flex flex-col items-start gap-2 md:items-end">
+            <p className="text-sm">
+              <span className="text-muted-foreground">Synergy Points:</span>{" "}
+              <span className="font-semibold tabular-nums">
+                {data.user.synergyPoints}
+              </span>
+            </p>
+            <GrantSynergyDialog
+              studentId={data.user.id}
+              studentName={data.user.name}
+            />
           </div>
         </div>
 
@@ -300,7 +313,7 @@ export default async function AdminStudentDetailPage({
             </p>
             <p>
               <span className="text-muted-foreground">Synergy Points:</span>{" "}
-              {data.profile.synergyPoints}
+              {data.user.synergyPoints}
             </p>
           </CardContent>
         </Card>

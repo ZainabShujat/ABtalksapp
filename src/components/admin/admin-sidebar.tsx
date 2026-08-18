@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  Bell,
   BookOpen,
   Briefcase,
   Code2,
@@ -22,6 +23,7 @@ import { cn } from "@/lib/utils";
 
 type IconName =
   | "overview"
+  | "notifications"
   | "students"
   | "submissions"
   | "jobs"
@@ -39,6 +41,7 @@ type IconName =
 
 const iconMap = {
   overview: LayoutDashboard,
+  notifications: Bell,
   students: Users,
   submissions: FileText,
   jobs: Briefcase,

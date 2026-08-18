@@ -1,5 +1,4 @@
-import { CertificateType } from "@prisma/client";
-import { CERTIFICATE_TYPES } from "@/features/certificate/constants";
+import { CERTIFICATE_TYPES, HACKATHON_VARIANT_FILE_SLUGS } from "@/features/certificate/constants";
 import { getPublicCertificate } from "@/features/certificate/get-certificate";
 import { renderCertificatePdf } from "@/features/certificate/render-certificate-pdf";
 import { logger } from "@/lib/logger";
@@ -9,7 +8,11 @@ export const dynamic = "force-dynamic";
 
 function safePdfFilename(
   fullName: string,
-  cert: { type: CertificateType; certificateId: string },
+  cert: {
+    type: keyof typeof CERTIFICATE_TYPES;
+    certificateId: string;
+    hackathonVariant: keyof typeof HACKATHON_VARIANT_FILE_SLUGS | null;
+  },
 ): string {
   const namePart =
     fullName
@@ -17,7 +20,10 @@ function safePdfFilename(
       .replace(/[^\w\s-]/g, "")
       .replace(/\s+/g, "-")
       .slice(0, 80) || "recipient";
-  return `ABTalks-${CERTIFICATE_TYPES[cert.type].fileSlug}-${namePart}-${cert.certificateId}.pdf`;
+  const placement = cert.hackathonVariant
+    ? `-${HACKATHON_VARIANT_FILE_SLUGS[cert.hackathonVariant]}`
+    : "";
+  return `ABTalks-${CERTIFICATE_TYPES[cert.type].fileSlug}${placement}-${namePart}-${cert.certificateId}.pdf`;
 }
 
 export async function GET(
@@ -50,6 +56,7 @@ export async function GET(
       certificateId: cert.certificateId,
       issuedOn: cert.issuedOn,
       verifyUrl,
+      hackathonVariant: cert.hackathonVariant ?? undefined,
       debugGrid,
     });
 

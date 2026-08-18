@@ -229,6 +229,50 @@ export const CERTIFICATE_TEMPLATES: Partial<
   },
 };
 
+/** Extra HACKATHON rows (winner / place) reuse ABT-HK IDs and HACKATHON_CERT_LAYOUT. */
+export type HackathonCertificateVariant = "winner" | "second" | "third" | "top5";
+
+export const HACKATHON_VARIANT_TEMPLATES: Record<
+  HackathonCertificateVariant,
+  string
+> = {
+  winner: "public/certificates/winner-vicod-aug.pdf",
+  second: "public/certificates/second-vicod-aug.pdf",
+  third: "public/certificates/third-vicod-aug.pdf",
+  top5: "public/certificates/top5-vicod-aug.pdf",
+};
+
+export const HACKATHON_VARIANT_LABELS: Record<HackathonCertificateVariant, string> = {
+  winner: "Winner",
+  second: "2nd place",
+  third: "3rd place",
+  top5: "Top 5",
+};
+
+export const HACKATHON_VARIANT_FILE_SLUGS: Record<
+  HackathonCertificateVariant,
+  string
+> = {
+  winner: "Winner",
+  second: "2nd",
+  third: "3rd",
+  top5: "Top5",
+};
+
+export function parseHackathonVariant(
+  value: unknown,
+): HackathonCertificateVariant | null {
+  if (
+    value === "winner" ||
+    value === "second" ||
+    value === "third" ||
+    value === "top5"
+  ) {
+    return value;
+  }
+  return null;
+}
+
 export function certificateDomainLabel(domain: Domain | null): string {
   switch (domain) {
     case Domain.CLAUDE: return "Claude AI Mastery";

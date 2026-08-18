@@ -21,14 +21,14 @@ import { getMyRegistration } from "@/features/workshop/registration-status";
 import { getWorkshopConfig } from "@/lib/workshop-supabase";
 
 export const metadata: Metadata = {
-  title: "ABTalks | Figma × Cursor Workshop",
+  title: "ABTalks | Workshops Every week",
   description:
-    "Join ABTalks' FREE 1-Hour Live UI/UX Workshop on Zoom. Learn Figma, Cursor, AI design plugins and MCP-powered workflows, from design to working code.",
+    "Join ABTalks' FREE 1-Hour Live LinkedIn Workshop on YouTube Live. Build a recruiter-ready profile, post content that actually gets seen, and use AI tools to stay consistent.",
   keywords:
-    "UI, UX, design, Figma, Cursor, MCP, AI plugins, design systems, prototyping, design to code, workshop, ABTalks",
+    "LinkedIn, personal branding, LinkedIn profile, headline, About section, content strategy, LinkedIn posts, hooks, AI content creation, ChatGPT, Canva, scheduling, LinkedIn growth, analytics, networking, workshop, ABTalks",
   openGraph: {
-    title: "ABTalks | Figma × Cursor Workshop",
-    description: "Join the FREE 1-Hour Live Figma × Cursor UI/UX Workshop",
+    title: "ABTalks | Workshops Every week",
+    description: "Join the FREE 1-Hour Live LinkedIn & Personal Branding Workshop",
     type: "website",
   },
 };
@@ -329,7 +329,7 @@ export default async function AIWorkshopPage() {
           >
             {[
               { Icon: Clock, text: "1 Hour Live" },
-              { Icon: MapPin, text: "Live on Zoom" },
+              { Icon: MapPin, text: "Live on YouTube" },
               { Icon: Tag, text: "100% Free" },
               { Icon: Target, text: "Beginner Friendly" },
             ].map((c) => (

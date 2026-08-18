@@ -12,6 +12,7 @@ import {
   CERTIFICATE_LAYOUTS,
   CERTIFICATE_TYPES,
   type CertificateTextStamp,
+  type HackathonCertificateVariant,
 } from "./constants";
 import { loadCertificateTemplate } from "./template-source";
 
@@ -68,6 +69,8 @@ export async function renderCertificatePdf(input: {
   /** Already formatted IST string, e.g. "12 Mar 2026". Formatted by the caller. */
   issuedOn: string;
   verifyUrl: string;
+  /** Placement artwork for extra HACKATHON rows. Absent = participation template. */
+  hackathonVariant?: HackathonCertificateVariant;
   /** Draws a calibration grid over the page. Dev only. */
   debugGrid?: boolean;
 }): Promise<Uint8Array> {
@@ -82,9 +85,12 @@ export async function renderCertificatePdf(input: {
   if (!layout) {
     throw new Error(`No certificate layout for type ${input.type}`);
   }
-  const pdfDoc = await PDFDocument.load(await loadCertificateTemplate(input.type), {
-    updateMetadata: false,
-  });
+  const pdfDoc = await PDFDocument.load(
+    await loadCertificateTemplate(input.type, input.hackathonVariant),
+    {
+      updateMetadata: false,
+    },
+  );
   const page = pdfDoc.getPages()[0];
   if (!page) {
     throw new Error("Certificate template has no pages");

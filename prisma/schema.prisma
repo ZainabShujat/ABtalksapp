@@ -242,6 +242,7 @@ model StudentProfile {
   isCampusAmbassadorCandidate Boolean   @default(false)
   ambassadorAppliedAt         DateTime?
   ambassadorDismissedAt       DateTime?
+  /// Temporary rollback mirror. User.synergyPoints is the account-level balance.
   synergyPoints               Int       @default(0)
   createdAt                   DateTime  @default(now())
   updatedAt                   DateTime  @updatedAt
@@ -281,6 +282,7 @@ model User {
   image                 String?
   password              String?
   role                  Role                     @default(STUDENT)
+  synergyPoints         Int                      @default(0)
   createdAt             DateTime                 @default(now())
   updatedAt             DateTime                 @updatedAt
   accounts              Account[]
@@ -311,9 +313,11 @@ model User {
   workshopRegistrations WorkshopRegistration[]
   legalConsents         LegalConsent[]
   dataRightsRequests    DataRightsRequest[]
+  notificationReads     NotificationRead[]
 
 
   @@index([createdAt(sort: Desc)])
+  @@index([synergyPoints(sort: Desc)])
 }
 
 enum LegalDocument {
@@ -1207,4 +1211,64 @@ enum GeneralInterviewStatus {
   ABANDONED
   /// Technical failure or invalid session. Never consumes an attempt.
   INVALID
+enum NotificationAudience {
+  ALL
+  CHALLENGE
+  PROGRAM
+  HACKATHON
+}
+
+enum NotificationCategory {
+  GENERAL
+  WORKSHOP
+  HACKATHON
+  COHORT
+  CHALLENGE
+}
+
+/// Admin-authored broadcast announcements, pushed from /admin/notifications.
+///
+/// Automated event notifications (workshops, hackathon milestones, cohort
+/// enrolment) are deliberately NOT stored here — they are derived at read time
+/// from the code-defined EVENTS / HACKATHON config and ProgramCohort rows in
+/// src/features/notification/derive-event-notifications.ts. That keeps read
+/// paths write-free and means adding a workshop to events-data.ts needs no
+/// database work. See docs/plans/067-notification-bell.md.
+model Notification {
+  id               String               @id @default(cuid())
+  title            String
+  body             String?
+  /// Internal path ("/hackathon") or absolute URL. Optional.
+  href             String?
+  category         NotificationCategory @default(GENERAL)
+  audience         NotificationAudience @default(ALL)
+  publishedAt      DateTime             @default(now())
+  /// After this instant the item stops appearing in the bell. Null = no expiry.
+  expiresAt        DateTime?
+  isActive         Boolean              @default(true)
+  createdByAdminId String?
+  createdAt        DateTime             @default(now())
+
+  @@index([isActive, publishedAt(sort: Desc)])
+}
+
+/// Per-user read state for BOTH admin and derived notifications.
+///
+/// There is no "dismissed" state on purpose: the feed shows only the newest
+/// few notifications (NOTIFICATION_FEED_LIMIT), so older ones fall off by
+/// themselves and never need removing by hand.
+///
+/// `notificationKey` is deliberately NOT a foreign key: derived event
+/// notifications have no row to point at. Keys are stable and never reused
+/// ("admin:<id>", "workshop:<eventId>", "hackathon:kickoff", …).
+model NotificationRead {
+  id              String   @id @default(cuid())
+  userId          String
+  notificationKey String
+  readAt          DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, notificationKey])
+  @@index([userId])
 }

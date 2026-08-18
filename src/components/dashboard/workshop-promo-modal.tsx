@@ -376,7 +376,7 @@ export function WorkshopPromoModal() {
                 </Link>
 
                 <div className="mt-3 flex items-center justify-center gap-3 text-[11px] text-white/30">
-                  <span>Live on Zoom Meet</span>
+                  <span>Live on YouTube</span>
                   <span className="text-white/15">•</span>
                   <span>Limited seats</span>
                 </div>

@@ -139,6 +139,14 @@ export async function completeRegistration(
 
   try {
     const profileId = await prisma.$transaction(async (tx) => {
+      // Lock the account row before creating the rollback mirror so a
+      // simultaneous grant cannot leave the two balances out of sync.
+      const account = await tx.user.update({
+        where: { id: userId },
+        data: { synergyPoints: { increment: 0 } },
+        select: { synergyPoints: true },
+      });
+
       const profile = await tx.studentProfile.create({
         data:
           input.userType === UserType.STUDENT
@@ -159,6 +167,7 @@ export async function completeRegistration(
                 phoneVerified,
                 githubUsername,
                 referralCode: newReferralCode,
+                synergyPoints: account.synergyPoints,
               }
             : {
                 userId,
@@ -177,6 +186,7 @@ export async function completeRegistration(
                 phoneVerified,
                 githubUsername,
                 referralCode: newReferralCode,
+                synergyPoints: account.synergyPoints,
               },
       });
 

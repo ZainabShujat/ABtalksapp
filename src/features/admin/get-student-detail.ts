@@ -9,6 +9,7 @@ export type ChallengeStudentDetail = {
     email: string;
     image: string | null;
     joinedAt: Date;
+    synergyPoints: number;
   };
   profile: StudentProfile;
   enrollment: {
@@ -75,6 +76,7 @@ export type HackathonStudentDetail = {
     email: string;
     image: string | null;
     joinedAt: Date;
+    synergyPoints: number;
   };
   hackathon: {
     fullName: string;
@@ -151,6 +153,7 @@ export async function getStudentDetail(
         email: user.email,
         image: user.image,
         joinedAt: participant.createdAt,
+        synergyPoints: user.synergyPoints,
       },
       hackathon: {
         fullName: participant.fullName,
@@ -230,6 +233,7 @@ export async function getStudentDetail(
       email: user.email,
       image: user.image,
       joinedAt: user.createdAt,
+      synergyPoints: user.synergyPoints,
     },
     profile: user.studentProfile,
     enrollment,

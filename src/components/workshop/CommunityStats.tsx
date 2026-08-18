@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 
 const STATS = [
-  { value: 3000, suffix: "+", label: "AI Learners", sub: "From 20+ Countries", accent: "var(--color-accent-500)" },
-  { value: 550, suffix: "+", label: "Institutions", sub: "Students enrolled", accent: "var(--color-accent-400)" },
-  { value: 300, suffix: "+", label: "Organisations", sub: "Working professionals", accent: "var(--color-accent-400)" },
+  { value: 11000, suffix: "+", label: "AI Learners", sub: "From 25+ Countries", accent: "#6366f1" },
+  { value: 550, suffix: "+", label: "Institutions", sub: "Students enrolled", accent: "#a855f7" },
+  { value: 300, suffix: "+", label: "Organisations", sub: "Working professionals", accent: "#818cf8" },
 ];
 
 const CLAUDE_SIGNUP = "https://www.abtalks.in/?ref=N2VD2X";
@@ -73,7 +73,7 @@ export default function CommunityStats() {
 
         {/* Heading */}
         <div className="text-center">
-          
+
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-white sm:text-[38px]">
             The ABTalks AI Learners Community
           </h2>

@@ -49,3 +49,4 @@ next-env.d.ts
 .cache/
 # Local reference clones of the standalone agent repos (own .git dirs, ~240MB)
 agent packages/
+.neon

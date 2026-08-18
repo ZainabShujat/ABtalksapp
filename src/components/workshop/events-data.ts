@@ -1,7 +1,7 @@
 import { formatInTimeZone } from "date-fns-tz";
 import type { LucideIcon } from "lucide-react";
 import { IST } from "@/lib/date-utils";
-import { BriefcaseBusiness, GraduationCap, Palette, Trophy } from "lucide-react";
+import { BriefcaseBusiness, Clapperboard, GraduationCap, Palette, Trophy } from "lucide-react";
 
 export interface WorkshopEvent {
   /**
@@ -101,9 +101,21 @@ export const EVENTS: WorkshopEvent[] = [
     title: "Enhance LinkedIn & AI Mock Interview",
     desc: "Rebuild your LinkedIn profile so recruiters actually find you, then run live AI mock interviews that grill you and score your answers.",
     host: "ABTalks",
-    location: "Live · Zoom",
+    location: "Live · YouTube",
     register: true,
     registrationOpen: true,
+  },
+  {
+    id: "workshop-2026-09-05",
+    date: "2026-09-05",
+    time: "6:00 PM IST",
+    tag: "Content",
+    accent: "#ec4899",
+    Icon: Clapperboard,
+    title: "AI Post & Video Generation",
+    desc: "Turn one idea into a week of content — generate scroll-stopping posts, carousels and short-form videos with AI, then edit and schedule them in minutes.",
+    host: "ABTalks",
+    location: "Live · YouTube",
   },
 ];
 

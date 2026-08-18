@@ -25,7 +25,7 @@ export async function sendWorkshopConfirmationEmail(
                 <tr>
                   <td align="center" style="padding:8px 0 24px;">
                     <a href="${zoomLink}" style="display:inline-block;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#ffffff;text-decoration:none;padding:14px 40px;border-radius:50px;font-size:15px;font-weight:600;">
-                      Join the Zoom session
+                      Join the YouTube Live stream
                     </a>
                   </td>
                 </tr>
@@ -37,7 +37,7 @@ export async function sendWorkshopConfirmationEmail(
               <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f3ff;border-radius:12px;margin-bottom:24px;">
                 <tr><td style="padding:20px;">
                   <p style="color:#4c1d95;font-size:14px;line-height:1.6;margin:0;">
-                    <strong>Your Zoom link is on its way.</strong><br>
+                    <strong>Your YouTube Live link is on its way.</strong><br>
                     We'll email it to this address before the session. Keep an eye on your inbox and join 5 to 10 minutes early.
                   </p>
                 </td></tr>
@@ -74,7 +74,7 @@ export async function sendWorkshopConfirmationEmail(
                   <p style="color:#333;font-size:14px;line-height:2;margin:0;">
                     <strong>Date:</strong> ${webinarDate}<br>
                     <strong>Time:</strong> ${webinarTime}<br>
-                    <strong>Platform:</strong> Zoom<br>
+                    <strong>Platform:</strong> YouTube Live<br>
                     <strong>Cost:</strong> Free
                   </p>
                 </td></tr>

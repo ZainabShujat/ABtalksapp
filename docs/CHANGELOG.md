@@ -2,6 +2,20 @@
 
 <!-- Reconciled through 2026-08-05 (commit 519cc34) into docs/project-context.md. -->
 
+- 2026-08-18 [rule] ViCoDathon placement certs issuable on production via --all --allow-production on issue-hackathon-award-certificates.ts
+- 2026-08-18 [rule] ViCoDathon placement certs (winner/2nd/3rd/top5) as extra HACKATHON rows with metadata.hackathonVariant; same overlay layout
+- 2026-08-18 [rule] Admin community synergy grant cap raised from 2000 to 3000
+
+- 2026-08-18 [rule] Admin reset/reject clamps User and StudentProfile synergy at 0 and writes BALANCE_RECONCILIATION for already-spent submission points so the ledger cannot go negative
+
+- 2026-08-18 [schema|rule|convention] Synergy became one User-level wallet for challenge and hackathon students (with a temporary StudentProfile rollback mirror and ledger reconciliation); all Neon mutations must target a production child branch unless that exact production write is explicitly authorized
+
+- 2026-08-18 [schema] Reverted PR #168 AI cohort interview foundation from master (code + unused 20260813000000 migration file; do not apply/drop that schema on production)
+
+- 2026-08-18 [convention] New UI follows docs/design-system.md (plan 071 orange/cream); modernist/pre-modernist retired as templates, existing screens unchanged
+
+- 2026-08-18 [schema|convention] Plan 067 notification bell: Notification + NotificationRead models (read state keyed by opaque string, NOT an FK) and /admin/notifications composer; automated workshop/hackathon/cohort notifications are DERIVED at read time from EVENTS, HACKATHON config and ENROLLING ProgramCohort rows — no rows, no cron, read path stays write-free. NotificationProvider sits above SynergyProvider in the root layout (BottomNavGate needs it) and fetches only when a bell trigger mounts; one NotificationBellButton renders desktop-only in AppHeader and mobile-only as a 6th item in the bottom pill (deliberately outside the `tabs` array so the sliding indicator still measures correctly). Event notifications are suppressed for users they no longer apply to: an existing WorkshopRegistration for that eventId, an existing HackathonParticipant row (which also inverts the hackathon set — "register now" for non-participants, kickoff/deadline for participants only), or an existing ProgramMember row for that cohort. The bell shows only the newest 5 items (FEED_LIMIT in get-notifications.ts) — older ones fall off on their own, so there is deliberately no dismiss/remove control and no dismissed state in the schema
+
 - 2026-08-17 [schema] College catalog table (54,651 institutions) + StudentProfile.collegeId (nullable, no FK) so registration/profile can store a canonical pick while college stays the display string
 
 - 2026-08-12 [convention] App fonts self-hosted via next/font/local + src/fonts (no next/font/google fetch at build)

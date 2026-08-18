@@ -28,6 +28,7 @@
     "db:backfill:certificates": "tsx prisma/scripts/backfill-certificates.ts",
     "db:backfill:college-id": "tsx prisma/scripts/backfill-profile-college-id.ts",
     "db:backfill:certificates:hackathon": "tsx prisma/scripts/backfill-hackathon-certificates.ts",
+    "db:issue:hackathon-awards": "tsx prisma/scripts/issue-hackathon-award-certificates.ts",
     "hackathon:migrate": "tsx scripts/migrate-hackathon-to-neon.ts",
     "hackathon:verify": "tsx scripts/migrate-hackathon-to-neon.ts --verify",
     "hackathon:preflight": "tsx scripts/migrate-hackathon-to-neon.ts --preflight",

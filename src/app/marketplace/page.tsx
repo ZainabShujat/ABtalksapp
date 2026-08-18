@@ -15,12 +15,15 @@ export default async function MarketplacePage() {
 
   const userId = session.user.id;
 
-  const [items, balance, profile] = await Promise.all([
+  const [items, balance, contact] = await Promise.all([
     getCatalog(),
     getMySynergy(userId),
-    prisma.studentProfile.findUnique({
-      where: { userId },
-      select: { phone: true, college: true },
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        studentProfile: { select: { phone: true } },
+        hackathonParticipant: { select: { phone: true } },
+      },
     }),
   ]);
 
@@ -45,7 +48,11 @@ export default async function MarketplacePage() {
         <ProductGrid
           items={items}
           balance={balance}
-          defaultPhone={profile?.phone ?? ""}
+          defaultPhone={
+            contact?.studentProfile?.phone ??
+            contact?.hackathonParticipant?.phone ??
+            ""
+          }
         />
       </main>
     </div>

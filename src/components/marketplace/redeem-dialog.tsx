@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { redeemItemAction } from "@/app/actions/marketplace-actions";
+import { useSynergy } from "@/components/shared/synergy-provider";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -36,6 +37,7 @@ export function RedeemDialog({
   defaultPhone,
 }: Props) {
   const router = useRouter();
+  const { setPoints } = useSynergy();
   const [pending, startTransition] = useTransition();
   const [shippingAddress, setShippingAddress] = useState("");
   const [recipientPhone, setRecipientPhone] = useState(defaultPhone);
@@ -61,6 +63,7 @@ export function RedeemDialog({
     startTransition(async () => {
       const result = await redeemItemAction(formData);
       if (result.ok) {
+        setPoints(result.newBalance);
         handleOpenChange(false);
         toast.success("Redeemed! Admin will reach out for fulfillment.");
         router.refresh();

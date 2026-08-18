@@ -3,7 +3,11 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import type { CertificateType } from "@prisma/client";
 import { logger } from "@/lib/logger";
-import { CERTIFICATE_TEMPLATES } from "./constants";
+import {
+  CERTIFICATE_TEMPLATES,
+  HACKATHON_VARIANT_TEMPLATES,
+  type HackathonCertificateVariant,
+} from "./constants";
 
 const cache = new Map<string, { bytes: Uint8Array; mtimeMs: number | null }>();
 
@@ -12,9 +16,37 @@ const cache = new Map<string, { bytes: Uint8Array; mtimeMs: number | null }>();
  * CERTIFICATE_TEMPLATE_PATH cannot leak onto hackathon certificates.
  * Disk reads are mtime-checked; remote fetches use no-store.
  */
+async function loadFromDisk(absolutePath: string): Promise<Uint8Array> {
+  try {
+    const { mtimeMs } = await stat(absolutePath);
+    const hit = cache.get(absolutePath);
+    if (hit && hit.mtimeMs === mtimeMs) {
+      return hit.bytes;
+    }
+    const bytes = new Uint8Array(await readFile(absolutePath));
+    cache.set(absolutePath, { bytes, mtimeMs });
+    return bytes;
+  } catch (error) {
+    logger.error("Certificate template not configured", {
+      path: absolutePath,
+      error: String(error),
+    });
+    throw new Error("Certificate template not configured");
+  }
+}
+
 export async function loadCertificateTemplate(
   type: CertificateType,
+  hackathonVariant?: HackathonCertificateVariant,
 ): Promise<Uint8Array> {
+  if (type === "HACKATHON" && hackathonVariant) {
+    const absolutePath = path.resolve(
+      process.cwd(),
+      HACKATHON_VARIANT_TEMPLATES[hackathonVariant],
+    );
+    return loadFromDisk(absolutePath);
+  }
+
   const config = CERTIFICATE_TEMPLATES[type];
   if (!config) {
     logger.error("Certificate template not configured", { type });
@@ -45,20 +77,5 @@ export async function loadCertificateTemplate(
     process.env[config.pathEnv] ?? config.defaultPath,
   );
 
-  try {
-    const { mtimeMs } = await stat(absolutePath);
-    const hit = cache.get(absolutePath);
-    if (hit && hit.mtimeMs === mtimeMs) {
-      return hit.bytes;
-    }
-    const bytes = new Uint8Array(await readFile(absolutePath));
-    cache.set(absolutePath, { bytes, mtimeMs });
-    return bytes;
-  } catch (error) {
-    logger.error("Certificate template not configured", {
-      path: absolutePath,
-      error: String(error),
-    });
-    throw new Error("Certificate template not configured");
-  }
+  return loadFromDisk(absolutePath);
 }

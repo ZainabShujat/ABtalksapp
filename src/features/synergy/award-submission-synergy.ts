@@ -29,6 +29,10 @@ export async function awardSubmissionSynergy(
       rankAtAward: null,
     },
   });
+  await tx.user.update({
+    where: { id: args.userId },
+    data: { synergyPoints: { increment: points } },
+  });
   await tx.studentProfile.updateMany({
     where: { userId: args.userId },
     data: { synergyPoints: { increment: points } },

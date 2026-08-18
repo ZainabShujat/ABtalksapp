@@ -41,15 +41,25 @@ export async function updateRedemptionStatusAction(formData: FormData) {
       };
     }
 
-    await tx.redemption.update({
-      where: { id: redemptionId },
+    const transition = await tx.redemption.updateMany({
+      where: { id: redemptionId, status: current.status },
       data: { status: nextStatus, trackingNote: trackingNote ?? undefined },
     });
+    if (transition.count === 0) {
+      return {
+        ok: false as const,
+        message: "Redemption status changed; refresh and try again",
+      };
+    }
 
     if (
       nextStatus === RedemptionStatus.CANCELLED &&
       current.status !== RedemptionStatus.CANCELLED
     ) {
+      await tx.user.update({
+        where: { id: current.userId },
+        data: { synergyPoints: { increment: current.costSP } },
+      });
       await tx.studentProfile.updateMany({
         where: { userId: current.userId },
         data: { synergyPoints: { increment: current.costSP } },

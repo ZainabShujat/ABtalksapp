@@ -17,6 +17,10 @@ export async function awardReferralSynergy(
       reason: `Referral signup (referralId=${args.referralId}, referredUserId=${args.referredUserId})`,
     },
   });
+  await tx.user.update({
+    where: { id: args.referrerId },
+    data: { synergyPoints: { increment: SYNERGY_REFERRAL } },
+  });
   await tx.studentProfile.updateMany({
     where: { userId: args.referrerId },
     data: { synergyPoints: { increment: SYNERGY_REFERRAL } },

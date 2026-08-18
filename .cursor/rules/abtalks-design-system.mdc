@@ -1,0 +1,16 @@
+---
+description: ABTalks UI design system for all new work (orange/cream, plan 071)
+alwaysApply: true
+---
+
+# ABTalks design system (orange / cream)
+
+Canonical spec: [`docs/design-system.md`](docs/design-system.md) (from plan 071).
+
+When building **new** UI:
+
+- Follow that spec (tokens, type scale, four weights, radius, spacing, components).
+- Primary accent is `#E05226`. Page ground is `#FBF9F7`. Do not introduce purple or indigo as brand.
+- Do **not** use or extend the modernist system (`src/components/landing/modernist/`, zero-radius, `#7C5CFF`) or pre-modernist landing-hub patterns as templates for new work.
+- Do **not** restyle existing screens unless the user explicitly asks.
+- Do not add a new font family without approval; use what is already loaded in `src/app/layout.tsx` / current Figma.

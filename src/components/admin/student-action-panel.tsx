@@ -16,9 +16,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
+import { GrantSynergyDialog } from "@/components/admin/grant-synergy-dialog";
 import {
-  grantSynergyAction,
   removeFromChallengeAction,
   resetProgressAction,
   toggleReadyForInterviewAction,
@@ -90,8 +89,6 @@ export function StudentActionPanel({
   const [resetReason, setResetReason] = useState("");
   const [toggleReason, setToggleReason] = useState("");
   const [removeReason, setRemoveReason] = useState("");
-  const [grantPoints, setGrantPoints] = useState("50");
-  const [grantReason, setGrantReason] = useState("");
 
   const handleResetProgress = async () => {
     setPending(true);
@@ -124,29 +121,6 @@ export function StudentActionPanel({
           ? `${studentName} is now ready for interview`
           : `${studentName} is no longer marked ready`,
       );
-      router.refresh();
-      return;
-    }
-    toast.error(result.message);
-    throw new Error(result.message);
-  };
-
-  const handleGrantSynergy = async () => {
-    const points = Number.parseInt(grantPoints, 10);
-    if (!Number.isFinite(points) || points < 1 || points > 2000) {
-      toast.error("Enter points between 1 and 2000");
-      throw new Error("Invalid points");
-    }
-    setPending(true);
-    const result = await grantSynergyAction({
-      targetUserId: studentId,
-      points,
-      reason: grantReason || undefined,
-    });
-    setPending(false);
-
-    if (result.ok) {
-      toast.success(`Granted ${points} synergy to ${studentName}`);
       router.refresh();
       return;
     }
@@ -222,41 +196,7 @@ export function StudentActionPanel({
         </div>
       </ActionDialog>
 
-      <ActionDialog
-        trigger={
-          <Button type="button" variant="outline" size="sm">
-            Grant Synergy
-          </Button>
-        }
-        title="Grant synergy"
-        description={`Award community synergy points to ${studentName}.`}
-        confirmLabel="Grant"
-        onConfirm={handleGrantSynergy}
-        pending={pending}
-      >
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="grant-points">Points (1–2000)</Label>
-            <Input
-              id="grant-points"
-              type="number"
-              min={1}
-              max={2000}
-              value={grantPoints}
-              onChange={(e) => setGrantPoints(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="grant-reason">Reason (optional)</Label>
-            <Textarea
-              id="grant-reason"
-              value={grantReason}
-              onChange={(e) => setGrantReason(e.target.value)}
-              placeholder="e.g. Weekly comms practice"
-            />
-          </div>
-        </div>
-      </ActionDialog>
+      <GrantSynergyDialog studentId={studentId} studentName={studentName} />
 
       <ActionDialog
         trigger={

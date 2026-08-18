@@ -5,7 +5,10 @@ import { formatDateIST } from "@/lib/date-utils";
 import { certificateIdSchema } from "@/lib/validations/certificate";
 import {
   CERTIFICATE_TYPES,
+  HACKATHON_VARIANT_LABELS,
   certificateDomainLabel,
+  parseHackathonVariant,
+  type HackathonCertificateVariant,
 } from "./constants";
 
 export type PublicCertificateView = {
@@ -19,6 +22,8 @@ export type PublicCertificateView = {
   statusLabel: string;
   /** Extra rows for the details list. Already stringified. */
   details: { label: string; value: string }[];
+  /** Placement artwork for extra HACKATHON rows. Null = participation. */
+  hackathonVariant: HackathonCertificateVariant | null;
   isRevoked: boolean;
 };
 
@@ -75,7 +80,10 @@ export async function getPublicCertificate(
       });
     }
   } else if (cert.type === CertificateType.HACKATHON) {
-    statusLabel = "Participated";
+    const hackathonVariant = parseHackathonVariant(meta.hackathonVariant);
+    statusLabel = hackathonVariant
+      ? HACKATHON_VARIANT_LABELS[hackathonVariant]
+      : "Participated";
     details.push({
       label: "Team",
       value: typeof meta.teamName === "string" ? meta.teamName : "Solo entry",
@@ -86,6 +94,11 @@ export async function getPublicCertificate(
     });
   }
 
+  const hackathonVariant =
+    cert.type === CertificateType.HACKATHON
+      ? parseHackathonVariant(meta.hackathonVariant)
+      : null;
+
   return {
     certificateId: cert.certificateId,
     recipientName: cert.recipientName,
@@ -95,6 +108,7 @@ export async function getPublicCertificate(
     issuedOn: formatDateIST(cert.issuedAt),
     statusLabel,
     details,
+    hackathonVariant,
     isRevoked: cert.status === CertificateStatus.REVOKED,
   };
 }
