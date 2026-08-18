@@ -11,6 +11,7 @@ export type ProfileData = {
   fullName: string;
   userType: UserType;
   college: string | null;
+  collegeId: string | null;
   graduationYear: number | null;
   organization: string | null;
   role: string | null;
@@ -42,6 +43,7 @@ export async function getProfile(userId: string): Promise<{
           fullName: true,
           userType: true,
           college: true,
+          collegeId: true,
           graduationYear: true,
           organization: true,
           role: true,

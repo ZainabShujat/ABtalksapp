@@ -132,6 +132,7 @@ export default async function ProfilePage() {
           userType: "STUDENT",
           ...commonFields,
           college: profile.college ?? "",
+          collegeId: profile.collegeId ?? "",
           graduationYear: profile.graduationYear ?? 2026,
         }
       : {

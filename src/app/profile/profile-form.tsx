@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { updateProfileAction } from "@/app/actions/profile-actions";
+import { CollegeCombobox } from "@/components/shared/college-combobox";
 import { PhoneVerifyField } from "@/components/shared/phone-verify-field";
 import {
   updateProfessionalProfileSchema,
@@ -60,6 +61,7 @@ export function ProfileForm({
 
   const {
     register,
+    control,
     handleSubmit,
     watch,
     setValue,
@@ -106,6 +108,7 @@ export function ProfileForm({
     if (userType === "STUDENT") {
       const v = values as Extract<ProfileFormValues, { userType: "STUDENT" }>;
       fd.append("college", v.college);
+      fd.append("collegeId", v.collegeId ?? "");
       fd.append("graduationYear", String(v.graduationYear));
     } else {
       const v = values as Extract<
@@ -148,7 +151,21 @@ export function ProfileForm({
         <>
           <div className="space-y-1.5 sm:space-y-2">
             <Label htmlFor="college">College</Label>
-            <Input id="college" {...register("college")} />
+            <Controller
+              name="college"
+              control={control}
+              render={({ field }) => (
+                <CollegeCombobox
+                  id="college"
+                  value={field.value}
+                  onChange={(name, collegeId) => {
+                    field.onChange(name);
+                    setValue("collegeId", collegeId ?? "");
+                  }}
+                  aria-invalid={!!("college" in errors && errors.college)}
+                />
+              )}
+            />
             {"college" in errors && errors.college ? (
               <p className="text-sm text-destructive">{errors.college.message}</p>
             ) : null}

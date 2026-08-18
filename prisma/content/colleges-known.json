@@ -1,0 +1,2155 @@
+[
+ {
+  "name": "Indian Institute of Technology Kharagpur",
+  "aliases": [
+   "IIT Kharagpur",
+   "IIT KGP"
+  ],
+  "state": "West Bengal",
+  "city": "Kharagpur",
+  "tier": 1,
+  "govAliases": [
+   "Indian Institute of Technology, Kaharagpur"
+  ]
+ },
+ {
+  "name": "Indian Institute of Technology Bombay",
+  "aliases": [
+   "IIT Bombay",
+   "IITB",
+   "IIT Mumbai"
+  ],
+  "state": "Maharashtra",
+  "city": "Mumbai",
+  "tier": 1,
+  "govAliases": [
+   "Indian Institute of Technology, Mumbai"
+  ]
+ },
+ {
+  "name": "Indian Institute of Technology Madras",
+  "aliases": [
+   "IIT Madras",
+   "IITM",
+   "IIT Chennai"
+  ],
+  "state": "Tamil Nadu",
+  "city": "Chennai",
+  "tier": 1,
+  "govAliases": [
+   "Indian Institute of Technology, Chennai"
+  ]
+ },
+ {
+  "name": "Indian Institute of Technology Kanpur",
+  "aliases": [
+   "IIT Kanpur",
+   "IITK"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Kanpur",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Technology Delhi",
+  "aliases": [
+   "IIT Delhi",
+   "IITD"
+  ],
+  "state": "Delhi",
+  "city": "New Delhi",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Technology Guwahati",
+  "aliases": [
+   "IIT Guwahati",
+   "IITG"
+  ],
+  "state": "Assam",
+  "city": "Guwahati",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Technology Roorkee",
+  "aliases": [
+   "IIT Roorkee",
+   "IITR"
+  ],
+  "state": "Uttarakhand",
+  "city": "Roorkee",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Technology (BHU) Varanasi",
+  "aliases": [
+   "IIT BHU",
+   "IIT Varanasi",
+   "IIT (BHU)"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Varanasi",
+  "tier": 1,
+  "govAliases": [
+   "Indian Institute of Technology (Banaras Hindu University), Varanasi"
+  ]
+ },
+ {
+  "name": "Indian Institute of Technology (ISM) Dhanbad",
+  "aliases": [
+   "IIT ISM Dhanbad",
+   "IIT Dhanbad",
+   "ISM Dhanbad"
+  ],
+  "state": "Jharkhand",
+  "city": "Dhanbad",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Technology Hyderabad",
+  "aliases": [
+   "IIT Hyderabad",
+   "IITH"
+  ],
+  "state": "Telangana",
+  "city": "Hyderabad",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Technology Bhubaneswar",
+  "aliases": [
+   "IIT Bhubaneswar"
+  ],
+  "state": "Odisha",
+  "city": "Bhubaneswar",
+  "tier": 1,
+  "govAliases": [
+   "Indian Institute of Technology, Bhubaneshwar"
+  ]
+ },
+ {
+  "name": "Indian Institute of Technology Gandhinagar",
+  "aliases": [
+   "IIT Gandhinagar",
+   "IITGN"
+  ],
+  "state": "Gujarat",
+  "city": "Gandhinagar",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Technology Jodhpur",
+  "aliases": [
+   "IIT Jodhpur"
+  ],
+  "state": "Rajasthan",
+  "city": "Jodhpur",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Technology Patna",
+  "aliases": [
+   "IIT Patna"
+  ],
+  "state": "Bihar",
+  "city": "Patna",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Technology Indore",
+  "aliases": [
+   "IIT Indore"
+  ],
+  "state": "Madhya Pradesh",
+  "city": "Indore",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Technology Mandi",
+  "aliases": [
+   "IIT Mandi"
+  ],
+  "state": "Himachal Pradesh",
+  "city": "Mandi",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Technology Ropar",
+  "aliases": [
+   "IIT Ropar"
+  ],
+  "state": "Punjab",
+  "city": "Rupnagar",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Technology Tirupati",
+  "aliases": [
+   "IIT Tirupati"
+  ],
+  "state": "Andhra Pradesh",
+  "city": "Tirupati",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Technology Palakkad",
+  "aliases": [
+   "IIT Palakkad"
+  ],
+  "state": "Kerala",
+  "city": "Palakkad",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Technology Bhilai",
+  "aliases": [
+   "IIT Bhilai"
+  ],
+  "state": "Chhattisgarh",
+  "city": "Bhilai",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Technology Goa",
+  "aliases": [
+   "IIT Goa"
+  ],
+  "state": "Goa",
+  "city": "Ponda",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Technology Jammu",
+  "aliases": [
+   "IIT Jammu"
+  ],
+  "state": "Jammu and Kashmir",
+  "city": "Jammu",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Technology Dharwad",
+  "aliases": [
+   "IIT Dharwad"
+  ],
+  "state": "Karnataka",
+  "city": "Dharwad",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Tiruchirappalli",
+  "aliases": [
+   "NIT Trichy",
+   "NITT",
+   "NIT Tiruchirappalli"
+  ],
+  "state": "Tamil Nadu",
+  "city": "Tiruchirappalli",
+  "tier": 1,
+  "govAliases": [
+   "National Institute of Technology, Tiruchirapalli"
+  ]
+ },
+ {
+  "name": "National Institute of Technology Karnataka, Surathkal",
+  "aliases": [
+   "NIT Surathkal",
+   "NITK",
+   "NIT Karnataka"
+  ],
+  "state": "Karnataka",
+  "city": "Surathkal",
+  "tier": 1,
+  "govAliases": [
+   "National Institute of Technology, Karnataka"
+  ]
+ },
+ {
+  "name": "National Institute of Technology Warangal",
+  "aliases": [
+   "NIT Warangal",
+   "NITW"
+  ],
+  "state": "Telangana",
+  "city": "Warangal",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Rourkela",
+  "aliases": [
+   "NIT Rourkela",
+   "NITR"
+  ],
+  "state": "Odisha",
+  "city": "Rourkela",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Calicut",
+  "aliases": [
+   "NIT Calicut",
+   "NITC"
+  ],
+  "state": "Kerala",
+  "city": "Kozhikode",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Durgapur",
+  "aliases": [
+   "NIT Durgapur"
+  ],
+  "state": "West Bengal",
+  "city": "Durgapur",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Jamshedpur",
+  "aliases": [
+   "NIT Jamshedpur"
+  ],
+  "state": "Jharkhand",
+  "city": "Jamshedpur",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Kurukshetra",
+  "aliases": [
+   "NIT Kurukshetra"
+  ],
+  "state": "Haryana",
+  "city": "Kurukshetra",
+  "tier": 1
+ },
+ {
+  "name": "Motilal Nehru National Institute of Technology Allahabad",
+  "aliases": [
+   "MNNIT Allahabad",
+   "NIT Allahabad",
+   "MNNIT"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Prayagraj",
+  "tier": 1
+ },
+ {
+  "name": "Maulana Azad National Institute of Technology Bhopal",
+  "aliases": [
+   "MANIT Bhopal",
+   "NIT Bhopal",
+   "MANIT"
+  ],
+  "state": "Madhya Pradesh",
+  "city": "Bhopal",
+  "tier": 1
+ },
+ {
+  "name": "Malaviya National Institute of Technology Jaipur",
+  "aliases": [
+   "MNIT Jaipur",
+   "NIT Jaipur",
+   "MNIT"
+  ],
+  "state": "Rajasthan",
+  "city": "Jaipur",
+  "tier": 1,
+  "govAliases": [
+   "Malviya National Institute of Technology, Jaipur"
+  ]
+ },
+ {
+  "name": "Visvesvaraya National Institute of Technology Nagpur",
+  "aliases": [
+   "VNIT Nagpur",
+   "NIT Nagpur",
+   "VNIT"
+  ],
+  "state": "Maharashtra",
+  "city": "Nagpur",
+  "tier": 1
+ },
+ {
+  "name": "Sardar Vallabhbhai National Institute of Technology Surat",
+  "aliases": [
+   "SVNIT Surat",
+   "NIT Surat",
+   "SVNIT"
+  ],
+  "state": "Gujarat",
+  "city": "Surat",
+  "tier": 1
+ },
+ {
+  "name": "Dr. B. R. Ambedkar National Institute of Technology Jalandhar",
+  "aliases": [
+   "NIT Jalandhar",
+   "NITJ"
+  ],
+  "state": "Punjab",
+  "city": "Jalandhar",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Silchar",
+  "aliases": [
+   "NIT Silchar"
+  ],
+  "state": "Assam",
+  "city": "Silchar",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Hamirpur",
+  "aliases": [
+   "NIT Hamirpur"
+  ],
+  "state": "Himachal Pradesh",
+  "city": "Hamirpur",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Srinagar",
+  "aliases": [
+   "NIT Srinagar"
+  ],
+  "state": "Jammu and Kashmir",
+  "city": "Srinagar",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Agartala",
+  "aliases": [
+   "NIT Agartala"
+  ],
+  "state": "Tripura",
+  "city": "Agartala",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Raipur",
+  "aliases": [
+   "NIT Raipur"
+  ],
+  "state": "Chhattisgarh",
+  "city": "Raipur",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Patna",
+  "aliases": [
+   "NIT Patna"
+  ],
+  "state": "Bihar",
+  "city": "Patna",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Delhi",
+  "aliases": [
+   "NIT Delhi"
+  ],
+  "state": "Delhi",
+  "city": "New Delhi",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Goa",
+  "aliases": [
+   "NIT Goa"
+  ],
+  "state": "Goa",
+  "city": "Ponda",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Puducherry",
+  "aliases": [
+   "NIT Puducherry"
+  ],
+  "state": "Puducherry",
+  "city": "Karaikal",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Meghalaya",
+  "aliases": [
+   "NIT Meghalaya"
+  ],
+  "state": "Meghalaya",
+  "city": "Shillong",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Manipur",
+  "aliases": [
+   "NIT Manipur"
+  ],
+  "state": "Manipur",
+  "city": "Imphal",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Mizoram",
+  "aliases": [
+   "NIT Mizoram"
+  ],
+  "state": "Mizoram",
+  "city": "Aizawl",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Nagaland",
+  "aliases": [
+   "NIT Nagaland"
+  ],
+  "state": "Nagaland",
+  "city": "Dimapur",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Sikkim",
+  "aliases": [
+   "NIT Sikkim"
+  ],
+  "state": "Sikkim",
+  "city": "Ravangla",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Arunachal Pradesh",
+  "aliases": [
+   "NIT Arunachal Pradesh"
+  ],
+  "state": "Arunachal Pradesh",
+  "city": "Jote",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Uttarakhand",
+  "aliases": [
+   "NIT Uttarakhand"
+  ],
+  "state": "Uttarakhand",
+  "city": "Srinagar Garhwal",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Technology Andhra Pradesh",
+  "aliases": [
+   "NIT Andhra Pradesh",
+   "NIT AP"
+  ],
+  "state": "Andhra Pradesh",
+  "city": "Tadepalligudem",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Information Technology Allahabad",
+  "aliases": [
+   "IIIT Allahabad",
+   "IIITA"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Prayagraj",
+  "tier": 1
+ },
+ {
+  "name": "Atal Bihari Vajpayee Indian Institute of Information Technology and Management Gwalior",
+  "aliases": [
+   "IIITM Gwalior",
+   "IIIT Gwalior",
+   "ABV-IIITM"
+  ],
+  "state": "Madhya Pradesh",
+  "city": "Gwalior",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Information Technology, Design and Manufacturing Jabalpur",
+  "aliases": [
+   "IIITDM Jabalpur",
+   "IIIT Jabalpur"
+  ],
+  "state": "Madhya Pradesh",
+  "city": "Jabalpur",
+  "tier": 1,
+  "govAliases": [
+   "Pandhi Dwarka Prasad Mishra Indian Institute of Information Technology & Manufacturing , Jabalpur"
+  ]
+ },
+ {
+  "name": "Indian Institute of Information Technology, Design and Manufacturing Kancheepuram",
+  "aliases": [
+   "IIITDM Kancheepuram",
+   "IIITDM Chennai"
+  ],
+  "state": "Tamil Nadu",
+  "city": "Chennai",
+  "tier": 1,
+  "govAliases": [
+   "Indian Institute of Information Technology, Design & Manufacturing, Kancheepuram"
+  ]
+ },
+ {
+  "name": "International Institute of Information Technology, Hyderabad",
+  "aliases": [
+   "IIIT Hyderabad",
+   "IIITH",
+   "IIIT-H"
+  ],
+  "state": "Telangana",
+  "city": "Hyderabad",
+  "tier": 1,
+  "govAliases": [
+   "International Institute of Information Technology, Hyderabad"
+  ]
+ },
+ {
+  "name": "Indraprastha Institute of Information Technology Delhi",
+  "aliases": [
+   "IIIT Delhi",
+   "IIITD"
+  ],
+  "state": "Delhi",
+  "city": "New Delhi",
+  "tier": 1
+ },
+ {
+  "name": "International Institute of Information Technology Bangalore",
+  "aliases": [
+   "IIIT Bangalore",
+   "IIITB"
+  ],
+  "state": "Karnataka",
+  "city": "Bengaluru",
+  "tier": 1,
+  "govAliases": [
+   "International Institute of Information Technology Bangalore",
+   "International Institute of Information Technology, Bangalore"
+  ]
+ },
+ {
+  "name": "Indian Institute of Information Technology Guwahati",
+  "aliases": [
+   "IIIT Guwahati"
+  ],
+  "state": "Assam",
+  "city": "Guwahati",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Information Technology Vadodara",
+  "aliases": [
+   "IIIT Vadodara"
+  ],
+  "state": "Gujarat",
+  "city": "Gandhinagar",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Information Technology Kota",
+  "aliases": [
+   "IIIT Kota"
+  ],
+  "state": "Rajasthan",
+  "city": "Kota",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Information Technology Sri City",
+  "aliases": [
+   "IIIT Sri City"
+  ],
+  "state": "Andhra Pradesh",
+  "city": "Sri City",
+  "tier": 1,
+  "govAliases": [
+   "Indian Institute of Information Technology, Chittoor"
+  ]
+ },
+ {
+  "name": "Indian Institute of Information Technology Una",
+  "aliases": [
+   "IIIT Una"
+  ],
+  "state": "Himachal Pradesh",
+  "city": "Una",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Information Technology Sonepat",
+  "aliases": [
+   "IIIT Sonepat"
+  ],
+  "state": "Haryana",
+  "city": "Sonipat",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Information Technology Kalyani",
+  "aliases": [
+   "IIIT Kalyani"
+  ],
+  "state": "West Bengal",
+  "city": "Kalyani",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Information Technology Lucknow",
+  "aliases": [
+   "IIIT Lucknow"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Lucknow",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Information Technology Dharwad",
+  "aliases": [
+   "IIIT Dharwad"
+  ],
+  "state": "Karnataka",
+  "city": "Dharwad",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Information Technology Kottayam",
+  "aliases": [
+   "IIIT Kottayam"
+  ],
+  "state": "Kerala",
+  "city": "Kottayam",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Information Technology Ranchi",
+  "aliases": [
+   "IIIT Ranchi"
+  ],
+  "state": "Jharkhand",
+  "city": "Ranchi",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Information Technology Nagpur",
+  "aliases": [
+   "IIIT Nagpur"
+  ],
+  "state": "Maharashtra",
+  "city": "Nagpur",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Information Technology Pune",
+  "aliases": [
+   "IIIT Pune"
+  ],
+  "state": "Maharashtra",
+  "city": "Pune",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Information Technology Bhagalpur",
+  "aliases": [
+   "IIIT Bhagalpur"
+  ],
+  "state": "Bihar",
+  "city": "Bhagalpur",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Information Technology Bhopal",
+  "aliases": [
+   "IIIT Bhopal"
+  ],
+  "state": "Madhya Pradesh",
+  "city": "Bhopal",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Information Technology Surat",
+  "aliases": [
+   "IIIT Surat"
+  ],
+  "state": "Gujarat",
+  "city": "Surat",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Information Technology Agartala",
+  "aliases": [
+   "IIIT Agartala"
+  ],
+  "state": "Tripura",
+  "city": "Agartala",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Information Technology Raichur",
+  "aliases": [
+   "IIIT Raichur"
+  ],
+  "state": "Karnataka",
+  "city": "Raichur",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Information Technology Manipur",
+  "aliases": [
+   "IIIT Manipur"
+  ],
+  "state": "Manipur",
+  "city": "Imphal",
+  "tier": 1,
+  "govAliases": [
+   "Indian Institute of Information Technology, Senapati"
+  ]
+ },
+ {
+  "name": "Indian Institute of Information Technology Tiruchirappalli",
+  "aliases": [
+   "IIIT Trichy",
+   "IIIT Tiruchirappalli"
+  ],
+  "state": "Tamil Nadu",
+  "city": "Tiruchirappalli",
+  "tier": 1,
+  "govAliases": [
+   "Indian Institute of Information Technology, Srirangam"
+  ]
+ },
+ {
+  "name": "Indian Institute of Information Technology Kurnool",
+  "aliases": [
+   "IIIT Kurnool"
+  ],
+  "state": "Andhra Pradesh",
+  "city": "Kurnool",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Science, Bengaluru",
+  "aliases": [
+   "IISc",
+   "IISc Bangalore",
+   "Indian Institute of Science"
+  ],
+  "state": "Karnataka",
+  "city": "Bengaluru",
+  "tier": 1,
+  "govAliases": [
+   "Indian Institute of Science, Bangalore"
+  ]
+ },
+ {
+  "name": "Indian Institute of Science Education and Research Pune",
+  "aliases": [
+   "IISER Pune"
+  ],
+  "state": "Maharashtra",
+  "city": "Pune",
+  "tier": 1,
+  "govAliases": [
+   "Indian Institute of Science Education & Research (IISER), Pune"
+  ]
+ },
+ {
+  "name": "Indian Institute of Science Education and Research Kolkata",
+  "aliases": [
+   "IISER Kolkata"
+  ],
+  "state": "West Bengal",
+  "city": "Kolkata",
+  "tier": 1,
+  "govAliases": [
+   "Indian Institute of Science Education & Research (IISER), Kolkata"
+  ]
+ },
+ {
+  "name": "Indian Institute of Science Education and Research Mohali",
+  "aliases": [
+   "IISER Mohali"
+  ],
+  "state": "Punjab",
+  "city": "Mohali",
+  "tier": 1,
+  "govAliases": [
+   "Indian Institute of Science Education & Research (IISER), Mohali"
+  ]
+ },
+ {
+  "name": "Indian Institute of Science Education and Research Bhopal",
+  "aliases": [
+   "IISER Bhopal"
+  ],
+  "state": "Madhya Pradesh",
+  "city": "Bhopal",
+  "tier": 1,
+  "govAliases": [
+   "Indian Institute of Science Education & Research (IISER), Bhopal"
+  ]
+ },
+ {
+  "name": "Indian Institute of Science Education and Research Thiruvananthapuram",
+  "aliases": [
+   "IISER Thiruvananthapuram",
+   "IISER TVM"
+  ],
+  "state": "Kerala",
+  "city": "Thiruvananthapuram",
+  "tier": 1,
+  "govAliases": [
+   "Indian Institute of Science Education & Research (IISER), Thiruvananthapuram"
+  ]
+ },
+ {
+  "name": "Indian Institute of Science Education and Research Tirupati",
+  "aliases": [
+   "IISER Tirupati"
+  ],
+  "state": "Andhra Pradesh",
+  "city": "Tirupati",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Science Education and Research Berhampur",
+  "aliases": [
+   "IISER Berhampur"
+  ],
+  "state": "Odisha",
+  "city": "Berhampur",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Space Science and Technology",
+  "aliases": [
+   "IIST",
+   "IIST Thiruvananthapuram"
+  ],
+  "state": "Kerala",
+  "city": "Thiruvananthapuram",
+  "tier": 1
+ },
+ {
+  "name": "Indian Statistical Institute",
+  "aliases": [
+   "ISI Kolkata",
+   "ISI"
+  ],
+  "state": "West Bengal",
+  "city": "Kolkata",
+  "tier": 1
+ },
+ {
+  "name": "National Institute of Science Education and Research Bhubaneswar",
+  "aliases": [
+   "NISER Bhubaneswar",
+   "NISER"
+  ],
+  "state": "Odisha",
+  "city": "Bhubaneswar",
+  "tier": 1
+ },
+ {
+  "name": "Birla Institute of Technology and Science, Pilani",
+  "aliases": [
+   "BITS Pilani",
+   "BITS"
+  ],
+  "state": "Rajasthan",
+  "city": "Pilani",
+  "tier": 1,
+  "govAliases": [
+   "Birla Institute of Technology and Science 'BITS' Pilani"
+  ]
+ },
+ {
+  "name": "Birla Institute of Technology and Science, Pilani - Goa Campus",
+  "aliases": [
+   "BITS Goa",
+   "BITS Pilani Goa"
+  ],
+  "state": "Goa",
+  "city": "Zuarinagar",
+  "tier": 1,
+  "govAliases": [
+   "Birla Institute of Technology and Science Pilani K K Birla Goa Campus"
+  ]
+ },
+ {
+  "name": "Birla Institute of Technology and Science, Pilani - Hyderabad Campus",
+  "aliases": [
+   "BITS Hyderabad",
+   "BITS Pilani Hyderabad"
+  ],
+  "state": "Telangana",
+  "city": "Hyderabad",
+  "tier": 1,
+  "govAliases": [
+   "Birla Instiutte of Technology and Science Pilani Hyderabad Campus"
+  ]
+ },
+ {
+  "name": "Birla Institute of Technology, Mesra",
+  "aliases": [
+   "BIT Mesra"
+  ],
+  "state": "Jharkhand",
+  "city": "Ranchi",
+  "tier": 2
+ },
+ {
+  "name": "Delhi Technological University",
+  "aliases": [
+   "DTU",
+   "Delhi College of Engineering",
+   "DCE"
+  ],
+  "state": "Delhi",
+  "city": "New Delhi",
+  "tier": 1
+ },
+ {
+  "name": "Netaji Subhas University of Technology",
+  "aliases": [
+   "NSUT",
+   "NSIT",
+   "Netaji Subhas Institute of Technology"
+  ],
+  "state": "Delhi",
+  "city": "New Delhi",
+  "tier": 1
+ },
+ {
+  "name": "Indira Gandhi Delhi Technical University for Women",
+  "aliases": [
+   "IGDTUW"
+  ],
+  "state": "Delhi",
+  "city": "New Delhi",
+  "tier": 2
+ },
+ {
+  "name": "Guru Gobind Singh Indraprastha University",
+  "aliases": [
+   "GGSIPU",
+   "IP University",
+   "IPU"
+  ],
+  "state": "Delhi",
+  "city": "New Delhi",
+  "tier": 2
+ },
+ {
+  "name": "Jamia Millia Islamia",
+  "aliases": [
+   "JMI",
+   "Jamia"
+  ],
+  "state": "Delhi",
+  "city": "New Delhi",
+  "tier": 2
+ },
+ {
+  "name": "University of Delhi",
+  "aliases": [
+   "Delhi University",
+   "DU"
+  ],
+  "state": "Delhi",
+  "city": "New Delhi",
+  "tier": 2
+ },
+ {
+  "name": "Aligarh Muslim University",
+  "aliases": [
+   "AMU",
+   "AMU Aligarh"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Aligarh",
+  "tier": 2
+ },
+ {
+  "name": "Banaras Hindu University",
+  "aliases": [
+   "BHU"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Varanasi",
+  "tier": 2
+ },
+ {
+  "name": "Jawaharlal Nehru University",
+  "aliases": [
+   "JNU"
+  ],
+  "state": "Delhi",
+  "city": "New Delhi",
+  "tier": 2
+ },
+ {
+  "name": "Jadavpur University",
+  "aliases": [
+   "JU Kolkata",
+   "Jadavpur"
+  ],
+  "state": "West Bengal",
+  "city": "Kolkata",
+  "tier": 1
+ },
+ {
+  "name": "Indian Institute of Engineering Science and Technology, Shibpur",
+  "aliases": [
+   "IIEST Shibpur",
+   "BESU"
+  ],
+  "state": "West Bengal",
+  "city": "Howrah",
+  "tier": 2
+ },
+ {
+  "name": "Anna University",
+  "aliases": [
+   "Anna University Chennai",
+   "CEG",
+   "College of Engineering Guindy"
+  ],
+  "state": "Tamil Nadu",
+  "city": "Chennai",
+  "tier": 1
+ },
+ {
+  "name": "PSG College of Technology",
+  "aliases": [
+   "PSG Tech",
+   "PSGCT"
+  ],
+  "state": "Tamil Nadu",
+  "city": "Coimbatore",
+  "tier": 2
+ },
+ {
+  "name": "Sri Sivasubramaniya Nadar College of Engineering",
+  "aliases": [
+   "SSN College of Engineering",
+   "SSN"
+  ],
+  "state": "Tamil Nadu",
+  "city": "Chennai",
+  "tier": 2
+ },
+ {
+  "name": "Coimbatore Institute of Technology",
+  "aliases": [
+   "CIT Coimbatore"
+  ],
+  "state": "Tamil Nadu",
+  "city": "Coimbatore",
+  "tier": 2
+ },
+ {
+  "name": "Thiagarajar College of Engineering",
+  "aliases": [
+   "TCE Madurai"
+  ],
+  "state": "Tamil Nadu",
+  "city": "Madurai",
+  "tier": 2
+ },
+ {
+  "name": "Vellore Institute of Technology, Vellore",
+  "aliases": [
+   "VIT Vellore",
+   "VIT University",
+   "VIT"
+  ],
+  "state": "Tamil Nadu",
+  "city": "Vellore",
+  "tier": 1
+ },
+ {
+  "name": "Vellore Institute of Technology, Chennai",
+  "aliases": [
+   "VIT Chennai"
+  ],
+  "state": "Tamil Nadu",
+  "city": "Chennai",
+  "tier": 2
+ },
+ {
+  "name": "VIT-AP University",
+  "aliases": [
+   "VIT AP",
+   "VIT Amaravati"
+  ],
+  "state": "Andhra Pradesh",
+  "city": "Amaravati",
+  "tier": 2
+ },
+ {
+  "name": "VIT Bhopal University",
+  "aliases": [
+   "VIT Bhopal"
+  ],
+  "state": "Madhya Pradesh",
+  "city": "Bhopal",
+  "tier": 2
+ },
+ {
+  "name": "SRM Institute of Science and Technology, Kattankulathur",
+  "aliases": [
+   "SRM University",
+   "SRM KTR",
+   "SRMIST",
+   "SRM Chennai"
+  ],
+  "state": "Tamil Nadu",
+  "city": "Chennai",
+  "tier": 1
+ },
+ {
+  "name": "SRM University AP",
+  "aliases": [
+   "SRM AP",
+   "SRM Amaravati"
+  ],
+  "state": "Andhra Pradesh",
+  "city": "Amaravati",
+  "tier": 2
+ },
+ {
+  "name": "Amrita Vishwa Vidyapeetham",
+  "aliases": [
+   "Amrita University",
+   "Amrita Coimbatore",
+   "Amrita School of Engineering"
+  ],
+  "state": "Tamil Nadu",
+  "city": "Coimbatore",
+  "tier": 2
+ },
+ {
+  "name": "Sathyabama Institute of Science and Technology",
+  "aliases": [
+   "Sathyabama University"
+  ],
+  "state": "Tamil Nadu",
+  "city": "Chennai",
+  "tier": 2
+ },
+ {
+  "name": "SASTRA Deemed University",
+  "aliases": [
+   "SASTRA",
+   "SASTRA University"
+  ],
+  "state": "Tamil Nadu",
+  "city": "Thanjavur",
+  "tier": 2
+ },
+ {
+  "name": "Manipal Institute of Technology, Manipal",
+  "aliases": [
+   "MIT Manipal",
+   "Manipal Institute of Technology"
+  ],
+  "state": "Karnataka",
+  "city": "Manipal",
+  "tier": 1
+ },
+ {
+  "name": "Manipal University Jaipur",
+  "aliases": [
+   "MUJ",
+   "Manipal Jaipur"
+  ],
+  "state": "Rajasthan",
+  "city": "Jaipur",
+  "tier": 2
+ },
+ {
+  "name": "R.V. College of Engineering",
+  "aliases": [
+   "RVCE",
+   "RV College of Engineering"
+  ],
+  "state": "Karnataka",
+  "city": "Bengaluru",
+  "tier": 2
+ },
+ {
+  "name": "B.M.S. College of Engineering",
+  "aliases": [
+   "BMSCE",
+   "BMS College of Engineering"
+  ],
+  "state": "Karnataka",
+  "city": "Bengaluru",
+  "tier": 2
+ },
+ {
+  "name": "M.S. Ramaiah Institute of Technology",
+  "aliases": [
+   "MSRIT",
+   "Ramaiah Institute of Technology"
+  ],
+  "state": "Karnataka",
+  "city": "Bengaluru",
+  "tier": 2
+ },
+ {
+  "name": "PES University",
+  "aliases": [
+   "PESU",
+   "PES Institute of Technology",
+   "PESIT"
+  ],
+  "state": "Karnataka",
+  "city": "Bengaluru",
+  "tier": 2
+ },
+ {
+  "name": "Dayananda Sagar College of Engineering",
+  "aliases": [
+   "DSCE",
+   "Dayananda Sagar"
+  ],
+  "state": "Karnataka",
+  "city": "Bengaluru",
+  "tier": 2
+ },
+ {
+  "name": "Nitte Meenakshi Institute of Technology",
+  "aliases": [
+   "NMIT Bangalore"
+  ],
+  "state": "Karnataka",
+  "city": "Bengaluru",
+  "tier": 2
+ },
+ {
+  "name": "Sir M. Visvesvaraya Institute of Technology",
+  "aliases": [
+   "Sir MVIT"
+  ],
+  "state": "Karnataka",
+  "city": "Bengaluru",
+  "tier": 2
+ },
+ {
+  "name": "BMS Institute of Technology and Management",
+  "aliases": [
+   "BMSIT"
+  ],
+  "state": "Karnataka",
+  "city": "Bengaluru",
+  "tier": 2
+ },
+ {
+  "name": "Christ University",
+  "aliases": [
+   "Christ Bangalore",
+   "CHRIST (Deemed to be University)"
+  ],
+  "state": "Karnataka",
+  "city": "Bengaluru",
+  "tier": 2
+ },
+ {
+  "name": "Visvesvaraya Technological University",
+  "aliases": [
+   "VTU",
+   "VTU Belagavi"
+  ],
+  "state": "Karnataka",
+  "city": "Belagavi",
+  "tier": 2
+ },
+ {
+  "name": "The National Institute of Engineering, Mysuru",
+  "aliases": [
+   "NIE Mysore",
+   "NIE Mysuru"
+  ],
+  "state": "Karnataka",
+  "city": "Mysuru",
+  "tier": 2
+ },
+ {
+  "name": "Sri Jayachamarajendra College of Engineering",
+  "aliases": [
+   "SJCE Mysore",
+   "JSS STU"
+  ],
+  "state": "Karnataka",
+  "city": "Mysuru",
+  "tier": 2
+ },
+ {
+  "name": "Veermata Jijabai Technological Institute",
+  "aliases": [
+   "VJTI",
+   "VJTI Mumbai"
+  ],
+  "state": "Maharashtra",
+  "city": "Mumbai",
+  "tier": 1
+ },
+ {
+  "name": "Institute of Chemical Technology, Mumbai",
+  "aliases": [
+   "ICT Mumbai",
+   "UDCT"
+  ],
+  "state": "Maharashtra",
+  "city": "Mumbai",
+  "tier": 2
+ },
+ {
+  "name": "Sardar Patel Institute of Technology",
+  "aliases": [
+   "SPIT Mumbai",
+   "SPIT"
+  ],
+  "state": "Maharashtra",
+  "city": "Mumbai",
+  "tier": 2
+ },
+ {
+  "name": "Dwarkadas J. Sanghvi College of Engineering",
+  "aliases": [
+   "DJ Sanghvi",
+   "DJSCE"
+  ],
+  "state": "Maharashtra",
+  "city": "Mumbai",
+  "tier": 2
+ },
+ {
+  "name": "K. J. Somaiya College of Engineering",
+  "aliases": [
+   "KJ Somaiya",
+   "KJSCE"
+  ],
+  "state": "Maharashtra",
+  "city": "Mumbai",
+  "tier": 2
+ },
+ {
+  "name": "Thadomal Shahani Engineering College",
+  "aliases": [
+   "TSEC Mumbai"
+  ],
+  "state": "Maharashtra",
+  "city": "Mumbai",
+  "tier": 2
+ },
+ {
+  "name": "College of Engineering, Pune",
+  "aliases": [
+   "COEP",
+   "COEP Technological University"
+  ],
+  "state": "Maharashtra",
+  "city": "Pune",
+  "tier": 1
+ },
+ {
+  "name": "Pune Institute of Computer Technology",
+  "aliases": [
+   "PICT Pune",
+   "PICT"
+  ],
+  "state": "Maharashtra",
+  "city": "Pune",
+  "tier": 2
+ },
+ {
+  "name": "Vishwakarma Institute of Technology, Pune",
+  "aliases": [
+   "VIT Pune"
+  ],
+  "state": "Maharashtra",
+  "city": "Pune",
+  "tier": 2
+ },
+ {
+  "name": "MIT World Peace University",
+  "aliases": [
+   "MIT WPU",
+   "MIT Pune"
+  ],
+  "state": "Maharashtra",
+  "city": "Pune",
+  "tier": 2
+ },
+ {
+  "name": "Walchand College of Engineering, Sangli",
+  "aliases": [
+   "Walchand Sangli",
+   "WCE Sangli"
+  ],
+  "state": "Maharashtra",
+  "city": "Sangli",
+  "tier": 2
+ },
+ {
+  "name": "Savitribai Phule Pune University",
+  "aliases": [
+   "SPPU",
+   "University of Pune",
+   "Pune University"
+  ],
+  "state": "Maharashtra",
+  "city": "Pune",
+  "tier": 2
+ },
+ {
+  "name": "Nirma University",
+  "aliases": [
+   "Institute of Technology Nirma University",
+   "Nirma"
+  ],
+  "state": "Gujarat",
+  "city": "Ahmedabad",
+  "tier": 2
+ },
+ {
+  "name": "Dhirubhai Ambani Institute of Information and Communication Technology",
+  "aliases": [
+   "DAIICT",
+   "DA-IICT"
+  ],
+  "state": "Gujarat",
+  "city": "Gandhinagar",
+  "tier": 2
+ },
+ {
+  "name": "L.D. College of Engineering",
+  "aliases": [
+   "LDCE Ahmedabad",
+   "LD Engineering"
+  ],
+  "state": "Gujarat",
+  "city": "Ahmedabad",
+  "tier": 2
+ },
+ {
+  "name": "Pandit Deendayal Energy University",
+  "aliases": [
+   "PDEU",
+   "PDPU"
+  ],
+  "state": "Gujarat",
+  "city": "Gandhinagar",
+  "tier": 2
+ },
+ {
+  "name": "Charotar University of Science and Technology",
+  "aliases": [
+   "CHARUSAT"
+  ],
+  "state": "Gujarat",
+  "city": "Anand",
+  "tier": 2
+ },
+ {
+  "name": "Nirma Institute of Technology",
+  "aliases": [
+   "Nirma Institute"
+  ],
+  "state": "Gujarat",
+  "city": "Ahmedabad",
+  "tier": 2
+ },
+ {
+  "name": "Parul University",
+  "aliases": [
+   "Parul"
+  ],
+  "state": "Gujarat",
+  "city": "Vadodara",
+  "tier": 2
+ },
+ {
+  "name": "Marwadi University",
+  "aliases": [
+   "Marwadi"
+  ],
+  "state": "Gujarat",
+  "city": "Rajkot",
+  "tier": 2
+ },
+ {
+  "name": "Thapar Institute of Engineering and Technology",
+  "aliases": [
+   "Thapar University",
+   "TIET",
+   "Thapar"
+  ],
+  "state": "Punjab",
+  "city": "Patiala",
+  "tier": 1
+ },
+ {
+  "name": "Lovely Professional University",
+  "aliases": [
+   "LPU"
+  ],
+  "state": "Punjab",
+  "city": "Phagwara",
+  "tier": 1
+ },
+ {
+  "name": "Chandigarh University",
+  "aliases": [
+   "CU Chandigarh",
+   "CU Mohali"
+  ],
+  "state": "Punjab",
+  "city": "Mohali",
+  "tier": 1
+ },
+ {
+  "name": "Punjab Engineering College",
+  "aliases": [
+   "PEC Chandigarh",
+   "PEC"
+  ],
+  "state": "Chandigarh",
+  "city": "Chandigarh",
+  "tier": 2
+ },
+ {
+  "name": "Guru Nanak Dev Engineering College, Ludhiana",
+  "aliases": [
+   "GNDEC Ludhiana"
+  ],
+  "state": "Punjab",
+  "city": "Ludhiana",
+  "tier": 2
+ },
+ {
+  "name": "Panjab University",
+  "aliases": [
+   "Panjab University Chandigarh",
+   "PU Chandigarh"
+  ],
+  "state": "Chandigarh",
+  "city": "Chandigarh",
+  "tier": 2
+ },
+ {
+  "name": "Amity University, Noida",
+  "aliases": [
+   "Amity Noida",
+   "Amity University"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Noida",
+  "tier": 1
+ },
+ {
+  "name": "Galgotias University",
+  "aliases": [
+   "Galgotias",
+   "Galgotias College of Engineering and Technology",
+   "GCET"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Greater Noida",
+  "tier": 2
+ },
+ {
+  "name": "Bennett University",
+  "aliases": [
+   "Bennett"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Greater Noida",
+  "tier": 2
+ },
+ {
+  "name": "Shiv Nadar University",
+  "aliases": [
+   "Shiv Nadar",
+   "SNU"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Greater Noida",
+  "tier": 2
+ },
+ {
+  "name": "Sharda University",
+  "aliases": [
+   "Sharda"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Greater Noida",
+  "tier": 2
+ },
+ {
+  "name": "ABES Engineering College",
+  "aliases": [
+   "ABES Ghaziabad",
+   "ABESEC"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Ghaziabad",
+  "tier": 2
+ },
+ {
+  "name": "KIET Group of Institutions",
+  "aliases": [
+   "KIET Ghaziabad"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Ghaziabad",
+  "tier": 2
+ },
+ {
+  "name": "JSS Academy of Technical Education, Noida",
+  "aliases": [
+   "JSS Noida",
+   "JSSATE Noida"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Noida",
+  "tier": 2
+ },
+ {
+  "name": "Ajay Kumar Garg Engineering College",
+  "aliases": [
+   "AKGEC Ghaziabad",
+   "AKGEC"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Ghaziabad",
+  "tier": 2
+ },
+ {
+  "name": "G.L. Bajaj Institute of Technology and Management",
+  "aliases": [
+   "GL Bajaj",
+   "GLBITM"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Greater Noida",
+  "tier": 2
+ },
+ {
+  "name": "GLA University",
+  "aliases": [
+   "GLA Mathura"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Mathura",
+  "tier": 2
+ },
+ {
+  "name": "Institute of Engineering and Technology, Lucknow",
+  "aliases": [
+   "IET Lucknow"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Lucknow",
+  "tier": 2
+ },
+ {
+  "name": "Harcourt Butler Technical University",
+  "aliases": [
+   "HBTU Kanpur",
+   "HBTI"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Kanpur",
+  "tier": 2
+ },
+ {
+  "name": "Madan Mohan Malaviya University of Technology",
+  "aliases": [
+   "MMMUT Gorakhpur",
+   "MMMUT"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Gorakhpur",
+  "tier": 2
+ },
+ {
+  "name": "Dr. A.P.J. Abdul Kalam Technical University",
+  "aliases": [
+   "AKTU",
+   "UPTU"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Lucknow",
+  "tier": 2
+ },
+ {
+  "name": "Integral University",
+  "aliases": [
+   "Integral Lucknow"
+  ],
+  "state": "Uttar Pradesh",
+  "city": "Lucknow",
+  "tier": 2
+ },
+ {
+  "name": "Kalinga Institute of Industrial Technology",
+  "aliases": [
+   "KIIT",
+   "KIIT Bhubaneswar"
+  ],
+  "state": "Odisha",
+  "city": "Bhubaneswar",
+  "tier": 1
+ },
+ {
+  "name": "Siksha O Anusandhan University",
+  "aliases": [
+   "SOA University",
+   "ITER Bhubaneswar"
+  ],
+  "state": "Odisha",
+  "city": "Bhubaneswar",
+  "tier": 2
+ },
+ {
+  "name": "College of Engineering and Technology, Bhubaneswar",
+  "aliases": [
+   "CET Bhubaneswar",
+   "OUTR"
+  ],
+  "state": "Odisha",
+  "city": "Bhubaneswar",
+  "tier": 2
+ },
+ {
+  "name": "Jawaharlal Nehru Technological University Hyderabad",
+  "aliases": [
+   "JNTUH",
+   "JNTU Hyderabad"
+  ],
+  "state": "Telangana",
+  "city": "Hyderabad",
+  "tier": 2
+ },
+ {
+  "name": "Chaitanya Bharathi Institute of Technology",
+  "aliases": [
+   "CBIT Hyderabad",
+   "CBIT"
+  ],
+  "state": "Telangana",
+  "city": "Hyderabad",
+  "tier": 2
+ },
+ {
+  "name": "Vasavi College of Engineering",
+  "aliases": [
+   "Vasavi Hyderabad"
+  ],
+  "state": "Telangana",
+  "city": "Hyderabad",
+  "tier": 2
+ },
+ {
+  "name": "VNR Vignana Jyothi Institute of Engineering and Technology",
+  "aliases": [
+   "VNRVJIET",
+   "VNR VJIET"
+  ],
+  "state": "Telangana",
+  "city": "Hyderabad",
+  "tier": 2
+ },
+ {
+  "name": "Gokaraju Rangaraju Institute of Engineering and Technology",
+  "aliases": [
+   "GRIET Hyderabad",
+   "GRIET"
+  ],
+  "state": "Telangana",
+  "city": "Hyderabad",
+  "tier": 2
+ },
+ {
+  "name": "Osmania University",
+  "aliases": [
+   "OU Hyderabad",
+   "University College of Engineering Osmania"
+  ],
+  "state": "Telangana",
+  "city": "Hyderabad",
+  "tier": 2
+ },
+ {
+  "name": "Jawaharlal Nehru Technological University Kakinada",
+  "aliases": [
+   "JNTUK",
+   "JNTU Kakinada"
+  ],
+  "state": "Andhra Pradesh",
+  "city": "Kakinada",
+  "tier": 2
+ },
+ {
+  "name": "Jawaharlal Nehru Technological University Anantapur",
+  "aliases": [
+   "JNTUA",
+   "JNTU Anantapur"
+  ],
+  "state": "Andhra Pradesh",
+  "city": "Anantapur",
+  "tier": 2
+ },
+ {
+  "name": "Andhra University",
+  "aliases": [
+   "AU Visakhapatnam",
+   "Andhra University College of Engineering"
+  ],
+  "state": "Andhra Pradesh",
+  "city": "Visakhapatnam",
+  "tier": 2
+ },
+ {
+  "name": "Gitam University",
+  "aliases": [
+   "GITAM",
+   "GITAM Visakhapatnam"
+  ],
+  "state": "Andhra Pradesh",
+  "city": "Visakhapatnam",
+  "tier": 2
+ },
+ {
+  "name": "Rajiv Gandhi University of Knowledge Technologies",
+  "aliases": [
+   "RGUKT",
+   "IIIT Basar",
+   "RGUKT Nuzvid"
+  ],
+  "state": "Andhra Pradesh",
+  "city": "Nuzvid",
+  "tier": 2
+ },
+ {
+  "name": "College of Engineering Trivandrum",
+  "aliases": [
+   "CET Trivandrum",
+   "CET"
+  ],
+  "state": "Kerala",
+  "city": "Thiruvananthapuram",
+  "tier": 2
+ },
+ {
+  "name": "Government Engineering College, Thrissur",
+  "aliases": [
+   "GEC Thrissur"
+  ],
+  "state": "Kerala",
+  "city": "Thrissur",
+  "tier": 2
+ },
+ {
+  "name": "TKM College of Engineering",
+  "aliases": [
+   "TKM Kollam"
+  ],
+  "state": "Kerala",
+  "city": "Kollam",
+  "tier": 2
+ },
+ {
+  "name": "Cochin University of Science and Technology",
+  "aliases": [
+   "CUSAT"
+  ],
+  "state": "Kerala",
+  "city": "Kochi",
+  "tier": 2
+ },
+ {
+  "name": "Model Engineering College, Thrikkakara",
+  "aliases": [
+   "MEC Thrikkakara"
+  ],
+  "state": "Kerala",
+  "city": "Kochi",
+  "tier": 2
+ },
+ {
+  "name": "Rajagiri School of Engineering and Technology",
+  "aliases": [
+   "RSET Kochi"
+  ],
+  "state": "Kerala",
+  "city": "Kochi",
+  "tier": 2
+ },
+ {
+  "name": "Maharaja Sayajirao University of Baroda",
+  "aliases": [
+   "MSU Baroda",
+   "MS University"
+  ],
+  "state": "Gujarat",
+  "city": "Vadodara",
+  "tier": 2
+ },
+ {
+  "name": "Malaviya Regional Engineering College",
+  "aliases": [
+   "MREC Jaipur"
+  ],
+  "state": "Rajasthan",
+  "city": "Jaipur",
+  "tier": 2
+ },
+ {
+  "name": "JECRC University",
+  "aliases": [
+   "JECRC Jaipur",
+   "JECRC"
+  ],
+  "state": "Rajasthan",
+  "city": "Jaipur",
+  "tier": 2
+ },
+ {
+  "name": "Poornima College of Engineering",
+  "aliases": [
+   "Poornima Jaipur"
+  ],
+  "state": "Rajasthan",
+  "city": "Jaipur",
+  "tier": 2
+ },
+ {
+  "name": "Swami Keshvanand Institute of Technology",
+  "aliases": [
+   "SKIT Jaipur"
+  ],
+  "state": "Rajasthan",
+  "city": "Jaipur",
+  "tier": 2
+ },
+ {
+  "name": "MBM University",
+  "aliases": [
+   "MBM Engineering College",
+   "MBM Jodhpur"
+  ],
+  "state": "Rajasthan",
+  "city": "Jodhpur",
+  "tier": 2
+ },
+ {
+  "name": "Amity University Rajasthan",
+  "aliases": [
+   "Amity Jaipur"
+  ],
+  "state": "Rajasthan",
+  "city": "Jaipur",
+  "tier": 2
+ },
+ {
+  "name": "University of Petroleum and Energy Studies",
+  "aliases": [
+   "UPES Dehradun",
+   "UPES"
+  ],
+  "state": "Uttarakhand",
+  "city": "Dehradun",
+  "tier": 2
+ },
+ {
+  "name": "Graphic Era University",
+  "aliases": [
+   "Graphic Era Dehradun",
+   "GEU"
+  ],
+  "state": "Uttarakhand",
+  "city": "Dehradun",
+  "tier": 2
+ },
+ {
+  "name": "Birla Institute of Technology, Patna",
+  "aliases": [
+   "BIT Patna"
+  ],
+  "state": "Bihar",
+  "city": "Patna",
+  "tier": 2
+ },
+ {
+  "name": "Chandigarh Group of Colleges, Landran",
+  "aliases": [
+   "CGC Landran"
+  ],
+  "state": "Punjab",
+  "city": "Mohali",
+  "tier": 2
+ },
+ {
+  "name": "Ashoka University",
+  "aliases": [
+   "Ashoka"
+  ],
+  "state": "Haryana",
+  "city": "Sonipat",
+  "tier": 2
+ },
+ {
+  "name": "National Institute of Fashion Technology",
+  "aliases": [
+   "NIFT"
+  ],
+  "state": "Delhi",
+  "city": "New Delhi",
+  "tier": 2
+ },
+ {
+  "name": "Symbiosis Institute of Technology",
+  "aliases": [
+   "SIT Pune",
+   "Symbiosis Pune"
+  ],
+  "state": "Maharashtra",
+  "city": "Pune",
+  "tier": 2
+ },
+ {
+  "name": "Indian Institute of Management Bangalore",
+  "aliases": [
+   "IIM Bangalore",
+   "IIMB"
+  ],
+  "state": "Karnataka",
+  "city": "Bengaluru",
+  "tier": 2
+ },
+ {
+  "name": "Indian Institute of Management Ahmedabad",
+  "aliases": [
+   "IIM Ahmedabad",
+   "IIMA"
+  ],
+  "state": "Gujarat",
+  "city": "Ahmedabad",
+  "tier": 2
+ },
+ {
+  "name": "Indian Institute of Management Calcutta",
+  "aliases": [
+   "IIM Calcutta",
+   "IIMC"
+  ],
+  "state": "West Bengal",
+  "city": "Kolkata",
+  "tier": 2
+ }
+]

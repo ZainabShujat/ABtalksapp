@@ -36,6 +36,7 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 const studentFields = z.object({
   userType: z.literal("STUDENT"),
   college: z.string().min(1, "College is required").max(200),
+  collegeId: z.union([z.literal(""), z.string().cuid()]).default(""),
   graduationYear: z.number().int().min(2020).max(2035),
 });
 

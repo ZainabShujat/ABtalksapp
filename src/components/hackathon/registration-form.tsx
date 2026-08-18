@@ -10,6 +10,7 @@ import {
   lookupHackathonTeamAction,
   submitHackathonRegistrationAction,
 } from "@/app/actions/hackathon-actions";
+import { CollegeCombobox } from "@/components/shared/college-combobox";
 import { SuccessPanel } from "@/components/hackathon/success-panel";
 import { Button } from "@/components/ui/button";
 import {
@@ -421,7 +422,10 @@ export function RegistrationForm({
                 <FormItem>
                   <FormLabel>College</FormLabel>
                   <FormControl>
-                    <Input autoComplete="organization" {...field} />
+                    <CollegeCombobox
+                      value={field.value}
+                      onChange={(name) => field.onChange(name)}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

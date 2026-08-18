@@ -55,6 +55,10 @@ export async function completeRegistrationAction(formData: FormData) {
   const college =
     typeof collegeRaw === "string" ? collegeRaw.trim() : collegeRaw;
 
+  const collegeIdRaw = formData.get("collegeId");
+  const collegeId =
+    typeof collegeIdRaw === "string" ? collegeIdRaw.trim() : collegeIdRaw;
+
   const organizationRaw = formData.get("organization");
   const organization =
     typeof organizationRaw === "string"
@@ -77,6 +81,7 @@ export async function completeRegistrationAction(formData: FormData) {
   const parsed = registerPayloadSchema.safeParse({
     fullName,
     college,
+    collegeId,
     graduationYear: Number.isFinite(graduationYear) ? graduationYear : undefined,
     userType,
     organization,

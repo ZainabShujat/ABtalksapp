@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CollegeCombobox } from "@/components/shared/college-combobox";
 import { PhoneVerifyField } from "@/components/shared/phone-verify-field";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
@@ -45,6 +46,7 @@ type RegistrationFormValues = {
   userType: "STUDENT" | "PROFESSIONAL";
   fullName: string;
   college: string;
+  collegeId: string;
   graduationYear: number;
   organization: string;
   role: string;
@@ -140,6 +142,7 @@ export function RegistrationForm({
       userType: "STUDENT",
       fullName: initialName,
       college: "",
+      collegeId: "",
       graduationYear: 2026,
       organization: "",
       role: "",
@@ -184,9 +187,11 @@ export function RegistrationForm({
       setValue("organization", "");
       setValue("role", "");
       setValue("yearsExperience", undefined);
+      setValue("collegeId", "");
       clearErrors(["college", "graduationYear"]);
     } else {
       setValue("college", "");
+      setValue("collegeId", "");
       setValue("graduationYear", 2026);
       clearErrors(["organization", "role", "yearsExperience"]);
     }
@@ -246,6 +251,7 @@ export function RegistrationForm({
 
       if (values.userType === "STUDENT") {
         fd.append("college", values.college);
+        fd.append("collegeId", values.collegeId);
         fd.append("graduationYear", String(values.graduationYear));
       } else {
         fd.append("organization", values.organization);
@@ -375,11 +381,21 @@ export function RegistrationForm({
           >
             <div className="space-y-2">
               <Label htmlFor="college">College</Label>
-              <Input
-                id="college"
-                placeholder="e.g. IIT Delhi"
-                {...register("college")}
-                aria-invalid={!!errors.college}
+              <Controller
+                name="college"
+                control={control}
+                render={({ field }) => (
+                  <CollegeCombobox
+                    id="college"
+                    value={field.value}
+                    onChange={(name, collegeId) => {
+                      field.onChange(name);
+                      setValue("collegeId", collegeId ?? "");
+                    }}
+                    placeholder="e.g. IIT Delhi"
+                    aria-invalid={!!errors.college}
+                  />
+                )}
               />
               {errors.college ? (
                 <p className="text-sm text-destructive">

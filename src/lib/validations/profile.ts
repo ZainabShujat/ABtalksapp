@@ -40,6 +40,7 @@ export const updateStudentProfileSchema = z.object({
   userType: z.literal("STUDENT"),
   ...profileCommonFields,
   college: z.string().trim().min(1, "College is required").max(200),
+  collegeId: z.union([z.literal(""), z.string().cuid()]).default(""),
   graduationYear: z.coerce.number().int().min(2020).max(2035),
 });
 

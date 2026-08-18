@@ -15,6 +15,7 @@ export async function updateProfile(
     userType: UserType;
     fullName: string;
     college?: string;
+    collegeId?: string;
     graduationYear?: unknown;
     organization?: string;
     role?: string;
@@ -46,6 +47,7 @@ export async function updateProfile(
       userType: "STUDENT",
       fullName: input.fullName,
       college: input.college ?? "",
+      collegeId: input.collegeId ?? "",
       graduationYear: input.graduationYear,
       skills: skillsArr,
       linkedinUrl: input.linkedinUrl ?? "",
@@ -71,6 +73,7 @@ export async function updateProfile(
       data: {
         fullName: data.fullName,
         college: data.college,
+        collegeId: data.collegeId || null,
         graduationYear: data.graduationYear,
         skills: data.skills,
         linkedinUrl: data.linkedinUrl ?? null,

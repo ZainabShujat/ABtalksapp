@@ -48,6 +48,10 @@ export async function updateProfileAction(
       profile.userType === UserType.STUDENT
         ? String(formData.get("college") ?? "")
         : undefined,
+    collegeId:
+      profile.userType === UserType.STUDENT
+        ? String(formData.get("collegeId") ?? "")
+        : undefined,
     graduationYear:
       profile.userType === UserType.STUDENT
         ? formData.get("graduationYear")
