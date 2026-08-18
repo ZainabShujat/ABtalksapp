@@ -28,6 +28,7 @@ import {
   resolveCohortEligibility,
 } from "@/features/interview/session";
 import { createInitialState, getCurrentQuestion } from "@/features/interview/state";
+import type { AgentAction } from "@/features/interview/agent";
 import type {
   CohortEligibility,
   InterviewScores,
@@ -182,8 +183,13 @@ export async function resumeCohortInterview(
 /* ----------------------------------------------------------------- answer */
 
 export type AnswerTurnData = {
-  /** True when the same question stays open with a follow-up probe. */
+  /** True whenever the same question stays open — follow-up, redirect or repeat. */
   isFollowUp: boolean;
+  /**
+   * What the agent actually did. Sent so the voice layer can choose delivery
+   * (a redirect should sound firmer than a follow-up) without re-deriving it.
+   */
+  action: AgentAction;
   prompt: string | null;
   question: ClientQuestion | null;
   finished: boolean;
@@ -213,6 +219,7 @@ export async function recordCohortAnswer(
     attempt.state,
     questionId,
     answerText,
+    { interviewId, blueprint: attempt.blueprint },
   );
   if (!turn.ok) return turn;
 
@@ -221,7 +228,11 @@ export async function recordCohortAnswer(
   return {
     ok: true,
     data: {
-      isFollowUp: turn.data.action === "FOLLOW_UP",
+      isFollowUp:
+        turn.data.action === "FOLLOW_UP" ||
+        turn.data.action === "REDIRECT" ||
+        turn.data.action === "REPEAT",
+      action: turn.data.action,
       prompt: turn.data.nextPrompt,
       question: turn.data.nextQuestion
         ? toClientQuestion(turn.data.nextQuestion, attempt.blueprint)

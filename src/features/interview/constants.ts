@@ -36,6 +36,24 @@ export const STUCK_ANSWERS_BEFORE_EARLY_END = 3;
  */
 export const MAX_FOLLOW_UPS_PER_QUESTION = 2;
 
+/**
+ * Redirects allowed on one question before the interview simply moves on.
+ *
+ * The interviewer must never be argued into answering off-topic questions, so
+ * this is not a "give up and comply" limit — a redirected candidate keeps the
+ * same question on the floor and loses no follow-up budget. The cap exists only
+ * so a candidate who keeps testing the bot cannot hold a milestone interview
+ * open indefinitely. Set above two so the "asked twice" case still redirects.
+ */
+export const MAX_REDIRECTS_PER_QUESTION = 3;
+
+/**
+ * Times a question may be repeated on request before a repeat is treated as a
+ * non-answer. Repeats are free (no evidence, no budget) and legitimate on a
+ * voice interview where audio can genuinely drop.
+ */
+export const MAX_REPEATS_PER_QUESTION = 2;
+
 /* ------------------------- general interviewer (not V1 — see docs/plans/066) */
 
 /** Completed challenge days required to unlock a first attempt. */

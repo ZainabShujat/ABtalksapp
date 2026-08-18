@@ -88,6 +88,16 @@ function blankAnswerDecision(answerText: string): TurnDecision {
   };
 }
 
+/**
+ * SUPERSEDED by the LangGraph agent (`features/interview/agent`), which owns
+ * per-answer analysis behind the `InterviewLLM` interface and adds REDIRECT /
+ * REPEAT plus schema validation and a deterministic fallback.
+ *
+ * Kept because it is the reference implementation of the evidence prompt and is
+ * still the only evaluator that works with no provider wiring at all. Nothing
+ * in the live cohort flow calls it. Delete it only together with the general
+ * interviewer (docs/plans/066).
+ */
 export async function evaluateAnswer(
   question: PlannedQuestion,
   answerText: string,

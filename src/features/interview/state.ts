@@ -22,6 +22,8 @@ export function createInitialState(): InterviewState {
     currentQuestionIndex: 0,
     followUpsAsked: 0,
     consecutiveStuckAnswers: 0,
+    redirectsAsked: 0,
+    repeatsAsked: 0,
     transcript: [],
     evidenceByQuestionId: {},
     startedAtMs: null,
@@ -123,8 +125,16 @@ export function advanceTurn(
     };
   }
 
+  // Per-question counters all reset together: the budgets belong to the
+  // question, not to the interview.
   return {
-    state: { ...next, currentQuestionIndex: nextIndex, followUpsAsked: 0 },
+    state: {
+      ...next,
+      currentQuestionIndex: nextIndex,
+      followUpsAsked: 0,
+      redirectsAsked: 0,
+      repeatsAsked: 0,
+    },
     action: "NEXT_QUESTION",
   };
 }

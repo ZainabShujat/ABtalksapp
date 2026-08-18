@@ -236,6 +236,14 @@ export type InterviewState = {
   currentQuestionIndex: number;
   followUpsAsked: number;
   consecutiveStuckAnswers: number;
+  /**
+   * Off-topic redirects issued on the question currently open. Optional because
+   * attempts opened before the LangGraph agent shipped have no such field; read
+   * it as `?? 0`.
+   */
+  redirectsAsked?: number;
+  /** Repeat requests served on the question currently open. See above. */
+  repeatsAsked?: number;
   transcript: TranscriptLine[];
   evidenceByQuestionId: Record<string, AnswerEvidence>;
   startedAtMs: number | null;

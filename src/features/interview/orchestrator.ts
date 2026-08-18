@@ -1,36 +1,44 @@
 import "server-only";
+import type { InterviewBlueprintKey } from "@/features/interview/cohort/blueprint";
 import { COHORT_INTERVIEW_MIN_DURATION_SEC } from "@/features/interview/constants";
-import { evaluateAnswer, judgeInterview } from "@/features/interview/evaluation";
-import { mergeEvidence } from "@/features/interview/evidence";
+import { judgeInterview } from "@/features/interview/evaluation";
 import { aggregateScores } from "@/features/interview/scoring";
-import {
-  advanceTurn,
-  appendLine,
-  getCurrentQuestion,
-  startInterview,
-} from "@/features/interview/state";
+import { appendLine, startInterview } from "@/features/interview/state";
+import { runInterviewTurn } from "@/features/interview/agent";
+import { resolveInterviewLLM } from "@/features/interview/agent/llm/registry";
+import type { AgentAction } from "@/features/interview/agent";
 import type {
   InterviewPlan,
   InterviewScores,
   InterviewState,
   PlannedQuestion,
-  TurnAction,
 } from "@/features/interview/types";
 
 /**
  * The live interview loop: begin → (submitAnswer)* → finalize.
  *
- * Thin glue by design. Every rule that decides what happens next lives in
- * `state.ts` (routing/budgets) or `evidence.ts` (evidence arithmetic), both pure
- * and independently tested. This file only sequences them around the LLM calls.
+ * Thin glue by design. Since the LangGraph agent landed, `submitAnswer` no
+ * longer contains any turn logic at all — it resolves the configured provider
+ * and hands the turn to the graph (`features/interview/agent`), which owns
+ * analysis, routing and state transitions. The rules themselves still live
+ * where they always did: `state.ts` (budgets/termination), `agent/policy.ts`
+ * (action policy) and `evidence.ts` (evidence arithmetic), all pure and
+ * independently tested.
+ *
+ * `beginInterview` and `finalizeInterview` stay here: opening and closing an
+ * attempt are not conversation turns and never enter the graph.
  */
 
 export type TurnResult = {
   state: InterviewState;
-  action: TurnAction;
+  /**
+   * Widened from the persisted `TurnAction` to the agent's action set: REDIRECT
+   * and REPEAT are real outcomes of a turn that leave the question on the floor.
+   */
+  action: AgentAction;
   /** What the interviewer says next; null once the interview is over. */
   nextPrompt: string | null;
-  /** The question now on the floor — unchanged when action is FOLLOW_UP. */
+  /** The question now on the floor — unchanged unless the turn moved on. */
   nextQuestion: PlannedQuestion | null;
   finished: boolean;
 };
@@ -38,9 +46,6 @@ export type TurnResult = {
 export type TurnOutcome =
   | { ok: true; data: TurnResult }
   | { ok: false; message: string };
-
-const CLOSING_LINE =
-  "That's everything I wanted to cover. Thanks for walking me through your work.";
 
 /** Opens the interview and puts the first question on the floor. */
 export function beginInterview(
@@ -70,117 +75,53 @@ export function beginInterview(
 }
 
 /**
- * Processes one candidate answer. Exactly one LLM call per invocation.
+ * Processes one candidate answer by running it through the LangGraph agent.
+ *
+ * Everything this function once did inline — evaluate, route under budget,
+ * merge evidence, advance or hold the question, draft the interviewer's next
+ * line — now happens as explicit graph nodes. What is left here is the two
+ * things the graph should not own: choosing the provider, and translating the
+ * agent's result into the shape the service layer already speaks.
+ *
+ * Exactly one LLM call per invocation, unchanged.
  */
 export async function submitAnswer(
   plan: InterviewPlan,
   state: InterviewState,
   questionId: string,
   answerText: string,
+  context?: { interviewId: string; blueprint: InterviewBlueprintKey },
 ): Promise<TurnOutcome> {
-  if (state.status !== "IN_PROGRESS") {
-    return { ok: false, message: "This interview is not in progress." };
-  }
+  const blueprint =
+    context?.blueprint ??
+    (plan.contextSummary.kind === "COHORT"
+      ? plan.contextSummary.blueprint
+      : "DAY_31");
 
-  const current = getCurrentQuestion(plan, state);
-  if (!current) {
-    return { ok: false, message: "No question is currently open." };
-  }
-
-  // Answers must land against the question actually on the floor. A mismatch
-  // means a stale or replayed client, not a valid turn.
-  if (current.id !== questionId) {
-    return { ok: false, message: "That answer is for a different question." };
-  }
-
-  const priorEvidence = state.evidenceByQuestionId[questionId];
-  const withAnswer = appendLine(state, "candidate", answerText, questionId);
-
-  const decision = await evaluateAnswer(
-    current,
-    answerText,
-    priorEvidence ?? null,
-  );
-
-  // Routing uses the RAW evidence for this answer: a candidate who recovers on
-  // a follow-up must not stay flagged stuck by the merged history.
-  const advanced = advanceTurn(
+  const turn = await runInterviewTurn(resolveInterviewLLM(), {
+    interviewId: context?.interviewId ?? "unknown",
+    blueprint,
     plan,
-    withAnswer,
+    state,
     questionId,
-    decision.evidence,
-    decision.action,
-  );
+    answerText,
+  });
 
-  // Storage uses the MERGED evidence so credit earned earlier in the question
-  // survives the follow-up.
-  let nextState: InterviewState = priorEvidence
-    ? {
-        ...advanced.state,
-        evidenceByQuestionId: {
-          ...advanced.state.evidenceByQuestionId,
-          [questionId]: mergeEvidence(priorEvidence, decision.evidence),
-        },
-      }
-    : advanced.state;
+  if (!turn.ok) return turn;
 
-  if (advanced.action === "FOLLOW_UP" && decision.followUpText) {
-    nextState = appendLine(
-      nextState,
-      "interviewer",
-      decision.followUpText,
-      questionId,
-    );
-    return {
-      ok: true,
-      data: {
-        state: nextState,
-        action: "FOLLOW_UP",
-        nextPrompt: decision.followUpText,
-        nextQuestion: current,
-        finished: false,
-      },
-    };
-  }
+  const { data } = turn;
+  const nextQuestion = data.questionId
+    ? (plan.questions.find((q) => q.id === data.questionId) ?? null)
+    : null;
 
-  if (advanced.action === "END_INTERVIEW") {
-    nextState = appendLine(nextState, "interviewer", CLOSING_LINE, null);
-    return {
-      ok: true,
-      data: {
-        state: nextState,
-        action: "END_INTERVIEW",
-        nextPrompt: CLOSING_LINE,
-        nextQuestion: null,
-        finished: true,
-      },
-    };
-  }
-
-  const next = getCurrentQuestion(plan, nextState);
-  if (!next) {
-    nextState = appendLine(nextState, "interviewer", CLOSING_LINE, null);
-    return {
-      ok: true,
-      data: {
-        state: { ...nextState, status: "COMPLETED" },
-        action: "END_INTERVIEW",
-        nextPrompt: CLOSING_LINE,
-        nextQuestion: null,
-        finished: true,
-      },
-    };
-  }
-
-  nextState = appendLine(nextState, "interviewer", next.text, next.id);
   return {
     ok: true,
     data: {
-      state: nextState,
-      action: "NEXT_QUESTION",
-      nextPrompt: next.text,
-      nextQuestion: next,
-      finished: false,
+      state: data.state,
+      action: data.action,
+      nextPrompt: data.prompt,
+      nextQuestion,
+      finished: data.finished,
     },
   };
 }
