@@ -47,3 +47,5 @@ next-env.d.ts
 /src/generated/prisma
 
 .cache/
+# Local reference clones of the standalone agent repos (own .git dirs, ~240MB)
+agent packages/
