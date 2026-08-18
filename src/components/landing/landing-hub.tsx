@@ -91,6 +91,24 @@ const PROGRAMS: {
 ];
 
 const FAQS = [
+  {
+    q: "Does it cost anything to join a cohort?",
+    a: "Taking part is free for candidates. Companies pay us when they hire, so nobody is ever charged for the chance to be seen.",
+  },
+  {
+    q: "What exactly do companies see before I consent?",
+    a: "The work and the scores, with your name, contact details and employer hidden. They can ask for access; you decide whether to grant it, company by company.",
+  },
+  {
+    q: "Do I need to be a student or a developer?",
+    a: "No. Cohorts run across engineering, design, data and product. Some people are in their first year of college, some are ten years into a career and want a different door.",
+  },
+  {
+    q: "We have a niche requirement. Can you build a cohort for it?",
+    a: "Yes — that is the normal way we work with companies. Send us the role, the stack and the timeline, and we design the challenge and recruit the cohort around it.",
+  },
+];
+
 const CLAUDE_TRACK = {
   key: "claude" as const,
   accent: "amber" as const,

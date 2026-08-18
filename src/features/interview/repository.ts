@@ -2,7 +2,8 @@ import "server-only";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import type { PriorAttempt } from "@/features/interview/eligibility";
+import type { InterviewBlueprintKey } from "@/features/interview/cohort/blueprint";
+import { scopeDaysFor } from "@/features/interview/cohort/planner";
 import type {
   InterviewPlan,
   InterviewScores,
@@ -11,103 +12,121 @@ import type {
 } from "@/features/interview/types";
 
 /**
- * All GeneralInterview database access. Nothing else in the module touches
- * Prisma for interview rows, so these invariants hold in one place:
+ * All `GeneralInterview` database access. Nothing else in the module touches
+ * Prisma for interview rows, so these invariants hold in one place.
  *
- *   - `consumedSubmissionIds` is written ONLY on the transition to COMPLETED
- *   - it is copied from the row's own `eligibleSubmissionIds`, never from input
- *   - `attemptNumber` is assigned ONLY on that same transition, atomically
- *   - ABANDONED / INVALID touch none of the above, so they cannot consume
- *     challenge progress
+ * Rewritten for the post-Day-1 schema. The previous version implemented the
+ * 60-day challenge's submission-consumption retake model — `attemptNumber`,
+ * `eligibleSubmissionIds`, `consumedSubmissionIds`, and a per-user advisory
+ * lock to serialize attempt numbering. All four columns are gone, and so is the
+ * mechanism: V1 is one completed interview per member per blueprint, and the
+ * partial unique index
+ *
+ *   GeneralInterview_one_completed_per_blueprint
+ *     ON (memberId, blueprint) WHERE status = 'COMPLETED'
+ *
+ * is the source of truth for it. That is strictly stronger than the old
+ * application-level lock — it holds even against a request that bypasses this
+ * module entirely, and it is why ABANDONED and INVALID attempts consume nothing
+ * and may repeat freely.
+ *
+ * Every function is scoped by `memberId`. Ownership is part of the WHERE clause
+ * rather than a follow-up check, so another member's interview id is
+ * indistinguishable from a nonexistent one.
  */
 
-/**
- * Prior attempts for the retake rule. This is the production source of
- * `PriorAttempt[]` — callers never assemble it by hand.
- */
-export async function loadPriorAttempts(
-  userId: string,
-): Promise<PriorAttempt[]> {
-  const rows = await prisma.generalInterview.findMany({
-    where: { userId },
-    select: {
-      attemptNumber: true,
-      status: true,
-      consumedSubmissionIds: true,
-      startedAt: true,
-    },
-    orderBy: { createdAt: "asc" },
-  });
-
-  return rows.map((row) => ({
-    attemptNumber: row.attemptNumber ?? 0,
-    status: row.status as InterviewStatus,
-    consumedSubmissionIds: row.consumedSubmissionIds,
-    startedAt: row.startedAt,
-  }));
-}
+/** Postgres unique-violation. Raised by the partial index on second completion. */
+const UNIQUE_VIOLATION = "P2002";
 
 export type LoadedAttempt = {
   id: string;
+  blueprint: InterviewBlueprintKey;
   plan: InterviewPlan;
   state: InterviewState;
   startedAt: Date | null;
 };
 
 /**
- * Loads an in-progress attempt, scoped to its owner. Ownership is part of the
- * WHERE clause rather than a follow-up check, so another user's interview id is
- * indistinguishable from a nonexistent one.
+ * Loads an in-progress attempt for a member. Returns null when the row is
+ * missing, owned by someone else, no longer IN_PROGRESS, or has no state —
+ * every one of which means "not resumable" to the caller.
  */
-export async function loadActiveAttemptForUser(
+export async function loadActiveAttempt(
   interviewId: string,
-  userId: string,
+  memberId: string,
 ): Promise<LoadedAttempt | null> {
   const row = await prisma.generalInterview.findFirst({
-    where: { id: interviewId, userId, status: "IN_PROGRESS" },
-    select: { id: true, plan: true, state: true, startedAt: true },
+    where: { id: interviewId, memberId, status: "IN_PROGRESS" },
+    select: {
+      id: true,
+      blueprint: true,
+      plan: true,
+      state: true,
+      startedAt: true,
+    },
   });
 
   if (!row || !row.state) return null;
 
   return {
     id: row.id,
+    blueprint: row.blueprint as InterviewBlueprintKey,
     plan: row.plan as unknown as InterviewPlan,
     state: row.state as unknown as InterviewState,
     startedAt: row.startedAt,
   };
 }
 
+/** The member's open attempt for one blueprint, if any. */
 export async function findActiveAttemptId(
-  userId: string,
+  memberId: string,
+  blueprint: InterviewBlueprintKey,
 ): Promise<string | null> {
   const row = await prisma.generalInterview.findFirst({
-    where: { userId, status: "IN_PROGRESS" },
+    where: { memberId, blueprint, status: "IN_PROGRESS" },
     select: { id: true },
     orderBy: { createdAt: "desc" },
   });
   return row?.id ?? null;
 }
 
+/** True when this member already holds a completed interview for a blueprint. */
+export async function hasCompletedAttempt(
+  memberId: string,
+  blueprint: InterviewBlueprintKey,
+): Promise<boolean> {
+  const row = await prisma.generalInterview.findFirst({
+    where: { memberId, blueprint, status: "COMPLETED" },
+    select: { id: true },
+  });
+  return row !== null;
+}
+
 /**
- * Opens an attempt. `attemptNumber` stays null until completion; the entitled
- * submissions are frozen here, server-side.
+ * Opens an attempt.
+ *
+ * `plan` and `scopeDays` are written from server-derived values only. The plan
+ * is frozen here so that changing the question bank later cannot retroactively
+ * alter an interview already in flight, and `scopeDays` records which
+ * curriculum window the attempt covered for provenance — it is never read back
+ * to decide eligibility.
  */
 export async function createAttempt(
-  userId: string,
+  memberId: string,
+  blueprint: InterviewBlueprintKey,
   plan: InterviewPlan,
   state: InterviewState,
-  eligibleSubmissionIds: string[],
 ): Promise<{ id: string }> {
   return prisma.generalInterview.create({
     data: {
-      userId,
+      memberId,
+      blueprint,
       status: "IN_PROGRESS",
       plan: plan as unknown as Prisma.InputJsonValue,
       state: state as unknown as Prisma.InputJsonValue,
       transcript: state.transcript as unknown as Prisma.InputJsonValue,
       evidence: state.evidenceByQuestionId as unknown as Prisma.InputJsonValue,
-      eligibleSubmissionIds,
+      scopeDays: scopeDaysFor(blueprint),
       startedAt: new Date(),
     },
     select: { id: true },
@@ -117,13 +136,18 @@ export async function createAttempt(
 /**
  * Persists turn progress. `transcript` and `evidence` are projections of the
  * same state object, kept as columns so admin reads don't have to parse state.
+ *
+ * `updateMany` with an IN_PROGRESS guard rather than `update`: a turn arriving
+ * after the interview closed becomes a no-op instead of resurrecting state onto
+ * a finished row.
  */
 export async function saveTurn(
   interviewId: string,
+  memberId: string,
   state: InterviewState,
 ): Promise<void> {
   await prisma.generalInterview.updateMany({
-    where: { id: interviewId, status: "IN_PROGRESS" },
+    where: { id: interviewId, memberId, status: "IN_PROGRESS" },
     data: {
       state: state as unknown as Prisma.InputJsonValue,
       transcript: state.transcript as unknown as Prisma.InputJsonValue,
@@ -133,27 +157,28 @@ export async function saveTurn(
 }
 
 export type CompleteAttemptResult =
-  | { ok: true; attemptNumber: number }
-  | { ok: false; message: string };
+  | { ok: true }
+  | { ok: false; message: string; reason: "NOT_OPEN" | "ALREADY_TAKEN" | "ERROR" };
 
 /**
- * Completes an attempt: assigns the attempt number, consumes the entitled
- * submissions, and writes final scores — all in one transaction.
+ * Completes an attempt: writes final state, transcript, evidence and scores in
+ * one update.
  *
- * Attempt numbering is serialized per user by a Postgres transaction-scoped
- * advisory lock, so two interviews finishing at the same instant cannot compute
- * the same max+1. `pg_advisory_xact_lock` (rather than a session lock) is
- * required because it releases on commit and is therefore safe under Neon's
- * pooled connections. `@@unique([userId, attemptNumber])` remains as a backstop.
+ * Two guards, both necessary:
  *
- * `consumedSubmissionIds` is read from the row itself inside the transaction —
- * never from a parameter — so nothing a client sends can change what an
- * interview costs. The IN_PROGRESS guard makes a replayed completion a no-op
- * rather than a second consumption.
+ *   1. `status: "IN_PROGRESS"` in the WHERE clause makes a replayed completion
+ *      a no-op rather than a second write.
+ *   2. The partial unique index rejects a second COMPLETED row for the same
+ *      (member, blueprint) at the database level. A P2002 here is not a bug —
+ *      it is the milestone limit doing its job under a race, and it is reported
+ *      as ALREADY_TAKEN rather than a server error.
+ *
+ * No advisory lock is needed. The old one existed only to serialize
+ * `attemptNumber = max + 1`, a computation this schema no longer performs.
  */
 export async function completeAttempt(
   interviewId: string,
-  userId: string,
+  memberId: string,
   params: {
     state: InterviewState;
     scores: InterviewScores;
@@ -165,85 +190,108 @@ export async function completeAttempt(
     scores.perCompetency.map((entry) => [entry.competency, entry.score]),
   );
 
+  const now = new Date();
+
   try {
-    return await prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`;
-
-      const row = await tx.generalInterview.findFirst({
-        where: { id: interviewId, userId, status: "IN_PROGRESS" },
-        select: { eligibleSubmissionIds: true },
-      });
-
-      if (!row) {
-        return {
-          ok: false as const,
-          message: "This interview is no longer in progress.",
-        };
-      }
-
-      const agg = await tx.generalInterview.aggregate({
-        where: { userId, attemptNumber: { not: null } },
-        _max: { attemptNumber: true },
-      });
-      const attemptNumber = (agg._max.attemptNumber ?? 0) + 1;
-
-      const now = new Date();
-      await tx.generalInterview.update({
-        where: { id: interviewId },
-        data: {
-          status: "COMPLETED",
-          attemptNumber,
-          consumedSubmissionIds: row.eligibleSubmissionIds,
-          state: state as unknown as Prisma.InputJsonValue,
-          transcript: state.transcript as unknown as Prisma.InputJsonValue,
-          evidence:
-            state.evidenceByQuestionId as unknown as Prisma.InputJsonValue,
-          durationSec: params.durationSec,
-          conceptualScore: byCompetency.get("CONCEPTUAL") ?? null,
-          practicalScore: byCompetency.get("PRACTICAL") ?? null,
-          problemSolvingScore: byCompetency.get("PROBLEM_SOLVING") ?? null,
-          technicalDepthScore: byCompetency.get("TECHNICAL_DEPTH") ?? null,
-          communicationScore: byCompetency.get("COMMUNICATION") ?? null,
-          overallScore: scores.overallScore,
-          summary: scores.summary || null,
-          endedAt: now,
-          evaluatedAt: now,
-        },
-      });
-
-      return { ok: true as const, attemptNumber };
+    const result = await prisma.generalInterview.updateMany({
+      where: { id: interviewId, memberId, status: "IN_PROGRESS" },
+      data: {
+        status: "COMPLETED",
+        state: state as unknown as Prisma.InputJsonValue,
+        transcript: state.transcript as unknown as Prisma.InputJsonValue,
+        evidence: state.evidenceByQuestionId as unknown as Prisma.InputJsonValue,
+        durationSec: params.durationSec,
+        conceptualScore: byCompetency.get("CONCEPTUAL") ?? null,
+        practicalScore: byCompetency.get("PRACTICAL") ?? null,
+        problemSolvingScore: byCompetency.get("PROBLEM_SOLVING") ?? null,
+        technicalDepthScore: byCompetency.get("TECHNICAL_DEPTH") ?? null,
+        communicationScore: byCompetency.get("COMMUNICATION") ?? null,
+        overallScore: scores.overallScore,
+        summary: scores.summary || null,
+        endedAt: now,
+        evaluatedAt: now,
+      },
     });
+
+    if (result.count === 0) {
+      return {
+        ok: false,
+        reason: "NOT_OPEN",
+        message: "This interview is no longer in progress.",
+      };
+    }
+
+    return { ok: true };
   } catch (e) {
+    if (
+      e instanceof Prisma.PrismaClientKnownRequestError &&
+      e.code === UNIQUE_VIOLATION
+    ) {
+      logger.warn("[interview] completion blocked by milestone limit", {
+        interviewId,
+        memberId,
+      });
+      return {
+        ok: false,
+        reason: "ALREADY_TAKEN",
+        message: "You have already completed this interview.",
+      };
+    }
+
     logger.error("[interview] completeAttempt failed", {
       interviewId,
       error: String(e),
     });
-    return { ok: false, message: "Could not save your interview result." };
+    return {
+      ok: false,
+      reason: "ERROR",
+      message: "Could not save your interview result.",
+    };
   }
 }
 
 /**
- * Closes an attempt without consuming anything. `consumedSubmissionIds` and
- * `attemptNumber` are untouched, so the candidate keeps every challenge day
- * toward their next attempt.
+ * Closes an attempt without consuming the milestone.
+ *
+ * The row keeps its transcript and evidence for audit, but never reaches
+ * COMPLETED, so the partial unique index does not see it and the member may
+ * take the interview again. This is what makes a dropped connection or a
+ * technical failure structurally incapable of burning someone's one attempt.
  */
 export async function closeAttemptWithoutConsuming(
   interviewId: string,
+  memberId: string,
   status: Extract<InterviewStatus, "ABANDONED" | "INVALID">,
   reason: string | null,
 ): Promise<void> {
   await prisma.generalInterview.updateMany({
-    where: { id: interviewId, status: "IN_PROGRESS" },
+    where: { id: interviewId, memberId, status: "IN_PROGRESS" },
     data: { status, endedAt: new Date(), invalidReason: reason },
   });
 }
 
-/** Latest completed attempt, for the pre-interview screen. */
-export async function loadLatestResult(userId: string) {
-  return prisma.generalInterview.findFirst({
-    where: { userId, status: "COMPLETED" },
+export type AttemptResult = {
+  blueprint: InterviewBlueprintKey;
+  overallScore: number | null;
+  conceptualScore: number | null;
+  practicalScore: number | null;
+  problemSolvingScore: number | null;
+  technicalDepthScore: number | null;
+  communicationScore: number | null;
+  summary: string | null;
+  durationSec: number | null;
+  evaluatedAt: Date | null;
+};
+
+/** The member's completed result for one blueprint, if they have one. */
+export async function loadCompletedResult(
+  memberId: string,
+  blueprint: InterviewBlueprintKey,
+): Promise<AttemptResult | null> {
+  const row = await prisma.generalInterview.findFirst({
+    where: { memberId, blueprint, status: "COMPLETED" },
     select: {
-      attemptNumber: true,
+      blueprint: true,
       overallScore: true,
       conceptualScore: true,
       practicalScore: true,
@@ -251,8 +299,38 @@ export async function loadLatestResult(userId: string) {
       technicalDepthScore: true,
       communicationScore: true,
       summary: true,
+      durationSec: true,
       evaluatedAt: true,
     },
-    orderBy: { attemptNumber: "desc" },
   });
+
+  if (!row) return null;
+  return { ...row, blueprint: row.blueprint as InterviewBlueprintKey };
+}
+
+/**
+ * Marks stale open attempts as ABANDONED.
+ *
+ * An interview whose tab was closed leaves an IN_PROGRESS row forever, which
+ * would otherwise block the member from ever starting again. Sweeping them
+ * costs nothing — abandoned attempts consume no milestone.
+ */
+export async function abandonStaleAttempts(
+  memberId: string,
+  olderThanMs: number,
+): Promise<number> {
+  const cutoff = new Date(Date.now() - olderThanMs);
+  const result = await prisma.generalInterview.updateMany({
+    where: {
+      memberId,
+      status: "IN_PROGRESS",
+      startedAt: { lt: cutoff },
+    },
+    data: {
+      status: "ABANDONED",
+      endedAt: new Date(),
+      invalidReason: "Session went stale and was closed automatically.",
+    },
+  });
+  return result.count;
 }

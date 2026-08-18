@@ -28,7 +28,9 @@
     "db:backfill:certificates:hackathon": "tsx prisma/scripts/backfill-hackathon-certificates.ts",
     "hackathon:migrate": "tsx scripts/migrate-hackathon-to-neon.ts",
     "hackathon:verify": "tsx scripts/migrate-hackathon-to-neon.ts --verify",
-    "hackathon:preflight": "tsx scripts/migrate-hackathon-to-neon.ts --preflight"
+    "hackathon:preflight": "tsx scripts/migrate-hackathon-to-neon.ts --preflight",
+    "test:interview": "tsx scripts/verify-cohort-interview.ts && tsx scripts/verify-interview-domain.ts",
+    "test:interview:db": "node scripts/db-preflight.mjs && tsx --conditions=react-server scripts/smoke-cohort-interview.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

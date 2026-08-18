@@ -1,35 +1,54 @@
 import "server-only";
 import { logger } from "@/lib/logger";
 import {
+  COHORT_INTERVIEW_DURATION_SEC,
+  COHORT_INTERVIEW_MIN_DURATION_SEC,
+  COHORT_INTERVIEW_STALE_MS,
+} from "@/features/interview/constants";
+import type { InterviewBlueprintKey } from "@/features/interview/cohort/blueprint";
+import { questionCountFor } from "@/features/interview/cohort/question-bank";
+import {
   beginInterview,
   finalizeInterview,
   submitAnswer,
 } from "@/features/interview/orchestrator";
 import {
+  abandonStaleAttempts,
   closeAttemptWithoutConsuming,
   completeAttempt,
   createAttempt,
   findActiveAttemptId,
-  loadActiveAttemptForUser,
-  loadLatestResult,
+  loadActiveAttempt,
+  loadCompletedResult,
   saveTurn,
 } from "@/features/interview/repository";
 import {
-  buildInterviewSession,
-  resolveEligibility,
+  buildCohortPlan,
+  gateStart,
+  resolveCohortEligibility,
 } from "@/features/interview/session";
-import { createInitialState } from "@/features/interview/state";
-import { INTERVIEW_QUESTION_COUNT } from "@/features/interview/constants";
+import { createInitialState, getCurrentQuestion } from "@/features/interview/state";
 import type {
-  InterviewEligibility,
+  CohortEligibility,
   InterviewScores,
   PlannedQuestion,
 } from "@/features/interview/types";
 
 /**
- * The persistence-wired interview flow. Server Actions call only these
- * functions, and pass only ids — never plan, state, or entitlement. Everything
- * that determines a score or an attempt's cost is loaded server-side.
+ * The AI Cohort interview flow. Server Actions call only these functions and
+ * pass only ids — never a plan, state, score, blueprint the server did not
+ * validate, or question index.
+ *
+ * The security posture, stated once:
+ *
+ *   - `memberId` is always resolved from the session, never from a payload
+ *   - the blueprint is validated against the enum before it reaches here
+ *   - eligibility is re-derived from the database at start, not carried
+ *   - plan and state are reloaded from the row on every turn
+ *   - duration is computed from the persisted `startedAt`
+ *   - an answer must match the question the SERVER believes is open
+ *
+ * The only thing a client contributes to an interview is the text of an answer.
  */
 
 export type ServiceResult<T> =
@@ -37,9 +56,9 @@ export type ServiceResult<T> =
   | { ok: false; message: string };
 
 /**
- * What the client is allowed to see about a question. Deliberately excludes the
- * rubric, expected evidence, and source refs — revealing what the evaluator
- * looks for would let candidates recite it back.
+ * What the client is allowed to see about a question. Deliberately excludes
+ * `expectedEvidence`, `minEvidence` and the rubric — revealing what the
+ * evaluator looks for would let candidates recite the checklist back.
  */
 export type ClientQuestion = {
   id: string;
@@ -48,12 +67,15 @@ export type ClientQuestion = {
   totalQuestions: number;
 };
 
-function toClientQuestion(question: PlannedQuestion): ClientQuestion {
+function toClientQuestion(
+  question: PlannedQuestion,
+  blueprint: InterviewBlueprintKey,
+): ClientQuestion {
   return {
     id: question.id,
     order: question.order,
     text: question.text,
-    totalQuestions: INTERVIEW_QUESTION_COUNT,
+    totalQuestions: questionCountFor(blueprint),
   };
 }
 
@@ -61,31 +83,42 @@ function toClientQuestion(question: PlannedQuestion): ClientQuestion {
 
 export type StartInterviewData = {
   interviewId: string;
+  blueprint: InterviewBlueprintKey;
   question: ClientQuestion;
+  /** True when an existing open attempt was resumed rather than created. */
+  resumed: boolean;
+  durationSec: number;
 };
 
-export async function startInterviewForUser(
-  userId: string,
+/**
+ * Opens — or resumes — an attempt and returns the question on the floor.
+ *
+ * Order of operations is load-bearing:
+ *   1. sweep stale attempts, so a closed tab does not lock the member out
+ *   2. resume an existing open attempt if there is one (not a new attempt)
+ *   3. ONLY THEN run the start gate and create a row
+ *
+ * The gate runs immediately before `createAttempt` in the same request. There is
+ * no path to `createAttempt` that skips it.
+ */
+export async function startCohortInterview(
+  memberId: string,
+  blueprint: InterviewBlueprintKey,
 ): Promise<ServiceResult<StartInterviewData>> {
-  const activeId = await findActiveAttemptId(userId);
-  if (activeId) {
-    return { ok: false, message: "You already have an interview in progress." };
+  await abandonStaleAttempts(memberId, COHORT_INTERVIEW_STALE_MS);
+
+  const existingId = await findActiveAttemptId(memberId, blueprint);
+  if (existingId) {
+    const resumed = await resumeCohortInterview(memberId, existingId);
+    if (resumed.ok) return resumed;
+    // The row vanished or went unresumable between the two reads. Fall through
+    // and let the gate decide whether a fresh attempt is allowed.
   }
 
-  const session = await buildInterviewSession(userId);
-  if (!session.ok) return { ok: false, message: session.message };
+  const gate = await gateStart(memberId, blueprint);
+  if (!gate.ok) return { ok: false, message: gate.message };
 
-  const { eligibility, plan, eligibleSubmissionIds } = session.data;
-  if (eligibility.state !== "ready") {
-    return {
-      ok: false,
-      message:
-        eligibility.state === "locked" || eligibility.state === "retake_locked"
-          ? eligibility.reason
-          : "You already have an interview in progress.",
-    };
-  }
-
+  const plan = buildCohortPlan(blueprint);
   const opened = beginInterview(plan, createInitialState());
   if (!opened.ok) return { ok: false, message: opened.message };
 
@@ -95,17 +128,53 @@ export async function startInterviewForUser(
   }
 
   const attempt = await createAttempt(
-    userId,
+    memberId,
+    blueprint,
     plan,
     opened.data.state,
-    eligibleSubmissionIds,
   );
+
+  logger.info("[cohort-interview] attempt opened", {
+    interviewId: attempt.id,
+    memberId,
+    blueprint,
+  });
 
   return {
     ok: true,
     data: {
       interviewId: attempt.id,
-      question: toClientQuestion(firstQuestion),
+      blueprint,
+      question: toClientQuestion(firstQuestion, blueprint),
+      resumed: false,
+      durationSec: COHORT_INTERVIEW_DURATION_SEC,
+    },
+  };
+}
+
+/** Re-opens an in-progress attempt at the question the server has on the floor. */
+export async function resumeCohortInterview(
+  memberId: string,
+  interviewId: string,
+): Promise<ServiceResult<StartInterviewData>> {
+  const attempt = await loadActiveAttempt(interviewId, memberId);
+  if (!attempt) {
+    return { ok: false, message: "This interview is no longer in progress." };
+  }
+
+  const question = getCurrentQuestion(attempt.plan, attempt.state);
+  if (!question) {
+    return { ok: false, message: "This interview has no question open." };
+  }
+
+  return {
+    ok: true,
+    data: {
+      interviewId: attempt.id,
+      blueprint: attempt.blueprint,
+      question: toClientQuestion(question, attempt.blueprint),
+      resumed: true,
+      durationSec: COHORT_INTERVIEW_DURATION_SEC,
     },
   };
 }
@@ -121,16 +190,20 @@ export type AnswerTurnData = {
 };
 
 /**
- * Processes one answer. Plan and state are reloaded from the database, so a
- * tampered client payload cannot change question order, evidence, or budgets.
+ * Processes one answer.
+ *
+ * Plan and state are reloaded from the row, so a tampered payload cannot change
+ * question order, evidence, budgets, or which question is open. The orchestrator
+ * rejects an answer whose `questionId` does not match the open question, which
+ * makes a replayed or stale turn a no-op rather than a double-scored answer.
  */
-export async function recordAnswer(
-  userId: string,
+export async function recordCohortAnswer(
+  memberId: string,
   interviewId: string,
   questionId: string,
   answerText: string,
 ): Promise<ServiceResult<AnswerTurnData>> {
-  const attempt = await loadActiveAttemptForUser(interviewId, userId);
+  const attempt = await loadActiveAttempt(interviewId, memberId);
   if (!attempt) {
     return { ok: false, message: "This interview is no longer in progress." };
   }
@@ -143,7 +216,7 @@ export async function recordAnswer(
   );
   if (!turn.ok) return turn;
 
-  await saveTurn(interviewId, turn.data.state);
+  await saveTurn(interviewId, memberId, turn.data.state);
 
   return {
     ok: true,
@@ -151,7 +224,7 @@ export async function recordAnswer(
       isFollowUp: turn.data.action === "FOLLOW_UP",
       prompt: turn.data.nextPrompt,
       question: turn.data.nextQuestion
-        ? toClientQuestion(turn.data.nextQuestion)
+        ? toClientQuestion(turn.data.nextQuestion, attempt.blueprint)
         : null,
       finished: turn.data.finished,
     },
@@ -161,23 +234,26 @@ export async function recordAnswer(
 /* --------------------------------------------------------------- finalize */
 
 export type FinishInterviewData = {
-  attemptNumber: number;
+  blueprint: InterviewBlueprintKey;
   scores: InterviewScores;
+  durationSec: number;
 };
 
 /**
- * Scores the interview and commits the attempt.
+ * Scores the interview and consumes the milestone.
  *
- * Duration is derived from the persisted `startedAt`, not from the client — a
+ * Duration comes from the persisted `startedAt`, never from the client — a
  * client-supplied duration could clear the minimum-length floor on an interview
- * that never actually ran. A session that cannot be scored is closed INVALID and
- * consumes nothing.
+ * that never actually ran.
+ *
+ * A session that cannot be scored is closed INVALID and consumes nothing, so a
+ * technical failure structurally cannot burn the member's one attempt.
  */
-export async function finishInterview(
-  userId: string,
+export async function finishCohortInterview(
+  memberId: string,
   interviewId: string,
 ): Promise<ServiceResult<FinishInterviewData>> {
-  const attempt = await loadActiveAttemptForUser(interviewId, userId);
+  const attempt = await loadActiveAttempt(interviewId, memberId);
   if (!attempt) {
     return { ok: false, message: "This interview is no longer in progress." };
   }
@@ -190,22 +266,26 @@ export async function finishInterview(
     attempt.plan,
     attempt.state,
     durationSec,
+    COHORT_INTERVIEW_MIN_DURATION_SEC,
   );
 
   if (!finalized.ok) {
     await closeAttemptWithoutConsuming(
       interviewId,
+      memberId,
       "INVALID",
       finalized.message,
     );
-    logger.warn("[interview] attempt closed without consuming", {
+    logger.warn("[cohort-interview] attempt closed without consuming", {
       interviewId,
+      memberId,
+      blueprint: attempt.blueprint,
       reason: finalized.message,
     });
     return { ok: false, message: finalized.message };
   }
 
-  const committed = await completeAttempt(interviewId, userId, {
+  const committed = await completeAttempt(interviewId, memberId, {
     state: finalized.data.state,
     scores: finalized.data.scores,
     durationSec,
@@ -213,62 +293,68 @@ export async function finishInterview(
 
   if (!committed.ok) return { ok: false, message: committed.message };
 
+  logger.info("[cohort-interview] attempt completed", {
+    interviewId,
+    memberId,
+    blueprint: attempt.blueprint,
+    overallScore: finalized.data.scores.overallScore,
+  });
+
   return {
     ok: true,
     data: {
-      attemptNumber: committed.attemptNumber,
+      blueprint: attempt.blueprint,
       scores: finalized.data.scores,
+      durationSec,
     },
   };
 }
 
 /* ------------------------------------------------------------------ close */
 
-export async function abandonInterview(
-  userId: string,
+/** Abandons an in-progress attempt. Consumes no milestone. */
+export async function abandonCohortInterview(
+  memberId: string,
   interviewId: string,
 ): Promise<ServiceResult<null>> {
-  const attempt = await loadActiveAttemptForUser(interviewId, userId);
+  const attempt = await loadActiveAttempt(interviewId, memberId);
   if (!attempt) return { ok: false, message: "No interview in progress." };
 
-  await closeAttemptWithoutConsuming(interviewId, "ABANDONED", null);
+  await closeAttemptWithoutConsuming(interviewId, memberId, "ABANDONED", null);
   return { ok: true, data: null };
 }
 
 /* ------------------------------------------------------------------- read */
 
-export type InterviewOverview = {
-  eligibility: InterviewEligibility;
-  activeInterviewId: string | null;
-  totalCompletedDays: number;
-  latestResult: Awaited<ReturnType<typeof loadLatestResult>>;
+export type CohortInterviewOverview = {
+  blueprint: InterviewBlueprintKey;
+  eligibility: CohortEligibility;
+  questionCount: number;
+  durationSec: number;
+  result: Awaited<ReturnType<typeof loadCompletedResult>>;
 };
 
 /**
  * Read model for the pre-interview screen. A Server Component calls this
  * directly — it is not a Server Action, because nothing mutates.
- *
- * Uses the LLM-free eligibility path: this runs on every page load, and question
- * phrasing is only worth paying for once an interview actually starts.
  */
-export async function getInterviewOverview(
-  userId: string,
-): Promise<ServiceResult<InterviewOverview>> {
-  const resolved = await resolveEligibility(userId);
-  if (!resolved.ok) return { ok: false, message: resolved.message };
-
-  const [activeInterviewId, latestResult] = await Promise.all([
-    findActiveAttemptId(userId),
-    loadLatestResult(userId),
+export async function getCohortInterviewOverview(
+  memberId: string,
+  blueprint: InterviewBlueprintKey,
+): Promise<ServiceResult<CohortInterviewOverview>> {
+  const [eligibility, result] = await Promise.all([
+    resolveCohortEligibility(memberId, blueprint),
+    loadCompletedResult(memberId, blueprint),
   ]);
 
   return {
     ok: true,
     data: {
-      eligibility: resolved.data.eligibility,
-      activeInterviewId,
-      totalCompletedDays: resolved.data.context.challenge.totalCompletedDays,
-      latestResult,
+      blueprint,
+      eligibility,
+      questionCount: questionCountFor(blueprint),
+      durationSec: COHORT_INTERVIEW_DURATION_SEC,
+      result,
     },
   };
 }

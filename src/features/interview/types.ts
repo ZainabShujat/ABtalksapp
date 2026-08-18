@@ -18,6 +18,8 @@ export const EVIDENCE_TIERS = [
 export type EvidenceTier = (typeof EVIDENCE_TIERS)[number];
 
 export const QUESTION_SOURCES = [
+  /** A fixed AI Cohort bank question, grounded in cohort curriculum days. */
+  "COHORT_CURRICULUM",
   "CHALLENGE_TASK",
   "RESUME_CLAIM",
   "PROFILE_SKILL",
@@ -109,6 +111,8 @@ export type QuestionSourceRef = {
   challengeId?: string;
   dayNumber?: number;
   dailyTaskId?: string;
+  /** Cohort day numbers a COHORT_CURRICULUM question draws on. */
+  sourceDays?: number[];
   label: string;
 };
 
@@ -119,9 +123,48 @@ export type PlannedQuestion = {
   sourceRef: QuestionSourceRef;
   /** Deterministic template text. Replaced by LLM phrasing when available. */
   text: string;
-  /** True once an LLM phrased it; false means the fallback template is in use. */
+  /**
+   * True once an LLM phrased it. Always FALSE for cohort bank questions — the
+   * standardized wording is what makes scores comparable, so it is never
+   * rewritten.
+   */
   llmPhrased: boolean;
   difficulty: "easy" | "medium" | "hard";
+
+  /* --- cohort bank fields; absent on general-interview questions --------- */
+
+  /** Id in the fixed bank. Same as `id` for cohort questions. */
+  bankQuestionId?: string;
+  /** What a complete spoken answer contains. Drives evaluation + follow-ups. */
+  expectedEvidence?: string[];
+  /** Evidence items needed before the answer counts as sufficient. */
+  minEvidence?: number;
+  /** Per-question follow-up budget. 0 means never probe. */
+  maxFollowUps?: number;
+  /** Deterministic fallback probe, used when LLM follow-up drafting fails. */
+  followUpPrompt?: string | null;
+};
+
+/**
+ * Provenance frozen into the plan at open. Discriminated so a general-interview
+ * plan can never be mistaken for a cohort one by a consumer reading the summary.
+ */
+export type CohortPlanContext = {
+  kind: "COHORT";
+  blueprint: "DAY_15" | "DAY_31";
+  bankVersion: string;
+  /** Cohort days the blueprint covers — 1..15 or 1..31. */
+  scopeDays: number[];
+  questionCount: number;
+};
+
+export type GeneralPlanContext = {
+  kind: "GENERAL";
+  totalCompletedDays: number;
+  challengeSourcedQuestions: number;
+  resumeSourcedQuestions: number;
+  genericQuestions: number;
+  hasStructuredResume: boolean;
 };
 
 export type InterviewPlan = {
@@ -129,13 +172,7 @@ export type InterviewPlan = {
   rubricSnapshot: ReturnType<
     typeof import("@/features/interview/rubric").buildRubricSnapshot
   >;
-  contextSummary: {
-    totalCompletedDays: number;
-    challengeSourcedQuestions: number;
-    resumeSourcedQuestions: number;
-    genericQuestions: number;
-    hasStructuredResume: boolean;
-  };
+  contextSummary: CohortPlanContext | GeneralPlanContext;
 };
 
 /* ------------------------------------------------------------- evaluation */
@@ -205,6 +242,28 @@ export type InterviewState = {
 };
 
 /* --------------------------------------------------------- eligibility */
+
+/**
+ * AI Cohort milestone eligibility. Every field is server-derived; the client
+ * receives this only to render copy and never sends it back.
+ *
+ * `taken` is terminal — each blueprint is claimable exactly once, enforced by a
+ * partial unique index on COMPLETED rows.
+ */
+export type CohortEligibility =
+  | { state: "ready" }
+  | {
+      state: "locked";
+      reason: string;
+      /** Scope days not yet passed. */
+      missingDays: number[];
+      passedCount: number;
+      needed: number;
+    }
+  | { state: "in_progress"; interviewId: string; startedAt: string | null }
+  | { state: "taken"; overallScore: number | null };
+
+/* -------------------------------------- general interview (not V1) -------- */
 
 export type InterviewEligibility =
   | { state: "locked"; reason: string; completedDays: number; needed: number }

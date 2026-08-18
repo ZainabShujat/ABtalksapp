@@ -1,50 +1,71 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import {
-  getInterviewProvider,
-  resolveCandidateId,
-  type AnswerTurnData,
-  type FinishInterviewData,
-  type StartInterviewData,
-} from "@/features/interview/provider";
+import { getInterviewProvider } from "@/features/interview/prisma-provider";
+import { resolveInterviewMemberId } from "@/features/interview/provider";
+import type {
+  AnswerTurnData,
+  FinishInterviewData,
+  StartInterviewData,
+} from "@/features/interview/service";
 import {
   interviewIdSchema,
+  startInterviewSchema,
   submitInterviewAnswerSchema,
 } from "@/lib/validations/interview";
 
 /**
- * Server Actions for the General AB Talks AI Interview.
+ * Server Actions for the AI Cohort milestone interview.
  *
- * Every action resolves the candidate server-side and passes only ids down. The
- * interview plan, runtime state, and submission entitlement never cross this
- * boundary, so a tampered client payload cannot alter question order, evidence,
- * scores, or what an attempt costs.
+ * Every action resolves the member server-side and passes only ids downward. The
+ * interview plan, runtime state, eligibility and scores never cross this
+ * boundary inbound, so a tampered client payload cannot alter question order,
+ * evidence, scores, or whether a milestone is claimable.
+ *
+ * The complete set of things a client may send:
+ *   - a blueprint enum value (validated against the enum, then re-gated)
+ *   - an interview id (scoped to the member in the WHERE clause)
+ *   - a question id (checked against the question the server has open)
+ *   - answer text
  */
 
 type ActionResult<T> = { ok: true; data: T } | { ok: false; message: string };
 
-async function requireCandidateId(): Promise<
-  { ok: true; candidateId: string } | { ok: false; message: string }
+async function requireMemberId(): Promise<
+  { ok: true; memberId: string } | { ok: false; message: string }
 > {
-  const candidateId = await resolveCandidateId();
-  if (!candidateId) {
-    return { ok: false, message: "Please sign in to continue." };
+  const memberId = await resolveInterviewMemberId();
+  if (!memberId) {
+    return {
+      ok: false,
+      message: "You need an active cohort enrollment to interview.",
+    };
   }
-  return { ok: true, candidateId };
+  return { ok: true, memberId };
 }
 
-/** Opens an attempt and returns the first question. */
-export async function startInterviewAction(): Promise<
-  ActionResult<StartInterviewData>
-> {
-  const auth = await requireCandidateId();
+/**
+ * Opens or resumes an attempt and returns the first question.
+ *
+ * The blueprint is validated as an enum here and independently re-gated inside
+ * the service against actual passed mission days. Passing `DAY_31` from a
+ * browser console does not open a Day 31 interview.
+ */
+export async function startInterviewAction(
+  input: unknown,
+): Promise<ActionResult<StartInterviewData>> {
+  const auth = await requireMemberId();
   if (!auth.ok) return auth;
 
-  const provider = await getInterviewProvider();
-  const started = await provider.start(auth.candidateId);
+  const parsed = startInterviewSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "Unknown interview." };
 
-  revalidatePath("/interview");
+  const started = await getInterviewProvider().start(
+    auth.memberId,
+    parsed.data.blueprint,
+  );
+
+  revalidatePath("/program/dashboard");
   return started;
 }
 
@@ -52,7 +73,7 @@ export async function startInterviewAction(): Promise<
 export async function submitInterviewAnswerAction(
   input: unknown,
 ): Promise<ActionResult<AnswerTurnData>> {
-  const auth = await requireCandidateId();
+  const auth = await requireMemberId();
   if (!auth.ok) return auth;
 
   const parsed = submitInterviewAnswerSchema.safeParse(input);
@@ -60,9 +81,8 @@ export async function submitInterviewAnswerAction(
     return { ok: false, message: "Invalid answer submission." };
   }
 
-  const provider = await getInterviewProvider();
-  return provider.answer(
-    auth.candidateId,
+  return getInterviewProvider().answer(
+    auth.memberId,
     parsed.data.interviewId,
     parsed.data.questionId,
     parsed.data.answerText,
@@ -76,38 +96,36 @@ export async function submitInterviewAnswerAction(
 export async function finishInterviewAction(
   input: unknown,
 ): Promise<ActionResult<FinishInterviewData>> {
-  const auth = await requireCandidateId();
+  const auth = await requireMemberId();
   if (!auth.ok) return auth;
 
   const parsed = interviewIdSchema.safeParse(input);
   if (!parsed.success) return { ok: false, message: "Invalid interview." };
 
-  const provider = await getInterviewProvider();
-  const finished = await provider.finish(
-    auth.candidateId,
+  const finished = await getInterviewProvider().finish(
+    auth.memberId,
     parsed.data.interviewId,
   );
 
-  revalidatePath("/interview");
+  revalidatePath("/program/dashboard");
   return finished;
 }
 
-/** Abandons an in-progress attempt. Consumes no challenge progress. */
+/** Abandons an in-progress attempt. Consumes no milestone. */
 export async function abandonInterviewAction(
   input: unknown,
 ): Promise<ActionResult<null>> {
-  const auth = await requireCandidateId();
+  const auth = await requireMemberId();
   if (!auth.ok) return auth;
 
   const parsed = interviewIdSchema.safeParse(input);
   if (!parsed.success) return { ok: false, message: "Invalid interview." };
 
-  const provider = await getInterviewProvider();
-  const result = await provider.abandon(
-    auth.candidateId,
+  const result = await getInterviewProvider().abandon(
+    auth.memberId,
     parsed.data.interviewId,
   );
 
-  revalidatePath("/interview");
+  revalidatePath("/program/dashboard");
   return result;
 }

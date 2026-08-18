@@ -13,6 +13,7 @@ import type {
   ClientQuestion,
   FinishInterviewData,
 } from "@/features/interview/provider";
+import type { InterviewBlueprintKey } from "@/features/interview/cohort/blueprint";
 
 /**
  * Stage 4 — the live interview.
@@ -30,11 +31,14 @@ type Line = {
 };
 
 export function StageLive({
+  blueprint,
   interviewId,
   onInterviewOpenAction,
   onFinishedAction,
   onAbandonedAction,
 }: {
+  /** Which milestone this attempt is for. Re-gated server-side on start. */
+  blueprint: InterviewBlueprintKey;
   interviewId: string | null;
   onInterviewOpenAction: (id: string) => void;
   onFinishedAction: (data: FinishInterviewData) => void;
@@ -73,7 +77,7 @@ export function StageLive({
     openedRef.current = true;
 
     void (async () => {
-      const started = await startInterviewAction();
+      const started = await startInterviewAction({ blueprint });
       setStarting(false);
       if (!started.ok) {
         setError(started.message);
@@ -84,7 +88,7 @@ export function StageLive({
       setQuestion(started.data.question);
       setLines([{ role: "interviewer", text: started.data.question.text }]);
     })();
-  }, [onInterviewOpenAction]);
+  }, [blueprint, onInterviewOpenAction]);
 
   function send() {
     const id = idRef.current;

@@ -1,5 +1,5 @@
 import "server-only";
-import { INTERVIEW_MIN_DURATION_SEC } from "@/features/interview/constants";
+import { COHORT_INTERVIEW_MIN_DURATION_SEC } from "@/features/interview/constants";
 import { evaluateAnswer, judgeInterview } from "@/features/interview/evaluation";
 import { mergeEvidence } from "@/features/interview/evidence";
 import { aggregateScores } from "@/features/interview/scoring";
@@ -201,16 +201,17 @@ export async function finalizeInterview(
   plan: InterviewPlan,
   state: InterviewState,
   durationSec: number,
+  minDurationSec: number = COHORT_INTERVIEW_MIN_DURATION_SEC,
 ): Promise<FinalizeResult> {
   if (state.status === "NOT_STARTED") {
     return { ok: false, message: "This interview never started." };
   }
 
-  if (durationSec < INTERVIEW_MIN_DURATION_SEC) {
+  if (durationSec < minDurationSec) {
     return {
       ok: false,
       message: `An interview must run at least ${Math.round(
-        INTERVIEW_MIN_DURATION_SEC / 60,
+        minDurationSec / 60,
       )} minutes to be scored.`,
     };
   }

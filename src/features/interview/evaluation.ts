@@ -98,9 +98,27 @@ export async function evaluateAnswer(
   }
 
   const def = getCompetencyDefinition(question.competency);
+
+  // Cohort bank questions carry an explicit expected-evidence checklist. Giving
+  // the model the checklist it is grading against is what keeps evaluation
+  // consistent across candidates — without it, "sufficient" drifts per answer.
+  const bankEvidence =
+    question.expectedEvidence && question.expectedEvidence.length > 0
+      ? [
+          "EXPECTED EVIDENCE FOR THIS QUESTION (the standard to grade against):",
+          ...question.expectedEvidence.map((item, i) => `  ${i + 1}. ${item}`),
+          question.minEvidence
+            ? `An answer is sufficient at ${question.minEvidence} of these.`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n")
+      : "";
+
   const user = [
     `QUESTION: ${question.text}`,
     `COMPETENCY: ${def.label} — ${def.expectations}`,
+    bankEvidence,
     `EVIDENCE SOUGHT:`,
     `  conceptual: ${def.evidenceRequired.conceptual}`,
     `  practical: ${def.evidenceRequired.practical}`,
@@ -129,7 +147,14 @@ export async function evaluateAnswer(
 
   const data = result.data;
   const flaggedIssues = coerceIssues(data.flaggedIssues);
-  const followUpText = (data.followUpText ?? "").trim();
+
+  // If the model wants to probe but returns no text, fall back to the bank's
+  // own follow-up prompt rather than dropping the probe. The bank prompt targets
+  // exactly the gap the question was written to expose, so the probe stays on
+  // topic even when the model's drafting fails.
+  const followUpText =
+    (data.followUpText ?? "").trim() || (question.followUpPrompt ?? "");
+
   const action: TurnAction =
     data.action === "FOLLOW_UP" && followUpText.length > 0
       ? "FOLLOW_UP"

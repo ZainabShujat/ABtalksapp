@@ -2,6 +2,7 @@
 
 import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
+import { getInterviewSignals } from "@/features/interview/read-model";
 import { getAtRiskMembers } from "@/features/program/commits";
 import { getCohortCalendarDay } from "@/features/program/progression";
 import { getAdminProgramCohort } from "@/features/program/admin";
@@ -136,41 +137,38 @@ export async function exportProgramInterviewsAction(input: unknown) {
   const members = await prisma.programMember.findMany({
     where: { cohortId, status: { in: ["ENROLLED", "COMPLETED"] } },
     select: {
+      id: true,
       fullName: true,
       company: true,
       user: { select: { email: true } },
-      interview: {
-        select: {
-          status: true,
-          durationSec: true,
-          commScore: true,
-          techScore: true,
-          problemScore: true,
-          overallScore: true,
-          summary: true,
-          evaluatedAt: true,
-        },
-      },
     },
     orderBy: { fullName: "asc" },
   });
 
+  // Resolved via the interview read model (DAY_31 -> DAY_15 -> legacy).
+  // Column names are deliberately unchanged so anything parsing this export
+  // keeps working; comm/tech/problem now carry the new competency values.
+  const signals = await getInterviewSignals(members.map((m) => m.id));
+
   return {
     ok: true as const,
     data: members
-      .filter((m) => m.interview)
-      .map((m) => ({
-        name: m.fullName,
-        email: m.user.email,
-        company: m.company,
-        status: m.interview!.status,
-        durationSec: m.interview!.durationSec ?? "",
-        commScore: m.interview!.commScore ?? "",
-        techScore: m.interview!.techScore ?? "",
-        problemScore: m.interview!.problemScore ?? "",
-        overallScore: m.interview!.overallScore ?? "",
-        summary: m.interview!.summary ?? "",
-        evaluatedAt: m.interview!.evaluatedAt?.toISOString() ?? "",
-      })),
+      .filter((m) => signals.has(m.id))
+      .map((m) => {
+        const s = signals.get(m.id)!;
+        return {
+          name: m.fullName,
+          email: m.user.email,
+          company: m.company,
+          status: s.status,
+          durationSec: s.durationSec ?? "",
+          commScore: s.communicationScore ?? "",
+          techScore: s.technicalDepthScore ?? "",
+          problemScore: s.problemSolvingScore ?? "",
+          overallScore: s.overallScore ?? "",
+          summary: s.summary ?? "",
+          evaluatedAt: s.evaluatedAt?.toISOString() ?? "",
+        };
+      }),
   };
 }

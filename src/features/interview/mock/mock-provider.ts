@@ -15,23 +15,70 @@ import {
   DEMO_CANDIDATE_ID,
   DEMO_CANDIDATE_NAME,
 } from "@/features/interview/mock/seed";
-import type {
-  AnswerTurnData,
-  ClientQuestion,
-  FinishInterviewData,
-  InterviewOverview,
-  InterviewProvider,
-  LatestResult,
-  ProviderResult,
-  StartInterviewData,
-} from "@/features/interview/provider";
 import type { PriorAttempt } from "@/features/interview/eligibility";
 import type {
+  InterviewEligibility,
   InterviewPlan,
+  InterviewScores,
   InterviewState,
   InterviewStatus,
   PlannedQuestion,
 } from "@/features/interview/types";
+
+/**
+ * PRESERVED, NOT REACHABLE.
+ *
+ * This is the in-memory demo provider for the GENERAL 60-day interview
+ * (docs/plans/066), kept intact for when that system is rebuilt. V1 is the AI
+ * Cohort milestone interview, which has a different identity model (member, not
+ * user), a different unlock rule (milestone, not retake), and a fixed question
+ * bank — so this provider is no longer wired into `provider.ts` and nothing
+ * imports it.
+ *
+ * Its types are declared locally rather than imported from `provider.ts` for
+ * exactly that reason: the seam has moved on, and coupling a frozen demo to a
+ * live interface would force one to drag the other around.
+ */
+
+type ProviderResult<T> = { ok: true; data: T } | { ok: false; message: string };
+
+type ClientQuestion = {
+  id: string;
+  order: number;
+  text: string;
+  totalQuestions: number;
+};
+
+type LatestResult = {
+  attemptNumber: number | null;
+  overallScore: number | null;
+  conceptualScore: number | null;
+  practicalScore: number | null;
+  problemSolvingScore: number | null;
+  technicalDepthScore: number | null;
+  communicationScore: number | null;
+  summary: string | null;
+  evaluatedAt: Date | null;
+};
+
+type InterviewOverview = {
+  candidateName: string;
+  eligibility: InterviewEligibility;
+  activeInterviewId: string | null;
+  totalCompletedDays: number;
+  latestResult: LatestResult | null;
+};
+
+type StartInterviewData = { interviewId: string; question: ClientQuestion };
+
+type AnswerTurnData = {
+  isFollowUp: boolean;
+  prompt: string | null;
+  question: ClientQuestion | null;
+  finished: boolean;
+};
+
+type FinishInterviewData = { attemptNumber: number; scores: InterviewScores };
 
 /**
  * In-memory interview provider for the demo.
@@ -118,6 +165,7 @@ function buildPlan(): InterviewPlan {
     questions,
     rubricSnapshot: buildRubricSnapshot(),
     contextSummary: {
+      kind: "GENERAL",
       totalCompletedDays: context.challenge.totalCompletedDays,
       challengeSourcedQuestions: challengeSourced,
       resumeSourcedQuestions: resumeSourced,
@@ -127,7 +175,7 @@ function buildPlan(): InterviewPlan {
   };
 }
 
-export const mockInterviewProvider: InterviewProvider = {
+export const mockInterviewProvider = {
   mode: "mock",
 
   async getOverview(

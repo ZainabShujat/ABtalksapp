@@ -1,127 +1,63 @@
 import "server-only";
-import type {
-  InterviewEligibility,
-  InterviewScores,
-} from "@/features/interview/types";
+import { prisma } from "@/lib/db";
+import { auth } from "@/auth";
+import type { InterviewBlueprintKey } from "@/features/interview/cohort/blueprint";
 
 /**
- * The seam between the interview UI and its storage.
+ * The seam between the interview UI and its storage, plus the one place that
+ * answers "which member is this request acting for".
  *
- * The UI talks only to this interface, so the in-memory demo provider and the
- * real Prisma-backed service are interchangeable without touching a component.
- * Everything above this line is real: question planning, turn routing, evidence
- * evaluation, scoring, and the retake rule all run the production code paths in
- * both modes. Only persistence differs.
+ * Retargeted from the general interviewer. It previously resolved a *user* and
+ * could swap in an in-memory demo provider driven by `INTERVIEW_DEMO=1`. Both
+ * are wrong for V1: a cohort interview belongs to a `ProgramMember`, not a
+ * `User`, and a demo path that fabricates cohort results has no legitimate use
+ * on a milestone that can only be claimed once. The mock provider stays on disk
+ * for the future general interview but is no longer reachable.
  */
 
 export type ProviderResult<T> =
   | { ok: true; data: T }
   | { ok: false; message: string };
 
-/** What the client is allowed to know about a question. */
-export type ClientQuestion = {
-  id: string;
-  order: number;
-  text: string;
-  totalQuestions: number;
-};
-
-export type LatestResult = {
-  attemptNumber: number | null;
-  overallScore: number | null;
-  conceptualScore: number | null;
-  practicalScore: number | null;
-  problemSolvingScore: number | null;
-  technicalDepthScore: number | null;
-  communicationScore: number | null;
-  summary: string | null;
-  evaluatedAt: Date | null;
-};
-
-export type InterviewOverview = {
-  candidateName: string;
-  eligibility: InterviewEligibility;
-  activeInterviewId: string | null;
-  totalCompletedDays: number;
-  latestResult: LatestResult | null;
-};
-
-export type StartInterviewData = {
-  interviewId: string;
-  question: ClientQuestion;
-};
-
-export type AnswerTurnData = {
-  /** True when the same question stays open with a follow-up probe. */
-  isFollowUp: boolean;
-  prompt: string | null;
-  question: ClientQuestion | null;
-  finished: boolean;
-};
-
-export type FinishInterviewData = {
-  attemptNumber: number;
-  scores: InterviewScores;
-};
-
-export type InterviewProvider = {
-  readonly mode: "mock" | "prisma";
-  getOverview(candidateId: string): Promise<ProviderResult<InterviewOverview>>;
-  start(candidateId: string): Promise<ProviderResult<StartInterviewData>>;
-  answer(
-    candidateId: string,
-    interviewId: string,
-    questionId: string,
-    answerText: string,
-  ): Promise<ProviderResult<AnswerTurnData>>;
-  finish(
-    candidateId: string,
-    interviewId: string,
-  ): Promise<ProviderResult<FinishInterviewData>>;
-  abandon(
-    candidateId: string,
-    interviewId: string,
-  ): Promise<ProviderResult<null>>;
-};
+export type {
+  AnswerTurnData,
+  ClientQuestion,
+  CohortInterviewOverview,
+  FinishInterviewData,
+  StartInterviewData,
+} from "@/features/interview/service";
 
 /**
- * Demo mode is opt-in via INTERVIEW_DEMO=1 and never the default — a mock that
- * switched on by itself would be a production hazard. With it unset, the real
- * Prisma provider is used and a missing database fails loudly rather than
- * silently serving fabricated results.
- */
-export function isDemoMode(): boolean {
-  return process.env.INTERVIEW_DEMO === "1";
-}
-
-export async function getInterviewProvider(): Promise<InterviewProvider> {
-  if (isDemoMode()) {
-    const { mockInterviewProvider } = await import(
-      "@/features/interview/mock/mock-provider"
-    );
-    return mockInterviewProvider;
-  }
-  const { prismaInterviewProvider } = await import(
-    "@/features/interview/prisma-provider"
-  );
-  return prismaInterviewProvider;
-}
-
-/**
- * The candidate this request acts for.
+ * Resolves the ProgramMember this request acts for.
  *
- * In demo mode this resolves to a fixed seeded id without touching NextAuth,
- * so the journey runs with no database at all. In real mode it is the signed-in
- * user and nothing else.
+ * The single source of member identity for every interview action. It reads the
+ * session and the database and takes NO input, so there is no parameter through
+ * which a caller could act as another member.
+ *
+ * Returns null for a signed-out user, a user with no membership, or a member
+ * whose enrollment is not active — all of which mean "may not interview".
  */
-export async function resolveCandidateId(): Promise<string | null> {
-  if (isDemoMode()) {
-    const { DEMO_CANDIDATE_ID } = await import(
-      "@/features/interview/mock/seed"
-    );
-    return DEMO_CANDIDATE_ID;
-  }
-  const { auth } = await import("@/auth");
+export async function resolveInterviewMemberId(): Promise<string | null> {
   const session = await auth();
-  return session?.user?.id ?? null;
+  if (!session?.user?.id) return null;
+
+  const member = await prisma.programMember.findFirst({
+    where: {
+      userId: session.user.id,
+      status: { in: ["ENROLLED", "COMPLETED"] },
+    },
+    select: { id: true },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return member?.id ?? null;
 }
+
+/**
+ * Member id plus the blueprint, for callers that need both. Kept together so a
+ * route handler cannot accidentally validate one and forget the other.
+ */
+export type InterviewActor = {
+  memberId: string;
+  blueprint: InterviewBlueprintKey;
+};

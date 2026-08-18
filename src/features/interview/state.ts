@@ -55,6 +55,21 @@ export function appendLine(
 }
 
 /**
+ * Follow-up budget for one question.
+ *
+ * Cohort bank questions carry their own budget (0, 1 or 2) because the right
+ * amount of probing is a property of the question, not of the interview: a
+ * recall-level opener should never be probed, while "fine-tuning or retrieval?"
+ * needs room to think out loud. The global constant caps whatever the bank asks
+ * for, so a bank edit can never make an interview unbounded. General-interview
+ * questions carry no budget and fall back to the global value.
+ */
+export function followUpBudgetFor(question: PlannedQuestion | null): number {
+  const requested = question?.maxFollowUps ?? MAX_FOLLOW_UPS_PER_QUESTION;
+  return Math.max(0, Math.min(requested, MAX_FOLLOW_UPS_PER_QUESTION));
+}
+
+/**
  * Applies a turn decision under deterministic budget rules.
  *
  * The proposed action is honoured only when it is affordable: a FOLLOW_UP past
@@ -70,6 +85,9 @@ export function advanceTurn(
 ): { state: InterviewState; action: TurnAction } {
   const stuck = evidence.flaggedIssues.includes("stuck_or_evasive");
   const consecutiveStuckAnswers = stuck ? state.consecutiveStuckAnswers + 1 : 0;
+  const budget = followUpBudgetFor(
+    plan.questions.find((q) => q.id === questionId) ?? null,
+  );
 
   const next: InterviewState = {
     ...state,
@@ -88,9 +106,7 @@ export function advanceTurn(
   }
 
   const canFollowUp =
-    proposedAction === "FOLLOW_UP" &&
-    !stuck &&
-    next.followUpsAsked < MAX_FOLLOW_UPS_PER_QUESTION;
+    proposedAction === "FOLLOW_UP" && !stuck && next.followUpsAsked < budget;
 
   if (canFollowUp) {
     return {

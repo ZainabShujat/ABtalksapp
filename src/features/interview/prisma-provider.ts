@@ -1,50 +1,80 @@
 import "server-only";
-import { prisma } from "@/lib/db";
 import {
-  abandonInterview,
-  finishInterview,
-  getInterviewOverview,
-  recordAnswer,
-  startInterviewForUser,
+  abandonCohortInterview,
+  finishCohortInterview,
+  getCohortInterviewOverview,
+  recordCohortAnswer,
+  resumeCohortInterview,
+  startCohortInterview,
 } from "@/features/interview/service";
-import type { InterviewProvider } from "@/features/interview/provider";
+import type { InterviewBlueprintKey } from "@/features/interview/cohort/blueprint";
+import type { ProviderResult } from "@/features/interview/provider";
+import type {
+  AnswerTurnData,
+  CohortInterviewOverview,
+  FinishInterviewData,
+  StartInterviewData,
+} from "@/features/interview/service";
 
 /**
- * The production provider. A thin adapter over `service.ts` so the real flow and
- * the demo satisfy one interface — the UI cannot tell them apart.
+ * The production provider: a thin, explicitly-typed surface over `service.ts`.
+ *
+ * Every method takes `memberId` as its first argument and that value only ever
+ * comes from `resolveInterviewMemberId()`. Keeping the shape uniform is what
+ * makes the "no method can act for another member" property checkable by
+ * reading this file alone.
  */
-export const prismaInterviewProvider: InterviewProvider = {
-  mode: "prisma",
+export const cohortInterviewProvider = {
+  mode: "prisma" as const,
 
-  async getOverview(candidateId) {
-    const overview = await getInterviewOverview(candidateId);
-    if (!overview.ok) return overview;
-
-    const profile = await prisma.studentProfile.findUnique({
-      where: { userId: candidateId },
-      select: { fullName: true },
-    });
-
-    return {
-      ok: true,
-      data: {
-        candidateName: profile?.fullName ?? "there",
-        eligibility: overview.data.eligibility,
-        activeInterviewId: overview.data.activeInterviewId,
-        totalCompletedDays: overview.data.totalCompletedDays,
-        latestResult: overview.data.latestResult ?? null,
-      },
-    };
+  getOverview(
+    memberId: string,
+    blueprint: InterviewBlueprintKey,
+  ): Promise<ProviderResult<CohortInterviewOverview>> {
+    return getCohortInterviewOverview(memberId, blueprint);
   },
 
-  start: (candidateId) => startInterviewForUser(candidateId),
+  start(
+    memberId: string,
+    blueprint: InterviewBlueprintKey,
+  ): Promise<ProviderResult<StartInterviewData>> {
+    return startCohortInterview(memberId, blueprint);
+  },
 
-  answer: (candidateId, interviewId, questionId, answerText) =>
-    recordAnswer(candidateId, interviewId, questionId, answerText),
+  resume(
+    memberId: string,
+    interviewId: string,
+  ): Promise<ProviderResult<StartInterviewData>> {
+    return resumeCohortInterview(memberId, interviewId);
+  },
 
-  finish: (candidateId, interviewId) =>
-    finishInterview(candidateId, interviewId),
+  answer(
+    memberId: string,
+    interviewId: string,
+    questionId: string,
+    answerText: string,
+  ): Promise<ProviderResult<AnswerTurnData>> {
+    return recordCohortAnswer(memberId, interviewId, questionId, answerText);
+  },
 
-  abandon: (candidateId, interviewId) =>
-    abandonInterview(candidateId, interviewId),
+  finish(
+    memberId: string,
+    interviewId: string,
+  ): Promise<ProviderResult<FinishInterviewData>> {
+    return finishCohortInterview(memberId, interviewId);
+  },
+
+  abandon(
+    memberId: string,
+    interviewId: string,
+  ): Promise<ProviderResult<null>> {
+    return abandonCohortInterview(memberId, interviewId);
+  },
 };
+
+export type InterviewProvider = typeof cohortInterviewProvider;
+
+/** Kept as a function so call sites need not change when this gains config. */
+export function getInterviewProvider(): InterviewProvider {
+  return cohortInterviewProvider;
+}

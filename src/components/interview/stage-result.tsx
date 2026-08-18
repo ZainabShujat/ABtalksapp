@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { RUBRIC } from "@/features/interview/rubric";
+import { BLUEPRINT_LABEL } from "@/features/interview/cohort/blueprint";
 import type { FinishInterviewData } from "@/features/interview/provider";
 import type { EvidenceTier } from "@/features/interview/types";
 
@@ -28,13 +29,13 @@ export function StageResult({ result }: { result: FinishInterviewData | null }) 
           This interview did not produce a score
         </h2>
         <p className="mt-3 max-w-[64ch] text-[15.5px] leading-7 text-foreground/78">
-          Your challenge days were not spent. You can start again.
+          Your milestone was not consumed. You can start again.
         </p>
       </section>
     );
   }
 
-  const { scores, attemptNumber } = result;
+  const { scores, blueprint } = result;
   const labelFor = (competency: string) =>
     RUBRIC.find((r) => r.competency === competency)?.label ?? competency;
   const weightFor = (competency: string) =>
@@ -47,7 +48,7 @@ export function StageResult({ result }: { result: FinishInterviewData | null }) 
           className="block text-[13px] font-extrabold uppercase leading-[14px] tracking-[0.08em]"
           style={{ color: "hsl(var(--background) / 0.8)" }}
         >
-          Attempt {String(attemptNumber).padStart(2, "0")} · Overall
+          {BLUEPRINT_LABEL[blueprint]} · Overall
         </span>
         <span
           className="mt-3 block font-extrabold tracking-[-0.03em]"

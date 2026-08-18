@@ -29,6 +29,8 @@ import {
 import type { MemberDashboard } from "@/features/program/dashboard";
 import type { InterviewDashboardCard } from "@/features/program/interview";
 import { MissionHeatmap } from "@/components/program/mission-heatmap";
+import { CohortInterviewCard } from "@/components/program/cohort-interview-card";
+import type { CohortInterviewState } from "@/features/interview/cohort-eligibility";
 import { cn } from "@/lib/utils";
 
 type ProjectRow = {
@@ -45,6 +47,7 @@ type Props = {
   projects: ProjectRow[];
   aiRec: { recommendation: string | null; generatedAt: string | null };
   interviewCard: InterviewDashboardCard;
+  cohortInterviewState: CohortInterviewState;
 };
 
 const AT_RISK_LABEL: Record<string, string> = {
@@ -153,6 +156,7 @@ export function ProgramDashboardView({
   projects,
   aiRec,
   interviewCard,
+  cohortInterviewState,
 }: Props) {
   return (
     <div className="-mx-4 -my-6 min-h-[calc(100svh-3.5rem)] bg-ink-900 px-4 py-6 text-white md:px-6">
@@ -296,6 +300,8 @@ export function ProgramDashboardView({
               </div>
             </div>
           </section>
+
+          <CohortInterviewCard state={cohortInterviewState} />
         </div>
       </div>
 

@@ -100,6 +100,7 @@ function makePlan(context: CandidateContext): InterviewPlan {
     questions,
     rubricSnapshot: buildRubricSnapshot(),
     contextSummary: {
+      kind: "GENERAL",
       totalCompletedDays: context.challenge.totalCompletedDays,
       challengeSourcedQuestions: questions.length,
       resumeSourcedQuestions: 0,

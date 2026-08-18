@@ -289,7 +289,7 @@ model User {
   workshopRegistrations WorkshopRegistration[]
   legalConsents         LegalConsent[]
   dataRightsRequests    DataRightsRequest[]
-  generalInterviews     GeneralInterview[]
+
 
   @@index([createdAt(sort: Desc)])
 }
@@ -711,7 +711,10 @@ model ProgramMember {
   commitDays          ProgramCommitDay[]
   exerciseCompletions ProgramExerciseCompletion[]
   projects            ProgramProject[]
+  /// Legacy end-of-cohort voice interview. Retained during the migration to
+  /// GeneralInterview — do not delete until the DAY_31 replacement is verified.
   interview           ProgramInterview?
+  generalInterviews   GeneralInterview[]
   shortlistedBy       RecruiterShortlistItem[]
 
   @@unique([userId, cohortId])
@@ -1114,16 +1117,15 @@ model WorkshopRegistration {
 /// `ProgramInterview` (the 31-day AI Cohort exit interview), which is unrelated
 /// and must keep working independently.
 model GeneralInterview {
-  id     String @id @default(cuid())
-  userId String
+  id       String @id @default(cuid())
+  memberId String
 
-  /// Assigned ONLY when an attempt completes, inside a transaction guarded by a
-  /// per-user advisory lock. Null while in progress and for abandoned/invalid
-  /// sessions, so a technical failure structurally cannot consume an attempt.
-  /// Postgres treats NULLs as distinct in unique indexes, so any number of
-  /// unfinished attempts may coexist.
-  attemptNumber Int?
-  status        GeneralInterviewStatus @default(NOT_STARTED)
+  /// Which standardized question bank this interview ran. A member may hold at
+  /// most ONE completed interview per blueprint — enforced by a partial unique
+  /// index on COMPLETED rows (see the migration), so abandoned and invalid
+  /// attempts never consume the milestone.
+  blueprint InterviewBlueprint
+  status    GeneralInterviewStatus @default(NOT_STARTED)
 
   /// Frozen at session start: planned questions, rubric snapshot, context summary.
   /// The rubric snapshot keeps historical scores interpretable if weights change.
@@ -1139,15 +1141,10 @@ model GeneralInterview {
   /// projections of this, written from the same object.
   state Json?
 
-  /// Frozen when the attempt opens: the submissions this attempt is entitled to
-  /// consume. Server-side so a client cannot submit an empty set and complete an
-  /// interview without spending challenge progress.
-  eligibleSubmissionIds String[] @default([])
-
-  /// Submission ids this attempt consumed. Copied from `eligibleSubmissionIds`
-  /// inside the completing transaction, and written ONLY on the transition to
-  /// COMPLETED — this is what makes the 30-new-days retake rule a set difference.
-  consumedSubmissionIds String[] @default([])
+  /// Cohort day numbers this blueprint covered, frozen at open for provenance:
+  /// DAY_15 → 1..15, DAY_31 → 1..31. Never used to decide eligibility — that is
+  /// recomputed from ProgramMissionSubmission at request time.
+  scopeDays Int[] @default([])
 
   conceptualScore     Int?
   practicalScore      Int?
@@ -1166,10 +1163,19 @@ model GeneralInterview {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  member ProgramMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, attemptNumber])
-  @@index([userId, status])
+  @@index([memberId, status])
+  @@index([memberId, blueprint])
+}
+
+/// Standardized cohort question banks. Extensible: a future candidate-specific
+/// blueprint is a new enum member, not a new system.
+enum InterviewBlueprint {
+  /// Cohort days 1–15. Unlocks when every one of those days is PASSED.
+  DAY_15
+  /// Cohort days 1–31. Unlocks when every one of those days is PASSED.
+  DAY_31
 }
 
 enum GeneralInterviewStatus {
