@@ -8,6 +8,11 @@ export const NAV_LINKS = [
   { href: "#faq", id: "faq", label: "FAQ" },
 ] as const;
 
+export const GET_STARTED_ITEMS = [
+  { href: "/program", label: "Candidates" },
+  { href: "/talent", label: "Recruiter" },
+] as const;
+
 export const STATS = [
   { count: 10, suffix: "k+", label: "People on the platform" },
   { count: 100, suffix: "+", label: "Companies in the recruiter network" },
