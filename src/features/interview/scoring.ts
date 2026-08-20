@@ -4,9 +4,18 @@ import {
   TOTAL_RUBRIC_WEIGHT,
   getCompetencyDefinition,
 } from "@/features/interview/rubric";
+import { deriveCompetencyTier } from "@/features/interview/evidence";
+import {
+  scoreToTier,
+  type QuestionScore,
+} from "@/features/interview/module-scoring";
 import type {
+  Competency,
   CompetencyJudgment,
+  EvidenceTier,
+  InterviewPlan,
   InterviewScores,
+  InterviewState,
 } from "@/features/interview/types";
 
 /**
@@ -18,6 +27,102 @@ import type {
 
 function clampScore(value: number): number {
   return Math.min(100, Math.max(0, Math.round(value)));
+}
+
+/* ------------------------------------------- evidence-backed competencies */
+
+export type CompetencyAssessment = {
+  competency: Competency;
+  label: string;
+  weight: number;
+  score: number;
+  tier: EvidenceTier;
+  /** Question ids this score was computed from. Empty for COMMUNICATION. */
+  evidenceRefs: string[];
+  /** How the number was reached, in one sentence a candidate could check. */
+  justification: string;
+};
+
+/**
+ * Competency scores computed from per-question evidence.
+ *
+ * This replaces asking a model for a tier. The rubric still decides WHAT is
+ * measured and how much each axis is worth; the arithmetic decides the number.
+ * The model's only remaining job in the whole scoring path is judging which
+ * checklist items an individual answer covered — and even that is validated
+ * against the checklist before it counts.
+ *
+ * COMMUNICATION has no questions of its own by design (it is observed across
+ * every answer), so it is derived from behaviour across the transcript rather
+ * than scored as zero for want of a slot.
+ */
+export function assessCompetencies(
+  questionScores: QuestionScore[],
+  state: InterviewState,
+  plan: InterviewPlan,
+): CompetencyAssessment[] {
+  return RUBRIC.map((definition) => {
+    if (definition.competency === "COMMUNICATION") {
+      const tier = deriveCompetencyTier("COMMUNICATION", state, plan);
+      return {
+        competency: definition.competency,
+        label: definition.label,
+        weight: definition.weight,
+        score: EVIDENCE_TIER_SCORE[tier],
+        tier,
+        evidenceRefs: [],
+        justification:
+          "Observed across every answer — clarity, staying on the question, and handling not-knowing honestly.",
+      };
+    }
+
+    const forCompetency = questionScores.filter(
+      (s) => s.competency === definition.competency && s.answered,
+    );
+
+    if (forCompetency.length === 0) {
+      return {
+        competency: definition.competency,
+        label: definition.label,
+        weight: definition.weight,
+        score: 0,
+        tier: "NONE" as EvidenceTier,
+        evidenceRefs: [],
+        justification: "No question for this competency was answered.",
+      };
+    }
+
+    const score = Math.round(
+      forCompetency.reduce((sum, s) => sum + s.score, 0) / forCompetency.length,
+    );
+    const cleared = forCompetency.filter((s) => s.cleared).length;
+
+    return {
+      competency: definition.competency,
+      label: definition.label,
+      weight: definition.weight,
+      score,
+      tier: scoreToTier(score),
+      evidenceRefs: forCompetency.map((s) => s.questionId),
+      justification:
+        `Cleared the evidence bar on ${cleared} of ${forCompetency.length} ` +
+        `question${forCompetency.length === 1 ? "" : "s"} for this competency.`,
+    };
+  });
+}
+
+/**
+ * The single overall number, weighted by the rubric.
+ *
+ * Computed from CORE questions only — extension questions about work beyond the
+ * milestone are reported separately and never move this number, because two
+ * DAY_15 scores have to mean the same thing.
+ */
+export function overallFromCompetencies(
+  assessments: CompetencyAssessment[],
+): number {
+  const weighted = assessments.reduce((sum, a) => sum + a.score * a.weight, 0);
+  return clampScore(weighted / TOTAL_RUBRIC_WEIGHT);
 }
 
 export function aggregateScores(

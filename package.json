@@ -32,7 +32,10 @@
     "hackathon:migrate": "tsx scripts/migrate-hackathon-to-neon.ts",
     "hackathon:verify": "tsx scripts/migrate-hackathon-to-neon.ts --verify",
     "hackathon:preflight": "tsx scripts/migrate-hackathon-to-neon.ts --preflight",
-    "test:interview": "tsx scripts/verify-cohort-interview.ts && tsx scripts/verify-interview-domain.ts && tsx scripts/verify-interview-agent.ts",
+    "test:interview": "tsx scripts/verify-cohort-interview.ts && tsx scripts/verify-interview-domain.ts && tsx scripts/verify-interview-agent.ts && tsx scripts/verify-interview-adaptive.ts && tsx scripts/verify-interview-report.ts && tsx scripts/verify-interview-voice.ts",
+    "test:interview:adaptive": "tsx scripts/verify-interview-adaptive.ts",
+    "demo:interview": "tsx scripts/demo-adaptive-interview.ts",
+    "demo:interview:report": "tsx scripts/e2e-interview-report.ts",
     "test:interview:agent": "tsx scripts/verify-interview-agent.ts",
     "test:interview:db": "node scripts/db-preflight.mjs && tsx --conditions=react-server scripts/smoke-cohort-interview.ts"
   },

@@ -1,4 +1,5 @@
 import {
+  MAX_ESCALATIONS_PER_QUESTION,
   MAX_FOLLOW_UPS_PER_QUESTION,
   STUCK_ANSWERS_BEFORE_EARLY_END,
 } from "@/features/interview/constants";
@@ -24,6 +25,9 @@ export function createInitialState(): InterviewState {
     consecutiveStuckAnswers: 0,
     redirectsAsked: 0,
     repeatsAsked: 0,
+    depthLevel: 1,
+    escalationsAsked: 0,
+    competenceSignal: {},
     transcript: [],
     evidenceByQuestionId: {},
     startedAtMs: null,
@@ -84,6 +88,13 @@ export function advanceTurn(
   questionId: string,
   evidence: AnswerEvidence,
   proposedAction: TurnAction,
+  /**
+   * Where to file this answer's evidence. Defaults to the question id; an
+   * escalated turn passes a rung-scoped key so the two checklists' index spaces
+   * never mix. Budgets are still looked up by `questionId`, which is why the
+   * two are separate parameters rather than one.
+   */
+  evidenceKey: string = questionId,
 ): { state: InterviewState; action: TurnAction } {
   const stuck = evidence.flaggedIssues.includes("stuck_or_evasive");
   const consecutiveStuckAnswers = stuck ? state.consecutiveStuckAnswers + 1 : 0;
@@ -96,7 +107,7 @@ export function advanceTurn(
     consecutiveStuckAnswers,
     evidenceByQuestionId: {
       ...state.evidenceByQuestionId,
-      [questionId]: evidence,
+      [evidenceKey]: evidence,
     },
   };
 
@@ -117,6 +128,26 @@ export function advanceTurn(
     };
   }
 
+  // Escalation draws on its OWN budget, not the follow-up budget: a follow-up
+  // closes a gap, an escalation looks for the ceiling of a candidate who has
+  // no gap left. A recall question with `maxFollowUps: 0` can therefore still
+  // reward a strong answer with a harder one.
+  const canEscalate =
+    proposedAction === "ESCALATE" &&
+    !stuck &&
+    (next.escalationsAsked ?? 0) < MAX_ESCALATIONS_PER_QUESTION;
+
+  if (canEscalate) {
+    return {
+      state: {
+        ...next,
+        escalationsAsked: (next.escalationsAsked ?? 0) + 1,
+        depthLevel: (next.depthLevel ?? 1) + 1,
+      },
+      action: "ESCALATE",
+    };
+  }
+
   const nextIndex = next.currentQuestionIndex + 1;
   if (nextIndex >= plan.questions.length) {
     return {
@@ -134,6 +165,8 @@ export function advanceTurn(
       followUpsAsked: 0,
       redirectsAsked: 0,
       repeatsAsked: 0,
+      depthLevel: 1,
+      escalationsAsked: 0,
     },
     action: "NEXT_QUESTION",
   };

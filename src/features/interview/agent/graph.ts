@@ -9,6 +9,7 @@ import type {
   InterviewStatus,
 } from "@/features/interview/types";
 import {
+  applyEscalate,
   applyFollowUp,
   applyNextQuestion,
   applyRedirect,
@@ -76,6 +77,8 @@ const InterviewAnnotation = Annotation.Root({
   maxFollowUps: Annotation<number>,
   redirectCount: Annotation<number>,
   repeatCount: Annotation<number>,
+  depthLevel: Annotation<number>,
+  escalationsAsked: Annotation<number>,
 
   decision: Annotation<InterviewDecision | null>,
   lastDecision: Annotation<AgentAction | null>,
@@ -93,10 +96,12 @@ function guardBranch(state: InterviewAgentState): "analyze" | "abort" {
 /** Names the branch node for the routed action. */
 function actionBranch(
   state: InterviewAgentState,
-): "followUp" | "nextQuestion" | "redirect" | "repeat" {
+): "followUp" | "escalate" | "nextQuestion" | "redirect" | "repeat" {
   switch (state.lastDecision) {
     case "FOLLOW_UP":
       return "followUp";
+    case "ESCALATE":
+      return "escalate";
     case "REDIRECT":
       return "redirect";
     case "REPEAT":
@@ -112,6 +117,7 @@ export function buildInterviewGraph(llm: InterviewLLM) {
     .addNode("analyzeAnswer", createAnalyzeAnswer(llm))
     .addNode("routeResponse", routeResponse)
     .addNode("followUp", applyFollowUp)
+    .addNode("escalate", applyEscalate)
     .addNode("nextQuestion", applyNextQuestion)
     .addNode("redirect", applyRedirect)
     .addNode("repeat", applyRepeat)
@@ -125,11 +131,13 @@ export function buildInterviewGraph(llm: InterviewLLM) {
     .addEdge("analyzeAnswer", "routeResponse")
     .addConditionalEdges("routeResponse", actionBranch, {
       followUp: "followUp",
+      escalate: "escalate",
       nextQuestion: "nextQuestion",
       redirect: "redirect",
       repeat: "repeat",
     })
     .addEdge("followUp", "updateState")
+    .addEdge("escalate", "updateState")
     .addEdge("nextQuestion", "updateState")
     .addEdge("redirect", "updateState")
     .addEdge("repeat", "updateState")
@@ -219,7 +227,7 @@ export async function runInterviewTurn(
     interviewState: input.state,
     currentQuestionId: input.questionId,
     currentQuestionIndex: input.state.currentQuestionIndex,
-    currentQuestion: openQuestion?.text ?? "",
+    currentQuestion: openQuestion?.spokenText ?? openQuestion?.text ?? "",
     candidateAnswer: input.answerText,
     transcript: input.state.transcript,
     evidence: input.state.evidenceByQuestionId,
@@ -227,6 +235,8 @@ export async function runInterviewTurn(
     maxFollowUps: followUpBudgetFor(openQuestion),
     redirectCount: input.state.redirectsAsked ?? 0,
     repeatCount: input.state.repeatsAsked ?? 0,
+    depthLevel: input.state.depthLevel ?? 1,
+    escalationsAsked: input.state.escalationsAsked ?? 0,
     decision: null,
     lastDecision: null,
     nextPrompt: null,

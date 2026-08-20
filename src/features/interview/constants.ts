@@ -48,6 +48,51 @@ export const MAX_FOLLOW_UPS_PER_QUESTION = 2;
 export const MAX_REDIRECTS_PER_QUESTION = 3;
 
 /**
+ * Escalations allowed on a single question.
+ *
+ * Separate from the follow-up budget on purpose: a follow-up spends a turn
+ * closing a GAP, an escalation spends one finding a CEILING. A question with
+ * `maxFollowUps: 0` (recall-level, never worth probing a gap on) can still earn
+ * an escalation, because rewarding a strong answer with a harder one is exactly
+ * what the spec asks for.
+ */
+export const MAX_ESCALATIONS_PER_QUESTION = 2;
+
+/**
+ * Evidence items a DEEP PROBE answer must cover to count as cleared.
+ *
+ * Rungs are not authored with their own `minEvidence` — they are follow-on
+ * questions, not standalone assessment items, and asking an author to tune a
+ * bar for each one invites drift. Two is the same bar most core questions use,
+ * clamped to the rung's checklist length.
+ */
+export const DEEP_PROBE_MIN_EVIDENCE = 2;
+
+/**
+ * Consecutive strong answers in one competency before the interview is allowed
+ * to spend its second escalation there. Below this, one rung per question — the
+ * interview probes for depth without turning every good answer into a
+ * three-part interrogation.
+ */
+export const STRONG_ANSWERS_TO_RAISE_CEILING = 2;
+
+/**
+ * Consecutive weak answers in one competency before escalation is suppressed.
+ *
+ * Two, not one. A single weak answer must never suppress the next escalation —
+ * candidates have off moments, and an interview that punishes one stumble stops
+ * measuring ability. The streak resets the instant they answer well.
+ */
+export const WEAK_ANSWERS_TO_SUPPRESS = 2;
+
+/**
+ * Extension questions appended for cohort days passed BEYOND the blueprint's
+ * scope. Small on purpose: the milestone is the assessment, current progress is
+ * context.
+ */
+export const MAX_EXTENSION_QUESTIONS = 2;
+
+/**
  * Times a question may be repeated on request before a repeat is treated as a
  * non-answer. Repeats are free (no evidence, no budget) and legitimate on a
  * voice interview where audio can genuinely drop.

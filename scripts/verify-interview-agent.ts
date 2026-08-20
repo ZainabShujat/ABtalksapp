@@ -59,6 +59,18 @@ function stateAt(index: number): InterviewState {
   };
 }
 
+/**
+ * A state whose escalation budget is already spent, so a STRONG answer moves to
+ * the next question instead of going deeper.
+ *
+ * Needed by every test written before the depth ladder existed: those tests
+ * assert the hand-off between questions, which a cleared bar now delays by one
+ * escalation. Adaptive behaviour itself is covered in verify-interview-adaptive.ts.
+ */
+function depthSpent(index: number): InterviewState {
+  return { ...stateAt(index), escalationsAsked: 2 };
+}
+
 function evidence(over: Partial<AnswerEvidence> = {}): AnswerEvidence {
   return {
     conceptualFound: false,
@@ -111,14 +123,16 @@ async function turn(
 async function main() {
   console.log("\nLangGraph interview agent\n");
 
-  await check("1. strong answer advances to the next question", async () => {
+  await check("1. strong answer advances when nothing deeper is left to ask", async () => {
+    // Depth is exhausted, so a cleared bar has nowhere to go but forward. The
+    // escalation case is covered in verify-interview-adaptive.ts.
     const llm = fixedLLM({
       action: "NEXT_QUESTION",
       evidence: evidence({ conceptualFound: true, practicalFound: true }),
     });
     const out = await turn(
       llm,
-      stateAt(0),
+      depthSpent(0),
       OPENER.id,
       "I ran it locally with Ollama first because there is no API cost and the coverage data never leaves my machine. I pulled llama3 and had to check my RAM before choosing the model size.",
     );
@@ -358,7 +372,12 @@ async function main() {
       evidence: evidence({ conceptualFound: true, practicalFound: true }),
     });
     const last = plan.questions.length - 1;
-    const out = await turn(llm, stateAt(last), plan.questions[last]!.id, "A full closing answer with specifics from my own build.");
+    const out = await turn(
+      llm,
+      depthSpent(last),
+      plan.questions[last]!.id,
+      "A full closing answer with specifics from my own build.",
+    );
 
     assert.equal(out.finished, true);
     assert.equal(out.action, "COMPLETE");
@@ -388,11 +407,13 @@ async function main() {
       OPENER.id,
       "I ran it locally with Ollama; no API cost and the data stayed on my machine.",
     );
+    // The opener carries deep probes, so a cleared bar routes through the
+    // escalate branch — the trace is direct evidence that the ladder ran.
     assert.deepEqual(strong.trace, [
       "receiveAnswer",
       "analyzeAnswer",
       "routeResponse",
-      "nextQuestion",
+      "escalate",
       "updateState",
     ]);
 
@@ -417,7 +438,7 @@ async function main() {
       acknowledgement: "That makes sense, you kept it local for cost and privacy.",
       evidence: evidence({ conceptualFound: true, practicalFound: true }),
     });
-    const out = await turn(llm, stateAt(0), OPENER.id, "I ran it locally to avoid API cost.");
+    const out = await turn(llm, depthSpent(0), OPENER.id, "I ran it locally to avoid API cost.");
 
     assert.ok(
       out.prompt?.startsWith("That makes sense, you kept it local for cost and privacy."),
@@ -437,7 +458,7 @@ async function main() {
       acknowledgement: "Interesting - and how did you measure that?",
       evidence: evidence({ conceptualFound: true }),
     });
-    const out = await turn(llm, stateAt(0), OPENER.id, "I ran it locally to avoid API cost.");
+    const out = await turn(llm, depthSpent(0), OPENER.id, "I ran it locally to avoid API cost.");
 
     assert.ok(
       !out.prompt?.includes("how did you measure that"),
@@ -452,7 +473,7 @@ async function main() {
       acknowledgement: "x".repeat(400),
       evidence: evidence({ practicalFound: true }),
     });
-    const out = await turn(llm, stateAt(0), OPENER.id, "I ran it locally to avoid API cost.");
+    const out = await turn(llm, depthSpent(0), OPENER.id, "I ran it locally to avoid API cost.");
     assert.ok(!out.prompt?.includes("x".repeat(50)));
     assert.ok(out.prompt?.endsWith(plan.questions[1]!.text));
   });

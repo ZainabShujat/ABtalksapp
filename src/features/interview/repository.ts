@@ -5,11 +5,16 @@ import { logger } from "@/lib/logger";
 import type { InterviewBlueprintKey } from "@/features/interview/cohort/blueprint";
 import { scopeDaysFor } from "@/features/interview/cohort/planner";
 import type {
+  AnswerEvidence,
   InterviewPlan,
   InterviewScores,
   InterviewState,
   InterviewStatus,
 } from "@/features/interview/types";
+import {
+  parseReport,
+  type InterviewReportDocument,
+} from "@/features/interview/report-assembly";
 
 /**
  * All `GeneralInterview` database access. Nothing else in the module touches
@@ -145,8 +150,9 @@ export async function saveTurn(
   interviewId: string,
   memberId: string,
   state: InterviewState,
+  turn?: TurnRecord,
 ): Promise<void> {
-  await prisma.generalInterview.updateMany({
+  const updated = await prisma.generalInterview.updateMany({
     where: { id: interviewId, memberId, status: "IN_PROGRESS" },
     data: {
       state: state as unknown as Prisma.InputJsonValue,
@@ -154,6 +160,115 @@ export async function saveTurn(
       evidence: state.evidenceByQuestionId as unknown as Prisma.InputJsonValue,
     },
   });
+
+  // The audit row is written only if the runtime state was actually accepted.
+  // Writing it unconditionally would leave turns hanging off an interview that
+  // had already closed, and a report is only as trustworthy as the trail
+  // behind it.
+  if (updated.count === 0 || !turn) return;
+
+  try {
+    await prisma.interviewTurn.create({
+      data: {
+        interviewId,
+        turnIndex: turn.turnIndex,
+        questionId: turn.questionId,
+        tier: turn.tier,
+        depthLevel: turn.depthLevel,
+        action: turn.action,
+        promptText: turn.promptText.slice(0, 4000),
+        answerText: turn.answerText.slice(0, 8000),
+        evidence: turn.evidence
+          ? (turn.evidence as unknown as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
+        degraded: turn.degraded,
+        latencyMs: turn.latencyMs ?? null,
+      },
+    });
+  } catch (e) {
+    // A duplicate turnIndex means a replayed request; the runtime state is
+    // already correct and idempotent, so this must not fail the candidate's
+    // turn. Anything else is logged and swallowed for the same reason: losing
+    // one audit row is bad, losing the interview is worse.
+    if (
+      e instanceof Prisma.PrismaClientKnownRequestError &&
+      e.code === UNIQUE_VIOLATION
+    ) {
+      logger.warn("[interview] duplicate turn index ignored", {
+        interviewId,
+        turnIndex: turn.turnIndex,
+      });
+      return;
+    }
+    logger.error("[interview] failed to persist turn", {
+      interviewId,
+      turnIndex: turn.turnIndex,
+      error: String(e),
+    });
+  }
+}
+
+/** One durable audit row. Built by the service from the agent's turn result. */
+export type TurnRecord = {
+  turnIndex: number;
+  questionId: string;
+  tier: "CORE" | "EXTENSION";
+  depthLevel: number;
+  action: string;
+  promptText: string;
+  answerText: string;
+  evidence: AnswerEvidence | null;
+  degraded: boolean;
+  latencyMs?: number;
+};
+
+/** Every recorded turn for an interview, in order. */
+export async function loadTurns(
+  interviewId: string,
+  memberId: string,
+): Promise<
+  {
+    turnIndex: number;
+    questionId: string;
+    tier: string;
+    depthLevel: number;
+    action: string;
+    promptText: string;
+    answerText: string;
+    evidence: AnswerEvidence | null;
+    degraded: boolean;
+  }[]
+> {
+  const rows = await prisma.interviewTurn.findMany({
+    where: { interviewId, interview: { memberId } },
+    select: {
+      turnIndex: true,
+      questionId: true,
+      tier: true,
+      depthLevel: true,
+      action: true,
+      promptText: true,
+      answerText: true,
+      evidence: true,
+      degraded: true,
+    },
+    orderBy: { turnIndex: "asc" },
+  });
+
+  return rows.map((r) => ({
+    ...r,
+    evidence: (r.evidence as AnswerEvidence | null) ?? null,
+  }));
+}
+
+/** Next turn index for an interview. */
+export async function nextTurnIndex(interviewId: string): Promise<number> {
+  const last = await prisma.interviewTurn.findFirst({
+    where: { interviewId },
+    select: { turnIndex: true },
+    orderBy: { turnIndex: "desc" },
+  });
+  return (last?.turnIndex ?? -1) + 1;
 }
 
 export type CompleteAttemptResult =
@@ -333,4 +448,113 @@ export async function abandonStaleAttempts(
     },
   });
   return result.count;
+}
+
+
+/* ------------------------------------------------------------- the report */
+
+/**
+ * Stores the generated report.
+ *
+ * `upsert` rather than `create`: regenerating a report for an interview is a
+ * legitimate operation (a narrative model outage today should not permanently
+ * cost this candidate their prose), and it must replace rather than accumulate.
+ * The interview row itself is untouched — the report is derived data, and the
+ * interview stays the source of truth for what happened.
+ */
+export async function saveReport(
+  interviewId: string,
+  memberId: string,
+  report: InterviewReportDocument,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  // Validate on WRITE. A document that cannot be parsed back is a document
+  // that will render as "unavailable" later, and it is far cheaper to refuse
+  // it here than to discover it on the candidate's screen.
+  const validated = parseReport(report);
+  if (!validated.ok) {
+    logger.error("[interview-report] refused to store invalid report", {
+      interviewId,
+      message: validated.message,
+    });
+    return { ok: false, message: "Generated report failed validation." };
+  }
+
+  const owned = await prisma.generalInterview.findFirst({
+    where: { id: interviewId, memberId },
+    select: { id: true },
+  });
+  if (!owned) return { ok: false, message: "Interview not found." };
+
+  await prisma.interviewReport.upsert({
+    where: { interviewId },
+    create: {
+      interviewId,
+      version: report.version,
+      overallScore: report.overall.score,
+      report: report as unknown as Prisma.InputJsonValue,
+      narrativeDegraded: report.narrativeDegraded,
+    },
+    update: {
+      version: report.version,
+      overallScore: report.overall.score,
+      report: report as unknown as Prisma.InputJsonValue,
+      narrativeDegraded: report.narrativeDegraded,
+      generatedAt: new Date(),
+    },
+  });
+
+  return { ok: true };
+}
+
+export type LoadedReport = {
+  report: InterviewReportDocument;
+  generatedAt: Date;
+  narrativeDegraded: boolean;
+};
+
+/**
+ * Reads a stored report back, scoped to its owner.
+ *
+ * Validated on READ as well as on write: this column outlives any single
+ * deploy, so a row written against an older shape must degrade to "unavailable"
+ * rather than crash the page rendering it.
+ */
+export async function loadReport(
+  interviewId: string,
+  memberId: string,
+): Promise<LoadedReport | null> {
+  const row = await prisma.interviewReport.findFirst({
+    where: { interviewId, interview: { memberId } },
+    select: { report: true, generatedAt: true, narrativeDegraded: true },
+  });
+  if (!row) return null;
+
+  const parsed = parseReport(row.report);
+  if (!parsed.ok) {
+    logger.error("[interview-report] stored report failed validation on read", {
+      interviewId,
+      message: parsed.message,
+    });
+    return null;
+  }
+
+  return {
+    report: parsed.data,
+    generatedAt: row.generatedAt,
+    narrativeDegraded: row.narrativeDegraded,
+  };
+}
+
+/** The report for a member's completed blueprint, if one exists. */
+export async function loadReportForBlueprint(
+  memberId: string,
+  blueprint: InterviewBlueprintKey,
+): Promise<LoadedReport | null> {
+  const interview = await prisma.generalInterview.findFirst({
+    where: { memberId, blueprint, status: "COMPLETED" },
+    select: { id: true },
+    orderBy: { evaluatedAt: "desc" },
+  });
+  if (!interview) return null;
+  return loadReport(interview.id, memberId);
 }

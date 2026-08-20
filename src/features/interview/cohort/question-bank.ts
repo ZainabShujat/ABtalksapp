@@ -26,7 +26,72 @@ import type { Competency } from "@/features/interview/types";
  * production incident.
  */
 
-export const QUESTION_BANK_VERSION = "2026-08-14.1";
+export const QUESTION_BANK_VERSION = "2026-08-20.1";
+
+/**
+ * Interview modes. A bank is not a quiz because the same competency is probed
+ * from different angles: recall, implementation walk-through, a decision, a
+ * debugging scenario. Recorded per question so the report can say WHICH KIND of
+ * thinking a candidate is strong at, and so bank composition is reviewable.
+ */
+export const QUESTION_MODES = [
+  "CONCEPTUAL",
+  "IMPLEMENTATION",
+  "DECISION",
+  "DEBUGGING",
+  "SCENARIO",
+  "TRADEOFF",
+  "EVIDENCE",
+  "REFLECTION",
+  "TRANSFER",
+] as const;
+export type QuestionMode = (typeof QUESTION_MODES)[number];
+
+/**
+ * Which real artifact this question can point at.
+ *
+ * Resolved against the candidate's own submissions at plan time by
+ * `cohort/grounding.ts`. If the artifact does not exist the reference is
+ * dropped and the question is asked exactly as banked — never softened into a
+ * vague claim about work we cannot see.
+ */
+export type GroundsOn = {
+  /** Cohort day whose submission/repo is referenced. */
+  day?: number;
+  /** Module whose project is referenced. Used with `artifact: "project"`. */
+  moduleNumber?: number;
+  artifact: "repo" | "submission" | "project";
+};
+
+/**
+ * An escalation rung: what to ask when the candidate has ALREADY cleared the
+ * bar on the core question.
+ *
+ * This is the difference between an interview and a questionnaire. A strong
+ * answer earns a harder question rather than a polite "thank you, next".
+ * Because rungs are banked rather than generated, going deeper stays
+ * comparable: two candidates who answer equally well hear the same escalation.
+ */
+export type DeepProbe = {
+  /** 2 = one level deeper than the core question, 3 = deepest. */
+  level: 2 | 3;
+  mode: QuestionMode;
+  text: string;
+  /** What the deeper answer should contain. Judged like any other evidence. */
+  expectedEvidence: string[];
+};
+
+/**
+ * A scaffold: what to ask when the candidate is BELOW the bar but still
+ * engaged. Narrower than the core question and aimed at one specific expected
+ * item, so a struggling candidate gets a way back in rather than a repeat of
+ * the question they already could not answer.
+ */
+export type ScaffoldProbe = {
+  text: string;
+  /** The expected-evidence item this probe is trying to unlock. */
+  targets: string;
+};
 
 export type CoreQuestion = {
   /** Stable id. Persisted in plan/transcript/evidence — never renumber. */
@@ -54,6 +119,19 @@ export type CoreQuestion = {
    * so a follow-up stays on the same topic even if the LLM call fails.
    */
   followUpPrompt: string | null;
+
+  /** How this question interrogates the competency. */
+  mode: QuestionMode;
+  /** Optional pointer at the candidate's real work. Omitted ⇒ asked as banked. */
+  groundsOn?: GroundsOn;
+  /**
+   * Escalation ladder, ascending by level. Empty or absent means a strong
+   * answer simply moves on — which is correct for questions with nothing
+   * deeper to ask.
+   */
+  deepProbes?: readonly DeepProbe[];
+  /** Simplification ladder for a below-bar answer. */
+  scaffoldProbes?: readonly ScaffoldProbe[];
 };
 
 export type QuestionBank = {
@@ -93,6 +171,32 @@ const DAY_15_QUESTIONS: readonly CoreQuestion[] = [
     // probing would pad the transcript without adding signal.
     maxFollowUps: 0,
     followUpPrompt: null,
+    mode: "CONCEPTUAL",
+    groundsOn: { day: 2, artifact: "submission" },
+    deepProbes: [
+      {
+        level: 2,
+        mode: "TRADEOFF",
+        text: "When would you not run locally — what makes a hosted API the right call for this chatbot?",
+        expectedEvidence: [
+          "Model size against available RAM",
+          "Throughput or concurrency needs",
+          "Quality gap on harder generation",
+          "Operational burden of self-hosting",
+        ],
+      },
+      {
+        level: 3,
+        mode: "SCENARIO",
+        text: "Suppose the coverage bot has to serve two hundred members at once. What breaks first on the local setup?",
+        expectedEvidence: [
+          "Requests serialise on one process",
+          "Memory contention between requests",
+          "Latency grows under queueing",
+          "Would need batching or a hosted endpoint",
+        ],
+      },
+    ],
   },
   {
     id: "d15-q09",
@@ -111,6 +215,34 @@ const DAY_15_QUESTIONS: readonly CoreQuestion[] = [
     maxFollowUps: 1,
     followUpPrompt:
       "Was there a case where the right context still produced a wrong answer?",
+    mode: "IMPLEMENTATION",
+    groundsOn: { day: 11, artifact: "repo" },
+    deepProbes: [
+      {
+        level: 2,
+        mode: "DEBUGGING",
+        text: "Take one of those ten where the answer came out wrong. How would you work out whether retrieval or generation caused it?",
+        expectedEvidence: [
+          "Inspect the retrieved chunks first",
+          "Check whether the claim appears in them at all",
+          "Separates a retrieval failure from a generation failure",
+          "Names a concrete check they actually ran",
+        ],
+      },
+      {
+        level: 3,
+        mode: "TRADEOFF",
+        text: "If you could only improve one — retrieval quality or the generation prompt — which buys more for coverage answers?",
+        expectedEvidence: [
+          "Grounding depends on retrieval first",
+          "A perfect prompt cannot recover missing context",
+          "Acknowledges the counter-case",
+        ],
+      },
+    ],
+    scaffoldProbes: [
+      { text: "Start smaller — for one question, what did the retrieval step hand back before the model wrote anything?", targets: "Distinguishes retrieval quality from generation quality" },
+    ],
   },
   {
     id: "d15-q01",
@@ -129,6 +261,35 @@ const DAY_15_QUESTIONS: readonly CoreQuestion[] = [
     maxFollowUps: 1,
     followUpPrompt:
       "Think about a policy exclusion that spans two chunks — what does retrieval return?",
+    mode: "CONCEPTUAL",
+    groundsOn: { day: 6, artifact: "submission" },
+    deepProbes: [
+      {
+        level: 2,
+        mode: "SCENARIO",
+        text: "Your policy documents double in size and you keep 500 with 50 overlap. What degrades first — retrieval quality, cost, or latency?",
+        expectedEvidence: [
+          "More chunks means a larger index",
+          "Top-k dilution from near-duplicates",
+          "Storage and embedding cost rise",
+          "Similarity search latency",
+        ],
+      },
+      {
+        level: 3,
+        mode: "DECISION",
+        text: "How would you actually choose a chunk size for these documents rather than inheriting 500?",
+        expectedEvidence: [
+          "Measure against a real question set",
+          "Align to document structure — clause or section",
+          "Trade recall against precision",
+          "Re-evaluate after changing it",
+        ],
+      },
+    ],
+    scaffoldProbes: [
+      { text: "Just take one exclusion clause that runs across two chunks — what does the retriever hand back?", targets: "Retrieval may then return partial or missed exclusion clauses" },
+    ],
   },
   {
     id: "d15-q10",
@@ -146,6 +307,33 @@ const DAY_15_QUESTIONS: readonly CoreQuestion[] = [
     minEvidence: 2,
     maxFollowUps: 1,
     followUpPrompt: "What happens on turn fifty?",
+    mode: "IMPLEMENTATION",
+    groundsOn: { day: 3, artifact: "repo" },
+    deepProbes: [
+      {
+        level: 2,
+        mode: "SCENARIO",
+        text: "Turn fifty arrives and you are over the context limit. What is your strategy, and what do you refuse to drop?",
+        expectedEvidence: [
+          "Truncation or summarisation",
+          "Keeps the identifying facts — which plan, which member",
+          "States the cost against fidelity tradeoff",
+        ],
+      },
+      {
+        level: 3,
+        mode: "TRANSFER",
+        text: "Same problem, but now it is a support agent that must recall a claim number from turn three. Does your strategy still hold?",
+        expectedEvidence: [
+          "Recognises summarisation can lose identifiers",
+          "Pins key facts outside the rolling window",
+          "Separates working memory from durable state",
+        ],
+      },
+    ],
+    scaffoldProbes: [
+      { text: "Concretely — where in your code did the previous turns live between requests?", targets: "Appended turns to a messages list passed back each call" },
+    ],
   },
   {
     id: "d15-q04",
@@ -163,6 +351,34 @@ const DAY_15_QUESTIONS: readonly CoreQuestion[] = [
     minEvidence: 2,
     maxFollowUps: 1,
     followUpPrompt: "What could a member see if the filter were removed?",
+    mode: "IMPLEMENTATION",
+    groundsOn: { day: 9, artifact: "repo" },
+    deepProbes: [
+      {
+        level: 2,
+        mode: "DEBUGGING",
+        text: "A query with the plan_type filter suddenly returns nothing at all. What are the first two things you check?",
+        expectedEvidence: [
+          "Metadata key or value mismatch at write time",
+          "Casing or type of the filter value",
+          "Whether chunks were ingested with that metadata",
+          "Drops the filter to isolate the cause",
+        ],
+      },
+      {
+        level: 3,
+        mode: "SCENARIO",
+        text: "Two plans share almost identical wording. Does the filter still save you, and what else would you add?",
+        expectedEvidence: [
+          "The filter scopes correctly by plan",
+          "Similarity alone would confuse the two",
+          "Suggests reranking or stricter chunk provenance",
+        ],
+      },
+    ],
+    scaffoldProbes: [
+      { text: "Simpler version — what does the filter stop the search from even looking at?", targets: "The filter restricts the candidate set considered for similarity" },
+    ],
   },
   {
     id: "d15-q05",
@@ -180,6 +396,33 @@ const DAY_15_QUESTIONS: readonly CoreQuestion[] = [
     minEvidence: 3,
     maxFollowUps: 1,
     followUpPrompt: "What did the runner-up get wrong that yours got right?",
+    mode: "EVIDENCE",
+    groundsOn: { day: 12, artifact: "submission" },
+    deepProbes: [
+      {
+        level: 2,
+        mode: "DECISION",
+        text: "If tone and accuracy pulled in opposite directions on one variant, how did you break the tie?",
+        expectedEvidence: [
+          "Names accuracy or compliance as the priority here",
+          "Explains why that ordering fits coverage",
+          "Gives a concrete instance",
+        ],
+      },
+      {
+        level: 3,
+        mode: "REFLECTION",
+        text: "Looking at that locked prompt now, what would you change before it went in front of real members?",
+        expectedEvidence: [
+          "Names a concrete weakness",
+          "Ties it to an observed failure",
+          "Realistic about the compliance language",
+        ],
+      },
+    ],
+    scaffoldProbes: [
+      { text: "Just name the variant you locked, and one thing it did better than the rest.", targets: "Names the variant they chose" },
+    ],
   },
   {
     id: "d15-q07",
@@ -197,6 +440,35 @@ const DAY_15_QUESTIONS: readonly CoreQuestion[] = [
     minEvidence: 2,
     maxFollowUps: 1,
     followUpPrompt: "At what point does that choice stop working?",
+    mode: "DECISION",
+    groundsOn: { day: 8, artifact: "submission" },
+    deepProbes: [
+      {
+        level: 2,
+        mode: "SCENARIO",
+        text: "You are now serving three enterprise clients whose documents may never mix. Does Chroma still hold?",
+        expectedEvidence: [
+          "Isolation or multi-tenancy concern",
+          "Access control per client",
+          "Operational burden at that point",
+          "Names the trigger to switch",
+        ],
+      },
+      {
+        level: 3,
+        mode: "TRADEOFF",
+        text: "What do you actually give up by moving to a managed vector store?",
+        expectedEvidence: [
+          "Cost",
+          "Data leaves your boundary",
+          "Vendor lock-in",
+          "Less control over indexing",
+        ],
+      },
+    ],
+    scaffoldProbes: [
+      { text: "Start with the simplest reason — what did Chroma let you do on your own machine?", targets: "Local and persistent — no external service needed for this build" },
+    ],
   },
   {
     id: "d15-q02",
@@ -216,6 +488,34 @@ const DAY_15_QUESTIONS: readonly CoreQuestion[] = [
     maxFollowUps: 1,
     followUpPrompt:
       "Which part of that answer came from SQL and which from the vector store?",
+    mode: "EVIDENCE",
+    groundsOn: { day: 10, artifact: "repo" },
+    deepProbes: [
+      {
+        level: 2,
+        mode: "DEBUGGING",
+        text: "Suppose the SQL half returns the right row but the final answer still contradicts it. Where do you look?",
+        expectedEvidence: [
+          "Prompt assembly and precedence between sources",
+          "The model overriding structured context",
+          "Inspects the assembled prompt itself",
+          "Strength of the grounding instruction",
+        ],
+      },
+      {
+        level: 3,
+        mode: "TRANSFER",
+        text: "New requirement — the same question has to work for a member with no claim history. What changes?",
+        expectedEvidence: [
+          "Handles the empty structured result",
+          "Falls back to policy text only",
+          "Avoids fabricating a claim status",
+        ],
+      },
+    ],
+    scaffoldProbes: [
+      { text: "Take any one question from your harness — what did the SQL side return?", targets: "Describes the SQL/structured lookup returning plan or claim rows" },
+    ],
   },
   {
     id: "d15-q08",
@@ -233,6 +533,33 @@ const DAY_15_QUESTIONS: readonly CoreQuestion[] = [
     minEvidence: 2,
     maxFollowUps: 1,
     followUpPrompt: "What does the model do with a field it did not expect?",
+    mode: "DEBUGGING",
+    groundsOn: { day: 13, artifact: "repo" },
+    deepProbes: [
+      {
+        level: 2,
+        mode: "SCENARIO",
+        text: "The tool starts returning an extra nested field one day and validation catches it. What should happen next?",
+        expectedEvidence: [
+          "Fail closed rather than coerce silently",
+          "Log it and surface a safe message",
+          "Versioning the tool contract",
+        ],
+      },
+      {
+        level: 3,
+        mode: "TRADEOFF",
+        text: "What does strict validation cost you when the upstream tool evolves?",
+        expectedEvidence: [
+          "Breaks on benign additions",
+          "Couples deployments together",
+          "Argues for tolerant reading of unknown fields",
+        ],
+      },
+    ],
+    scaffoldProbes: [
+      { text: "What is the very first thing that goes wrong if one field has the wrong type?", targets: "The model receives a malformed or unexpected shape" },
+    ],
   },
   {
     id: "d15-q06",
@@ -252,6 +579,34 @@ const DAY_15_QUESTIONS: readonly CoreQuestion[] = [
     // strongest discriminator in the bank.
     maxFollowUps: 2,
     followUpPrompt: "Where would the wrong number have entered the pipeline?",
+    mode: "DECISION",
+    groundsOn: { day: 15, artifact: "submission" },
+    deepProbes: [
+      {
+        level: 2,
+        mode: "DEBUGGING",
+        text: "You have decided it is a data problem. Trace the wrong deductible back — what do you check, in order?",
+        expectedEvidence: [
+          "The retrieved chunk or the SQL row",
+          "The version of the source document",
+          "The metadata filter and plan scoping",
+          "Reproduces against the eval set",
+        ],
+      },
+      {
+        level: 3,
+        mode: "TRANSFER",
+        text: "Now the complaint is that the tone is too clinical, not that it is wrong. Same answer?",
+        expectedEvidence: [
+          "Recognises this one IS a style problem",
+          "Prompting first, fine-tuning only if it persists",
+          "Explains why the tool differs by problem type",
+        ],
+      },
+    ],
+    scaffoldProbes: [
+      { text: "Before deciding — is a wrong deductible a facts problem or a style problem?", targets: "Identifies this as a retrieval/data problem, not a style problem" },
+    ],
   },
 ];
 
@@ -292,6 +647,34 @@ const DAY_31_QUESTIONS: readonly CoreQuestion[] = [
     minEvidence: 3,
     maxFollowUps: 1,
     followUpPrompt: "Where does the delay before the first token come from?",
+    mode: "IMPLEMENTATION",
+    groundsOn: { day: 18, artifact: "repo" },
+    deepProbes: [
+      {
+        level: 2,
+        mode: "DEBUGGING",
+        text: "The first token now takes eight seconds. Where do you instrument to find out why?",
+        expectedEvidence: [
+          "Times retrieval separately from generation",
+          "Checks embedding and query latency",
+          "Checks time-to-first-token from the model",
+          "Measures before optimising",
+        ],
+      },
+      {
+        level: 3,
+        mode: "TRADEOFF",
+        text: "Would you start streaming before retrieval finishes? What does that buy and cost?",
+        expectedEvidence: [
+          "Perceived latency against correctness",
+          "Cannot ground an answer before context arrives",
+          "Suggests a status indicator instead",
+        ],
+      },
+    ],
+    scaffoldProbes: [
+      { text: "Just the order — what has to finish before the model can write anything at all?", targets: "Retrieval completes before generation can start" },
+    ],
   },
   {
     id: "d31-q05",
@@ -310,6 +693,33 @@ const DAY_31_QUESTIONS: readonly CoreQuestion[] = [
     minEvidence: 3,
     maxFollowUps: 1,
     followUpPrompt: "What did the member actually see on screen?",
+    mode: "EVIDENCE",
+    groundsOn: { day: 24, artifact: "repo" },
+    deepProbes: [
+      {
+        level: 2,
+        mode: "SCENARIO",
+        text: "The tool is not down but slow — nine seconds every time, just under your timeout. What does the member experience?",
+        expectedEvidence: [
+          "The timeout threshold interacts badly with the retry",
+          "Latency compounds across attempts",
+          "Would need a tighter budget or a circuit breaker",
+        ],
+      },
+      {
+        level: 3,
+        mode: "REFLECTION",
+        text: "What failure mode do you think you did not cover?",
+        expectedEvidence: [
+          "Names a real gap honestly",
+          "Partial or corrupt response rather than hard failure",
+          "Cascading failure across tools",
+        ],
+      },
+    ],
+    scaffoldProbes: [
+      { text: "What message did the member actually get when the tool failed?", targets: "A canned support fallback message" },
+    ],
   },
   {
     id: "d31-q02",
@@ -328,6 +738,33 @@ const DAY_31_QUESTIONS: readonly CoreQuestion[] = [
     minEvidence: 3,
     maxFollowUps: 2,
     followUpPrompt: "What is the one thing that must survive summarisation?",
+    mode: "SCENARIO",
+    groundsOn: { day: 20, artifact: "repo" },
+    deepProbes: [
+      {
+        level: 2,
+        mode: "DEBUGGING",
+        text: "A member complains the bot forgot which plan they are on, halfway through. What happened?",
+        expectedEvidence: [
+          "plan_id lost during summarisation",
+          "Identifiers must be pinned outside the rolling window",
+          "Would inspect the summarised payload",
+        ],
+      },
+      {
+        level: 3,
+        mode: "TRADEOFF",
+        text: "Summarise more aggressively or keep more raw turns — which way do you lean for coverage support?",
+        expectedEvidence: [
+          "Cost against fidelity",
+          "Accuracy stakes are higher here than in chat",
+          "Reasons about a concrete threshold",
+        ],
+      },
+    ],
+    scaffoldProbes: [
+      { text: "What does your code do first when the history gets too long?", targets: "Summarises the oldest turns" },
+    ],
   },
   {
     id: "d31-q03",
@@ -346,6 +783,33 @@ const DAY_31_QUESTIONS: readonly CoreQuestion[] = [
     minEvidence: 3,
     maxFollowUps: 1,
     followUpPrompt: "Does redacting the log stop PHI reaching the model?",
+    mode: "CONCEPTUAL",
+    groundsOn: { day: 25, artifact: "submission" },
+    deepProbes: [
+      {
+        level: 2,
+        mode: "SCENARIO",
+        text: "If you had one more place to spend redaction, where would you put it?",
+        expectedEvidence: [
+          "Before the prompt leaves for the model",
+          "On the response path back to the member",
+          "Argues for the choice rather than listing both",
+        ],
+      },
+      {
+        level: 3,
+        mode: "TRADEOFF",
+        text: "What does redaction break, operationally?",
+        expectedEvidence: [
+          "Debuggability of real incidents",
+          "Support cannot reproduce a case",
+          "Suggests reversible tokenisation or restricted access",
+        ],
+      },
+    ],
+    scaffoldProbes: [
+      { text: "What lives in a log file long after the request is over?", targets: "Logs persist PHI/PII well beyond the request lifetime" },
+    ],
   },
   {
     id: "d31-q08",
@@ -364,6 +828,33 @@ const DAY_31_QUESTIONS: readonly CoreQuestion[] = [
     minEvidence: 3,
     maxFollowUps: 1,
     followUpPrompt: "What did you do about the Chroma data with two replicas?",
+    mode: "IMPLEMENTATION",
+    groundsOn: { day: 29, artifact: "repo" },
+    deepProbes: [
+      {
+        level: 2,
+        mode: "DEBUGGING",
+        text: "One replica serves stale policy answers and the other is fine. What is your first hypothesis?",
+        expectedEvidence: [
+          "Chroma state is not shared between replicas",
+          "Each pod has its own local volume",
+          "Would move to shared storage or a separate service",
+        ],
+      },
+      {
+        level: 3,
+        mode: "SCENARIO",
+        text: "You need zero-downtime deploys. What in your manifest actually matters?",
+        expectedEvidence: [
+          "Readiness probe correctness",
+          "Rolling update strategy",
+          "Graceful shutdown for in-flight requests",
+        ],
+      },
+    ],
+    scaffoldProbes: [
+      { text: "What did you have to do with the secrets that env_file used to handle?", targets: "Secrets moved from env_file to a Secret with envFrom" },
+    ],
   },
   {
     id: "d31-q04",
@@ -382,6 +873,33 @@ const DAY_31_QUESTIONS: readonly CoreQuestion[] = [
     minEvidence: 3,
     maxFollowUps: 2,
     followUpPrompt: "Was there a question where the extra hop bought you nothing?",
+    mode: "TRADEOFF",
+    groundsOn: { day: 22, artifact: "repo" },
+    deepProbes: [
+      {
+        level: 2,
+        mode: "DEBUGGING",
+        text: "The Router sends a coverage question to the claims specialist. How would you catch that in production?",
+        expectedEvidence: [
+          "Inspects traces",
+          "Treats routing accuracy as a measured metric",
+          "A fallback or confirmation step",
+        ],
+      },
+      {
+        level: 3,
+        mode: "DECISION",
+        text: "If you had to ship one of the two tomorrow, which, and what would make you revisit it?",
+        expectedEvidence: [
+          "Commits to a choice",
+          "Ties it to how large the tool surface is",
+          "Names the trigger to revisit",
+        ],
+      },
+    ],
+    scaffoldProbes: [
+      { text: "Name one question where the multi-agent setup did better.", targets: "Names a concrete question where routing helped" },
+    ],
   },
   {
     id: "d31-q07",
@@ -400,6 +918,33 @@ const DAY_31_QUESTIONS: readonly CoreQuestion[] = [
     minEvidence: 3,
     maxFollowUps: 1,
     followUpPrompt: "What is the worst case if you cached a claim-status answer?",
+    mode: "DECISION",
+    groundsOn: { day: 26, artifact: "submission" },
+    deepProbes: [
+      {
+        level: 2,
+        mode: "SCENARIO",
+        text: "A general policy document is updated. What does your cache do?",
+        expectedEvidence: [
+          "Even stable answers go stale",
+          "Invalidation keyed to document version",
+          "TTL as a blunt instrument",
+        ],
+      },
+      {
+        level: 3,
+        mode: "TRADEOFF",
+        text: "How much are you actually saving, and how would you know?",
+        expectedEvidence: [
+          "Measures hit rate",
+          "Cost per cached against uncached answer",
+          "Would instrument before widening the cache",
+        ],
+      },
+    ],
+    scaffoldProbes: [
+      { text: "What is the risk if two different members share one cached answer?", targets: "Caching them risks serving one member's data to another" },
+    ],
   },
   {
     id: "d31-q06",
@@ -421,6 +966,33 @@ const DAY_31_QUESTIONS: readonly CoreQuestion[] = [
     minEvidence: 3,
     maxFollowUps: 2,
     followUpPrompt: "Did the number move after your fix?",
+    mode: "EVIDENCE",
+    groundsOn: { day: 27, artifact: "submission" },
+    deepProbes: [
+      {
+        level: 2,
+        mode: "DEBUGGING",
+        text: "Faithfulness is low but context precision is high. What does that combination tell you?",
+        expectedEvidence: [
+          "The right context was retrieved and generation drifted",
+          "Points at the prompt or model, not retrieval",
+          "Would tighten the grounding instruction",
+        ],
+      },
+      {
+        level: 3,
+        mode: "REFLECTION",
+        text: "Do you trust the metric itself? Where does RAGAS mislead?",
+        expectedEvidence: [
+          "LLM-judge variance",
+          "Eval set too small to conclude from",
+          "The metric may not match member-perceived quality",
+        ],
+      },
+    ],
+    scaffoldProbes: [
+      { text: "Which metric came out lowest — just the name and roughly the number.", targets: "Names the metric — faithfulness, relevancy, precision, or recall" },
+    ],
   },
   {
     id: "d31-q10",
@@ -440,6 +1012,33 @@ const DAY_31_QUESTIONS: readonly CoreQuestion[] = [
     minEvidence: 3,
     maxFollowUps: 2,
     followUpPrompt: "How would you tell a retrieval bug from a generation bug?",
+    mode: "DEBUGGING",
+    groundsOn: { day: 19, artifact: "repo" },
+    deepProbes: [
+      {
+        level: 2,
+        mode: "SCENARIO",
+        text: "The cited chunk does contain the claim, but the source PDF is a year out of date. Now what?",
+        expectedEvidence: [
+          "The pipeline worked; data governance failed",
+          "Document freshness and versioning",
+          "A re-ingestion policy",
+        ],
+      },
+      {
+        level: 3,
+        mode: "TRANSFER",
+        text: "Same complaint, but you have no eval case for that question type. How do you proceed?",
+        expectedEvidence: [
+          "Builds a minimal reproduction",
+          "Adds the case to the eval set",
+          "Avoids a one-off patch",
+        ],
+      },
+    ],
+    scaffoldProbes: [
+      { text: "Start here — how do you check whether the cited chunk actually says it?", targets: "Check whether the cited chunk actually contains the claim" },
+    ],
   },
   {
     id: "d31-q11",
@@ -459,6 +1058,34 @@ const DAY_31_QUESTIONS: readonly CoreQuestion[] = [
     maxFollowUps: 1,
     followUpPrompt:
       "Who else could call your check_coverage tool once it speaks MCP?",
+    mode: "CONCEPTUAL",
+    groundsOn: { day: 23, artifact: "repo" },
+    deepProbes: [
+      {
+        level: 2,
+        mode: "SCENARIO",
+        text: "Three teams want to call check_coverage. What now has to be true of your server?",
+        expectedEvidence: [
+          "Authentication and authorisation per client",
+          "Rate limiting",
+          "Schema stability as a contract",
+          "Audit logging",
+        ],
+      },
+      {
+        level: 3,
+        mode: "TRADEOFF",
+        text: "What does the protocol cost you compared with a plain function call?",
+        expectedEvidence: [
+          "Transport and serialisation overhead",
+          "Another process to run and monitor",
+          "Versioning discipline",
+        ],
+      },
+    ],
+    scaffoldProbes: [
+      { text: "Who could call your tool once it speaks MCP that could not before?", targets: "The tool becomes callable by any MCP-compatible client, not just their agent" },
+    ],
   },
   {
     id: "d31-q12",
@@ -477,6 +1104,33 @@ const DAY_31_QUESTIONS: readonly CoreQuestion[] = [
     minEvidence: 3,
     maxFollowUps: 2,
     followUpPrompt: "What did you leave on the list, and why does it wait?",
+    mode: "REFLECTION",
+    groundsOn: { day: 31, artifact: "submission" },
+    deepProbes: [
+      {
+        level: 2,
+        mode: "DECISION",
+        text: "What would have to be true for the second item to jump ahead of it?",
+        expectedEvidence: [
+          "Names a concrete trigger",
+          "Shows the ordering is reasoned rather than fixed",
+          "Ties it to impact or risk",
+        ],
+      },
+      {
+        level: 3,
+        mode: "REFLECTION",
+        text: "Of what you shipped, what would you warn the next person about?",
+        expectedEvidence: [
+          "Honest about a real weakness",
+          "Specific rather than generic",
+          "Suggests a mitigation",
+        ],
+      },
+    ],
+    scaffoldProbes: [
+      { text: "Just the top item — what is it?", targets: "Names one specific top roadmap item" },
+    ],
   },
 ];
 
@@ -541,6 +1195,43 @@ function assertBankIntegrity(bank: QuestionBank): void {
     if (q.maxFollowUps > 0 && !q.followUpPrompt) {
       throw new Error(
         `[question-bank] ${q.id} allows follow-ups but has no followUpPrompt.`,
+      );
+    }
+
+    // Escalation rungs must climb. An out-of-order or duplicated level would
+    // make "one level deeper" ambiguous, and the ladder picks by position.
+    let previousLevel = 1;
+    for (const probe of q.deepProbes ?? []) {
+      if (probe.level <= previousLevel) {
+        throw new Error(
+          `[question-bank] ${q.id} deepProbes must ascend by level; saw ` +
+            `${probe.level} after ${previousLevel}.`,
+        );
+      }
+      if (probe.expectedEvidence.length === 0) {
+        throw new Error(
+          `[question-bank] ${q.id} deep probe at level ${probe.level} has no ` +
+            `expected evidence, so its answer could never be judged.`,
+        );
+      }
+      previousLevel = probe.level;
+    }
+
+    // A scaffold exists to unlock ONE listed evidence item. Pointing it at text
+    // that is not in the checklist means the probe cannot close the gap it was
+    // written for, which is a silent authoring error rather than a visible one.
+    for (const scaffold of q.scaffoldProbes ?? []) {
+      if (!q.expectedEvidence.includes(scaffold.targets)) {
+        throw new Error(
+          `[question-bank] ${q.id} scaffold targets "${scaffold.targets}", ` +
+            `which is not one of its expected evidence items.`,
+        );
+      }
+    }
+    if ((q.scaffoldProbes?.length ?? 0) > 0 && q.maxFollowUps === 0) {
+      throw new Error(
+        `[question-bank] ${q.id} has scaffolds but a zero follow-up budget, ` +
+          `so they could never be asked.`,
       );
     }
   }

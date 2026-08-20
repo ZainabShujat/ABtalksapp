@@ -6,6 +6,7 @@ import {
 } from "@/features/interview/cohort-eligibility";
 import type { InterviewBlueprintKey } from "@/features/interview/cohort/blueprint";
 import { planCohortInterview } from "@/features/interview/cohort/planner";
+import { buildCohortCandidateContext } from "@/features/interview/cohort/candidate-context";
 import type {
   CohortEligibility,
   InterviewPlan,
@@ -25,6 +26,9 @@ import type {
  * What remains is deliberately thin, and entirely LLM-free:
  *   - eligibility comes from actual PASSED mission days
  *   - the plan comes from the fixed bank for the blueprint
+ *   - the candidate context comes from their own ProgramMember record, and is
+ *     used to GROUND questions in real artifacts and to append beyond-milestone
+ *     extension questions — never to change which core questions are asked
  *
  * Nothing here reads a request body. The only inputs are a server-resolved
  * `memberId` and a server-validated blueprint.
@@ -64,12 +68,25 @@ export async function gateStart(
 /**
  * The plan frozen into a new attempt.
  *
- * A pure function of the blueprint — the member does not influence it. Kept as a
- * named session step rather than inlined at the call site so the "plan is
- * server-derived, never client-supplied" boundary stays visible.
+ * The CORE question set is still a pure function of the blueprint — the member
+ * cannot influence which standardized questions they face, which is what keeps
+ * two results comparable. What the member's own record does influence is
+ * narrower and deliberate:
+ *
+ *   - grounding: a factual clause in front of a question, from their real
+ *     submissions. Templated from database rows, never generated.
+ *   - extensions: up to two questions about cohort days they have passed BEYOND
+ *     this milestone, scored separately.
+ *
+ * Context is loaded from `memberId`, which the caller resolved from the session.
+ * If it cannot be loaded the plan degrades to the ungrounded, extension-free
+ * form rather than failing — a missing profile must not cost someone their
+ * interview.
  */
-export function buildCohortPlan(
+export async function buildCohortPlan(
+  memberId: string,
   blueprint: InterviewBlueprintKey,
-): InterviewPlan {
-  return planCohortInterview(blueprint);
+): Promise<InterviewPlan> {
+  const context = await buildCohortCandidateContext(memberId, blueprint);
+  return planCohortInterview(blueprint, context);
 }

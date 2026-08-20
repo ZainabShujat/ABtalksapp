@@ -7,8 +7,18 @@ import {
   getQuestionBank,
   type CoreQuestion,
 } from "@/features/interview/cohort/question-bank";
+import {
+  groundQuestion,
+  type GroundingFacts,
+} from "@/features/interview/cohort/grounding";
+import { MAX_EXTENSION_QUESTIONS } from "@/features/interview/constants";
 import { buildRubricSnapshot } from "@/features/interview/rubric";
-import type { InterviewPlan, PlannedQuestion } from "@/features/interview/types";
+import type {
+  InterviewPlan,
+  PlannedQuestion,
+  QuestionTier,
+} from "@/features/interview/types";
+import type { CohortCandidateContext } from "@/features/interview/cohort/candidate-context";
 
 /**
  * Turns a blueprint into a frozen interview plan.
@@ -55,7 +65,16 @@ function assertWithinScope(
 function toPlannedQuestion(
   question: CoreQuestion,
   index: number,
+  tier: QuestionTier,
+  facts: GroundingFacts | null,
 ): PlannedQuestion {
+  // Grounding is applied ONCE, at plan time, and frozen into the plan. Doing it
+  // per turn would let the spoken question drift mid-interview if a submission
+  // landed while the candidate was talking.
+  const grounded = facts
+    ? groundQuestion(question.text, question.groundsOn, facts)
+    : { spoken: question.text, grounded: false, groundingNote: null };
+
   return {
     id: question.id,
     order: index + 1,
@@ -66,15 +85,56 @@ function toPlannedQuestion(
       label: question.sourceLabel,
     },
     text: question.text,
+    spokenText: grounded.spoken,
+    grounded: grounded.grounded,
+    groundingNote: grounded.groundingNote,
+    tier,
     // Never true for a cohort question. Standardized wording is the point.
     llmPhrased: false,
     difficulty: question.difficulty,
+    mode: question.mode,
+    deepProbes: question.deepProbes,
+    scaffoldProbes: question.scaffoldProbes,
     bankQuestionId: question.id,
     expectedEvidence: question.expectedEvidence,
     minEvidence: question.minEvidence,
     maxFollowUps: question.maxFollowUps,
     followUpPrompt: question.followUpPrompt,
   };
+}
+
+/**
+ * Questions about cohort days the member has passed BEYOND this milestone.
+ *
+ * The case this exists for: a member reaches Day 15, the interview unlocks, and
+ * they actually sit it on Day 18. The assessment must still be a DAY_15
+ * assessment — that is what makes their score comparable with everyone else's —
+ * but an interviewer that pretends not to know they have since finished Days 16
+ * to 18 is obviously not paying attention.
+ *
+ * So the milestone stays bounded and these are appended as EXTENSION questions:
+ * asked, judged, reported separately, and excluded from the overall score.
+ *
+ * Selection is deterministic — bank order, filtered to questions whose EVERY
+ * source day the member has actually passed. A question is never asked about a
+ * day they have not completed, which is the same rule the blueprint itself
+ * obeys.
+ */
+function selectExtensionQuestions(
+  blueprint: InterviewBlueprintKey,
+  beyondScopePassedDays: number[],
+): CoreQuestion[] {
+  if (beyondScopePassedDays.length === 0) return [];
+
+  const available = new Set(beyondScopePassedDays);
+  // Extension material comes from the LATER bank, which is where the
+  // beyond-scope days are covered. DAY_31 has no later bank, so it never
+  // produces extensions — correct, since nothing lies beyond day 31.
+  if (blueprint !== "DAY_15") return [];
+
+  return getQuestionBank("DAY_31")
+    .questions.filter((q) => q.sourceDays.every((day) => available.has(day)))
+    .slice(0, MAX_EXTENSION_QUESTIONS);
 }
 
 /**
@@ -85,13 +145,31 @@ function toPlannedQuestion(
  */
 export function planCohortInterview(
   blueprint: InterviewBlueprintKey,
+  context?: CohortCandidateContext | null,
 ): InterviewPlan {
   const bank = getQuestionBank(blueprint);
+  const facts = context ?? null;
 
-  const questions = bank.questions.map((question, index) => {
+  const core = bank.questions.map((question, index) => {
     assertWithinScope(blueprint, question);
-    return toPlannedQuestion(question, index);
+    return toPlannedQuestion(question, index, "CORE", facts);
   });
+
+  // Extensions require a candidate context: without one we cannot know which
+  // days they have passed, and guessing would ask about unfinished work.
+  const extensions = context
+    ? selectExtensionQuestions(blueprint, context.beyondScopePassedDays).map(
+        (question, offset) =>
+          toPlannedQuestion(
+            question,
+            core.length + offset,
+            "EXTENSION",
+            facts,
+          ),
+      )
+    : [];
+
+  const questions = [...core, ...extensions];
 
   return {
     questions,
@@ -101,7 +179,12 @@ export function planCohortInterview(
       blueprint,
       bankVersion: bank.version,
       scopeDays: [...BLUEPRINT_SCOPE[blueprint]],
-      questionCount: questions.length,
+      // The COMPARABLE question count — extensions are deliberately not
+      // included, because this number is what two results are compared on.
+      questionCount: core.length,
+      extensionCount: extensions.length,
+      progressDay: context?.progressDay ?? null,
+      groundedCount: questions.filter((q) => q.grounded).length,
     },
   };
 }

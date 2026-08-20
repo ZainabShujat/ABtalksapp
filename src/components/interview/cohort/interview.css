@@ -1,0 +1,49 @@
+/* ─── Interview environment ─── */
+
+@layer components {
+  .interview-env {
+    --iv-bg: #050C21;
+    --iv-surface: rgba(255, 255, 255, 0.04);
+    --iv-border: rgba(46, 57, 75, 0.69);
+    --iv-text: rgba(255, 255, 255, 0.92);
+    --iv-text-muted: rgba(255, 255, 255, 0.55);
+    --iv-accent: hsl(239 84% 67%);
+  }
+}
+
+@keyframes iv-orb-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+
+@keyframes iv-orb-speak {
+  0%, 100% { transform: scale(1); }
+  25% { transform: scale(1.12); }
+  50% { transform: scale(0.96); }
+  75% { transform: scale(1.06); }
+}
+
+@keyframes iv-bar {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+
+@keyframes iv-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes iv-ring-pulse {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+@keyframes iv-processing-dot {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes iv-check-in {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}

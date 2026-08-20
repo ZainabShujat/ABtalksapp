@@ -1,6 +1,12 @@
 import { logger } from "@/lib/logger";
 import { mergeEvidence } from "@/features/interview/evidence";
 import {
+  activeQuestionView,
+  classifyAnswer,
+  questionAsAsked,
+  updateCompetenceSignal,
+} from "@/features/interview/agent/depth";
+import {
   advanceTurn,
   appendLine,
   followUpBudgetFor,
@@ -63,12 +69,14 @@ export function receiveAnswer(state: InterviewAgentState): NodeUpdate {
   return {
     interviewState: withAnswer,
     transcript: withAnswer.transcript,
-    currentQuestion: current.text,
+    currentQuestion: current.spokenText ?? current.text,
     currentQuestionIndex: withAnswer.currentQuestionIndex,
     followUpCount: withAnswer.followUpsAsked,
     maxFollowUps: followUpBudgetFor(current),
     redirectCount: withAnswer.redirectsAsked ?? 0,
     repeatCount: withAnswer.repeatsAsked ?? 0,
+    depthLevel: withAnswer.depthLevel ?? 1,
+    escalationsAsked: withAnswer.escalationsAsked ?? 0,
   };
 }
 
@@ -91,11 +99,18 @@ export function createAnalyzeAnswer(llm: InterviewLLM) {
       return { error: "No question is currently open.", finished: true };
     }
 
+    // Once escalated, the candidate is answering the RUNG, so that is what the
+    // evaluator must grade against — its text and its checklist, not the core
+    // question's.
+    const depthLevel = state.interviewState.depthLevel ?? 1;
+    const asked = questionAsAsked(question, depthLevel);
+    const view = activeQuestionView(question, depthLevel);
+
     const decision = await llm.analyzeAnswer({
-      question,
+      question: asked,
       answerText: state.candidateAnswer,
       priorEvidence:
-        state.interviewState.evidenceByQuestionId[question.id] ?? null,
+        state.interviewState.evidenceByQuestionId[view.evidenceKey] ?? null,
       followUpsRemaining: Math.max(
         0,
         state.maxFollowUps - state.interviewState.followUpsAsked,
@@ -105,7 +120,7 @@ export function createAnalyzeAnswer(llm: InterviewLLM) {
 
     logger.info("[interview-agent] answer analyzed", {
       interviewId: state.interviewId,
-      questionId: question.id,
+      questionId: view.evidenceKey,
       provider: llm.name,
       proposed: decision.action,
       degraded: decision.degraded,
@@ -128,23 +143,34 @@ export function routeResponse(state: InterviewAgentState): NodeUpdate {
     return { lastDecision: "NEXT_QUESTION" };
   }
 
-  const outcome = routeDecision(question, state.decision, {
-    followUpsAsked: state.interviewState.followUpsAsked,
-    redirectsAsked: state.interviewState.redirectsAsked ?? 0,
-    repeatsAsked: state.interviewState.repeatsAsked ?? 0,
-  });
+  const outcome = routeDecision(
+    questionAsAsked(question, state.interviewState.depthLevel ?? 1),
+    state.decision,
+    {
+      followUpsAsked: state.interviewState.followUpsAsked,
+      redirectsAsked: state.interviewState.redirectsAsked ?? 0,
+      repeatsAsked: state.interviewState.repeatsAsked ?? 0,
+    },
+    state.interviewState,
+  );
 
   if (outcome.action !== state.decision.action) {
-    logger.info("[interview-agent] policy overrode model action", {
+    logger.info("[interview-agent] policy decided", {
       interviewId: state.interviewId,
       questionId: question.id,
       proposed: state.decision.action,
       applied: outcome.action,
+      depthLevel: state.interviewState.depthLevel ?? 1,
       rationale: outcome.rationale,
     });
   }
 
-  return { lastDecision: outcome.action };
+  // The probe text is resolved by the policy (an escalation rung must come from
+  // the bank, never from the model), so it is staged here for the branch node.
+  return {
+    lastDecision: outcome.action,
+    nextPrompt: outcome.probeText ?? null,
+  };
 }
 
 /* --------------------------------------------------- branch: prompt drafting */
@@ -159,13 +185,30 @@ export function routeResponse(state: InterviewAgentState): NodeUpdate {
 export function applyFollowUp(state: InterviewAgentState): NodeUpdate {
   const question = getCurrentQuestion(state.plan, state.interviewState);
   const text =
-    question && state.decision
+    state.nextPrompt ??
+    (question && state.decision
       ? resolveFollowUpText(question, state.decision)
-      : null;
+      : null);
   // Policy already guaranteed usable text; this is belt-and-braces.
   return text
     ? { nextPrompt: text }
     : { lastDecision: "NEXT_QUESTION", nextPrompt: null };
+}
+
+/**
+ * The escalation branch: the candidate cleared the bar, so the interview asks a
+ * harder question instead of thanking them and moving on.
+ *
+ * The text is ALWAYS the banked rung staged by the policy. There is no model
+ * fallback here on purpose — an escalation that the model invented would not be
+ * comparable between candidates, and "we went deeper" would stop meaning the
+ * same thing on two transcripts. No rung, no escalation.
+ */
+export function applyEscalate(state: InterviewAgentState): NodeUpdate {
+  if (!state.nextPrompt) {
+    return { lastDecision: "NEXT_QUESTION", nextPrompt: null };
+  }
+  return { nextPrompt: state.nextPrompt };
 }
 
 export function applyRedirect(state: InterviewAgentState): NodeUpdate {
@@ -226,19 +269,41 @@ export function updateState(state: InterviewAgentState): NodeUpdate {
     };
   }
 
+  const depthLevel = state.interviewState.depthLevel ?? 1;
+  const asked = questionAsAsked(question, depthLevel);
+  const view = activeQuestionView(question, depthLevel);
+
   const proposed: TurnAction =
-    state.lastDecision === "FOLLOW_UP" ? "FOLLOW_UP" : "NEXT_QUESTION";
-  const prior = state.interviewState.evidenceByQuestionId[question.id];
+    state.lastDecision === "FOLLOW_UP"
+      ? "FOLLOW_UP"
+      : state.lastDecision === "ESCALATE"
+        ? "ESCALATE"
+        : "NEXT_QUESTION";
+  const prior = state.interviewState.evidenceByQuestionId[view.evidenceKey];
+
+  // The competence read is updated from the RAW answer, before budgets are
+  // applied: whether the candidate was strong is a fact about the answer, not
+  // about whether we could afford to act on it.
+  const strength = classifyAnswer(asked, state.decision.evidence);
+  const withSignal: InterviewState = {
+    ...state.interviewState,
+    competenceSignal: updateCompetenceSignal(
+      state.interviewState.competenceSignal,
+      question.competency,
+      strength,
+    ),
+  };
 
   // Routing reads the RAW evidence for this answer so a candidate who recovers
   // on a follow-up is not still treated as stuck; storage keeps the MERGED
   // evidence so credit earned earlier in the question survives.
   const advanced = advanceTurn(
     state.plan,
-    state.interviewState,
+    withSignal,
     question.id,
     state.decision.evidence,
     proposed,
+    view.evidenceKey,
   );
 
   let nextState: InterviewState = prior
@@ -246,12 +311,18 @@ export function updateState(state: InterviewAgentState): NodeUpdate {
         ...advanced.state,
         evidenceByQuestionId: {
           ...advanced.state.evidenceByQuestionId,
-          [question.id]: mergeEvidence(prior, state.decision.evidence),
+          [view.evidenceKey]: mergeEvidence(prior, state.decision.evidence),
         },
       }
     : advanced.state;
 
-  if (advanced.action === "FOLLOW_UP" && state.nextPrompt) {
+  // FOLLOW_UP and ESCALATE both keep the same question on the floor; they
+  // differ in which budget they spend and in why. Sharing the branch keeps that
+  // symmetry visible rather than duplicating the transcript bookkeeping.
+  if (
+    (advanced.action === "FOLLOW_UP" || advanced.action === "ESCALATE") &&
+    state.nextPrompt
+  ) {
     nextState = appendLine(
       nextState,
       "interviewer",
@@ -263,7 +334,9 @@ export function updateState(state: InterviewAgentState): NodeUpdate {
       transcript: nextState.transcript,
       evidence: nextState.evidenceByQuestionId,
       followUpCount: nextState.followUpsAsked,
-      lastDecision: "FOLLOW_UP",
+      depthLevel: nextState.depthLevel ?? 1,
+      escalationsAsked: nextState.escalationsAsked ?? 0,
+      lastDecision: advanced.action,
       status: nextState.status,
       finished: false,
     };
@@ -305,12 +378,14 @@ export function updateState(state: InterviewAgentState): NodeUpdate {
     transcript: nextState.transcript,
     evidence: nextState.evidenceByQuestionId,
     currentQuestionId: next.id,
-    currentQuestion: next.text,
+    currentQuestion: next.spokenText ?? next.text,
     currentQuestionIndex: nextState.currentQuestionIndex,
     followUpCount: 0,
     maxFollowUps: followUpBudgetFor(next),
     redirectCount: 0,
     repeatCount: 0,
+    depthLevel: 1,
+    escalationsAsked: 0,
     nextPrompt: spoken,
     lastDecision: "NEXT_QUESTION",
     status: nextState.status,

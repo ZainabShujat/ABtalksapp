@@ -13,6 +13,8 @@ import {
   submitInterviewAnswerAction,
 } from "@/app/actions/interview-actions";
 import { BLUEPRINT_LABEL } from "@/features/interview/cohort/blueprint";
+import { InterviewVoiceRunner } from "@/components/program/interview-voice-runner";
+import { CohortInterviewJourney } from "@/components/interview/cohort/cohort-interview-journey";
 import type {
   ClientQuestion,
   CohortInterviewOverview,
@@ -42,12 +44,23 @@ type Line = {
 export function CohortInterviewRunner({
   overview,
   memberName,
+  voiceEnabled = false,
 }: {
   overview: CohortInterviewOverview;
   memberName: string;
+  /**
+   * Resolved on the SERVER from `isInterviewVoiceEnabled()`. Passed as a plain
+   * boolean rather than read here, because a feature flag read in a client
+   * component would need the value inlined into the bundle at build time.
+   */
+  voiceEnabled?: boolean;
 }) {
   const router = useRouter();
   const { blueprint, eligibility, questionCount, result } = overview;
+
+  if (voiceEnabled) {
+    return <CohortInterviewJourney blueprint={blueprint} candidateName={memberName} />;
+  }
 
   const [live, setLive] = useState(false);
   const [lines, setLines] = useState<Line[]>([]);
@@ -194,17 +207,63 @@ export function CohortInterviewRunner({
             </p>
           )}
         </div>
-        <Link
-          href="/program/dashboard"
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-        >
-          Back to dashboard
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          {/*
+            The scores above come from the finish response. The REPORT is the
+            persisted document — module scores, evidence and the written
+            assessment — and it is read back from the database rather than held
+            in this component, so it survives a refresh and can be reopened any
+            time from the dashboard.
+          */}
+          <Link
+            href={`/program/cohort-interview/${blueprint}/report`}
+            className={cn(buttonVariants({ size: "sm" }))}
+          >
+            Open full report
+          </Link>
+          <Link
+            href="/program/dashboard"
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            Back to dashboard
+          </Link>
+        </div>
       </div>
     );
   }
 
   /* --------------------------------------------------------------- live */
+
+  // Voice takes over the whole live stage once an attempt is open: it owns
+  // recording, playback and answer submission, but reaches the interview
+  // through the same Server Action this component uses, so the two paths are
+  // scored identically.
+  if (live && voiceEnabled && idRef.current && question) {
+    return (
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <p className="text-sm font-medium">
+            Question {question.order} of {question.totalQuestions}
+          </p>
+          <button
+            type="button"
+            onClick={() => void leave()}
+            className="text-sm text-muted-foreground underline underline-offset-4"
+          >
+            Leave without finishing
+          </button>
+        </div>
+        <InterviewVoiceRunner
+          interviewId={idRef.current}
+          firstQuestion={question}
+          onFinishedAction={() => {
+            const id = idRef.current;
+            if (id) void finish(id);
+          }}
+        />
+      </div>
+    );
+  }
 
   if (live) {
     return (

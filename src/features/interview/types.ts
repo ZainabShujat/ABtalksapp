@@ -116,13 +116,48 @@ export type QuestionSourceRef = {
   label: string;
 };
 
+/**
+ * CORE questions are the fixed spine — identical for every candidate at a
+ * milestone, and the ONLY input to the comparable overall score.
+ *
+ * EXTENSION questions come from cohort days the member has passed BEYOND the
+ * blueprint's scope (the "took DAY_15 on day 18" case). They are asked, judged
+ * and reported, but deliberately excluded from the overall score: if they
+ * counted, two DAY_15 results would no longer measure the same thing.
+ */
+export const QUESTION_TIERS = ["CORE", "EXTENSION"] as const;
+export type QuestionTier = (typeof QUESTION_TIERS)[number];
+
 export type PlannedQuestion = {
   id: string;
   order: number;
   competency: Competency;
   sourceRef: QuestionSourceRef;
-  /** Deterministic template text. Replaced by LLM phrasing when available. */
+  /**
+   * The canonical question. For a cohort bank question this is the bank text,
+   * byte-identical across candidates — it is what makes two scores comparable,
+   * and it is what evaluation grades against.
+   */
   text: string;
+  /**
+   * What the candidate actually hears: `text`, optionally preceded by one
+   * factual clause about their own work (see `cohort/grounding.ts`). Absent
+   * means "spoken exactly as `text`". The grading target is never the grounded
+   * form, so personalisation cannot move a score.
+   */
+  spokenText?: string;
+  /** True when a real artifact was found and referenced in `spokenText`. */
+  grounded?: boolean;
+  /** The fact that was referenced, for the plan/report audit trail. */
+  groundingNote?: string | null;
+  /** CORE by default; EXTENSION for beyond-milestone questions. */
+  tier?: QuestionTier;
+  /** How this question interrogates its competency. */
+  mode?: import("@/features/interview/cohort/question-bank").QuestionMode;
+  /** Escalation rungs for a candidate who already cleared the bar. */
+  deepProbes?: readonly import("@/features/interview/cohort/question-bank").DeepProbe[];
+  /** Narrower probes for a candidate below the bar. */
+  scaffoldProbes?: readonly import("@/features/interview/cohort/question-bank").ScaffoldProbe[];
   /**
    * True once an LLM phrased it. Always FALSE for cohort bank questions — the
    * standardized wording is what makes scores comparable, so it is never
@@ -155,7 +190,14 @@ export type CohortPlanContext = {
   bankVersion: string;
   /** Cohort days the blueprint covers — 1..15 or 1..31. */
   scopeDays: number[];
+  /** CORE questions only. This is the number two results are compared on. */
   questionCount: number;
+  /** Beyond-milestone questions appended from the member's live progress. */
+  extensionCount?: number;
+  /** The member's live progress when the attempt opened. Provenance only. */
+  progressDay?: number | null;
+  /** How many questions referenced a real artifact of theirs. */
+  groundedCount?: number;
 };
 
 export type GeneralPlanContext = {
@@ -186,15 +228,41 @@ export const ISSUE_TYPES = [
 ] as const;
 export type IssueType = (typeof ISSUE_TYPES)[number];
 
+/**
+ * How much of the question the answer actually engaged with.
+ *
+ * Judged semantically by the model, never by keyword. The three states matter
+ * because they route differently: a PARTIAL answer earns a probe, an OFF_TOPIC
+ * one earns a redirect and records no evidence at all.
+ */
+export const RELEVANCE_LEVELS = ["ON_TOPIC", "PARTIAL", "OFF_TOPIC"] as const;
+export type Relevance = (typeof RELEVANCE_LEVELS)[number];
+
 export type AnswerEvidence = {
   conceptualFound: boolean;
   practicalFound: boolean;
   tradeoffsFound: boolean;
   flaggedIssues: IssueType[];
   reasoning: string;
+  /**
+   * Indices into the question's `expectedEvidence` that this answer covered.
+   *
+   * The difference between "the model said it was fine" and a defensible
+   * assessment: the depth ladder compares `matchedEvidence.length` against the
+   * question's `minEvidence`, and the report cites the items by name. Optional
+   * because attempts opened before this shipped have no such field — read it
+   * as `?? []`.
+   */
+  matchedEvidence?: number[];
+  /** Semantic relevance of the answer. Read as `"ON_TOPIC"` when absent. */
+  relevance?: Relevance;
 };
 
-export type TurnAction = "FOLLOW_UP" | "NEXT_QUESTION" | "END_INTERVIEW";
+export type TurnAction =
+  | "FOLLOW_UP"
+  | "ESCALATE"
+  | "NEXT_QUESTION"
+  | "END_INTERVIEW";
 
 export type TurnDecision = {
   evidence: AnswerEvidence;
@@ -244,6 +312,25 @@ export type InterviewState = {
   redirectsAsked?: number;
   /** Repeat requests served on the question currently open. See above. */
   repeatsAsked?: number;
+  /**
+   * How deep the conversation has gone on the question currently open.
+   * 1 = the core question as banked; 2 and 3 are escalation rungs. Resets with
+   * every new question, like the other per-question counters.
+   */
+  depthLevel?: number;
+  /** Escalations spent on the question currently open. */
+  escalationsAsked?: number;
+  /**
+   * Running competence read per competency, as CONSECUTIVE strong/weak answers.
+   *
+   * This is what makes the interview adapt across questions rather than only
+   * within one. Consecutive rather than cumulative on purpose: the spec's "do
+   * not punish a candidate indefinitely for one weak answer" is expressed as a
+   * counter that resets the moment they recover.
+   */
+  competenceSignal?: Partial<
+    Record<Competency, { strong: number; weak: number }>
+  >;
   transcript: TranscriptLine[];
   evidenceByQuestionId: Record<string, AnswerEvidence>;
   startedAtMs: number | null;

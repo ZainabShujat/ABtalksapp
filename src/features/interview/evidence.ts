@@ -52,17 +52,37 @@ function deriveCommunicationTier(state: InterviewState): EvidenceTier {
   const derailed = evidences.filter(
     (e) =>
       e.flaggedIssues.includes("off_topic") ||
-      e.flaggedIssues.includes("stuck_or_evasive"),
+      e.flaggedIssues.includes("stuck_or_evasive") ||
+      e.relevance === "OFF_TOPIC",
   ).length;
-  const explained = evidences.filter((e) => e.conceptualFound).length;
 
   const derailRate = derailed / answered;
-  const explainRate = explained / answered;
-
   if (derailRate > 0.5) return "NONE";
   if (derailRate > 0.25) return "CLAIMED";
-  if (explainRate >= 0.6) return "DEMONSTRATED";
-  if (explainRate >= 0.3) return "EXPLAINED";
+
+  /**
+   * "Landed the point" is the communication signal.
+   *
+   * Previously this counted `conceptualFound`, a keyword flag that fires on
+   * words like "because" — which meant a candidate could answer every question
+   * completely and still be marked a poor communicator for phrasing things
+   * plainly. Communication here is defined the way the rubric defines it:
+   * answering the question that was actually asked. An answer that covered
+   * checklist items did that, whatever vocabulary it used.
+   *
+   * The old flag remains the fallback for attempts recorded before itemised
+   * evidence existed.
+   */
+  const withItemised = evidences.filter((e) => e.matchedEvidence !== undefined);
+  const landed =
+    withItemised.length > 0
+      ? withItemised.filter((e) => (e.matchedEvidence?.length ?? 0) > 0).length /
+        withItemised.length
+      : evidences.filter((e) => e.conceptualFound).length / answered;
+
+  if (landed >= 0.75) return "DEMONSTRATED";
+  if (landed >= 0.4) return "EXPLAINED";
+  if (landed > 0) return "CLAIMED";
   return "CLAIMED";
 }
 

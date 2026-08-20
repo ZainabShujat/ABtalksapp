@@ -3,7 +3,11 @@ import {
   MAX_REPEATS_PER_QUESTION,
 } from "@/features/interview/constants";
 import { followUpBudgetFor } from "@/features/interview/state";
-import type { PlannedQuestion } from "@/features/interview/types";
+import type {
+  InterviewState,
+  PlannedQuestion,
+} from "@/features/interview/types";
+import { decideLadderMove } from "@/features/interview/agent/depth";
 import type {
   AgentAction,
   InterviewDecision,
@@ -48,18 +52,59 @@ export type PolicyOutcome = {
   action: Exclude<AgentAction, "COMPLETE">;
   /** Why the proposal was or was not honoured. Logged, never shown to candidates. */
   rationale: string;
+  /**
+   * Text for an ESCALATE turn, taken from the bank rung. Follow-up text is
+   * still resolved by `resolveFollowUpText`, because it may legitimately come
+   * from the model; an escalation may not.
+   */
+  probeText?: string;
+  /** Depth being moved to, for logging and the demo view. */
+  probeLevel?: number;
 };
 
+/**
+ * Turns the model's report into the interview's next move.
+ *
+ * Order matters and encodes the product rules:
+ *   1. OFF_TOPIC never becomes an answer, whatever the model proposed
+ *   2. REPEAT is free and legitimate on a voice interview
+ *   3. everything else goes to the depth ladder, which decides DIRECTION
+ *   4. budgets decide whether the ladder's choice is affordable
+ *
+ * Step 3 is the new behaviour. Previously a sufficient answer always fell
+ * through to NEXT_QUESTION, which is what made the interview a questionnaire.
+ */
 export function routeDecision(
   question: PlannedQuestion,
   decision: InterviewDecision,
   counters: PolicyCounters,
+  state: InterviewState,
 ): PolicyOutcome {
   const stuck = decision.evidence.flaggedIssues.includes("stuck_or_evasive");
-  const offTopic = decision.evidence.flaggedIssues.includes("off_topic");
+  const relevance = decision.evidence.relevance ?? "ON_TOPIC";
+  const offTopic =
+    decision.evidence.flaggedIssues.includes("off_topic") ||
+    relevance === "OFF_TOPIC";
 
-  // Off-topic is decided by the EVIDENCE flag as well as the proposed action.
-  // A model that flags off_topic but proposes NEXT_QUESTION would otherwise let
+  // REPEAT is checked BEFORE relevance. "Sorry, could you say that again?" has
+  // nothing in common with the question's subject matter, so any relevance
+  // judgment will read it as off-topic — but it is a legitimate meta-request,
+  // especially on a voice interview where audio genuinely drops. Redirecting
+  // someone who simply could not hear the question would be a bug that only
+  // ever hurts honest candidates. Repeats are capped and record no evidence, so
+  // letting them take precedence costs nothing.
+  if (decision.action === "REPEAT") {
+    if (counters.repeatsAsked < MAX_REPEATS_PER_QUESTION) {
+      return { action: "REPEAT", rationale: "Candidate asked for the question again." };
+    }
+    return {
+      action: "NEXT_QUESTION",
+      rationale: `Repeat cap (${MAX_REPEATS_PER_QUESTION}) reached; moving on.`,
+    };
+  }
+
+  // Off-topic is decided by the EVIDENCE as well as the proposed action. A
+  // model that reports off_topic but proposes NEXT_QUESTION would otherwise let
   // a non-answer count as an answered question.
   const wantsRedirect = decision.action === "REDIRECT" || offTopic;
 
@@ -73,43 +118,69 @@ export function routeDecision(
     };
   }
 
-  if (decision.action === "REPEAT") {
-    if (counters.repeatsAsked < MAX_REPEATS_PER_QUESTION) {
-      return { action: "REPEAT", rationale: "Candidate asked for the question again." };
-    }
+  if (stuck) {
     return {
       action: "NEXT_QUESTION",
-      rationale: `Repeat cap (${MAX_REPEATS_PER_QUESTION}) reached; moving on.`,
+      rationale: "Candidate is stuck; probing further would not help.",
     };
   }
 
-  if (decision.action === "FOLLOW_UP") {
-    const budget = followUpBudgetFor(question);
-    const text = (decision.followUpQuestion ?? "").trim() ||
-      (question.followUpPrompt ?? "");
+  const ladder = decideLadderMove(question, decision.evidence, state);
 
-    if (stuck) {
-      return {
-        action: "NEXT_QUESTION",
-        rationale: "Candidate is stuck; probing further would not help.",
-      };
-    }
+  if (ladder.move === "ESCALATE") {
+    return {
+      action: "ESCALATE",
+      rationale: ladder.rationale,
+      probeText: ladder.probe.text,
+      probeLevel: ladder.probe.level,
+    };
+  }
+
+  if (ladder.move === "SCAFFOLD") {
+    const budget = followUpBudgetFor(question);
+
     if (counters.followUpsAsked >= budget) {
       return {
         action: "NEXT_QUESTION",
         rationale: `Follow-up budget for ${question.id} is ${budget}, already used ${counters.followUpsAsked}.`,
       };
     }
+
+    // WHICH probe to use depends on how the candidate is doing, not on what is
+    // available:
+    //
+    //   WEAK    → the banked scaffold first. It is deliberately narrower and
+    //             simpler than the question. A model's contextual probe is
+    //             often just as hard as the thing they already could not
+    //             answer, which helps nobody.
+    //   PARTIAL → the model's probe first. They are one item short, so the best
+    //             question is the one that targets what they actually said.
+    //
+    // The bank's generic follow-up backstops both.
+    const modelProbe = (decision.followUpQuestion ?? "").trim();
+    const scaffold = (ladder.probe?.text ?? "").trim();
+    const banked = (question.followUpPrompt ?? "").trim();
+
+    const text =
+      ladder.strength === "WEAK"
+        ? scaffold || modelProbe || banked
+        : modelProbe || scaffold || banked;
+
     if (text.length === 0) {
       return {
         action: "NEXT_QUESTION",
-        rationale: "Follow-up proposed with no usable text.",
+        rationale: "No usable probe text available.",
       };
     }
-    return { action: "FOLLOW_UP", rationale: "Evidence gap is worth one probe." };
+
+    return {
+      action: "FOLLOW_UP",
+      rationale: ladder.rationale,
+      probeText: text,
+    };
   }
 
-  return { action: "NEXT_QUESTION", rationale: "Evidence sufficient or no probe warranted." };
+  return { action: "NEXT_QUESTION", rationale: ladder.rationale };
 }
 
 /**

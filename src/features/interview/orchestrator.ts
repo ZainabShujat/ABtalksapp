@@ -1,8 +1,11 @@
 import "server-only";
 import type { InterviewBlueprintKey } from "@/features/interview/cohort/blueprint";
 import { COHORT_INTERVIEW_MIN_DURATION_SEC } from "@/features/interview/constants";
-import { judgeInterview } from "@/features/interview/evaluation";
-import { aggregateScores } from "@/features/interview/scoring";
+import { scoreQuestion } from "@/features/interview/module-scoring";
+import {
+  assessCompetencies,
+  overallFromCompetencies,
+} from "@/features/interview/scoring";
 import { appendLine, startInterview } from "@/features/interview/state";
 import { runInterviewTurn } from "@/features/interview/agent";
 import { resolveInterviewLLM } from "@/features/interview/agent/llm/registry";
@@ -131,8 +134,17 @@ export type FinalizeResult =
   | { ok: false; message: string };
 
 /**
- * Closes the interview and produces final scores. One LLM call for the semantic
- * judgment; all arithmetic afterwards is deterministic.
+ * Closes the interview and produces final scores.
+ *
+ * NO model is involved. Scores are computed from the evidence recorded during
+ * the interview: which expected-evidence items each answer covered, aggregated
+ * per competency and weighted by the rubric. `evaluation.ts`'s `judgeInterview`
+ * — which asked a model for a tier per competency — is no longer on this path.
+ * It stays on disk as the reference implementation of that prompt, but a score
+ * a model can nudge is not a score two candidates can be compared on.
+ *
+ * Only CORE questions count. Extension questions about work beyond the
+ * milestone are reported separately and never move this number.
  *
  * A session shorter than the floor is rejected rather than scored — too little
  * evidence to be comparable. The caller marks such attempts INVALID so they do
@@ -157,13 +169,33 @@ export async function finalizeInterview(
     };
   }
 
-  const { judgments, summary } = await judgeInterview(plan, state);
+  const coreScores = plan.questions
+    .filter((q) => (q.tier ?? "CORE") === "CORE")
+    .map((q) => scoreQuestion(q, state));
+
+  const competencies = assessCompetencies(coreScores, state, plan);
+  const overallScore = overallFromCompetencies(competencies);
+
+  const answered = coreScores.filter((s) => s.answered);
+  const cleared = answered.filter((s) => s.cleared).length;
 
   return {
     ok: true,
     data: {
       state: { ...state, status: "COMPLETED" },
-      scores: aggregateScores(judgments, summary),
+      scores: {
+        perCompetency: competencies.map((c) => ({
+          competency: c.competency,
+          score: c.score,
+          tier: c.tier,
+        })),
+        overallScore,
+        // A factual placeholder. The readable summary belongs to the report,
+        // which is generated after this and written to the interview row.
+        summary:
+          `Cleared the evidence bar on ${cleared} of ${answered.length} ` +
+          `answered questions.`,
+      },
     },
   };
 }

@@ -3,66 +3,24 @@
 import { useState } from "react";
 import type { InterviewBlueprintKey } from "@/features/interview/cohort-eligibility";
 import type { FinishInterviewData } from "@/features/interview/provider";
-import { StageResult } from "@/components/interview/stage-result";
+import { BLUEPRINT_LABEL } from "@/features/interview/cohort/blueprint";
+import { StageIntro } from "@/components/interview/cohort/stage-intro";
 import { StageConsent } from "@/components/interview/cohort/stage-consent";
 import { StageSystemCheck } from "@/components/interview/cohort/stage-system-check";
 import { StageReady } from "@/components/interview/cohort/stage-ready";
 import { StageLiveVoice } from "@/components/interview/cohort/stage-live-voice";
+import { StageCompletion } from "@/components/interview/cohort/stage-completion";
+import { StageCohortResult } from "@/components/interview/cohort/stage-cohort-result";
+import "./interview.css";
 
 export type CohortJourneyStage =
+  | "intro"
   | "consent"
   | "devices"
   | "ready"
   | "live"
+  | "completion"
   | "result";
-
-const STEPS: { id: CohortJourneyStage; label: string }[] = [
-  { id: "consent", label: "Rules" },
-  { id: "devices", label: "System check" },
-  { id: "ready", label: "Ready" },
-  { id: "live", label: "Interview" },
-  { id: "result", label: "Result" },
-];
-
-function StepRail({ stage }: { stage: CohortJourneyStage }) {
-  const activeIndex = STEPS.findIndex((s) => s.id === stage);
-
-  return (
-    <ol className="lattice mb-10 grid grid-cols-2 sm:grid-cols-5">
-      {STEPS.map((step, i) => {
-        const done = i < activeIndex;
-        const active = i === activeIndex;
-        return (
-          <li key={step.id} className="px-4 py-3">
-            <span
-              className="block text-[13px] font-extrabold leading-[14px] tracking-[0.08em]"
-              style={{
-                color: active
-                  ? "var(--color-accent-700)"
-                  : done
-                    ? "hsl(var(--foreground) / 0.7)"
-                    : "hsl(var(--foreground) / 0.4)",
-              }}
-            >
-              {String(i + 1).padStart(2, "0")}
-            </span>
-            <span
-              className="mt-1 block text-[15px] leading-6"
-              style={{
-                color: active || done
-                  ? "hsl(var(--foreground))"
-                  : "hsl(var(--foreground) / 0.45)",
-                fontWeight: active ? 800 : 400,
-              }}
-            >
-              {step.label}
-            </span>
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
 
 export function CohortInterviewJourney({
   blueprint,
@@ -71,49 +29,64 @@ export function CohortInterviewJourney({
   blueprint: InterviewBlueprintKey;
   candidateName: string;
 }) {
-  const [stage, setStage] = useState<CohortJourneyStage>("consent");
+  const [stage, setStage] = useState<CohortJourneyStage>("intro");
   const [interviewId, setInterviewId] = useState<string | null>(null);
   const [result, setResult] = useState<FinishInterviewData | null>(null);
 
-  const title = blueprint === "DAY_15" ? "Day 15 Checkpoint" : "Day 31 Final Interview";
+  const title = BLUEPRINT_LABEL[blueprint];
+  const dayLabel = blueprint === "DAY_15" ? "Day 15" : "Day 31";
+
+  // The live and completion stages get a full-bleed dark environment.
+  // Pre-interview stages use the standard AB Talks layout.
+  const isImmersive = stage === "live";
 
   return (
     <div>
-      <header className="mb-8">
-        <span className="kicker">AI Cohort Interview</span>
-        <h1 className="mt-3 text-[clamp(28px,3.4vw,40px)] font-extrabold leading-[1.1] tracking-[-0.015em]">
-          {title}
-        </h1>
-        <p className="mt-4 max-w-[68ch] text-[15.5px] leading-7 text-foreground/78">
-          A voice-based conversation to assess your understanding of the cohort material so far.
-        </p>
-      </header>
+      {/* Pre-interview stages: standard AB Talks layout with subtle step indicator */}
+      {!isImmersive && stage !== "completion" && stage !== "result" && (
+        <div>
+          {stage !== "intro" && (
+            <header className="mb-8">
+              <span className="kicker">AI Cohort Interview</span>
+              <h1 className="mt-3 text-[clamp(28px,3.4vw,40px)] font-extrabold leading-[1.1] tracking-[-0.015em]">
+                {title}
+              </h1>
+            </header>
+          )}
 
-      <hr className="rule2 mb-8" />
+          {stage === "intro" && (
+            <StageIntro
+              blueprint={blueprint}
+              dayLabel={dayLabel}
+              title={title}
+              onProceed={() => setStage("consent")}
+            />
+          )}
 
-      <StepRail stage={stage} />
+          {stage === "consent" && (
+            <StageConsent
+              blueprint={blueprint}
+              onProceed={() => setStage("devices")}
+            />
+          )}
 
-      {stage === "consent" && (
-        <StageConsent
-          blueprint={blueprint}
-          onProceed={() => setStage("devices")}
-        />
+          {stage === "devices" && (
+            <StageSystemCheck
+              onBack={() => setStage("consent")}
+              onReadyAction={() => setStage("ready")}
+            />
+          )}
+
+          {stage === "ready" && (
+            <StageReady
+              onBack={() => setStage("devices")}
+              onBeginAction={() => setStage("live")}
+            />
+          )}
+        </div>
       )}
 
-      {stage === "devices" && (
-        <StageSystemCheck
-          onBack={() => setStage("consent")}
-          onReadyAction={() => setStage("ready")}
-        />
-      )}
-
-      {stage === "ready" && (
-        <StageReady
-          onBack={() => setStage("devices")}
-          onBeginAction={() => setStage("live")}
-        />
-      )}
-
+      {/* Live interview: full-screen immersive environment */}
       {stage === "live" && (
         <StageLiveVoice
           blueprint={blueprint}
@@ -121,16 +94,30 @@ export function CohortInterviewJourney({
           onInterviewOpenAction={(id) => setInterviewId(id)}
           onFinishedAction={(data) => {
             setResult(data);
-            setStage("result");
+            setStage("completion");
           }}
           onAbandonedAction={() => {
             setInterviewId(null);
-            setStage("consent");
+            setStage("intro");
           }}
         />
       )}
 
-      {stage === "result" && <StageResult result={result} />}
+      {/* Completion transition */}
+      {stage === "completion" && (
+        <StageCompletion
+          onViewReport={() => setStage("result")}
+        />
+      )}
+
+      {/* Assessment report */}
+      {stage === "result" && (
+        <StageCohortResult
+          result={result}
+          blueprint={blueprint}
+          candidateName={candidateName}
+        />
+      )}
     </div>
   );
 }

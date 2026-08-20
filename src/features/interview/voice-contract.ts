@@ -1,0 +1,72 @@
+import { createHash } from "node:crypto";
+
+/**
+ * The voice transport's contract, as pure functions.
+ *
+ * Separated from `voice.ts` — which is `server-only` because it reaches the
+ * database and the speech APIs — so the parts that decide what is ACCEPTED can
+ * be tested without either. Upload limits and format checks are security
+ * boundaries, and a security boundary that is awkward to test is one that stops
+ * being tested.
+ */
+
+/** Upload ceiling. Roughly four minutes of Opus — far beyond any single answer. */
+export const MAX_AUDIO_BYTES = 8 * 1024 * 1024;
+
+export const ALLOWED_AUDIO_TYPES = [
+  "audio/webm",
+  "audio/ogg",
+  "audio/mpeg",
+  "audio/mp4",
+  "audio/wav",
+  "audio/x-wav",
+] as const;
+
+/**
+ * Pseudonymous abuse identifier, ported verbatim from the legacy interview.
+ *
+ * A stable hash of the member id: it lets the provider rate-limit a single
+ * abusive account without ever receiving a name, an email, or anything else
+ * that identifies a real person.
+ */
+export function safetyIdentifierFor(memberId: string): string {
+  return createHash("sha256").update(memberId).digest("hex").slice(0, 64);
+}
+
+/**
+ * The base MIME type, without codec parameters.
+ *
+ * MediaRecorder reports `audio/webm;codecs=opus`, so a naive equality check
+ * against the allow-list rejects every real recording the browser produces.
+ */
+export function normalizeAudioType(rawType: string): string {
+  return (rawType || "").split(";")[0]!.trim().toLowerCase();
+}
+
+export function isAllowedAudioType(rawType: string): boolean {
+  return (ALLOWED_AUDIO_TYPES as readonly string[]).includes(
+    normalizeAudioType(rawType),
+  );
+}
+
+/** Upload filename for a recording. The provider infers the container from it. */
+export function audioFilenameFor(rawType: string): string {
+  const subtype = normalizeAudioType(rawType).split("/")[1] ?? "webm";
+  return `answer.${subtype === "x-wav" ? "wav" : subtype}`;
+}
+
+export type AudioRejection = "EMPTY" | "TOO_LARGE" | "UNSUPPORTED_TYPE" | null;
+
+/**
+ * The whole upload gate, in one place so the route reads as policy rather than
+ * as a pile of conditionals.
+ */
+export function rejectAudioUpload(
+  size: number,
+  rawType: string,
+): AudioRejection {
+  if (size <= 0) return "EMPTY";
+  if (size > MAX_AUDIO_BYTES) return "TOO_LARGE";
+  if (!isAllowedAudioType(rawType)) return "UNSUPPORTED_TYPE";
+  return null;
+}

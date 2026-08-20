@@ -5,6 +5,7 @@ import { parseBlueprintParam, BLUEPRINT_LABEL } from "@/features/interview/cohor
 import { getCohortInterviewOverview } from "@/features/interview/service";
 import { CohortInterviewRunner } from "@/components/program/cohort-interview-runner";
 import { buttonVariants } from "@/components/ui/button";
+import { isInterviewVoiceEnabled } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -59,7 +60,9 @@ export default async function CohortInterviewPage({
       <CohortInterviewRunner
         overview={overview.data}
         memberName={member.fullName}
+        voiceEnabled={isInterviewVoiceEnabled()}
       />
     </div>
   );
 }
+ 

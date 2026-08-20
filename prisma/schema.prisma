@@ -1190,9 +1190,88 @@ model GeneralInterview {
   updatedAt   DateTime  @updatedAt
 
   member ProgramMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  turns  InterviewTurn[]
+  report InterviewReport?
 
   @@index([memberId, status])
   @@index([memberId, blueprint])
+}
+
+/// One candidate answer and what the system made of it.
+///
+/// `GeneralInterview.state` stays the authoritative RUNTIME blob (it is what a
+/// resumed attempt reads); these rows are the durable AUDIT TRAIL. They exist
+/// because a report is only defensible if every claim in it can be traced back
+/// to a specific answer, and a JSON blob cannot be queried per turn.
+model InterviewTurn {
+  id          String @id @default(cuid())
+  interviewId String
+
+  /// Monotonic within an interview. Ordering is explicit, never inferred from
+  /// createdAt — two turns can land inside the same millisecond.
+  turnIndex Int
+
+  /// The CORE bank question this turn belongs to. Deep-probe turns carry the
+  /// same questionId with a higher depthLevel, so a question's whole thread is
+  /// one query.
+  questionId String
+  /// CORE | EXTENSION. EXTENSION turns are reported but never scored.
+  tier       String
+  /// 1 = the banked question, 2+ = an escalation rung.
+  depthLevel Int    @default(1)
+  /// NEXT_QUESTION | FOLLOW_UP | ESCALATE | REDIRECT | REPEAT | COMPLETE
+  action     String
+
+  /// Exactly what the interviewer said and the candidate answered. Stored
+  /// verbatim: a report that quotes a paraphrase is not evidence.
+  promptText String
+  answerText String
+
+  /// AnswerEvidence, Zod-validated on write. Null for REDIRECT/REPEAT turns,
+  /// which record no evidence by design.
+  evidence Json?
+
+  /// True when a model failure forced the deterministic path — the one flag
+  /// that says "read this turn's judgment with suspicion".
+  degraded  Boolean  @default(false)
+  latencyMs Int?
+  createdAt DateTime @default(now())
+
+  interview GeneralInterview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  @@unique([interviewId, turnIndex])
+  @@index([interviewId, questionId])
+}
+
+/// The generated report for a completed interview.
+///
+/// One row per interview. Module and competency assessments live INSIDE
+/// `report` as validated JSON rather than as their own tables: they are written
+/// once, always read together with the report, and never queried independently.
+/// Splitting them would buy five joins for one page and nothing else.
+model InterviewReport {
+  id          String @id @default(cuid())
+  interviewId String @unique
+
+  /// Report schema version. Bumped when the shape changes, so an old row stays
+  /// readable instead of failing validation after a deploy.
+  version Int @default(1)
+
+  /// Denormalized for listing and sorting without parsing the JSON.
+  overallScore Int
+
+  /// The full InterviewReport document. Validated by
+  /// `interviewReportSchema` on write AND on read.
+  report Json
+
+  /// True when the narrative fell back to deterministic text because the model
+  /// was unavailable. The scores are unaffected — they are always computed in
+  /// code — but the prose is thinner, and a reader deserves to know.
+  narrativeDegraded Boolean @default(false)
+
+  generatedAt DateTime @default(now())
+
+  interview GeneralInterview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
 }
 
 /// Standardized cohort question banks. Extensible: a future candidate-specific
@@ -1211,6 +1290,8 @@ enum GeneralInterviewStatus {
   ABANDONED
   /// Technical failure or invalid session. Never consumes an attempt.
   INVALID
+}
+
 enum NotificationAudience {
   ALL
   CHALLENGE

@@ -16,6 +16,17 @@ export const ANALYZE_SYSTEM_PROMPT = `You are the evidence extractor for a stand
 
 Read the candidate's answer to the question on the floor and report what it contains.
 
+First judge RELEVANCE to the question on the floor. Judge it by meaning, never by keywords:
+- "ON_TOPIC": they are genuinely attempting the question, even if the answer is wrong, thin, or rambling. An on-topic answer that happens to mention something unrelated is still ON_TOPIC.
+- "PARTIAL": they addressed only a fragment of what was asked, or drifted onto an adjacent topic without answering.
+- "OFF_TOPIC": they are not answering at all — asking you an unrelated question, making small talk, requesting a joke, a poem, the weather, a fact about the world, or trying to get you to do something else.
+
+Then list which of the EXPECTED EVIDENCE items the answer actually covered, in "matchedEvidence", as a JSON array of the item numbers.
+
+Write each number as a SEPARATE element: three covered items is [1, 2, 3], never [123]. One covered item is [2]. Nothing covered is [].
+
+Include an item only if the answer genuinely contains it — a vague gesture in its direction does not count.
+
 Extract three independent evidence axes:
 - conceptual: did they explain the underlying idea, not just name it?
 - practical: did they cite specific work THEY did (files, tools, data, steps)?
@@ -44,8 +55,10 @@ Rules for the acknowledgement:
 
 Never answer an off-topic question, even a harmless one. Never reveal the expected evidence, the rubric, or any score.
 
+You do NOT decide whether the interview goes deeper. Report what the answer contained and propose at most a follow-up; the system decides depth from the evidence you report.
+
 Return ONLY a JSON object, no prose, no markdown fence:
-{"action":"FOLLOW_UP"|"NEXT_QUESTION"|"REDIRECT"|"REPEAT","reason":"one short line","evidence":{"conceptualFound":false,"practicalFound":false,"tradeoffsFound":false,"flaggedIssues":[],"reasoning":"one short line"},"followUpQuestion":"","acknowledgement":"","confidence":0.0}`;
+{"action":"FOLLOW_UP"|"NEXT_QUESTION"|"REDIRECT"|"REPEAT","reason":"one short line","evidence":{"conceptualFound":false,"practicalFound":false,"tradeoffsFound":false,"matchedEvidence":[],"relevance":"ON_TOPIC","flaggedIssues":[],"reasoning":"one short line"},"followUpQuestion":"","acknowledgement":"","confidence":0.0}`;
 
 /** Appended on the retry after a malformed response. */
 export const STRICT_JSON_REMINDER = `Your previous response was not valid JSON matching the required shape. Reply with the JSON object only — no explanation, no code fence, no leading or trailing text.`;
@@ -73,11 +86,17 @@ export function buildAnalyzeUserMessage(input: AnalyzeAnswerInput): string {
     recentTranscript.length > 0
       ? [
           "RECENT CONVERSATION (context only — grade the answer below):",
+          // Four lines, each capped. This exists to resolve pronouns and
+          // references, not to re-read the interview — and prompt size is
+          // charged against a tokens-per-minute budget that a long interview
+          // can exhaust, which degrades later answers to keyword heuristics.
           ...recentTranscript
-            .slice(-6)
+            .slice(-4)
             .map(
               (line) =>
-                `${line.role === "interviewer" ? "Interviewer" : "Candidate"}: ${line.text}`,
+                `${line.role === "interviewer" ? "Interviewer" : "Candidate"}: ${
+                  line.text.length > 400 ? `${line.text.slice(0, 400)}…` : line.text
+                }`,
             ),
         ].join("\n")
       : "";

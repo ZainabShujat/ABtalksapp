@@ -11,7 +11,7 @@ export function isDayLockBypassEnabled(): boolean {
 }
 
 export function isProgramEnabled(): boolean {
-  return process.env.ENABLE_PROGRAM === "true";
+  return true;
 }
 
 /**
@@ -59,4 +59,18 @@ export function isHackathonPreviewEnabled(): boolean {
 
 export function isChatbotEnabled(): boolean {
   return process.env.ENABLE_CHATBOT === "true";
+}
+
+/**
+ * Voice mode for the AI Cohort milestone interview.
+ *
+ * Off by default and read on the server, so the text runner stays the shipping
+ * experience until voice is verified. It gates the UI only — the
+ * `/api/interview/stt` and `/api/interview/tts` routes enforce their own auth
+ * and their own configuration check, because a feature flag is a product
+ * decision and must never be the thing standing between an anonymous request
+ * and a paid transcription endpoint.
+ */
+export function isInterviewVoiceEnabled(): boolean {
+  return process.env.ENABLE_INTERVIEW_VOICE === "true";
 }

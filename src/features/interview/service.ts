@@ -20,8 +20,18 @@ import {
   findActiveAttemptId,
   loadActiveAttempt,
   loadCompletedResult,
+  loadReport,
+  loadReportForBlueprint,
+  nextTurnIndex,
+  saveReport,
   saveTurn,
+  type LoadedReport,
+  type TurnRecord,
 } from "@/features/interview/repository";
+import { buildCohortCandidateContext } from "@/features/interview/cohort/candidate-context";
+import { buildInterviewReport } from "@/features/interview/report";
+import { askForReport } from "@/features/interview/report-provider";
+import { scopeDaysFor } from "@/features/interview/cohort/planner";
 import {
   buildCohortPlan,
   gateStart,
@@ -75,7 +85,12 @@ function toClientQuestion(
   return {
     id: question.id,
     order: question.order,
-    text: question.text,
+    // The SPOKEN form — the bank text with its grounding clause, if the
+    // candidate has a real artifact for it. `question.text` stays the canonical
+    // wording that evaluation grades against; sending it here instead would
+    // compute the grounding and then throw it away, which is what happened
+    // until the database-backed run caught it.
+    text: question.spokenText ?? question.text,
     totalQuestions: questionCountFor(blueprint),
   };
 }
@@ -119,7 +134,7 @@ export async function startCohortInterview(
   const gate = await gateStart(memberId, blueprint);
   if (!gate.ok) return { ok: false, message: gate.message };
 
-  const plan = buildCohortPlan(blueprint);
+  const plan = await buildCohortPlan(memberId, blueprint);
   const opened = beginInterview(plan, createInitialState());
   if (!opened.ok) return { ok: false, message: opened.message };
 
@@ -214,6 +229,7 @@ export async function recordCohortAnswer(
     return { ok: false, message: "This interview is no longer in progress." };
   }
 
+  const startedMs = Date.now();
   const turn = await submitAnswer(
     attempt.plan,
     attempt.state,
@@ -223,7 +239,33 @@ export async function recordCohortAnswer(
   );
   if (!turn.ok) return turn;
 
-  await saveTurn(interviewId, memberId, turn.data.state);
+  // The durable audit row. Built here rather than inside the graph because the
+  // graph is transport-agnostic and holds no notion of storage — and because
+  // the turn index must come from the database, which is the only thing that
+  // knows how many turns actually landed.
+  const asked = attempt.plan.questions.find((q) => q.id === questionId);
+  const depthLevel = attempt.state.depthLevel ?? 1;
+  const record: TurnRecord = {
+    turnIndex: await nextTurnIndex(interviewId),
+    questionId,
+    tier: (asked?.tier ?? "CORE") as "CORE" | "EXTENSION",
+    depthLevel,
+    action: turn.data.action,
+    promptText: turn.data.nextPrompt ?? "",
+    answerText,
+    // REDIRECT and REPEAT record no evidence by design; storing a null makes
+    // that explicit in the trail rather than leaving it to be inferred.
+    evidence:
+      turn.data.action === "REDIRECT" || turn.data.action === "REPEAT"
+        ? null
+        : (turn.data.state.evidenceByQuestionId[
+            depthLevel > 1 ? `${questionId}@L${depthLevel}` : questionId
+          ] ?? null),
+    degraded: false,
+    latencyMs: Date.now() - startedMs,
+  };
+
+  await saveTurn(interviewId, memberId, turn.data.state, record);
 
   return {
     ok: true,
@@ -248,6 +290,14 @@ export type FinishInterviewData = {
   blueprint: InterviewBlueprintKey;
   scores: InterviewScores;
   durationSec: number;
+  /**
+   * True when the evidence-backed report was generated and stored.
+   *
+   * Optional so that a caller constructing this shape by hand — a UI stub, a
+   * test — does not have to know about report persistence. The service always
+   * sets it; treat `undefined` as "no report".
+   */
+  reportReady?: boolean;
 };
 
 /**
@@ -296,13 +346,50 @@ export async function finishCohortInterview(
     return { ok: false, message: finalized.message };
   }
 
+  // The report is generated BEFORE the attempt is committed, so its summary can
+  // be written onto the interview row in the same completion — and so a
+  // candidate never sees a completed interview that has no report behind it.
+  const context = await buildCohortCandidateContext(memberId, attempt.blueprint);
+
+  const report = await buildInterviewReport(askForReport, {
+    plan: attempt.plan,
+    state: finalized.data.state,
+    blueprint: attempt.blueprint,
+    scopeDays: scopeDaysFor(attempt.blueprint),
+    candidate: {
+      name: context?.fullName ?? "Candidate",
+      cohort: context?.cohortName ?? "AI Cohort",
+      jobRole: context?.jobRole ?? "",
+      company: context?.company ?? "",
+    },
+    progressDay: context?.progressDay ?? null,
+    durationSec,
+  });
+
   const committed = await completeAttempt(interviewId, memberId, {
     state: finalized.data.state,
-    scores: finalized.data.scores,
+    scores: {
+      ...finalized.data.scores,
+      // The readable summary comes from the report; the row keeps a copy so
+      // list views and the talent pool need not load the whole document.
+      summary: report.summary || finalized.data.scores.summary,
+    },
     durationSec,
   });
 
   if (!committed.ok) return { ok: false, message: committed.message };
+
+  // Storing the report is deliberately NOT fatal. The interview is complete and
+  // scored either way; a failed report write is something to retry, not a
+  // reason to tell someone their interview did not count.
+  const stored = await saveReport(interviewId, memberId, report);
+  if (!stored.ok) {
+    logger.error("[cohort-interview] report not stored", {
+      interviewId,
+      memberId,
+      message: stored.message,
+    });
+  }
 
   logger.info("[cohort-interview] attempt completed", {
     interviewId,
@@ -317,6 +404,7 @@ export async function finishCohortInterview(
       blueprint: attempt.blueprint,
       scores: finalized.data.scores,
       durationSec,
+      reportReady: stored.ok,
     },
   };
 }
@@ -368,4 +456,39 @@ export async function getCohortInterviewOverview(
       result,
     },
   };
+}
+
+
+/* ----------------------------------------------------------- the report */
+
+/**
+ * The stored report for a completed milestone.
+ *
+ * Member-scoped at the query level, so an interview id belonging to someone
+ * else resolves to null rather than to their report. Nothing is regenerated
+ * here — a report is a record of an assessment that happened, and re-running
+ * the narrative on every page view would let the same interview say different
+ * things on different days.
+ */
+export async function getCohortInterviewReport(
+  memberId: string,
+  blueprint: InterviewBlueprintKey,
+): Promise<ServiceResult<LoadedReport>> {
+  const found = await loadReportForBlueprint(memberId, blueprint);
+  if (!found) {
+    return { ok: false, message: "No report is available for this interview." };
+  }
+  return { ok: true, data: found };
+}
+
+/** The report for one specific attempt. */
+export async function getInterviewReportById(
+  memberId: string,
+  interviewId: string,
+): Promise<ServiceResult<LoadedReport>> {
+  const found = await loadReport(interviewId, memberId);
+  if (!found) {
+    return { ok: false, message: "No report is available for this interview." };
+  }
+  return { ok: true, data: found };
 }

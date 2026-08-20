@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { InterviewBlueprintKey } from "@/features/interview/cohort/blueprint";
-import { ISSUE_TYPES } from "@/features/interview/types";
+import { ISSUE_TYPES, RELEVANCE_LEVELS } from "@/features/interview/types";
 import type {
   AnswerEvidence,
   InterviewPlan,
@@ -33,6 +33,7 @@ export type TranscriptTurn = TranscriptLine;
  */
 export const AGENT_ACTIONS = [
   "FOLLOW_UP",
+  "ESCALATE",
   "NEXT_QUESTION",
   "REDIRECT",
   "REPEAT",
@@ -40,7 +41,16 @@ export const AGENT_ACTIONS = [
 ] as const;
 export type AgentAction = (typeof AGENT_ACTIONS)[number];
 
-/** The subset an LLM is allowed to propose. COMPLETE is never the model's call. */
+/**
+ * The subset an LLM is allowed to propose.
+ *
+ * Neither COMPLETE nor ESCALATE is the model's call. COMPLETE is termination,
+ * which belongs to the budget machine. ESCALATE is the adaptive decision, and
+ * it is withheld deliberately: if a model could ask to go deeper it would do so
+ * out of enthusiasm rather than evidence, and "this candidate is strong" would
+ * become a matter of tone rather than of cleared checklist items. The model
+ * reports WHAT IT SAW; `depth.ts` decides what that earns.
+ */
 export const LLM_ACTIONS = [
   "FOLLOW_UP",
   "NEXT_QUESTION",
@@ -67,6 +77,24 @@ export const interviewDecisionSchema = z.object({
       tradeoffsFound: z.boolean().default(false),
       flaggedIssues: z.array(z.enum(ISSUE_TYPES)).default([]),
       reasoning: z.string().max(500).default(""),
+      /**
+       * 1-based positions from the expected-evidence checklist the model was
+       * shown. Converted to 0-based indices and range-filtered by the provider.
+       *
+       * `.catch([])` is load-bearing. A model once returned `[123]` — meaning
+       * items 1, 2 and 3 concatenated — and a strict element bound rejected the
+       * WHOLE decision, throwing away a correct action, a correct relevance
+       * judgment and a good acknowledgement over one malformed array. A
+       * cosmetic field must not be able to invalidate an assessment: a bad
+       * value degrades to "made no claim", which the depth ladder already
+       * handles as distinct from "claimed nothing matched".
+       */
+      matchedEvidence: z
+        .array(z.number().int().nonnegative())
+        .max(40)
+        .catch([])
+        .default([]),
+      relevance: z.enum(RELEVANCE_LEVELS).default("ON_TOPIC"),
     })
     .default({
       conceptualFound: false,
@@ -74,6 +102,8 @@ export const interviewDecisionSchema = z.object({
       tradeoffsFound: false,
       flaggedIssues: [],
       reasoning: "",
+      matchedEvidence: [],
+      relevance: "ON_TOPIC",
     }),
   followUpQuestion: z.string().max(600).nullish(),
   acknowledgement: z.string().max(300).nullish(),
@@ -131,6 +161,9 @@ export type InterviewAgentState = {
   maxFollowUps: number;
   redirectCount: number;
   repeatCount: number;
+  /** 1 = the core question; 2 and 3 are escalation rungs. */
+  depthLevel: number;
+  escalationsAsked: number;
 
   decision: InterviewDecision | null;
   lastDecision: AgentAction | null;

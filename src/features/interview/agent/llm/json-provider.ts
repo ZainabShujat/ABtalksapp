@@ -53,15 +53,90 @@ export type JsonProviderOptions = {
  * `InterviewDecision` only by passing the schema; there is no path where raw
  * model fields reach the graph.
  */
-function validate(raw: unknown): InterviewDecision | null {
+/**
+ * Turns whatever the model wrote for `matchedEvidence` into 0-based indices.
+ *
+ * Models are unreliable about this one field in a specific, repeatable way:
+ * gpt-oss-120b writes `[123]` when it means items 1, 2 and 3, and no amount of
+ * prompt instruction has stopped it. Other models emit `"1,2,3"` as a string.
+ * Rather than lose a correct evidence read to a formatting habit, the parsing
+ * is lenient — but it is NOT guesswork:
+ *
+ *   - a run of digits is only split when EVERY digit is a real item number,
+ *     which is checkable because a checklist never has more than nine items
+ *   - anything that does not resolve to a real item is dropped
+ *
+ * So the worst case is that a claim is ignored, never that one is invented.
+ */
+export function coerceMatchedEvidence(raw: unknown, expectedCount: number): number[] {
+  if (expectedCount === 0) return [];
+
+  const tokens: number[] = [];
+
+  const pushToken = (value: unknown) => {
+    if (typeof value === "number" && Number.isInteger(value) && value >= 0) {
+      tokens.push(value);
+      return;
+    }
+    if (typeof value === "string") {
+      for (const part of value.split(/[^0-9]+/)) {
+        if (part.length > 0) tokens.push(Number(part));
+      }
+    }
+  };
+
+  if (Array.isArray(raw)) raw.forEach(pushToken);
+  else pushToken(raw);
+
+  const out = new Set<number>();
+  for (const token of tokens) {
+    // In range as written: the ordinary case.
+    if (token >= 1 && token <= expectedCount) {
+      out.add(token - 1);
+      continue;
+    }
+
+    // Out of range: it may be concatenated ordinals. Only accept that reading
+    // when every digit is itself a valid item number, and only for checklists
+    // small enough that the reading is unambiguous.
+    if (expectedCount <= 9 && token > expectedCount) {
+      const digits = String(token).split("");
+      const allValid = digits.every((d) => {
+        const n = Number(d);
+        return n >= 1 && n <= expectedCount;
+      });
+      if (allValid) {
+        for (const d of digits) out.add(Number(d) - 1);
+      }
+    }
+  }
+
+  return [...out].sort((a, b) => a - b);
+}
+
+function validate(
+  raw: unknown,
+  input: AnalyzeAnswerInput,
+): InterviewDecision | null {
   const parsed = interviewDecisionSchema.safeParse(raw);
   if (!parsed.success) return null;
 
   const followUp = (parsed.data.followUpQuestion ?? "").trim();
+
+  // The prompt numbers the checklist from 1 because models count that way;
+  // everything downstream indexes from 0. A number that does not address a real
+  // item is dropped, so a model that invents "item 9" on a four-item checklist
+  // cannot inflate the evidence count the score is computed from.
+  const expectedCount = input.question.expectedEvidence?.length ?? 0;
+  const matchedEvidence = coerceMatchedEvidence(
+    parsed.data.evidence.matchedEvidence,
+    expectedCount,
+  );
+
   return {
     action: parsed.data.action,
     reason: parsed.data.reason,
-    evidence: parsed.data.evidence,
+    evidence: { ...parsed.data.evidence, matchedEvidence },
     followUpQuestion: followUp.length > 0 ? followUp : null,
     acknowledgement: (parsed.data.acknowledgement ?? "").trim() || null,
     confidence: parsed.data.confidence ?? null,
@@ -105,7 +180,7 @@ export function createJsonInterviewLLM(
           continue;
         }
 
-        const decision = validate(result.data);
+        const decision = validate(result.data, input);
         if (decision) {
           if (attempt > 0) {
             logger.info("[interview-agent] llm recovered on retry", {

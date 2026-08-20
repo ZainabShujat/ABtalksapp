@@ -60,6 +60,11 @@ function MilestoneRow({
           <div className="mt-3">
             <span className={completedBadge}>Completed</span>
           </div>
+          <div className="mt-3">
+            <Link href={`${href}/report`} className={cn(figmaBtn)}>
+              View report →
+            </Link>
+          </div>
         </>
       ) : state.unlocked ? (
         <>
