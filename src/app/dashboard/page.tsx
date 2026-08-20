@@ -180,10 +180,7 @@ export default async function DashboardPage({
     });
     hasClaudeDay1Submission = day1 != null;
   }
-  const shouldShowAmbassadorBanner =
-    profile.userType === "STUDENT" &&
-    !profile.isCampusAmbassadorCandidate &&
-    !profile.ambassadorDismissedAt;
+  const shouldShowAmbassadorBanner = profile.userType === "STUDENT";
 
   const isPreStart = isEnrollmentPreStart(
     dashboardData.enrollment,
@@ -239,8 +236,10 @@ export default async function DashboardPage({
             useSharedModal
           />
         ) : null}
-        {hasClaudeEnrollment && shouldShowAmbassadorBanner ? (
-          <CampusAmbassadorBanner />
+        {shouldShowAmbassadorBanner ? (
+          <CampusAmbassadorBanner
+            alreadyApplied={profile.isCampusAmbassadorCandidate}
+          />
         ) : null}
         <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1">
           <EnrollmentEndedScreen
@@ -278,8 +277,10 @@ export default async function DashboardPage({
             useSharedModal
           />
         ) : null}
-        {hasClaudeEnrollment && shouldShowAmbassadorBanner ? (
-          <CampusAmbassadorBanner />
+        {shouldShowAmbassadorBanner ? (
+          <CampusAmbassadorBanner
+            alreadyApplied={profile.isCampusAmbassadorCandidate}
+          />
         ) : null}
         {hasClaudeEnrollment ? (
           <ClaudeDay0SharePrompt hasDay1Submission={hasClaudeDay1Submission} />
@@ -347,8 +348,10 @@ export default async function DashboardPage({
           useSharedModal
         />
       ) : null}
-      {hasClaudeEnrollment && shouldShowAmbassadorBanner ? (
-        <CampusAmbassadorBanner />
+      {shouldShowAmbassadorBanner ? (
+        <CampusAmbassadorBanner
+          alreadyApplied={profile.isCampusAmbassadorCandidate}
+        />
       ) : null}
       {showClaudeModal && claudeModalStartsAt ? (
         <ClaudeChallengeModal startsAt={claudeModalStartsAt} />

@@ -35,6 +35,8 @@ export type DeriveEventNotificationsInput = {
   isHackathonRegistered: boolean;
   /** `ProgramMember.cohortId`s this user already belongs to (any status). */
   joinedCohortIds: Set<string>;
+  /** True when the user has any challenge Enrollment row. */
+  hasChallengeEnrollment: boolean;
 };
 
 /** How many days before a workshop its notification starts showing. */
@@ -61,6 +63,7 @@ export function deriveEventNotifications(
     registeredWorkshopEventIds,
     isHackathonRegistered,
     joinedCohortIds,
+    hasChallengeEnrollment,
   } = input;
   const items: DerivedNotification[] = [];
   const todayKey = formatInTimeZone(now, IST, "yyyy-MM-dd");
@@ -157,6 +160,20 @@ export function deriveEventNotifications(
         ).toISOString(),
       });
     }
+  }
+
+  // ---- Campus Ambassador onboarding ----------------------------------------
+  // Off-site form. Shown to every challenge-enrolled user until FEED_LIMIT
+  // newer items push it off. Key is stable; do not reuse.
+  if (hasChallengeEnrollment) {
+    items.push({
+      key: "campus-ambassador:onboarding",
+      title: "Complete Campus Ambassador onboarding",
+      body: "You are enrolled on ABTalks. Finish ambassador enrollment on the official form.",
+      href: "https://abtalksca.netlify.app/",
+      category: "CHALLENGE",
+      publishedAt: "2026-08-20T00:00:00.000Z",
+    });
   }
 
   return items;

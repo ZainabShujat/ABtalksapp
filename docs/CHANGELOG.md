@@ -2,6 +2,7 @@
 
 <!-- Reconciled through 2026-08-05 (commit 519cc34) into docs/project-context.md. -->
 
+- 2026-08-20 [rule] Campus Ambassador onboarding is off-site (abtalksca.netlify.app); dashboard apply stopped; challenge-enrolled students get banner + derived bell notice
 - 2026-08-20 [convention] Reverted PR #153 chatbot-knowledge-base from master (old modernist UI and extra KB ingest that landed with it)
 - 2026-08-20 [rule] US AI cohort (name "AI Cohort USA") stays unfrozen until every ENROLLED/COMPLETED member has passed Day 31; India still freezes on endsAt
 - 2026-08-18 [rule] ViCoDathon placement certs issuable on production via --all --allow-production on issue-hackathon-award-certificates.ts

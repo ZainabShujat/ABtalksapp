@@ -317,13 +317,26 @@ function NotificationPanel({
                 </div>
               );
 
+              const linkClass =
+                "focus-spark block transition-colors hover:bg-muted/60";
+
               return (
                 <li key={item.key}>
-                  {item.href ? (
+                  {item.href?.startsWith("https://") ? (
+                    <a
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={onClose}
+                      className={linkClass}
+                    >
+                      {inner}
+                    </a>
+                  ) : item.href ? (
                     <Link
                       href={item.href}
                       onClick={onClose}
-                      className="focus-spark block transition-colors hover:bg-muted/60"
+                      className={linkClass}
                     >
                       {inner}
                     </Link>
