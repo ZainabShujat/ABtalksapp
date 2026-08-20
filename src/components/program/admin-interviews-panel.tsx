@@ -109,7 +109,7 @@ export function AdminInterviewsPanel({ rows }: { rows: InterviewRow[] }) {
                   <p className="text-xs text-muted-foreground">{row.company}</p>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="rounded-none bg-muted px-2 py-0.5 text-xs">
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
                     {row.status.replace("_", " ")}
                   </span>
                   {row.resetCount > 0 && (

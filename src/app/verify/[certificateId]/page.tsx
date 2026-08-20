@@ -39,7 +39,7 @@ export default async function VerifyCertificatePage({ params }: PageProps) {
       <div className="flex min-h-svh items-center justify-center bg-muted/30 px-4 py-12">
         <Card className="w-full max-w-2xl">
           <CardHeader className="items-center text-center">
-            <div className="mb-2 flex size-12 items-center justify-center rounded-none bg-destructive/10">
+            <div className="mb-2 flex size-12 items-center justify-center rounded-full bg-destructive/10">
               <ShieldAlert className="size-6 text-destructive" aria-hidden />
             </div>
             <CardTitle>Certificate not found</CardTitle>
@@ -64,7 +64,7 @@ export default async function VerifyCertificatePage({ params }: PageProps) {
       <div className="flex min-h-svh items-center justify-center bg-muted/30 px-4 py-12">
         <Card className="w-full max-w-2xl">
           <CardHeader className="items-center text-center">
-            <div className="mb-2 flex size-12 items-center justify-center rounded-none bg-destructive/10">
+            <div className="mb-2 flex size-12 items-center justify-center rounded-full bg-destructive/10">
               <ShieldX className="size-6 text-destructive" aria-hidden />
             </div>
             <CardTitle>This certificate has been revoked</CardTitle>
@@ -88,10 +88,10 @@ export default async function VerifyCertificatePage({ params }: PageProps) {
       <div className="mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-stretch">
         <Card className="min-w-0 lg:h-full">
           <CardHeader className="items-center text-center">
-            <div className="mb-2 flex size-12 items-center justify-center rounded-none bg-green-600/10">
+            <div className="mb-2 flex size-12 items-center justify-center rounded-full bg-green-600/10">
               <ShieldCheck className="size-6 text-green-600" aria-hidden />
             </div>
-            <CardTitle className="text-green-700">
+            <CardTitle className="text-green-700 dark:text-green-500">
               Verified Certificate
             </CardTitle>
             <CardDescription>{cert.subtitle}</CardDescription>

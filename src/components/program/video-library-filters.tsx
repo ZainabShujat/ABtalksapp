@@ -45,7 +45,7 @@ export function VideoLibraryFilters({
           type="button"
           onClick={() => setModuleFilter("ALL")}
           className={cn(
-            "rounded-none border px-3 py-1 text-xs font-medium",
+            "rounded-full border px-3 py-1 text-xs font-medium",
             moduleFilter === "ALL"
               ? "border-primary bg-primary/10 text-primary"
               : "text-muted-foreground",
@@ -59,7 +59,7 @@ export function VideoLibraryFilters({
             type="button"
             onClick={() => setModuleFilter(m.number)}
             className={cn(
-              "rounded-none border px-3 py-1 text-xs font-medium",
+              "rounded-full border px-3 py-1 text-xs font-medium",
               moduleFilter === m.number
                 ? "border-primary bg-primary/10 text-primary"
                 : "text-muted-foreground",

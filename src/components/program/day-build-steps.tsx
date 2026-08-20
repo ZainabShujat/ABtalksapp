@@ -19,14 +19,14 @@ import { toast } from "sonner";
 const MAX_VISIBLE_STEPS = 5;
 
 const stepNavBtn =
-  "inline-flex h-9 items-center justify-center rounded-[12px] border border-black bg-accent-500 px-4 text-sm font-bold text-white shadow-[inset_3px_3px_3px_0_rgba(0,0,0,0.5)] hover:bg-accent-500/90 disabled:cursor-not-allowed disabled:opacity-40";
+  "inline-flex h-9 items-center justify-center rounded-[12px] border border-black bg-[#7364E6] px-4 text-sm font-bold text-white shadow-[inset_3px_3px_3px_0_rgba(0,0,0,0.5)] hover:bg-[#7364E6]/90 disabled:cursor-not-allowed disabled:opacity-40";
 
 const pointerSpring = { type: "spring" as const, stiffness: 420, damping: 34 };
 const stepSpring = { type: "spring" as const, stiffness: 380, damping: 28 };
 
 /** Build-step prose: white body/bold/code; looser line spacing for readability. */
 const buildStepMdClassName =
-  "text-sm leading-7 text-white [&_a]:font-medium [&_a]:text-white [&_a]:underline [&_a]:underline-offset-2 [&_code]:rounded [&_code]:bg-ink-900 [&_code]:px-1 [&_code]:text-xs [&_code]:text-white [&_li]:ml-1 [&_li]:list-disc [&_li]:leading-7 [&_li]:marker:text-accent-700 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:space-y-2.5 [&_ol]:pl-5 [&_p]:mb-3 [&_p]:leading-8 [&_p]:last:mb-0 [&_pre]:my-3 [&_pre]:overflow-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-accent-600/40 [&_pre]:bg-ink-900 [&_pre]:p-3 [&_pre]:text-xs [&_pre]:leading-6 [&_pre]:text-ink-200 [&_strong]:font-bold [&_strong]:text-white [&_ul]:mb-3 [&_ul]:space-y-2.5 [&_ul]:pl-5";
+  "text-sm leading-7 text-white [&_a]:font-medium [&_a]:text-white [&_a]:underline [&_a]:underline-offset-2 [&_code]:rounded [&_code]:bg-[#1a0a3a] [&_code]:px-1 [&_code]:text-xs [&_code]:text-white [&_li]:ml-1 [&_li]:list-disc [&_li]:leading-7 [&_li]:marker:text-[#968BEC] [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:space-y-2.5 [&_ol]:pl-5 [&_p]:mb-3 [&_p]:leading-8 [&_p]:last:mb-0 [&_pre]:my-3 [&_pre]:overflow-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-[#8365E3]/40 [&_pre]:bg-[#110528] [&_pre]:p-3 [&_pre]:text-xs [&_pre]:leading-6 [&_pre]:text-[#E9E9E9] [&_strong]:font-bold [&_strong]:text-white [&_ul]:mb-3 [&_ul]:space-y-2.5 [&_ul]:pl-5";
 
 /**
  * Normalize step markdown for clearer reading:
@@ -123,7 +123,7 @@ function CopyableLink({
       aria-label={`Copy link ${href}`}
       onClick={() => void copy()}
       className={cn(
-        "inline max-w-full break-all font-medium text-white underline underline-offset-2 transition-colors hover:text-ink-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400",
+        "inline max-w-full break-all font-medium text-white underline underline-offset-2 transition-colors hover:text-[#E9E9E9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#968BEC]",
         copied && "ring-2 ring-emerald-400/70",
       )}
     >
@@ -163,7 +163,7 @@ function StepActiveArrow() {
       />
       <path
         d="M53.0174 15.7334C56.2081 17.683 56.2081 22.317 53.0174 24.2666L39.2605 32.6724C35.9288 34.7082 31.6535 32.3104 31.6535 28.4059V11.5942C31.6535 7.68964 35.9288 5.29178 39.2605 7.32759L53.0174 15.7334Z"
-        fill="var(--color-accent-500)"
+        fill="#7364E6"
       />
     </svg>
   );
@@ -183,7 +183,7 @@ function StepDottedLine() {
         y1="1"
         x2="100"
         y2="1"
-        stroke="var(--color-accent-700)"
+        stroke="#7528C9"
         strokeOpacity="0.54"
         strokeWidth="2"
         strokeDasharray="6 6"
@@ -303,7 +303,7 @@ export function DayBuildSteps({ steps }: { steps: string[] }) {
                   {/* Marker slot: Figma arrow 60×40; circle 20×20 centered on the dotted line */}
                   <span className="relative flex h-10 w-[60px] items-center justify-center">
                     <motion.span
-                      className="size-5 rounded-none border-[3px] border-accent-700 bg-ink-900"
+                      className="size-5 rounded-full border-[3px] border-[#7528C9] bg-[#040C20]"
                       initial={false}
                       animate={{
                         opacity: isActive ? 0 : 1,
@@ -352,7 +352,7 @@ export function DayBuildSteps({ steps }: { steps: string[] }) {
         </button>
       </div>
 
-      <div className="rounded-[16px] border border-accent-600 bg-ink-900 p-4 md:p-5">
+      <div className="rounded-[16px] border border-[#8365E3] bg-[#110528] p-4 md:p-5">
         <motion.div
           key={`content-${active}`}
           className={cn(buildStepMdClassName, "min-h-[80px]")}

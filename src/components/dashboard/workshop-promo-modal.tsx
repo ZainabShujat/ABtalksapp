@@ -12,10 +12,10 @@ const SEEN_KEY = "abtalks_figma_workshop_promo_v2";
 const TARGET = new Date("2026-08-01T12:30:00Z").getTime();
 
 const AVATARS = [
-  { i: "A", g: "linear-gradient(135deg,var(--color-accent-500),var(--color-accent-500))" },
-  { i: "R", g: "linear-gradient(135deg,var(--color-accent-500),var(--color-accent-400))" },
-  { i: "P", g: "linear-gradient(135deg,var(--color-accent-400),var(--color-accent-500))" },
-  { i: "S", g: "linear-gradient(135deg,var(--color-accent-400),var(--color-accent-600))" },
+  { i: "A", g: "linear-gradient(135deg,#6366f1,#8b5cf6)" },
+  { i: "R", g: "linear-gradient(135deg,#8b5cf6,#a855f7)" },
+  { i: "P", g: "linear-gradient(135deg,#818cf8,#6366f1)" },
+  { i: "S", g: "linear-gradient(135deg,#a855f7,#4f46e5)" },
 ];
 
 export function WorkshopPromoModal() {
@@ -122,16 +122,16 @@ export function WorkshopPromoModal() {
         >
           <style>{`
             .wk-promo {
-              --wk-bg: var(--color-ink-900);
-              --wk-surface: var(--color-ink-900);
-              --wk-text: var(--color-ink-100);
-              --wk-a1: var(--color-accent-500);
+              --wk-bg: #050a17;
+              --wk-surface: #0b1120;
+              --wk-text: #f5f6fa;
+              --wk-a1: #6366f1;
               --wk-a1-rgb: 99, 102, 241;
-              --wk-a1-light: var(--color-accent-400);
-              --wk-a1-deep: var(--color-accent-600);
-              --wk-a2: var(--color-accent-500);
+              --wk-a1-light: #818cf8;
+              --wk-a1-deep: #4f46e5;
+              --wk-a2: #8b5cf6;
               --wk-a2-rgb: 139, 92, 246;
-              --wk-a3: var(--color-accent-400);
+              --wk-a3: #a855f7;
               --wk-grad: linear-gradient(135deg, var(--wk-a1) 0%, var(--wk-a2) 100%);
             }
             @keyframes wk-promo-halo { to { transform: rotate(360deg); } }
@@ -196,7 +196,7 @@ export function WorkshopPromoModal() {
               className="pointer-events-none absolute -inset-6 rounded-[42px] opacity-50 blur-2xl"
               style={{
                 background:
-                  "conic-gradient(from 0deg, var(--color-accent-500), var(--color-accent-500), var(--color-accent-400), var(--color-accent-600), var(--color-accent-500))",
+                  "conic-gradient(from 0deg, #6366f1, #8b5cf6, #a855f7, #4f46e5, #6366f1)",
                 animation: "wk-promo-halo 8s linear infinite",
               }}
             />
@@ -217,7 +217,7 @@ export function WorkshopPromoModal() {
               {/* soft aurora orbs */}
               <div
                 aria-hidden
-                className="pointer-events-none absolute -left-16 -top-20 h-56 w-56 rounded-none blur-3xl"
+                className="pointer-events-none absolute -left-16 -top-20 h-56 w-56 rounded-full blur-3xl"
                 style={{
                   background:
                     "radial-gradient(circle, rgba(var(--wk-a1-rgb),0.28), transparent 65%)",
@@ -225,7 +225,7 @@ export function WorkshopPromoModal() {
               />
               <div
                 aria-hidden
-                className="pointer-events-none absolute -bottom-24 -right-16 h-60 w-60 rounded-none blur-3xl"
+                className="pointer-events-none absolute -bottom-24 -right-16 h-60 w-60 rounded-full blur-3xl"
                 style={{
                   background:
                     "radial-gradient(circle, rgba(var(--wk-a2-rgb),0.22), transparent 65%)",
@@ -241,9 +241,9 @@ export function WorkshopPromoModal() {
                     "linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)",
                   backgroundSize: "40px 40px",
                   maskImage:
-                    "radial-gradient(ellipse 80% 55% at 50% 0%, hsl(var(--foreground)) 35%, transparent 100%)",
+                    "radial-gradient(ellipse 80% 55% at 50% 0%, #000 35%, transparent 100%)",
                   WebkitMaskImage:
-                    "radial-gradient(ellipse 80% 55% at 50% 0%, hsl(var(--foreground)) 35%, transparent 100%)",
+                    "radial-gradient(ellipse 80% 55% at 50% 0%, #000 35%, transparent 100%)",
                 }}
               />
 
@@ -261,7 +261,7 @@ export function WorkshopPromoModal() {
               <div
                 ref={glowRef}
                 aria-hidden
-                className="pointer-events-none absolute left-0 top-0 h-[360px] w-[360px] rounded-none opacity-0 transition-opacity duration-300"
+                className="pointer-events-none absolute left-0 top-0 h-[360px] w-[360px] rounded-full opacity-0 transition-opacity duration-300"
                 style={{
                   marginLeft: -180,
                   marginTop: -180,
@@ -275,7 +275,7 @@ export function WorkshopPromoModal() {
                 type="button"
                 onClick={closeTemporarily}
                 aria-label="Close"
-                className="absolute right-4 top-4 z-10 flex size-8 items-center justify-center rounded-none text-white/40 transition-colors hover:bg-white/5 hover:text-white/80"
+                className="absolute right-4 top-4 z-10 flex size-8 items-center justify-center rounded-full text-white/40 transition-colors hover:bg-white/5 hover:text-white/80"
               >
                 <X className="size-4" aria-hidden />
               </button>
@@ -283,7 +283,7 @@ export function WorkshopPromoModal() {
               <div className="relative">
                 {/* live pill */}
                 <span
-                  className="inline-flex items-center gap-2 rounded-none px-3.5 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.18em]"
+                  className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.18em]"
                   style={{
                     background: "rgba(255,255,255,0.04)",
                     border: "1px solid rgba(255,255,255,0.1)",
@@ -291,7 +291,7 @@ export function WorkshopPromoModal() {
                   }}
                 >
                   <span
-                    className="h-1.5 w-1.5 rounded-none"
+                    className="h-1.5 w-1.5 rounded-full"
                     style={{
                       background: "var(--wk-a2)",
                       boxShadow: "0 0 8px 1px rgba(var(--wk-a2-rgb),0.8)",
@@ -365,7 +365,7 @@ export function WorkshopPromoModal() {
                 <Link
                   href="/ai-workshop"
                   onClick={closeTemporarily}
-                  className="wk-promo-cta group relative mt-7 flex w-full items-center justify-center gap-2 rounded-none py-3.5 text-[15px] font-semibold text-white transition-transform duration-200"
+                  className="wk-promo-cta group relative mt-7 flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-[15px] font-semibold text-white transition-transform duration-200"
                   style={{ background: "var(--wk-grad)" }}
                 >
                   <span className="relative z-10">Register now</span>

@@ -211,7 +211,7 @@ function FormStepStepper({ step }: { step: number }) {
               >
                 <div
                   className={cn(
-                    "flex size-8 shrink-0 items-center justify-center rounded-none border-2 bg-background text-xs font-bold transition-colors",
+                    "flex size-8 shrink-0 items-center justify-center rounded-full border-2 bg-background text-xs font-bold transition-colors",
                     isActive && "border-primary text-primary shadow-sm shadow-primary/20",
                     isComplete &&
                       "border-primary bg-primary text-primary-foreground",
@@ -307,7 +307,7 @@ export function ApplicationForm() {
     return (
       <Card className="mx-auto max-w-2xl rounded-xl border-border/60 shadow-[var(--shadow-card)]">
         <CardContent className="flex flex-col items-center px-6 py-16 text-center">
-          <div className="mb-6 flex size-16 items-center justify-center rounded-none bg-primary/10">
+          <div className="mb-6 flex size-16 items-center justify-center rounded-full bg-primary/10">
             <CircleCheck className="size-10 text-primary" aria-hidden />
           </div>
           <h2 className="font-display text-2xl font-bold tracking-tight">

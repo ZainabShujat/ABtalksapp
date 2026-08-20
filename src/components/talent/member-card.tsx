@@ -20,7 +20,7 @@ export function MemberCard({ member }: { member: TalentPoolRow }) {
               {member.fullName}
             </Link>
             {member.interviewOverall !== null && (
-              <span className="inline-flex items-center gap-1 rounded-none bg-primary/10 px-2 py-0.5 text-xs text-primary">
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
                 <Mic className="size-3" />
                 {member.interviewOverall}
               </span>
@@ -34,7 +34,7 @@ export function MemberCard({ member }: { member: TalentPoolRow }) {
               {member.skills.slice(0, 6).map((skill) => (
                 <span
                   key={skill}
-                  className="rounded-none border px-2 py-0.5 text-xs text-muted-foreground"
+                  className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground"
                 >
                   {skill}
                 </span>

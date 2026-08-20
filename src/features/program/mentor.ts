@@ -34,10 +34,12 @@ export async function reviewMission(
 > {
   const member = await prisma.programMember.findUnique({
     where: { id: memberId },
-    select: { cohort: { select: { endsAt: true } } },
+    select: {
+      cohort: { select: { id: true, name: true, status: true, endsAt: true } },
+    },
   });
   if (!member) return { ok: false, message: "Member not found." };
-  if (isCohortFrozen(member.cohort)) {
+  if (await isCohortFrozen(member.cohort)) {
     return { ok: false, message: "This cohort has ended." };
   }
 

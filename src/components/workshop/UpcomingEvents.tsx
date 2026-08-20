@@ -95,7 +95,7 @@ export default function UpcomingEvents() {
         <button
           onClick={prev}
           aria-label="Previous"
-          className="absolute -left-3 top-1/2 z-10 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-none text-white/80 transition-colors hover:text-white sm:flex md:-left-5"
+          className="absolute -left-3 top-1/2 z-10 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-white/80 transition-colors hover:text-white sm:flex md:-left-5"
           style={{
             background: "rgba(11,17,32,0.8)",
             border: "1px solid rgba(255,255,255,0.12)",
@@ -108,7 +108,7 @@ export default function UpcomingEvents() {
         <button
           onClick={next}
           aria-label="Next"
-          className="absolute -right-3 top-1/2 z-10 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-none text-white/80 transition-colors hover:text-white sm:flex md:-right-5"
+          className="absolute -right-3 top-1/2 z-10 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-white/80 transition-colors hover:text-white sm:flex md:-right-5"
           style={{
             background: "rgba(11,17,32,0.8)",
             border: "1px solid rgba(255,255,255,0.12)",
@@ -167,7 +167,7 @@ export default function UpcomingEvents() {
                           </span>
                         </div>
                         <span
-                          className="rounded-none px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
+                          className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
                           style={{ background: `${ev.accent}18`, color: ev.accent }}
                         >
                           {ev.tag}
@@ -187,7 +187,7 @@ export default function UpcomingEvents() {
                         </span>
                         {ev.id === openEventId ? (
                           <span
-                            className="inline-flex items-center gap-1.5 rounded-none px-2.5 py-1 text-[11px] font-bold"
+                            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold"
                             style={{
                               background: `${ev.accent}20`,
                               color: ev.accent,
@@ -195,14 +195,14 @@ export default function UpcomingEvents() {
                             }}
                           >
                             <span
-                              className="h-1.5 w-1.5 rounded-none"
+                              className="h-1.5 w-1.5 rounded-full"
                               style={{ background: ev.accent, boxShadow: `0 0 6px 1px ${ev.accent}` }}
                             />
                             Register →
                           </span>
                         ) : ev.href ? (
                           <span
-                            className="inline-flex items-center gap-1.5 rounded-none px-2.5 py-1 text-[11px] font-bold"
+                            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold"
                             style={{
                               background: `${ev.accent}20`,
                               color: ev.accent,
@@ -210,21 +210,21 @@ export default function UpcomingEvents() {
                             }}
                           >
                             <span
-                              className="h-1.5 w-1.5 rounded-none"
+                              className="h-1.5 w-1.5 rounded-full"
                               style={{ background: ev.accent, boxShadow: `0 0 6px 1px ${ev.accent}` }}
                             />
                             {ev.ctaLabel ?? "Learn more"} →
                           </span>
                         ) : (
                           <span
-                            className="inline-flex items-center gap-1.5 rounded-none px-2.5 py-1 text-[11px] font-semibold"
+                            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
                             style={{
                               background: "rgba(255,255,255,0.04)",
                               color: "rgba(255,255,255,0.6)",
                               border: "1px solid rgba(255,255,255,0.08)",
                             }}
                           >
-                            <span className="h-1.5 w-1.5 rounded-none bg-amber-400" />
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
                             Coming soon
                           </span>
                         )}
@@ -276,7 +276,7 @@ export default function UpcomingEvents() {
             key={i}
             onClick={() => setIndex(i)}
             aria-label={`Go to slide ${i + 1}`}
-            className="h-2 rounded-none transition-all duration-300"
+            className="h-2 rounded-full transition-all duration-300"
             style={{
               width: i === index ? 22 : 8,
               background:
@@ -292,7 +292,7 @@ export default function UpcomingEvents() {
       <div className="mt-8 text-center">
         <Link
           href="/ai-workshop/events"
-          className="group inline-flex items-center gap-2 rounded-none px-6 py-2.5 text-[14px] font-semibold text-white/80 transition-all hover:text-white"
+          className="group inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold text-white/80 transition-all hover:text-white"
           style={{
             background: "rgba(255,255,255,0.04)",
             border: "1px solid rgba(255,255,255,0.12)",

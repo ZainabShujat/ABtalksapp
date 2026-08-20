@@ -36,7 +36,7 @@ export default function SocialProof({ users }: { users?: RecentRegistrant[] }) {
   return (
     <div className="flex justify-center">
       <div
-        className="inline-flex items-center gap-2.5 rounded-none px-4 py-2"
+        className="inline-flex items-center gap-2.5 rounded-full px-4 py-2"
         style={{
           background: "rgba(255,255,255,0.03)",
           border: "1px solid rgba(255,255,255,0.08)",
@@ -45,7 +45,7 @@ export default function SocialProof({ users }: { users?: RecentRegistrant[] }) {
         }}
       >
         <span
-          className="h-2 w-2 shrink-0 rounded-none bg-green-400"
+          className="h-2 w-2 shrink-0 rounded-full bg-green-400"
           style={{ boxShadow: "0 0 8px 1px rgba(74,222,128,0.7)", animation: "sp-pulse 2s infinite" }}
         />
         <span

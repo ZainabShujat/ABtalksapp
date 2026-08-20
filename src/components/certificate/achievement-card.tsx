@@ -25,7 +25,7 @@ export function AchievementCard({ achievement, verifyBaseUrl }: Props) {
     <Card className="min-w-0">
       <CardHeader className="pb-3 sm:pb-4">
         <div className="flex items-start gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-none bg-primary/10">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
             <Award className="size-5 text-primary" aria-hidden />
           </div>
           <div className="min-w-0 flex-1 space-y-1">

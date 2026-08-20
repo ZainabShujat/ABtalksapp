@@ -17,9 +17,9 @@ function StateIcon({ state }: { state: DayState }) {
     case "SKIPPED":
       return <SkipForward className="size-4 text-amber-400" />;
     case "AVAILABLE":
-      return <Circle className="size-4 animate-pulse text-accent-700" />;
+      return <Circle className="size-4 animate-pulse text-[#968BEC]" />;
     default:
-      return <Lock className="size-4 text-ink-500" />;
+      return <Lock className="size-4 text-[#8F8F8F]" />;
   }
 }
 
@@ -51,9 +51,9 @@ function DaySidebar({
   }, [currentDay]);
 
   return (
-    <aside className="sticky top-20 flex h-auto max-h-[50vh] flex-col overflow-hidden rounded-[20px] border border-accent-600 bg-ink-900 lg:h-[calc(100svh-5.5rem)] lg:max-h-none">
-      <div className="shrink-0 border-b border-accent-600/40 bg-gradient-to-b from-accent-700/30 to-transparent px-4 py-5">
-        <p className="text-xs font-semibold uppercase tracking-wider text-accent-700">
+    <aside className="sticky top-20 flex h-auto max-h-[50vh] flex-col overflow-hidden rounded-[20px] border border-[#8365E3] bg-[#040B1C] lg:h-[calc(100svh-5.5rem)] lg:max-h-none">
+      <div className="shrink-0 border-b border-[#8365E3]/40 bg-gradient-to-b from-[#7528C9]/30 to-transparent px-4 py-5">
+        <p className="text-xs font-semibold uppercase tracking-wider text-[#968BEC]">
           Phase {moduleNumber}
         </p>
         <p className="mt-1 text-sm font-medium text-white">{moduleTitle}</p>
@@ -71,12 +71,12 @@ function DaySidebar({
             <div key={mod.number}>
               <div className="mb-1.5 flex items-center gap-2 px-2">
                 <span
-                  className="size-2 shrink-0 rounded-none"
+                  className="size-2 shrink-0 rounded-full"
                   style={{ backgroundColor: mod.color }}
                   aria-hidden
                 />
                 <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-accent-700">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[#968BEC]">
                     Phase {mod.number}
                   </p>
                   <h3 className="truncate text-sm font-medium text-white">
@@ -91,10 +91,10 @@ function DaySidebar({
                   const className = cn(
                     "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors",
                     active
-                      ? "bg-accent-500/25 text-white"
+                      ? "bg-[#7364E6]/25 text-white"
                       : locked
-                        ? "cursor-not-allowed text-ink-500"
-                        : "text-ink-400 hover:bg-white/5 hover:text-white",
+                        ? "cursor-not-allowed text-[#8F8F8F]"
+                        : "text-[#BCBCBC] hover:bg-white/5 hover:text-white",
                   );
 
                   if (locked) {
@@ -167,7 +167,7 @@ function DayMetaTag({
         "inline-flex items-center rounded-md border px-3 py-1 text-xs font-semibold md:text-sm",
         variant === "required"
           ? "border-[#FF4B4B]/60 bg-[#FF4B4B]/10 text-[#FF8A8A]"
-          : "border-accent-600/50 bg-ink-900 text-ink-400",
+          : "border-[#8365E3]/50 bg-[#110528] text-[#BCBCBC]",
       )}
     >
       {children}
@@ -197,7 +197,7 @@ export function DayShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="-mx-4 -my-6 min-h-[calc(100svh-4rem)] bg-ink-900 px-4 py-6 text-white md:-mx-4 md:px-6">
+    <div className="-mx-4 -my-6 min-h-[calc(100svh-4rem)] bg-[#030712] px-4 py-6 text-white md:-mx-4 md:px-6">
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(240px,352px)_1fr] lg:items-stretch">
         <div className="hidden lg:block">
           <DaySidebar
@@ -210,8 +210,8 @@ export function DayShell({
         </div>
 
         <div className="min-w-0 space-y-5">
-          <div className="relative overflow-hidden rounded-[16px] border border-accent-600/30 bg-gradient-to-br from-accent-700/40 via-ink-900 to-ink-900 px-5 py-6 md:px-7 md:py-8">
-            <p className="text-xs font-bold uppercase tracking-wider text-accent-700">
+          <div className="relative overflow-hidden rounded-[16px] border border-[#8365E3]/30 bg-gradient-to-br from-[#7528C9]/40 via-[#110528] to-[#030712] px-5 py-6 md:px-7 md:py-8">
+            <p className="text-xs font-bold uppercase tracking-wider text-[#968BEC]">
               Day {dayNumber}
             </p>
             <h1 className="mt-1.5 max-w-3xl font-display text-xl font-bold tracking-tight text-white md:text-2xl">

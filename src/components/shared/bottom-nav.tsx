@@ -97,12 +97,12 @@ export function BottomNav() {
       <nav
         ref={navRef}
         aria-label="Main navigation"
-        className="pointer-events-auto relative flex w-full max-w-md items-center justify-between gap-1 rounded-none border border-border/40 bg-card/70 px-2 py-1.5 shadow-lg shadow-black/10 backdrop-blur-xl"
+        className="pointer-events-auto relative flex w-full max-w-md items-center justify-between gap-1 rounded-full border border-border/40 bg-card/70 px-2 py-1.5 shadow-lg shadow-black/10 backdrop-blur-xl dark:bg-card/60 dark:shadow-black/40"
       >
         {rect ? (
           <motion.span
             aria-hidden
-            className="pointer-events-none absolute left-0 top-0 rounded-none bg-primary/15"
+            className="pointer-events-none absolute left-0 top-0 rounded-full bg-primary/15"
             initial={false}
             animate={{ x: rect.x, y: rect.y, width: rect.w, height: rect.h }}
             transition={
@@ -124,7 +124,7 @@ export function BottomNav() {
               }}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "focus-spark relative z-10 flex flex-1 flex-col items-center justify-center gap-0.5 rounded-none px-2 py-1.5 text-xs transition-colors",
+                "focus-spark relative z-10 flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-2 py-1.5 text-xs transition-colors",
                 active
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground",

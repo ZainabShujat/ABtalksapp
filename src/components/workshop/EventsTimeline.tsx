@@ -63,7 +63,7 @@ export default function EventsTimeline() {
           Events
         </h1>
         <div
-          className="inline-flex rounded-none p-1"
+          className="inline-flex rounded-full p-1"
           style={{
             background: "rgba(255,255,255,0.04)",
             border: "1px solid rgba(255,255,255,0.08)",
@@ -73,7 +73,7 @@ export default function EventsTimeline() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className="rounded-none px-4 py-1.5 text-[13px] font-semibold capitalize transition-all"
+              className="rounded-full px-4 py-1.5 text-[13px] font-semibold capitalize transition-all"
               style={
                 tab === t
                   ? {
@@ -144,7 +144,7 @@ export default function EventsTimeline() {
               {/* timeline rail */}
               <div className="relative flex w-3 shrink-0 justify-center">
                 <span
-                  className="absolute top-2 h-2.5 w-2.5 rounded-none"
+                  className="absolute top-2 h-2.5 w-2.5 rounded-full"
                   style={{
                     background: ev.accent,
                     boxShadow: `0 0 10px 1px ${ev.accent}`,
@@ -208,7 +208,7 @@ export default function EventsTimeline() {
                       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-white/50">
                         <span className="inline-flex items-center gap-1.5">
                           <span
-                            className="flex h-4 w-4 items-center justify-center rounded-none text-[9px]"
+                            className="flex h-4 w-4 items-center justify-center rounded-full text-[9px]"
                             style={{ background: `${ev.accent}30` }}
                           >
                             ●
@@ -223,7 +223,7 @@ export default function EventsTimeline() {
 
                       {isPastTab ? (
                         <span
-                          className="mt-3 inline-flex items-center gap-1.5 rounded-none px-2.5 py-1 text-[11px] font-semibold"
+                          className="mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
                           style={{
                             background: "rgba(255,255,255,0.04)",
                             color: "rgba(255,255,255,0.5)",
@@ -235,7 +235,7 @@ export default function EventsTimeline() {
                         </span>
                       ) : canRegister ? (
                         <span
-                          className="mt-3 inline-flex items-center gap-1.5 rounded-none px-2.5 py-1 text-[11px] font-bold"
+                          className="mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold"
                           style={{
                             background: `${ev.accent}20`,
                             color: ev.accent,
@@ -243,7 +243,7 @@ export default function EventsTimeline() {
                           }}
                         >
                           <span
-                            className="h-1.5 w-1.5 rounded-none"
+                            className="h-1.5 w-1.5 rounded-full"
                             style={{ background: ev.accent, boxShadow: `0 0 6px 1px ${ev.accent}` }}
                           />
                           Register now
@@ -251,7 +251,7 @@ export default function EventsTimeline() {
                         </span>
                       ) : externalHref ? (
                         <span
-                          className="mt-3 inline-flex items-center gap-1.5 rounded-none px-2.5 py-1 text-[11px] font-bold"
+                          className="mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold"
                           style={{
                             background: `${ev.accent}20`,
                             color: ev.accent,
@@ -259,7 +259,7 @@ export default function EventsTimeline() {
                           }}
                         >
                           <span
-                            className="h-1.5 w-1.5 rounded-none"
+                            className="h-1.5 w-1.5 rounded-full"
                             style={{ background: ev.accent, boxShadow: `0 0 6px 1px ${ev.accent}` }}
                           />
                           {ev.ctaLabel ?? "Learn more"}
@@ -267,14 +267,14 @@ export default function EventsTimeline() {
                         </span>
                       ) : (
                         <span
-                          className="mt-3 inline-flex items-center gap-1.5 rounded-none px-2.5 py-1 text-[11px] font-semibold"
+                          className="mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
                           style={{
                             background: "rgba(255,255,255,0.04)",
                             color: "rgba(255,255,255,0.6)",
                             border: "1px solid rgba(255,255,255,0.08)",
                           }}
                         >
-                          <span className="h-1.5 w-1.5 rounded-none bg-amber-400" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
                           Coming soon
                         </span>
                       )}
@@ -345,7 +345,7 @@ export default function EventsTimeline() {
             <div className="w-14 shrink-0 sm:w-16" />
             <div className="relative flex w-3 shrink-0 justify-center">
               <span
-                className="absolute top-3 h-2.5 w-2.5 rounded-none border"
+                className="absolute top-3 h-2.5 w-2.5 rounded-full border"
                 style={{ borderColor: "rgba(255,255,255,0.3)", background: "transparent" }}
               />
             </div>

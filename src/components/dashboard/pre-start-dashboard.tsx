@@ -130,7 +130,7 @@ export function PreStartDashboard({ enrollment, challenge }: Props) {
 
         <ul className="space-y-3 text-sm">
           <li className="flex items-start gap-3">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-none bg-primary/10 text-xs font-bold text-primary">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
               1
             </span>
             <div>
@@ -150,7 +150,7 @@ export function PreStartDashboard({ enrollment, challenge }: Props) {
             </div>
           </li>
           <li className="flex items-start gap-3">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-none bg-primary/10 text-xs font-bold text-primary">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
               2
             </span>
             <div>
@@ -161,7 +161,7 @@ export function PreStartDashboard({ enrollment, challenge }: Props) {
             </div>
           </li>
           <li className="flex items-start gap-3">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-none bg-primary/10 text-xs font-bold text-primary">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
               3
             </span>
             <div>
@@ -196,7 +196,7 @@ export function PreStartDashboard({ enrollment, challenge }: Props) {
           rel="noopener noreferrer"
           className={cn(
             buttonVariants({ variant: "outline" }),
-            "mt-4 inline-flex border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10",
+            "mt-4 inline-flex border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400",
           )}
         >
           Join WhatsApp Group

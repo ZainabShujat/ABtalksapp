@@ -32,11 +32,11 @@ type Props = {
 function statusBadgeClass(status: RedemptionStatus): string {
   switch (status) {
     case "PENDING":
-      return "bg-amber-100 text-amber-800";
+      return "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200";
     case "SHIPPED":
-      return "bg-blue-100 text-blue-800";
+      return "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-200";
     case "FULFILLED":
-      return "bg-emerald-100 text-emerald-800";
+      return "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200";
     case "CANCELLED":
       return "bg-muted text-muted-foreground";
     default:

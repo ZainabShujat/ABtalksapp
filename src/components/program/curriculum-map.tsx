@@ -57,7 +57,7 @@ export function CurriculumMap({
           type="button"
           onClick={() => setFilter("ALL")}
           className={cn(
-            "rounded-none border px-3 py-1 text-xs font-medium",
+            "rounded-full border px-3 py-1 text-xs font-medium",
             filter === "ALL"
               ? "border-primary bg-primary/10 text-primary"
               : "text-muted-foreground",
@@ -71,7 +71,7 @@ export function CurriculumMap({
             type="button"
             onClick={() => setFilter(t)}
             className={cn(
-              "rounded-none border px-3 py-1 text-xs font-medium",
+              "rounded-full border px-3 py-1 text-xs font-medium",
               filter === t
                 ? "border-primary bg-primary/10 text-primary"
                 : "text-muted-foreground",
@@ -91,7 +91,7 @@ export function CurriculumMap({
           <section key={module.number} className="space-y-3">
             <div className="flex items-center gap-2">
               <span
-                className="size-3 rounded-none"
+                className="size-3 rounded-full"
                 style={{ backgroundColor: module.color }}
                 aria-hidden
               />
@@ -119,7 +119,7 @@ export function CurriculumMap({
                       <StateIcon state={day.state} />
                     </div>
                     <p className="line-clamp-2 text-sm font-medium">{day.title}</p>
-                    <span className="mt-auto inline-flex w-fit items-center rounded-none bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                    <span className="mt-auto inline-flex w-fit items-center rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
                       {MISSION_LABEL[day.missionType]}
                     </span>
                   </div>

@@ -21,7 +21,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
       className={cn(
         "flex-1",
         !isHackathon && "pb-16 md:pb-0",
-        isMarketplace && "bg-ink-900",
+        isMarketplace && "bg-[#030712]",
         isHackathon && "bg-black",
       )}
     >

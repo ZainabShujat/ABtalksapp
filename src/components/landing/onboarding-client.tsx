@@ -183,7 +183,7 @@ function BackgroundBlobs({ slideIndex }: { slideIndex: number }) {
           y: -slideIndex * 10,
         }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className="absolute -left-32 top-20 h-72 w-72 rounded-none bg-primary/20 blur-3xl"
+        className="absolute -left-32 top-20 h-72 w-72 rounded-full bg-primary/20 blur-3xl"
       />
       <motion.div
         animate={{
@@ -191,7 +191,7 @@ function BackgroundBlobs({ slideIndex }: { slideIndex: number }) {
           y: slideIndex * 20,
         }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className="absolute -right-32 top-60 h-80 w-80 rounded-none bg-violet-500/15 blur-3xl"
+        className="absolute -right-32 top-60 h-80 w-80 rounded-full bg-violet-500/15 blur-3xl"
       />
       <motion.div
         animate={{
@@ -199,7 +199,7 @@ function BackgroundBlobs({ slideIndex }: { slideIndex: number }) {
           y: -slideIndex * 25,
         }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className="absolute bottom-20 left-1/3 h-64 w-64 rounded-none bg-emerald-500/15 blur-3xl"
+        className="absolute bottom-20 left-1/3 h-64 w-64 rounded-full bg-emerald-500/15 blur-3xl"
       />
     </div>
   );

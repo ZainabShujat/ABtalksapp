@@ -66,7 +66,7 @@ export default async function AchievementsPage() {
         {achievements.length === 0 ? (
           <Card className="min-w-0">
             <CardHeader className="items-center pb-3 text-center sm:pb-4">
-              <div className="mb-2 flex size-12 items-center justify-center rounded-none bg-primary/10">
+              <div className="mb-2 flex size-12 items-center justify-center rounded-full bg-primary/10">
                 <Trophy className="size-6 text-primary" aria-hidden />
               </div>
               <CardTitle>No achievements yet</CardTitle>

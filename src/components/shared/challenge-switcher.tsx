@@ -36,11 +36,11 @@ const DOMAIN_COLORS: Record<string, string> = {
   DS: "border-domains-ds/50 bg-domains-ds-bg text-domains-ds",
   AI: "border-domains-ai/50 bg-domains-ai-bg text-domains-ai",
   CLAUDE:
-    "border-violet-500/50 bg-violet-50 text-violet-800",
+    "border-violet-500/50 bg-violet-50 text-violet-800 dark:bg-violet-950/40 dark:text-violet-200",
 };
 
 const HACK_BADGE_COLOR =
-  "border-amber-500/50 bg-amber-50 text-amber-800";
+  "border-amber-500/50 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200";
 
 const BADGE_BASE =
   "inline-flex h-6 w-16 shrink-0 items-center justify-center rounded-md border px-1.5 text-[10px] font-bold leading-none tracking-wide";
@@ -140,11 +140,11 @@ export function ChallengeSwitcher({
                     Day {enrollment.daysCompleted} / 60
                   </div>
                   <div
-                    className="h-1 w-full overflow-hidden rounded-none bg-muted"
+                    className="h-1 w-full overflow-hidden rounded-full bg-muted"
                     aria-hidden
                   >
                     <div
-                      className="h-full rounded-none bg-primary/70 transition-[width]"
+                      className="h-full rounded-full bg-primary/70 transition-[width]"
                       style={{ width: `${progressPct}%` }}
                     />
                   </div>
@@ -155,7 +155,7 @@ export function ChallengeSwitcher({
               </div>
               {isActive ? (
                 <span
-                  className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-none bg-primary/10"
+                  className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10"
                   aria-hidden
                 >
                   <Check className="size-3 text-primary" />

@@ -82,13 +82,13 @@ export default async function JobDetailPage({ params }: PageProps) {
           </p>
         </div>
 
-        <div className="prose prose-sm mt-8 max-w-none [&_p]:mb-3">
+        <div className="prose prose-sm dark:prose-invert mt-8 max-w-none [&_p]:mb-3">
           <ReactMarkdown>{job.description}</ReactMarkdown>
         </div>
 
         <div className="mt-8 rounded-xl border bg-card p-5">
           {!job.isOpen ? (
-            <p className="mb-4 text-sm font-medium text-amber-600">
+            <p className="mb-4 text-sm font-medium text-amber-600 dark:text-amber-400">
               This role is closed
             </p>
           ) : null}

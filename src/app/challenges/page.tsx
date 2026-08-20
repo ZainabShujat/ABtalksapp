@@ -83,7 +83,7 @@ export default function ChallengesPage() {
 
       <main className="relative z-10 mx-auto max-w-5xl px-5 pb-28 pt-14 md:px-8 md:pb-24 md:pt-20">
         <section>
-          <span className="inline-flex rounded-none border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+          <span className="inline-flex rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
             Enrolling now
           </span>
           <h1 className="mt-5 max-w-3xl font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-foreground sm:text-5xl md:text-6xl">
@@ -153,7 +153,7 @@ export default function ChallengesPage() {
                       aria-hidden
                     />
                   ) : null}
-                  <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-none border border-primary/40 bg-card text-primary">
+                  <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/40 bg-card text-primary">
                     <Icon className="h-4 w-4" />
                   </span>
                   <span>
@@ -173,7 +173,7 @@ export default function ChallengesPage() {
         <section className="mt-14 grid gap-5 md:mt-20 md:grid-cols-2">
           <StreakGrid />
           <div className="flex flex-col items-center justify-center rounded-3xl border border-border/60 bg-card/70 p-7 text-center shadow-card backdrop-blur-md">
-            <span className="flex h-12 w-12 items-center justify-center rounded-none bg-primary/10 text-primary">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Eye className="h-6 w-6" />
             </span>
             <h2 className="mt-5 font-display text-xl font-bold text-foreground">
@@ -187,7 +187,7 @@ export default function ChallengesPage() {
               {["AI startups", "Product teams", "Hiring network"].map((label) => (
                 <span
                   key={label}
-                  className="rounded-none border border-border px-3 py-1 text-xs text-muted-foreground"
+                  className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground"
                 >
                   {label}
                 </span>
@@ -263,8 +263,8 @@ export default function ChallengesPage() {
 function BackgroundBlobs() {
   return (
     <div className="pointer-events-none absolute inset-0" aria-hidden>
-      <div className="absolute -right-32 top-12 h-96 w-96 rounded-none bg-primary/15 blur-3xl" />
-      <div className="absolute -left-40 top-[46rem] h-96 w-96 rounded-none bg-violet-500/10 blur-3xl" />
+      <div className="absolute -right-32 top-12 h-96 w-96 rounded-full bg-primary/15 blur-3xl" />
+      <div className="absolute -left-40 top-[46rem] h-96 w-96 rounded-full bg-violet-500/10 blur-3xl" />
     </div>
   );
 }

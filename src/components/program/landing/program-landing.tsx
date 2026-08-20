@@ -256,17 +256,17 @@ function PrerequisitesMobile() {
 }
 
 const primaryBtnClass =
-  "inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-accent-500 px-6 text-sm font-semibold text-white transition-colors hover:bg-accent-500/90 md:h-12 md:text-base";
+  "inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#7364E6] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#7364E6]/90 md:h-12 md:text-base";
 
 const outlineBtnClass =
-  "inline-flex h-11 items-center justify-center rounded-lg border border-accent-500/70 bg-transparent px-6 text-sm font-semibold text-white transition-colors hover:border-accent-400 hover:bg-white/5 md:h-12 md:text-base";
+  "inline-flex h-11 items-center justify-center rounded-lg border border-[#7364E6]/70 bg-transparent px-6 text-sm font-semibold text-white transition-colors hover:border-[#968BEC] hover:bg-white/5 md:h-12 md:text-base";
 
 export function ProgramLanding({ cta }: { cta: Cta }) {
   return (
-    <main className="min-h-svh overflow-x-hidden bg-ink-900 text-white">
+    <main className="min-h-svh overflow-x-hidden bg-[#030712] text-white">
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-ink-900 via-ink-900 to-ink-900" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0a1628] via-[#030712] to-[#030712]" />
         <div
           className="absolute inset-0 opacity-50"
           style={{
@@ -290,7 +290,7 @@ export function ProgramLanding({ cta }: { cta: Cta }) {
 
         <div className="relative mx-auto grid max-w-7xl items-center gap-8 px-5 pb-12 pt-10 md:grid-cols-2 md:gap-6 md:px-10 md:pb-16 md:pt-12 lg:gap-10">
           <div className="max-w-xl text-left">
-            <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-accent-600/40 bg-ink-900/80 px-3 py-1.5 text-xs font-medium text-accent-700 md:text-sm">
+            <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#8365E3]/40 bg-[#110528]/80 px-3 py-1.5 text-xs font-medium text-[#968BEC] md:text-sm">
               <Users className="size-3.5 shrink-0" aria-hidden />
               For students &amp; recent grads · ~2–4 hrs/day
             </span>
@@ -300,12 +300,12 @@ export function ProgramLanding({ cta }: { cta: Cta }) {
             </h1> */}
             <h1 className="font-display text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl">
               AI{" "}
-              <span className="bg-gradient-to-r from-accent-400 via-accent-300 to-ink-100 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-[#A196FB] via-[#C9C3FD] to-[#F8F8FC] bg-clip-text text-transparent">
                 Cohort
               </span>
             </h1>
 
-            <p className="mt-4 text-base leading-relaxed text-ink-200 md:text-lg">
+            <p className="mt-4 text-base leading-relaxed text-[#E9E9E9] md:text-lg">
               Build and deploy a production-grade enterprise AI chatbot in 31
               days RAG, agents, MCP, guardrails, Docker, Kubernetes and get
               in front of recruiters.
@@ -329,7 +329,7 @@ export function ProgramLanding({ cta }: { cta: Cta }) {
       {/* Requirements */}
       <section className="relative px-4 pb-6 md:px-8 md:pb-10">
         <div className="mx-auto max-w-6xl">
-          <h2 className="text-center text-2xl font-bold text-accent-700 md:text-[32px]">
+          <h2 className="text-center text-2xl font-bold text-[#968BEC] md:text-[32px]">
             Requirements
           </h2>
           <div className="mt-1">
@@ -342,7 +342,7 @@ export function ProgramLanding({ cta }: { cta: Cta }) {
       {/* Prerequisites */}
       <section className="relative px-4 pb-10 md:mt-20 md:px-8 md:pb-25">
         <div className="mx-auto max-w-6xl">
-          <h2 className="text-center text-2xl font-bold text-accent-700 md:text-[32px]">
+          <h2 className="text-center text-2xl font-bold text-[#968BEC] md:text-[32px]">
             Prerequisites
           </h2>
           <div className="mt-1">
@@ -375,7 +375,7 @@ export function ProgramLanding({ cta }: { cta: Cta }) {
 
       {/* How it works */}
       <section className="px-4 py-12 md:px-8 md:py-12">
-        <h2 className="mb-10 text-center text-2xl font-bold text-accent-700 underline decoration-accent-400/50 underline-offset-8 md:text-[32px]">
+        <h2 className="mb-10 text-center text-2xl font-bold text-[#968BEC] underline decoration-[#968BEC]/50 underline-offset-8 md:text-[32px]">
           How it works
         </h2>
         <div className="mx-auto max-w-6xl">
@@ -396,7 +396,7 @@ export function ProgramLanding({ cta }: { cta: Cta }) {
                   <p className="mt-4 text-center text-xl font-semibold">
                     {step.title}
                   </p>
-                  <p className="mt-2 max-w-[200px] text-center text-sm leading-snug text-ink-200">
+                  <p className="mt-2 max-w-[200px] text-center text-sm leading-snug text-[#E9E9E9]">
                     {step.detail}
                   </p>
                 </div>
@@ -417,12 +417,12 @@ export function ProgramLanding({ cta }: { cta: Cta }) {
                 key={step.step}
                 className="flex gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4"
               >
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-ink-900 bg-[radial-gradient(circle,rgba(62,34,111,1)_0%,rgba(0,0,0,1)_100%)] text-sm font-semibold">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-[#1E1B37] bg-[radial-gradient(circle,rgba(62,34,111,1)_0%,rgba(0,0,0,1)_100%)] text-sm font-semibold">
                   {step.step}
                 </span>
                 <div>
                   <p className="font-semibold">{step.title}</p>
-                  <p className="mt-1 text-sm text-ink-400">{step.detail}</p>
+                  <p className="mt-1 text-sm text-[#BCBCBC]">{step.detail}</p>
                 </div>
               </li>
             ))}
@@ -443,7 +443,7 @@ export function ProgramLanding({ cta }: { cta: Cta }) {
             <h2 className="text-2xl font-semibold md:text-[40px] md:leading-tight">
               Ready to build?
             </h2>
-            <p className="mt-2 max-w-md text-sm text-ink-200 md:text-base">
+            <p className="mt-2 max-w-md text-sm text-[#E9E9E9] md:text-base">
               Free for participants. Use your cohort join code to apply when
               enrollment is open.
             </p>

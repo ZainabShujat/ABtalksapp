@@ -33,15 +33,15 @@ type Props = {
 };
 
 const figmaBtnClass =
-  "inline-flex h-9 items-center justify-center rounded-[12px] border border-black bg-accent-500 px-4 text-sm font-bold text-white shadow-[inset_3px_3px_3px_0_rgba(0,0,0,0.5)] hover:bg-accent-500/90";
+  "inline-flex h-9 items-center justify-center rounded-[12px] border border-black bg-[#7364E6] px-4 text-sm font-bold text-white shadow-[inset_3px_3px_3px_0_rgba(0,0,0,0.5)] hover:bg-[#7364E6]/90";
 
 const cardClass =
   "rounded-[16px] border border-[rgba(46,57,75,0.69)] bg-[rgba(5,12,33,0.89)] p-4 md:p-5";
 
 function MentorFeedbackCard({ feedback }: { feedback: string }) {
   return (
-    <div className="rounded-xl border border-accent-600/40 bg-ink-900 p-4 text-sm text-white [&_h3]:mt-2 [&_h3]:font-semibold [&_li]:ml-5 [&_li]:list-disc [&_p]:text-ink-400">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-accent-700">
+    <div className="rounded-xl border border-[#8365E3]/40 bg-[#110528] p-4 text-sm text-white [&_h3]:mt-2 [&_h3]:font-semibold [&_li]:ml-5 [&_li]:list-disc [&_p]:text-[#BCBCBC]">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#968BEC]">
         AI Mentor review
       </p>
       <ReactMarkdown components={programMdComponents}>{feedback}</ReactMarkdown>
@@ -204,7 +204,7 @@ export function MissionPanel({
             type="button"
             variant="outline"
             size="sm"
-            className="gap-2 border-accent-600/50 bg-transparent text-white"
+            className="gap-2 border-[#8365E3]/50 bg-transparent text-white"
             onClick={() => void handleMentorReview()}
             disabled={mentorLoading}
           >
@@ -220,7 +220,7 @@ export function MissionPanel({
     return (
       <div
         id="mission-verify"
-        className={cn(cardClass, "border-amber-500/40 text-sm text-ink-400")}
+        className={cn(cardClass, "border-amber-500/40 text-sm text-[#BCBCBC]")}
       >
         You skipped this mission (0 points). Continue with the next unlocked
         day when you are ready.
@@ -243,7 +243,7 @@ export function MissionPanel({
     <div id="mission-verify" className={cn(cardClass, "space-y-5")}>
       <div className="flex items-center gap-2.5">
         <DaySectionIcon name="verify" />
-        <h2 className="text-base font-semibold text-accent-700 md:text-lg">
+        <h2 className="text-base font-semibold text-[#968BEC] md:text-lg">
           {sectionTitle(missionType, questionCount)}
         </h2>
       </div>
@@ -269,23 +269,23 @@ export function MissionPanel({
       )}
 
       {verifyIntro && questionCount > 0 && (
-        <p className="text-sm text-ink-400">{verifyIntro}</p>
+        <p className="text-sm text-[#BCBCBC]">{verifyIntro}</p>
       )}
 
       {missionType === "SHIP_IT" && (
         <div className="space-y-2">
-          <p className="text-sm text-ink-400">
+          <p className="text-sm text-[#BCBCBC]">
             Build locally in VS Code, then push your artifact to{" "}
             <a
               href={githubRepoUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-accent-700 underline-offset-4 hover:underline"
+              className="text-[#968BEC] underline-offset-4 hover:underline"
             >
               {githubRepoUrl}
             </a>
             .{" "}
-            <mark className="rounded bg-accent-400 px-1.5 py-0.5 font-semibold text-ink-900">
+            <mark className="rounded bg-[#968BEC] px-1.5 py-0.5 font-semibold text-[#030712]">
               We verify the repo against the mission checklist.
             </mark>
           </p>
@@ -294,7 +294,7 @@ export function MissionPanel({
               {missionState.shipItHints.map((h, i) => (
                 <li
                   key={`${h.check}:${h.path}:${i}`}
-                  className="font-mono text-ink-400"
+                  className="font-mono text-[#A5A5A5]"
                 >
                   {h.check}: <span className="text-white">{h.path}</span>
                 </li>
@@ -306,23 +306,23 @@ export function MissionPanel({
 
       {missionType === "PROMPT_FORGE" && (
         <div className="space-y-2">
-          <Label htmlFor="prompt" className="text-ink-400">
+          <Label htmlFor="prompt" className="text-[#BCBCBC]">
             Your system prompt
           </Label>
           <textarea
             id="prompt"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            className="min-h-40 w-full rounded-[10px] border border-accent-600 bg-ink-900 p-3 font-mono text-sm text-white"
+            className="min-h-40 w-full rounded-[10px] border border-[#8365E3] bg-[#110528] p-3 font-mono text-sm text-white"
             placeholder="Write the prompt that satisfies the mission spec…"
           />
         </div>
       )}
 
       {missionType === "BOSS_BUILD" && (
-        <div className="space-y-4 rounded-[20px] border border-accent-600 bg-ink-900 p-4">
+        <div className="space-y-4 rounded-[20px] border border-[#8365E3] bg-[#110528] p-4">
           <div className="space-y-2">
-            <Label htmlFor="boss-repo" className="text-ink-400">
+            <Label htmlFor="boss-repo" className="text-[#BCBCBC]">
               Project repository URL
             </Label>
             <Input
@@ -330,18 +330,18 @@ export function MissionPanel({
               value={bossRepo}
               onChange={(e) => setBossRepo(e.target.value)}
               placeholder="https://github.com/you/project"
-              className="border-accent-600 bg-ink-900 text-white"
+              className="border-[#8365E3] bg-[#110528] text-white"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="boss-writeup" className="text-ink-400">
+            <Label htmlFor="boss-writeup" className="text-[#BCBCBC]">
               Write-up
             </Label>
             <textarea
               id="boss-writeup"
               value={bossWriteup}
               onChange={(e) => setBossWriteup(e.target.value)}
-              className="min-h-32 w-full rounded-[10px] border border-accent-600 bg-ink-900 p-3 text-sm text-white"
+              className="min-h-32 w-full rounded-[10px] border border-[#8365E3] bg-[#030712] p-3 text-sm text-white"
               placeholder="Describe what you built and how to run it…"
             />
           </div>
@@ -377,7 +377,7 @@ export function MissionPanel({
                     setAnswers(next);
                   }}
                   placeholder="Type answer here..."
-                  className="h-12 rounded-[10px] border border-accent-600 bg-ink-900 px-4 text-sm text-white placeholder:text-ink-500"
+                  className="h-12 rounded-[10px] border border-[#8365E3] bg-[#110528] px-4 text-sm text-white placeholder:text-[#8F8F8F]"
                 />
               </div>
             );
@@ -386,15 +386,15 @@ export function MissionPanel({
       )}
 
       {missionType === "CODE_SPRINT" && (
-        <div className="rounded-[20px] border border-accent-600/40 bg-ink-900 p-4 text-sm text-ink-400">
+        <div className="rounded-[20px] border border-[#8365E3]/40 bg-[#110528] p-4 text-sm text-[#BCBCBC]">
           In-browser Workbench was removed. CODE_SPRINT days are not used in the
           current curriculum — build and verify via SHIP_IT repo checks instead.
         </div>
       )}
 
       {verdict && (
-        <div className="rounded-[20px] border border-accent-600/40 bg-ink-900 p-4">
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-accent-700">
+        <div className="rounded-[20px] border border-[#8365E3]/40 bg-[#110528] p-4">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#968BEC]">
             Verification
           </h3>
           <CheckList items={verdict} running={submitting} />

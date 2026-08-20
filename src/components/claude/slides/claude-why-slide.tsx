@@ -15,8 +15,8 @@ function BuildersBadge({ totalCount }: { totalCount: number }) {
     : `🔥 Join ${displayCount}+ builders already enrolled`;
 
   return (
-    <div className="mb-3 inline-flex items-center gap-2 rounded-none border border-orange-500/20 bg-orange-500/10 px-3 py-1">
-      <span className="text-xs font-semibold text-orange-600">
+    <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1">
+      <span className="text-xs font-semibold text-orange-600 dark:text-orange-400">
         {badgeText}
       </span>
     </div>

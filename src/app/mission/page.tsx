@@ -35,7 +35,7 @@ export default async function MissionPage() {
       <div className="mx-auto w-full max-w-4xl flex-1 animate-in fade-in space-y-12 px-4 py-10 duration-500 sm:space-y-16 sm:py-14">
         {/* Hero */}
         <section className="relative rounded-2xl bg-gradient-to-b from-primary/5 to-transparent px-4 py-8 text-center sm:px-8 sm:py-12">
-          <span className="inline-flex items-center gap-1.5 rounded-none border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
             <Sparkles className="size-3.5" aria-hidden />
             Our Mission
           </span>
@@ -74,7 +74,7 @@ export default async function MissionPage() {
               </p>
             </article>
             <article className="rounded-2xl border bg-card p-5 shadow-sm">
-              <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-slate-500/10 text-slate-600">
+              <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-slate-500/10 text-slate-600 dark:text-slate-400">
                 <EyeOff className="size-5" aria-hidden />
               </div>
               <h3 className="font-display text-lg font-semibold">
@@ -108,7 +108,7 @@ export default async function MissionPage() {
                 className="absolute inset-x-0 top-0 h-1 bg-domains-se"
                 aria-hidden
               />
-              <div className="mb-4 flex size-9 items-center justify-center rounded-none bg-domains-se-bg font-display text-sm font-bold text-domains-se">
+              <div className="mb-4 flex size-9 items-center justify-center rounded-full bg-domains-se-bg font-display text-sm font-bold text-domains-se">
                 1
               </div>
               <h3 className="font-display font-semibold">Enroll in a challenge</h3>
@@ -121,7 +121,7 @@ export default async function MissionPage() {
                 className="absolute inset-x-0 top-0 h-1 bg-domains-ds"
                 aria-hidden
               />
-              <div className="mb-4 flex size-9 items-center justify-center rounded-none bg-domains-ds-bg font-display text-sm font-bold text-domains-ds">
+              <div className="mb-4 flex size-9 items-center justify-center rounded-full bg-domains-ds-bg font-display text-sm font-bold text-domains-ds">
                 2
               </div>
               <h3 className="font-display font-semibold">Build in public</h3>
@@ -135,7 +135,7 @@ export default async function MissionPage() {
                 className="absolute inset-x-0 top-0 h-1 bg-domains-ai"
                 aria-hidden
               />
-              <div className="mb-4 flex size-9 items-center justify-center rounded-none bg-domains-ai-bg font-display text-sm font-bold text-domains-ai">
+              <div className="mb-4 flex size-9 items-center justify-center rounded-full bg-domains-ai-bg font-display text-sm font-bold text-domains-ai">
                 3
               </div>
               <h3 className="font-display font-semibold">

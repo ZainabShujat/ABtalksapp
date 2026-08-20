@@ -100,7 +100,7 @@ export default async function ProgramDayPage({ params }: Props) {
               <div
                 className={cn(
                   dayMdClassName,
-                  "rounded-[20px] border border-accent-600 bg-ink-900 p-5 [&_pre]:border-0 [&_pre]:bg-transparent [&_pre]:p-0",
+                  "rounded-[20px] border border-[#8365E3] bg-[#110528] p-5 [&_pre]:border-0 [&_pre]:bg-transparent [&_pre]:p-0",
                 )}
               >
                 <ReactMarkdown components={programMdComponents}>
@@ -116,7 +116,7 @@ export default async function ProgramDayPage({ params }: Props) {
                 <ul className={cn(dayMdClassName, "mb-4 space-y-1.5")}>
                   {day.objectives.map((o, i) => (
                     <li key={i} className="flex gap-2">
-                      <span className="text-accent-700">-</span>
+                      <span className="text-[#968BEC]">-</span>
                       <span>{o}</span>
                     </li>
                   ))}
@@ -156,7 +156,7 @@ export default async function ProgramDayPage({ params }: Props) {
                   youtubeId={video.youtubeId}
                   title={video.title}
                   compact
-                  className="border-accent-600/40"
+                  className="border-[#8365E3]/40"
                 />
               </div>
             ))}

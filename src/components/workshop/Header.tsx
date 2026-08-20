@@ -32,7 +32,7 @@ export default function WorkshopHeader() {
         <div className="flex items-center gap-1.5 sm:gap-3">
           <Link
             href="/ai-workshop/events"
-            className="group inline-flex items-center gap-1.5 rounded-none px-3 py-2 text-[13px] font-medium text-white/60 transition-colors hover:text-white sm:px-3.5"
+            className="group inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-medium text-white/60 transition-colors hover:text-white sm:px-3.5"
           >
             <CalendarDays size={15} strokeWidth={1.75} />
             <span className="hidden sm:inline">Discover events</span>
@@ -41,7 +41,7 @@ export default function WorkshopHeader() {
 
           <a
             href="#register"
-            className="rounded-none px-4 py-2 text-[13px] font-semibold text-white transition-transform hover:-translate-y-0.5"
+            className="rounded-full px-4 py-2 text-[13px] font-semibold text-white transition-transform hover:-translate-y-0.5"
             style={{
               background: "var(--wk-grad)",
               boxShadow: "0 6px 20px -6px rgba(var(--wk-a2-rgb),0.6)",

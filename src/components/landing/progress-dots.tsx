@@ -26,7 +26,7 @@ export function ProgressDots({ total, current, onSelect }: ProgressDotsProps) {
             animate={{ width: i === current ? 24 : 8 }}
             transition={{ duration: 0.3 }}
             className={cn(
-              "absolute inset-0 rounded-none transition-colors",
+              "absolute inset-0 rounded-full transition-colors",
               i === current
                 ? "bg-primary"
                 : "bg-muted-foreground/30 group-hover:bg-muted-foreground/50"

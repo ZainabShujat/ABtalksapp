@@ -56,15 +56,15 @@ const AT_RISK_LABEL: Record<string, string> = {
 };
 
 const figmaBtn =
-  "inline-flex h-11 items-center justify-center rounded-[12px] border border-black bg-accent-500 px-6 text-sm font-semibold text-white shadow-[inset_3px_3px_3px_0_rgba(0,0,0,0.5)] transition-[background-color,box-shadow] duration-300 ease-out hover:bg-accent-500/90 hover:shadow-[inset_3px_3px_3px_0_rgba(0,0,0,0.5),0_0_12px_rgba(115,100,230,0.2)]";
+  "inline-flex h-11 items-center justify-center rounded-[12px] border border-black bg-[#7364E6] px-6 text-sm font-semibold text-white shadow-[inset_3px_3px_3px_0_rgba(0,0,0,0.5)] transition-[background-color,box-shadow] duration-300 ease-out hover:bg-[#7364E6]/90 hover:shadow-[inset_3px_3px_3px_0_rgba(0,0,0,0.5),0_0_12px_rgba(115,100,230,0.2)]";
 
 const cardClass =
-  "rounded-[16px] border border-[rgba(46,57,75,0.69)] bg-[rgba(5,12,33,0.89)] p-4 transition-[border-color,box-shadow] duration-300 ease-out md:p-5 hover:border-accent-600/55 hover:shadow-[0_4px_20px_rgba(115,100,230,0.08)]";
+  "rounded-[16px] border border-[rgba(46,57,75,0.69)] bg-[rgba(5,12,33,0.89)] p-4 transition-[border-color,box-shadow] duration-300 ease-out md:p-5 hover:border-[#8365E3]/55 hover:shadow-[0_4px_20px_rgba(115,100,230,0.08)]";
 
 function SectionIcon({ icon: Icon }: { icon: LucideIcon }) {
   return (
     <span
-      className="flex size-6 shrink-0 items-center justify-center rounded-[6px] bg-[rgba(93,8,183,0.25)] text-accent-700 transition-colors duration-200 group-hover:bg-[rgba(115,100,230,0.35)] group-hover:text-accent-700 md:size-7"
+      className="flex size-6 shrink-0 items-center justify-center rounded-[6px] bg-[rgba(93,8,183,0.25)] text-[#968BEC] transition-colors duration-200 group-hover:bg-[rgba(115,100,230,0.35)] group-hover:text-[#B9B2F3] md:size-7"
       aria-hidden
     >
       <Icon className="size-3.5 md:size-4" strokeWidth={2.25} />
@@ -82,7 +82,7 @@ function SectionHeading({
   return (
     <div className="mb-2.5 flex items-center gap-2.5">
       <SectionIcon icon={icon} />
-      <h2 className="text-base font-semibold text-accent-700 md:text-lg">
+      <h2 className="text-base font-semibold text-[#968BEC] md:text-lg">
         {children}
       </h2>
     </div>
@@ -102,7 +102,7 @@ function StatCard({
 }) {
   return (
     <div
-      className="group relative overflow-hidden rounded-[12px] border border-[rgba(46,57,75,0.69)] px-3.5 py-6 transition-[border-color,box-shadow] duration-300 ease-out hover:border-accent-400/40 hover:shadow-[0_4px_18px_rgba(115,100,230,0.1)] md:px-4 md:py-7"
+      className="group relative overflow-hidden rounded-[12px] border border-[rgba(46,57,75,0.69)] px-3.5 py-6 transition-[border-color,box-shadow] duration-300 ease-out hover:border-[#968BEC]/40 hover:shadow-[0_4px_18px_rgba(115,100,230,0.1)] md:px-4 md:py-7"
       style={{
         background:
           "linear-gradient(180deg, rgba(5, 12, 33, 0.89) 0%, rgba(61, 26, 117, 0.89) 76%, rgba(80, 25, 140, 0.89) 100%)",
@@ -134,15 +134,15 @@ function ScoreBar({
 }) {
   return (
     <div className="group/bar rounded-md px-1 py-0.5 transition-colors duration-200 hover:bg-white/[0.03]">
-      <div className="mb-1.5 flex justify-between text-xs text-ink-400 md:text-sm">
+      <div className="mb-1.5 flex justify-between text-xs text-[#BCBCBC] md:text-sm">
         <span>{label}</span>
         <span>
           {value}/{max}
         </span>
       </div>
-      <div className="h-1.5 overflow-hidden rounded-none bg-ink-900">
+      <div className="h-1.5 overflow-hidden rounded-full bg-[#1a2333]">
         <div
-          className="h-full rounded-none bg-accent-500 transition-all duration-300 group-hover/bar:bg-accent-400"
+          className="h-full rounded-full bg-[#7364E6] transition-all duration-300 group-hover/bar:bg-[#968BEC]"
           style={{ width: `${max ? Math.min(100, (value / max) * 100) : 0}%` }}
         />
       </div>
@@ -159,14 +159,14 @@ export function ProgramDashboardView({
   cohortInterviewState,
 }: Props) {
   return (
-    <div className="-mx-4 -my-6 min-h-[calc(100svh-3.5rem)] bg-ink-900 px-4 py-6 text-white md:px-6">
+    <div className="-mx-4 -my-6 min-h-[calc(100svh-3.5rem)] bg-[#040A12] px-4 py-6 text-white md:px-6">
       {/* Header — title left, at-risk right (Figma) */}
       <header className="mb-5 flex flex-wrap items-start justify-between gap-3 md:mb-6">
         <div>
           <h1 className="font-display text-xl font-bold tracking-tight text-white md:text-2xl">
             Mission control
           </h1>
-          <p className="mt-1 text-sm text-ink-500">
+          <p className="mt-1 text-sm text-[#9CA3AF]">
             Day {data.memberDay}/{PROGRAM_TOTAL_DAYS}
             {data.behindBy > 0 ? ` · ${data.behindBy} behind cohort pace` : ""}
           </p>
@@ -195,7 +195,7 @@ export function ProgramDashboardView({
           label="Rank"
           value={data.rank ? `#${data.rank}` : "—"}
           icon={Award}
-          iconClass="text-accent-700"
+          iconClass="text-[#968BEC]"
         />
         <StatCard
           label="Commit pts"
@@ -221,7 +221,7 @@ export function ProgramDashboardView({
       <div className="mb-5 grid gap-4 md:mb-6 lg:grid-cols-2">
         <section className={cn(cardClass, "group relative md:min-h-[280px]")}>
           <SectionHeading icon={Activity}>Mission progress</SectionHeading>
-          <p className="mb-4 text-xs text-ink-200 md:text-sm">
+          <p className="mb-4 text-xs text-[#E9E9E9] md:text-sm">
             Green means you passed that day&apos;s mission verification. Complete
             each day to unlock the next.
           </p>
@@ -232,7 +232,7 @@ export function ProgramDashboardView({
           <section
             className={cn(
               cardClass,
-              "group flex flex-1 flex-col border-[2.5px] border-accent-400 md:min-h-[140px]",
+              "group flex flex-1 flex-col border-[2.5px] border-[#968BEC] md:min-h-[140px]",
             )}
           >
             <SectionHeading icon={Target}>Today&apos;s Mission</SectionHeading>
@@ -240,12 +240,12 @@ export function ProgramDashboardView({
               <div className="mt-auto flex flex-wrap items-end justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start gap-2">
-                    <span className="mt-1.5 size-2.5 shrink-0 rounded-none bg-[#FF7878]" />
-                    <p className="text-sm font-semibold text-ink-200 md:text-base">
+                    <span className="mt-1.5 size-2.5 shrink-0 rounded-full bg-[#FF7878]" />
+                    <p className="text-sm font-semibold text-[#E9E9E9] md:text-base">
                       Day {data.currentDay.dayNumber}: {data.currentDay.title}
                     </p>
                   </div>
-                  <span className="mt-2 ml-4 inline-flex rounded-[4px] border border-ink-400 bg-ink-800 px-2.5 py-1 text-[10px] font-medium tracking-wide text-ink-400 uppercase">
+                  <span className="mt-2 ml-4 inline-flex rounded-[4px] border border-[#A5A5A5] bg-[#433F3F] px-2.5 py-1 text-[10px] font-medium tracking-wide text-[#BCBCBC] uppercase">
                     {data.currentDay.missionType.replace("_", " ")}
                   </span>
                 </div>
@@ -257,7 +257,7 @@ export function ProgramDashboardView({
                 </Link>
               </div>
             ) : (
-              <p className="text-sm text-ink-500">
+              <p className="text-sm text-[#9CA3AF]">
                 No active mission, check the curriculum for what&apos;s next.
               </p>
             )}
@@ -272,11 +272,11 @@ export function ProgramDashboardView({
             <SectionHeading icon={Mic}>Voice Interview</SectionHeading>
             <div className="mt-auto flex flex-wrap items-end justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-sm text-ink-200 md:text-[15px]">
+                <p className="text-sm text-[#E9E9E9] md:text-[15px]">
                   Scored separately, not part of your leaderboard total.
                 </p>
                 {interviewCard.state === "locked" ? (
-                  <span className="mt-4 mb-4 inline-flex rounded-[4px] border border-accent-500 bg-[rgba(93,8,183,0.2)] px-3 py-1 text-xs text-accent-700 transition-colors duration-300 ease-out hover:border-accent-400/80">
+                  <span className="mt-4 mb-4 inline-flex rounded-[4px] border border-[#6B78F0] bg-[rgba(93,8,183,0.2)] px-3 py-1 text-xs text-[#B9B2F3] transition-colors duration-300 ease-out hover:border-[#968BEC]/80">
                     Locked until program end
                   </span>
                 ) : interviewCard.state !== "exhausted" ? (
@@ -286,7 +286,7 @@ export function ProgramDashboardView({
                       : "Open →"}
                   </Link>
                 ) : (
-                  <p className="mt-2.5 text-xs text-ink-500">{interviewCard.label}</p>
+                  <p className="mt-2.5 text-xs text-[#9CA3AF]">{interviewCard.label}</p>
                 )}
               </div>
               <div className="relative size-[72px] shrink-0 transition-opacity duration-300 ease-out group-hover:opacity-95 sm:size-[88px]">
@@ -327,7 +327,7 @@ export function ProgramDashboardView({
             max={PROGRAM_MAX_PROJECT_POINTS}
           />
         </div>
-        <p className="mt-3 text-xs text-ink-500">
+        <p className="mt-3 text-xs text-[#8F8F8F]">
           Max {PROGRAM_MAX_TOTAL_POINTS} pts across all components
         </p>
       </section>
@@ -336,7 +336,7 @@ export function ProgramDashboardView({
       <section className="mb-5 space-y-3 md:mb-6">
         <div className="group flex items-center gap-2.5">
           <SectionIcon icon={Layers} />
-          <h2 className="text-base font-semibold text-accent-700 md:text-lg">
+          <h2 className="text-base font-semibold text-[#968BEC] md:text-lg">
             Module progress
           </h2>
         </div>
@@ -345,17 +345,17 @@ export function ProgramDashboardView({
             <div key={mod.number} className={cn(cardClass, "group")}>
               <div className="flex items-center gap-2 text-sm font-medium text-white">
                 <span
-                  className="size-2.5 shrink-0 rounded-none transition-transform duration-300 ease-out group-hover:scale-110"
+                  className="size-2.5 shrink-0 rounded-full transition-transform duration-300 ease-out group-hover:scale-110"
                   style={{ backgroundColor: mod.color }}
                 />
                 {mod.title}
               </div>
-              <p className="mt-1 text-xs text-ink-500">
+              <p className="mt-1 text-xs text-[#9CA3AF]">
                 {mod.passed}/{mod.total} missions passed
               </p>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-none bg-ink-900">
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#1a2333]">
                 <div
-                  className="h-full rounded-none transition-[filter] duration-300 ease-out group-hover:brightness-105"
+                  className="h-full rounded-full transition-[filter] duration-300 ease-out group-hover:brightness-105"
                   style={{
                     width: `${mod.total ? (mod.passed / mod.total) * 100 : 0}%`,
                     backgroundColor: mod.color,
@@ -369,14 +369,14 @@ export function ProgramDashboardView({
 
       {aiRec.recommendation && (
         <section
-          className={cn(cardClass, "group mb-5 border-accent-600/40 md:mb-6")}
+          className={cn(cardClass, "group mb-5 border-[#8365E3]/40 md:mb-6")}
         >
           <SectionHeading icon={Sparkles}>Your AI mentor note</SectionHeading>
-          <p className="text-sm leading-relaxed text-ink-400">
+          <p className="text-sm leading-relaxed text-[#BCBCBC]">
             {aiRec.recommendation}
           </p>
           {aiRec.generatedAt && (
-            <p className="mt-2 text-xs text-ink-500">
+            <p className="mt-2 text-xs text-[#8F8F8F]">
               Updated{" "}
               {new Date(aiRec.generatedAt).toLocaleDateString("en-IN", {
                 day: "numeric",
@@ -397,24 +397,24 @@ export function ProgramDashboardView({
               return (
                 <li
                   key={p.moduleNumber}
-                  className="rounded-[10px] border border-accent-600/30 bg-ink-900 px-3 py-2.5 text-sm transition-[border-color,background-color] duration-300 ease-out hover:border-accent-400/45 hover:bg-ink-900"
+                  className="rounded-[10px] border border-[#8365E3]/30 bg-[#110528] px-3 py-2.5 text-sm transition-[border-color,background-color] duration-300 ease-out hover:border-[#968BEC]/45 hover:bg-[#140830]"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="font-medium text-white">
                       Module {p.moduleNumber}
                     </span>
                     {p.status === "GRADED" && score !== null ? (
-                      <span className="font-display font-bold text-accent-700">
+                      <span className="font-display font-bold text-[#968BEC]">
                         {score}/100
                       </span>
                     ) : (
-                      <span className="text-xs text-ink-500">
+                      <span className="text-xs text-[#8F8F8F]">
                         Awaiting grading
                       </span>
                     )}
                   </div>
                   {p.aiFeedback && (
-                    <p className="mt-1.5 line-clamp-2 text-xs text-ink-500">
+                    <p className="mt-1.5 line-clamp-2 text-xs text-[#9CA3AF]">
                       {p.aiFeedback}
                     </p>
                   )}
@@ -429,7 +429,7 @@ export function ProgramDashboardView({
         <section className="space-y-3">
           <div className="group flex items-center gap-2.5">
             <SectionIcon icon={History} />
-            <h2 className="text-base font-semibold text-accent-700">
+            <h2 className="text-base font-semibold text-[#968BEC]">
               Recent runs
             </h2>
           </div>
@@ -437,7 +437,7 @@ export function ProgramDashboardView({
             {data.recentVerdicts.map((v, i) => (
               <li
                 key={i}
-                className="rounded-[10px] border border-[rgba(46,57,75,0.69)] bg-[rgba(5,12,33,0.89)] px-3 py-2.5 transition-[border-color,box-shadow] duration-300 ease-out hover:border-accent-600/55 hover:shadow-[0_2px_12px_rgba(115,100,230,0.08)]"
+                className="rounded-[10px] border border-[rgba(46,57,75,0.69)] bg-[rgba(5,12,33,0.89)] px-3 py-2.5 transition-[border-color,box-shadow] duration-300 ease-out hover:border-[#8365E3]/55 hover:shadow-[0_2px_12px_rgba(115,100,230,0.08)]"
               >
                 <span className="font-medium text-white">Day {v.dayNumber}</span>{" "}
                 <span
@@ -445,7 +445,7 @@ export function ProgramDashboardView({
                 >
                   {v.passed ? "passed" : "failed"}
                 </span>
-                <span className="text-ink-500">
+                <span className="text-[#8F8F8F]">
                   {" "}
                   · {v.checks.filter((c) => c.passed).length}/{v.checks.length}{" "}
                   checks

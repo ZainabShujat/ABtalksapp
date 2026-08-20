@@ -222,7 +222,7 @@ export function ClaudeOnboardingClient() {
                     className="logo-image"
                   />
                 </Link>
-                <span className="rounded bg-orange-500/10 px-2 py-0.5 text-[10px] font-bold text-orange-600">
+                <span className="rounded bg-orange-500/10 px-2 py-0.5 text-[10px] font-bold text-orange-600 dark:text-orange-400">
                   CLAUDE
                 </span>
               </div>
@@ -327,17 +327,17 @@ function ClaudeBackgroundBlobs({ slideIndex }: { slideIndex: number }) {
       <motion.div
         animate={{ x: slideIndex * 20, y: -slideIndex * 10 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className="absolute -left-32 top-20 h-72 w-72 rounded-none bg-orange-500/20 blur-3xl"
+        className="absolute -left-32 top-20 h-72 w-72 rounded-full bg-orange-500/20 blur-3xl"
       />
       <motion.div
         animate={{ x: -slideIndex * 30, y: slideIndex * 20 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className="absolute -right-32 top-60 h-80 w-80 rounded-none bg-pink-500/15 blur-3xl"
+        className="absolute -right-32 top-60 h-80 w-80 rounded-full bg-pink-500/15 blur-3xl"
       />
       <motion.div
         animate={{ x: slideIndex * 15, y: -slideIndex * 25 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className="absolute bottom-20 left-1/3 h-64 w-64 rounded-none bg-violet-500/15 blur-3xl"
+        className="absolute bottom-20 left-1/3 h-64 w-64 rounded-full bg-violet-500/15 blur-3xl"
       />
     </div>
   );

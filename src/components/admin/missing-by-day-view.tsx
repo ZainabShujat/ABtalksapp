@@ -32,7 +32,7 @@ function domainBadgeClass(domain: string): string {
   if (domain === "AI") return "border-domains-ai/50 bg-domains-ai-bg text-domains-ai";
   if (domain === "DS") return "border-domains-ds/50 bg-domains-ds-bg text-domains-ds";
   if (domain === "CLAUDE")
-    return "border-orange-500/40 bg-orange-50 text-orange-800";
+    return "border-orange-500/40 bg-orange-50 text-orange-800 dark:bg-orange-950/40 dark:text-orange-200";
   return "border-domains-se/50 bg-domains-se-bg text-domains-se";
 }
 
@@ -79,7 +79,7 @@ export function MissingByDayView(props: Props) {
                 </span>
               </div>
               <div
-                className="mt-2 h-1 overflow-hidden rounded-none bg-muted"
+                className="mt-2 h-1 overflow-hidden rounded-full bg-muted"
                 aria-hidden
               >
                 <div
@@ -119,7 +119,7 @@ export function MissingByDayView(props: Props) {
                   <TableCell>{row.missing}</TableCell>
                   <TableCell>
                     <div className="flex min-w-[8rem] items-center gap-2">
-                      <div className="h-1 flex-1 overflow-hidden rounded-none bg-muted">
+                      <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
                         <div
                           className="h-1 bg-primary"
                           style={{ width: `${Math.min(100, row.pctSubmitted)}%` }}

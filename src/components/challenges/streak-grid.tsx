@@ -13,7 +13,7 @@ export function StreakGrid() {
             Current streak
           </h3>
         </div>
-        <span className="flex h-10 w-10 items-center justify-center rounded-none bg-primary/10 text-primary">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
           <Flame className="h-5 w-5" />
         </span>
       </div>

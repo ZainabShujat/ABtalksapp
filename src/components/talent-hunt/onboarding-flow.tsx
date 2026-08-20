@@ -82,8 +82,8 @@ export function CohortRegisterOnboardingFlow({
   return (
     <div className="relative flex min-h-svh flex-col overflow-hidden bg-gradient-to-br from-background via-background to-primary/5">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-32 top-20 h-72 w-72 rounded-none bg-primary/15 blur-3xl" />
-        <div className="absolute -right-32 top-60 h-80 w-80 rounded-none bg-violet-500/10 blur-3xl" />
+        <div className="absolute -left-32 top-20 h-72 w-72 rounded-full bg-primary/15 blur-3xl" />
+        <div className="absolute -right-32 top-60 h-80 w-80 rounded-full bg-violet-500/10 blur-3xl" />
       </div>
 
       <header className="relative z-10 shrink-0 px-6 py-4">

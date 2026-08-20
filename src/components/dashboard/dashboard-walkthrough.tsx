@@ -234,24 +234,24 @@ export function DashboardWalkthrough() {
                   borderRadius: 100,
                   background:
                     i === step
-                      ? "linear-gradient(135deg, var(--color-accent-500), var(--color-accent-700))"
+                      ? "linear-gradient(135deg, #6b7ad4, #4b5aa8)"
                       : "rgba(255,255,255,0.16)",
                 }}
               />
             ))}
           </div>
           <div key={step} className="tour-content" style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-            <p style={{ fontSize: 18, fontWeight: 800, color: "hsl(var(--background))", margin: 0, letterSpacing: "-0.01em", lineHeight: 1.15 }}>
+            <p style={{ fontSize: 18, fontWeight: 800, color: "#ffffff", margin: 0, letterSpacing: "-0.01em", lineHeight: 1.15 }}>
               {STEPS[step].title}
             </p>
-            <p style={{ fontSize: 12.5, color: "var(--color-ink-500)", margin: 0, lineHeight: 1.5 }}>
+            <p style={{ fontSize: 12.5, color: "#98a2b3", margin: 0, lineHeight: 1.5 }}>
               {STEPS[step].body}
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 3 }}>
             <button
               onClick={finish}
-              style={{ fontSize: 13, color: "var(--color-ink-600)", background: "none", border: "none", cursor: "pointer", padding: "6px 4px", fontWeight: 500 }}
+              style={{ fontSize: 13, color: "#6b7688", background: "none", border: "none", cursor: "pointer", padding: "6px 4px", fontWeight: 500 }}
             >
               Skip
             </button>
@@ -276,9 +276,9 @@ export function DashboardWalkthrough() {
                 padding: "8px 22px",
                 borderRadius: 100,
                 border: "1px solid rgba(135,155,235,0.42)",
-                background: "linear-gradient(135deg, var(--color-accent-700) 0%, var(--color-accent-800) 100%)",
+                background: "linear-gradient(135deg, #4b5aa8 0%, #2b3670 100%)",
                 boxShadow: "0 4px 16px rgba(50,68,170,0.5), 0 0 20px 2px rgba(80,105,225,0.28), inset 0 1px 0 rgba(255,255,255,0.16)",
-                color: "var(--color-accent-100)",
+                color: "#f0f3ff",
                 fontSize: 14,
                 fontWeight: 700,
                 cursor: "pointer",

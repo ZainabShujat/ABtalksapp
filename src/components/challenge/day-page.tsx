@@ -387,15 +387,15 @@ export function DayPage({
           </button>
 
           <div className="flex flex-wrap items-center gap-2 pt-2">
-            <span className="inline-flex items-center gap-1.5 rounded-none bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-blue-600">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-blue-600 dark:text-blue-400">
               <Award className="h-3 w-3" />
               {content.difficulty}
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-none bg-muted px-2.5 py-0.5 text-xs">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs">
               <Clock className="h-3 w-3" />
               {content.estimatedMinutes} min
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-none bg-muted px-2.5 py-0.5 text-xs">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs">
               <FileOutput className="h-3 w-3" />
               Deliverable: {content.deliverableFormat}
             </span>
@@ -508,7 +508,7 @@ export function DayPage({
               <ol className="space-y-2">
                 {content.tool.setupSteps.map((step, i) => (
                   <li key={i} className="flex items-start gap-3">
-                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-none bg-orange-500/10 text-[10px] font-bold text-orange-600">
+                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-500/10 text-[10px] font-bold text-orange-600 dark:text-orange-400">
                       {i + 1}
                     </div>
                     <span className="flex-1 text-sm text-muted-foreground">
@@ -543,7 +543,7 @@ export function DayPage({
           <ol className="space-y-3">
             {content.task.steps.map((step, i) => (
               <li key={i} className="flex items-start gap-3">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-none bg-emerald-500/10 text-sm font-bold text-emerald-600">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-sm font-bold text-emerald-600 dark:text-emerald-400">
                   {i + 1}
                 </div>
                 <span className="pt-0.5 text-sm leading-relaxed">{step}</span>
@@ -566,7 +566,7 @@ export function DayPage({
           <ol className="space-y-2.5">
             {content.learning.bullets.map((bullet, i) => (
               <li key={i} className="flex items-start gap-3">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-none bg-amber-500/10 text-xs font-bold text-amber-600">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-xs font-bold text-amber-600 dark:text-amber-400">
                   {i + 1}
                 </div>
                 <div className="flex-1 text-sm">
@@ -602,7 +602,7 @@ export function DayPage({
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-sm text-sky-600 hover:underline"
+                      className="inline-flex items-center gap-2 text-sm text-sky-600 hover:underline dark:text-sky-400"
                     >
                       <ExternalLink className="h-3 w-3 shrink-0" />
                       <span className="break-all">{label}</span>
@@ -625,7 +625,7 @@ export function DayPage({
             {content.engagement.description}
           </p>
 
-          <div className="mb-3 inline-flex items-center gap-2 rounded-none bg-pink-500/10 px-3 py-1 font-mono text-xs font-semibold text-pink-600">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-pink-500/10 px-3 py-1 font-mono text-xs font-semibold text-pink-600 dark:text-pink-400">
             <Tag className="h-3 w-3" />
             {content.engagement.hashtag}
           </div>
@@ -660,7 +660,7 @@ export function DayPage({
                 href={chip.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center rounded-none px-3 py-1 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold text-white transition-opacity hover:opacity-90"
                 style={{ backgroundColor: "#0A66C2" }}
               >
                 {chip.label}

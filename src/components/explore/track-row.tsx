@@ -29,7 +29,7 @@ export function TrackRow({ href, title, support, icon, badge }: Props) {
   } as const;
   const toneClasses = {
     success:
-      "bg-emerald-100 text-emerald-700",
+      "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400",
     neutral: "bg-muted text-muted-foreground",
   } as const;
   const Icon = iconMap[icon];
@@ -50,7 +50,7 @@ export function TrackRow({ href, title, support, icon, badge }: Props) {
       </span>
       {badge ? (
         <span
-          className={`shrink-0 rounded-none px-2 py-1 text-[10px] font-semibold ${toneClasses[badge.tone]}`}
+          className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${toneClasses[badge.tone]}`}
         >
           {badge.label}
         </span>

@@ -16,7 +16,7 @@ export default async function TalentPendingPage() {
 
   return (
     <div className="mx-auto max-w-md space-y-6 text-center">
-      <div className="mx-auto flex size-14 items-center justify-center rounded-none bg-primary/10">
+      <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-primary/10">
         <Clock className="size-7 text-primary" />
       </div>
       <header className="space-y-2">

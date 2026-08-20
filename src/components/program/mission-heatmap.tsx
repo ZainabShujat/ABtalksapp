@@ -15,7 +15,7 @@ function cellClass(completed: boolean, variant: "dashboard" | "compact"): string
     return variant === "dashboard" ? "bg-[#6AE276]" : "bg-emerald-500";
   }
   return variant === "dashboard"
-    ? "bg-ink-900 border border-ink-800"
+    ? "bg-[#1a2333] border border-[#2a3548]"
     : "bg-muted";
 }
 
@@ -39,7 +39,7 @@ export function MissionHeatmap({ cells, variant = "dashboard" }: Props) {
             className={cn(
               cellClass(cell.completed, variant),
               isDashboard
-                ? "aspect-square w-full max-w-[36px] justify-self-center rounded-none transition-transform duration-200 ease-out hover:z-10 hover:scale-105"
+                ? "aspect-square w-full max-w-[36px] justify-self-center rounded-full transition-transform duration-200 ease-out hover:z-10 hover:scale-105"
                 : "size-3 rounded-sm sm:size-3.5",
             )}
           />
@@ -49,21 +49,21 @@ export function MissionHeatmap({ cells, variant = "dashboard" }: Props) {
         className={cn(
           "inline-flex items-center gap-2 text-xs",
           isDashboard
-            ? "rounded-[8px] border border-accent-600 bg-ink-900 px-3 py-1.5 text-ink-200 transition-colors duration-300 ease-out hover:border-accent-400/70"
+            ? "rounded-[8px] border border-[#8365E3] bg-[#110528] px-3 py-1.5 text-[#E9E9E9] transition-colors duration-300 ease-out hover:border-[#968BEC]/70"
             : "text-muted-foreground",
         )}
       >
         <span>Incomplete</span>
         <span
           className={cn(
-            isDashboard ? "size-3.5 rounded-none sm:size-4" : "size-3 rounded-sm sm:size-3.5",
-            isDashboard ? "bg-ink-900 border border-ink-800" : "bg-muted",
+            isDashboard ? "size-3.5 rounded-full sm:size-4" : "size-3 rounded-sm sm:size-3.5",
+            isDashboard ? "bg-[#1a2333] border border-[#2a3548]" : "bg-muted",
           )}
         />
         <span>Complete</span>
         <span
           className={cn(
-            isDashboard ? "size-3.5 rounded-none sm:size-4" : "size-3 rounded-sm sm:size-3.5",
+            isDashboard ? "size-3.5 rounded-full sm:size-4" : "size-3 rounded-sm sm:size-3.5",
             isDashboard ? "bg-[#6AE276]" : "bg-emerald-500",
           )}
         />

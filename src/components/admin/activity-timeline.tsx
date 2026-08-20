@@ -29,7 +29,7 @@ export function ActivityTimeline({ items }: ActivityTimelineProps) {
             />
           ) : null}
           <span
-            className="relative z-10 mt-1.5 h-2.5 w-2.5 shrink-0 rounded-none bg-primary ring-2 ring-card"
+            className="relative z-10 mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-primary ring-2 ring-card"
             aria-hidden
           />
           <div className="min-w-0 flex-1 text-sm">

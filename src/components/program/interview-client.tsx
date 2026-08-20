@@ -318,7 +318,7 @@ export function InterviewClient({
 
   return (
     <div className="space-y-6 rounded-xl border p-6">
-      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900">
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
         Use a laptop with headphones in a quiet room for the best experience.
         Mobile browsers may have limited microphone support.
       </div>
@@ -375,7 +375,7 @@ export function InterviewClient({
             )}
             <div className="flex-1">
               <p className="text-sm font-medium">Microphone check</p>
-              <div className="mt-2 h-2 overflow-hidden rounded-none bg-muted">
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
                 <div
                   className="h-full bg-primary transition-all"
                   style={{ width: `${micLevel}%` }}

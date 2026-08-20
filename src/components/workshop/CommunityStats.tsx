@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 
 const STATS = [
-  { value: 11000, suffix: "+", label: "AI Learners", sub: "From 25+ Countries", accent: "var(--color-accent-500)" },
-  { value: 550, suffix: "+", label: "Institutions", sub: "Students enrolled", accent: "var(--color-accent-400)" },
-  { value: 300, suffix: "+", label: "Organisations", sub: "Working professionals", accent: "var(--color-accent-400)" },
+  { value: 11000, suffix: "+", label: "AI Learners", sub: "From 25+ Countries", accent: "#6366f1" },
+  { value: 550, suffix: "+", label: "Institutions", sub: "Students enrolled", accent: "#a855f7" },
+  { value: 300, suffix: "+", label: "Organisations", sub: "Working professionals", accent: "#818cf8" },
 ];
 
 const CLAUDE_SIGNUP = "https://www.abtalks.in/?ref=N2VD2X";
@@ -100,7 +100,7 @@ export default function CommunityStats() {
                 <span
                   className="font-mono text-4xl font-extrabold tracking-tight tabular-nums sm:text-5xl"
                   style={{
-                    background: `linear-gradient(135deg, hsl(var(--background)), ${s.accent})`,
+                    background: `linear-gradient(135deg, #ffffff, ${s.accent})`,
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
                     backgroundClip: "text",
@@ -136,7 +136,7 @@ export default function CommunityStats() {
             href={CLAUDE_SIGNUP}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-7 inline-flex items-center gap-2 rounded-none px-7 py-3.5 text-[15px] font-semibold text-white transition-transform hover:-translate-y-0.5"
+            className="mt-7 inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-semibold text-white transition-transform hover:-translate-y-0.5"
             style={{
               background: "var(--wk-grad)",
               boxShadow:

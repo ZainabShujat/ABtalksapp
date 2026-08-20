@@ -384,7 +384,7 @@ export function PhoneVerifyField({
       </div>
 
       {verificationRequired && isIndia && step === "verified" ? (
-        <p className="flex items-center gap-1.5 text-sm text-emerald-600">
+        <p className="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
           <CheckCircle2 className="size-4" aria-hidden />
           Phone number verified
         </p>

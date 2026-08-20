@@ -27,7 +27,6 @@ export const getUserWithProfile = cache(async (userId: string) => {
           ambassadorDismissedAt: true,
           phone: true,
           phoneVerified: true,
-          synergyPoints: true,
         },
       },
     },

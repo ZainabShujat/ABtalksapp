@@ -115,12 +115,14 @@ async function getDayAvailability(
       githubRepoUrl: true,
       missionPoints: true,
       cleanPassCount: true,
-      cohort: { select: { endsAt: true, startsAt: true } },
+      cohort: {
+        select: { id: true, name: true, status: true, endsAt: true, startsAt: true },
+      },
     },
   });
   if (!member) return { ok: false, message: "Member not found." };
 
-  if (isCohortFrozen(member.cohort)) {
+  if (await isCohortFrozen(member.cohort)) {
     return { ok: false, message: "This cohort has ended — submissions are closed." };
   }
 

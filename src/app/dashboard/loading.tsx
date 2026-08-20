@@ -11,7 +11,7 @@ export default function DashboardLoading() {
       <div className="border-b bg-background">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
           <Skeleton className="h-6 w-24" />
-          <Skeleton className="size-9 rounded-none" />
+          <Skeleton className="size-9 rounded-full" />
         </div>
       </div>
       <main className="mx-auto w-full max-w-6xl flex-1 space-y-6 px-4 py-6">
@@ -22,7 +22,7 @@ export default function DashboardLoading() {
                 <Skeleton className="h-4 w-28" />
               </CardHeader>
               <CardContent className="space-y-2">
-                <Skeleton className="h-2 w-full rounded-none" />
+                <Skeleton className="h-2 w-full rounded-full" />
                 <Skeleton className="h-3 w-3/4" />
               </CardContent>
             </Card>

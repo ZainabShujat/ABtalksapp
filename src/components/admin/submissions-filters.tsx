@@ -108,7 +108,7 @@ export function SubmissionsFilters() {
               type="button"
               onClick={() => pushWith({ domain })}
               className={cn(
-                "rounded-none border px-3 py-1 text-xs",
+                "rounded-full border px-3 py-1 text-xs",
                 currentDomain === domain
                   ? "border-primary bg-primary/10 text-primary"
                   : "border-border hover:bg-accent",
@@ -123,7 +123,7 @@ export function SubmissionsFilters() {
               type="button"
               onClick={() => pushWith({ status })}
               className={cn(
-                "rounded-none border px-3 py-1 text-xs",
+                "rounded-full border px-3 py-1 text-xs",
                 currentStatus === status
                   ? "border-primary bg-primary/10 text-primary"
                   : "border-border hover:bg-accent",

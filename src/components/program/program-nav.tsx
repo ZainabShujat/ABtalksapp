@@ -28,8 +28,8 @@ export function ProgramNav({ items }: { items: NavItem[] }) {
             className={cn(
               "shrink-0 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors",
               active
-                ? "bg-ink-900 text-accent-700"
-                : "text-ink-500 hover:bg-white/5 hover:text-white",
+                ? "bg-[#1A1635] text-[#968BEC]"
+                : "text-[#9CA3AF] hover:bg-white/5 hover:text-white",
             )}
           >
             {item.label}

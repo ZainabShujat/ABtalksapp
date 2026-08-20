@@ -60,25 +60,25 @@ export default async function AIWorkshopPage() {
       }}
     >
       <style>{`
-        /* Brand palette — mirrors --primary (var(--color-accent-500)) / AI-domain violet (var(--color-accent-500))
+        /* Brand palette — mirrors --primary (#6366f1) / AI-domain violet (#8b5cf6)
            from globals.css. Scoped to this page; the app theme is untouched. */
         .wk-root {
-          --wk-bg: var(--color-ink-900);
-          --wk-surface: var(--color-ink-900);
-          --wk-text: var(--color-ink-100);
-          --wk-text-dim: var(--color-ink-400);
+          --wk-bg: #050a17;
+          --wk-surface: #0b1120;
+          --wk-text: #f5f6fa;
+          --wk-text-dim: #c7cbda;
 
-          --wk-a1: var(--color-accent-500);
+          --wk-a1: #6366f1;
           --wk-a1-rgb: 99, 102, 241;
-          --wk-a1-light: var(--color-accent-400);
+          --wk-a1-light: #818cf8;
           --wk-a1-light-rgb: 129, 140, 248;
-          --wk-a1-deep: var(--color-accent-600);
+          --wk-a1-deep: #4f46e5;
 
-          --wk-a2: var(--color-accent-500);
+          --wk-a2: #8b5cf6;
           --wk-a2-rgb: 139, 92, 246;
-          --wk-a3: var(--color-accent-400);
-          --wk-a3-light: var(--color-accent-300);
-          --wk-a4: var(--color-accent-400);
+          --wk-a3: #a855f7;
+          --wk-a3-light: #c084fc;
+          --wk-a4: #a78bfa;
 
           --wk-grad: linear-gradient(135deg, var(--wk-a1) 0%, var(--wk-a2) 100%);
         }
@@ -191,23 +191,23 @@ export default async function AIWorkshopPage() {
               "linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)",
             backgroundSize: "56px 56px",
             maskImage:
-              "radial-gradient(ellipse 80% 50% at 50% 0%, hsl(var(--foreground)) 40%, transparent 100%)",
+              "radial-gradient(ellipse 80% 50% at 50% 0%, #000 40%, transparent 100%)",
             WebkitMaskImage:
-              "radial-gradient(ellipse 80% 50% at 50% 0%, hsl(var(--foreground)) 40%, transparent 100%)",
+              "radial-gradient(ellipse 80% 50% at 50% 0%, #000 40%, transparent 100%)",
           }}
         />
 
         {/* floating particles (top / hero region) */}
         <div className="absolute inset-x-0 top-0 h-[720px]">
           {[
-            { l: "12%", t: "22%", s: 4, c: "var(--color-accent-500)", d: 9, delay: 0 },
-            { l: "24%", t: "58%", s: 3, c: "var(--color-accent-500)", d: 12, delay: 1.5 },
-            { l: "40%", t: "16%", s: 5, c: "var(--color-accent-400)", d: 11, delay: 0.8 },
-            { l: "58%", t: "48%", s: 3, c: "var(--color-accent-400)", d: 10, delay: 2.2 },
-            { l: "72%", t: "26%", s: 4, c: "var(--color-accent-600)", d: 13, delay: 0.4 },
-            { l: "86%", t: "60%", s: 3, c: "var(--color-accent-500)", d: 9.5, delay: 1.1 },
-            { l: "50%", t: "70%", s: 4, c: "var(--color-accent-500)", d: 12.5, delay: 2.8 },
-            { l: "32%", t: "38%", s: 2, c: "hsl(var(--background))", d: 8, delay: 1.9 },
+            { l: "12%", t: "22%", s: 4, c: "#6366f1", d: 9, delay: 0 },
+            { l: "24%", t: "58%", s: 3, c: "#8b5cf6", d: 12, delay: 1.5 },
+            { l: "40%", t: "16%", s: 5, c: "#a855f7", d: 11, delay: 0.8 },
+            { l: "58%", t: "48%", s: 3, c: "#818cf8", d: 10, delay: 2.2 },
+            { l: "72%", t: "26%", s: 4, c: "#4f46e5", d: 13, delay: 0.4 },
+            { l: "86%", t: "60%", s: 3, c: "#8b5cf6", d: 9.5, delay: 1.1 },
+            { l: "50%", t: "70%", s: 4, c: "#6366f1", d: 12.5, delay: 2.8 },
+            { l: "32%", t: "38%", s: 2, c: "#ffffff", d: 8, delay: 1.9 },
           ].map((p, i) => (
             <span
               key={i}
@@ -274,7 +274,7 @@ export default async function AIWorkshopPage() {
             style={{ animationDelay: "0.28s" }}
           >
             <div
-              className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-none px-4 py-2 text-[13px] font-medium text-white/70"
+              className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-full px-4 py-2 text-[13px] font-medium text-white/70"
               style={{
                 background: "rgba(255,255,255,0.03)",
                 border: "1px solid rgba(255,255,255,0.08)",
@@ -301,7 +301,7 @@ export default async function AIWorkshopPage() {
           >
             <a
               href="#register"
-              className="hero-cta w-full rounded-none px-8 py-3.5 text-[15px] font-semibold text-white transition-transform hover:-translate-y-0.5 sm:w-auto"
+              className="hero-cta w-full rounded-full px-8 py-3.5 text-[15px] font-semibold text-white transition-transform hover:-translate-y-0.5 sm:w-auto"
               style={{
                 background: "var(--wk-grad)",
               }}
@@ -312,7 +312,7 @@ export default async function AIWorkshopPage() {
             </a>
             <a
               href="#curriculum"
-              className="w-full rounded-none px-8 py-3.5 text-[15px] font-semibold text-white/80 transition-colors hover:text-white sm:w-auto"
+              className="w-full rounded-full px-8 py-3.5 text-[15px] font-semibold text-white/80 transition-colors hover:text-white sm:w-auto"
               style={{
                 background: "rgba(255,255,255,0.04)",
                 border: "1px solid rgba(255,255,255,0.12)",

@@ -54,7 +54,7 @@ export function SignupTicker({ signups, isPaused }: Props) {
               </>
             ) : null}
             <span className="text-muted-foreground">just joined</span>
-            <span className="ml-2 h-1.5 w-1.5 animate-pulse rounded-none bg-emerald-500" />
+            <span className="ml-2 h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
           </motion.div>
         </AnimatePresence>
       </div>

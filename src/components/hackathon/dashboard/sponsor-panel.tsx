@@ -30,24 +30,14 @@ export function SponsorPanel() {
         {sponsor.redeemLabel}
       </Link>
 
-      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-3 text-sm">
-        <Link
-          href={sponsor.siteUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[#A78BFA] underline underline-offset-4 transition-colors hover:text-white"
-        >
-          {sponsor.name.toLowerCase()}.com
-        </Link>
-        <Link
-          href={sponsor.docsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[#A78BFA] underline underline-offset-4 transition-colors hover:text-white"
-        >
-          Quickstart and MCP setup →
-        </Link>
-      </div>
+      <Link
+        href={sponsor.docsUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-4 block text-sm text-[#A78BFA] underline underline-offset-4 transition-colors hover:text-white"
+      >
+        Quickstart and MCP setup →
+      </Link>
     </section>
   );
 }

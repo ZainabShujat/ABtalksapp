@@ -49,7 +49,7 @@ export default function ComingSoonCard() {
         {[0, 1, 2].map((i) => (
           <span
             key={i}
-            className="wk-soon-dot h-1.5 w-1.5 rounded-none"
+            className="wk-soon-dot h-1.5 w-1.5 rounded-full"
             style={{
               background: "var(--wk-grad)",
               animationDelay: `${i * 0.18}s`,
@@ -59,7 +59,7 @@ export default function ComingSoonCard() {
       </div>
 
       <span
-        className="relative z-10 mt-5 rounded-none px-3 py-1 text-[10px] font-bold uppercase tracking-widest"
+        className="relative z-10 mt-5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest"
         style={{
           background: "rgba(255,255,255,0.04)",
           color: "rgba(255,255,255,0.5)",

@@ -30,11 +30,11 @@ import type {
 function statusBadgeClass(status: string): string {
   const s = status.toLowerCase();
   if (s === "accepted" || s === "approved")
-    return "bg-emerald-100 text-emerald-700";
+    return "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400";
   if (s === "rejected")
-    return "bg-red-100 text-red-700";
+    return "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400";
   if (s === "reviewed" || s === "shortlisted")
-    return "bg-violet-100 text-violet-700";
+    return "bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400";
   return "bg-muted text-muted-foreground";
 }
 
@@ -132,7 +132,7 @@ export function CohortApplicationsView({
               <SlidersHorizontal className="h-4 w-4" />
               Filters
               {activeFilterCount > 0 ? (
-                <span className="rounded-none bg-primary px-1.5 py-0.5 text-xs text-primary-foreground">
+                <span className="rounded-full bg-primary px-1.5 py-0.5 text-xs text-primary-foreground">
                   {activeFilterCount}
                 </span>
               ) : null}
@@ -352,7 +352,7 @@ function FilterGroup({
             type="button"
             onClick={() => onSelect(opt)}
             className={cn(
-              "rounded-none border px-3 py-1 text-xs",
+              "rounded-full border px-3 py-1 text-xs",
               value === opt
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border hover:bg-accent",

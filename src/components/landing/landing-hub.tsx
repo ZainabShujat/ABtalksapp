@@ -9,6 +9,7 @@ import {
   Trophy,
   UsersRound,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
 import type { LandingState } from "@/features/landing/get-landing-state";
 import { cn } from "@/lib/utils";
@@ -158,6 +159,7 @@ export function LandingHub({ claudeEnabled, state }: LandingHubProps) {
             />
           </Link>
           <div className="flex items-center gap-1">
+            <ThemeToggle />
             {state.user ? (
               <LandingUserMenu user={state.user} />
             ) : (

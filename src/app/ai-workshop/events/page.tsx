@@ -20,25 +20,25 @@ export default function WorkshopEventsPage() {
       }}
     >
       <style>{`
-        /* Brand palette — mirrors --primary (var(--color-accent-500)) / AI-domain violet (var(--color-accent-500))
+        /* Brand palette — mirrors --primary (#6366f1) / AI-domain violet (#8b5cf6)
            from globals.css. Scoped to this page; the app theme is untouched. */
         .wk-root {
-          --wk-bg: var(--color-ink-900);
-          --wk-surface: var(--color-ink-900);
-          --wk-text: var(--color-ink-100);
-          --wk-text-dim: var(--color-ink-400);
+          --wk-bg: #050a17;
+          --wk-surface: #0b1120;
+          --wk-text: #f5f6fa;
+          --wk-text-dim: #c7cbda;
 
-          --wk-a1: var(--color-accent-500);
+          --wk-a1: #6366f1;
           --wk-a1-rgb: 99, 102, 241;
-          --wk-a1-light: var(--color-accent-400);
+          --wk-a1-light: #818cf8;
           --wk-a1-light-rgb: 129, 140, 248;
-          --wk-a1-deep: var(--color-accent-600);
+          --wk-a1-deep: #4f46e5;
 
-          --wk-a2: var(--color-accent-500);
+          --wk-a2: #8b5cf6;
           --wk-a2-rgb: 139, 92, 246;
-          --wk-a3: var(--color-accent-400);
-          --wk-a3-light: var(--color-accent-300);
-          --wk-a4: var(--color-accent-400);
+          --wk-a3: #a855f7;
+          --wk-a3-light: #c084fc;
+          --wk-a4: #a78bfa;
 
           --wk-grad: linear-gradient(135deg, var(--wk-a1) 0%, var(--wk-a2) 100%);
         }
@@ -114,7 +114,7 @@ export default function WorkshopEventsPage() {
           <p className="text-sm text-white/45">Don&apos;t miss the next one.</p>
           <Link
             href="/ai-workshop#register"
-            className="mt-4 inline-flex items-center gap-2 rounded-none px-7 py-3 text-[15px] font-semibold text-white transition-transform hover:-translate-y-0.5"
+            className="mt-4 inline-flex items-center gap-2 rounded-full px-7 py-3 text-[15px] font-semibold text-white transition-transform hover:-translate-y-0.5"
             style={{
               background: "var(--wk-grad)",
               boxShadow:

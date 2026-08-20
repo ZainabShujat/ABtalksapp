@@ -171,12 +171,12 @@ export function ClaudeChallengeModal({
               type="button"
               onClick={handleDismiss}
               aria-label="Close modal"
-              className="absolute top-4 right-4 z-10 flex h-9 w-9 items-center justify-center rounded-none bg-muted transition-colors hover:bg-accent"
+              className="absolute top-4 right-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-muted transition-colors hover:bg-accent"
             >
               <X className="h-4 w-4" />
             </button>
 
-            <div className="mx-auto mb-4 w-fit rounded-none bg-primary/10 px-4 py-1.5 text-xs font-semibold text-primary">
+            <div className="mx-auto mb-4 w-fit rounded-full bg-primary/10 px-4 py-1.5 text-xs font-semibold text-primary">
               🚀 60-DAY CHALLENGE
             </div>
 

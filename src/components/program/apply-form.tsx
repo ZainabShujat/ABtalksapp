@@ -192,13 +192,13 @@ export function ApplyForm({ joinCode }: { joinCode: string }) {
           {skills.map((skill) => (
             <span
               key={skill}
-              className="inline-flex items-center gap-1 rounded-none bg-primary/10 px-2.5 py-1 text-sm text-primary"
+              className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-sm text-primary"
             >
               {skill}
               <button
                 type="button"
                 onClick={() => removeSkill(skill)}
-                className="rounded-none hover:bg-primary/20"
+                className="rounded-full hover:bg-primary/20"
                 aria-label={`Remove ${skill}`}
               >
                 <X className="size-3.5" />
@@ -253,7 +253,7 @@ export function ApplyForm({ joinCode }: { joinCode: string }) {
           >
             Program repo URL
             <span
-              className="inline-flex size-4 items-center justify-center rounded-none border border-amber-500/60 bg-amber-500/10 text-amber-600"
+              className="inline-flex size-4 items-center justify-center rounded-full border border-amber-500/60 bg-amber-500/10 text-amber-600 dark:text-amber-400"
               title="IMPORTANT: This repository will be used throughout the cohort for task completion and verification. Make sure you type it correctly."
               aria-label="Important information about the program repository URL"
             >
@@ -265,7 +265,7 @@ export function ApplyForm({ joinCode }: { joinCode: string }) {
             placeholder="https://github.com/you/ai-cohort"
             {...register("githubRepoUrl")}
           />
-          <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-2 text-xs leading-relaxed text-amber-800">
+          <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-2 text-xs leading-relaxed text-amber-800 dark:text-amber-200">
             <span className="font-semibold">IMPORTANT:</span> The repository you
             create will be used in the cohort for task completion and
             verification, make sure you type it correctly.

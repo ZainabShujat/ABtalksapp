@@ -37,12 +37,12 @@ export function DaySectionIcon({
   return (
     <span
       className={cn(
-        "flex size-7 shrink-0 items-center justify-center rounded-md border border-accent-600/40 bg-ink-900",
+        "flex size-7 shrink-0 items-center justify-center rounded-md border border-[#8365E3]/40 bg-[#110528]",
         className,
       )}
       aria-hidden
     >
-      <Icon className="size-4 text-accent-700" strokeWidth={2} />
+      <Icon className="size-4 text-[#968BEC]" strokeWidth={2} />
     </span>
   );
 }
@@ -75,11 +75,11 @@ export function DaySectionCard({
             <DaySectionIcon name={icon} />
           ) : (
             <span
-              className="size-9 shrink-0 rounded-md bg-ink-300/80"
+              className="size-9 shrink-0 rounded-md bg-[#D9D9D9]/80"
               aria-hidden
             />
           ))}
-        <h2 className="text-base font-semibold text-accent-700 md:text-lg">
+        <h2 className="text-base font-semibold text-[#968BEC] md:text-lg">
           {title}
         </h2>
       </div>
@@ -159,4 +159,4 @@ export function ToolChip({ label }: { label: string }) {
 }
 
 export const dayMdClassName =
-  "text-sm leading-6 text-white [&_a]:text-accent-700 [&_a]:underline [&_code]:rounded [&_code]:bg-ink-900 [&_code]:px-1 [&_code]:text-xs [&_code]:text-accent-700 [&_li]:ml-4 [&_li]:list-disc [&_p]:mb-2 [&_p]:last:mb-0 [&_pre]:overflow-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-accent-600/40 [&_pre]:bg-ink-900 [&_pre]:p-3 [&_pre]:text-xs [&_pre]:text-ink-400 [&_strong]:font-semibold [&_strong]:text-accent-700";
+  "text-sm leading-6 text-white [&_a]:text-[#968BEC] [&_a]:underline [&_code]:rounded [&_code]:bg-[#110528] [&_code]:px-1 [&_code]:text-xs [&_code]:text-[#968BEC] [&_li]:ml-4 [&_li]:list-disc [&_p]:mb-2 [&_p]:last:mb-0 [&_pre]:overflow-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-[#8365E3]/40 [&_pre]:bg-[#110528] [&_pre]:p-3 [&_pre]:text-xs [&_pre]:text-[#A5A5A5] [&_strong]:font-semibold [&_strong]:text-[#7528C9]";

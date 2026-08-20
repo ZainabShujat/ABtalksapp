@@ -18,8 +18,8 @@ export default async function ProgramAppLayout({
   await requireProgramMember();
 
   return (
-    <div className="min-h-svh bg-ink-900 text-white">
-      <header className="sticky top-0 z-40 border-b border-ink-800 bg-ink-900/95 backdrop-blur">
+    <div className="min-h-svh bg-[#040A12] text-white">
+      <header className="sticky top-0 z-40 border-b border-[#1E1E1E] bg-[#040A12]/95 backdrop-blur">
         <div className="container mx-auto flex items-center gap-4 px-4 py-3 md:gap-6">
           <Link href="/" className="shrink-0" aria-label="ABTalks home">
             <Image
@@ -36,7 +36,7 @@ export default async function ProgramAppLayout({
               href="/program/dashboard"
               className="shrink-0 text-base font-semibold tracking-tight"
             >
-              <span className="text-accent-700">AI</span>{" "}
+              <span className="text-[#968BEC]">AI</span>{" "}
               <span className="text-white">Cohort</span>
             </Link>
           </div>

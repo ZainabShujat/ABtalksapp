@@ -104,13 +104,13 @@ export default function HackathonPromoModal() {
               type="button"
               onClick={dismiss}
               aria-label="Close"
-              className="absolute right-4 top-4 flex size-8 items-center justify-center rounded-none text-white/40 transition-colors hover:bg-white/5 hover:text-white/80"
+              className="absolute right-4 top-4 flex size-8 items-center justify-center rounded-full text-white/40 transition-colors hover:bg-white/5 hover:text-white/80"
             >
               <X className="size-4" aria-hidden />
             </button>
 
             <span
-              className="inline-flex items-center gap-2 rounded-none px-3 py-1 text-[10.5px] font-bold uppercase tracking-[0.16em]"
+              className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10.5px] font-bold uppercase tracking-[0.16em]"
               style={{
                 background: `${event.accent}18`,
                 color: event.accent,
@@ -151,7 +151,7 @@ export default function HackathonPromoModal() {
               target="_blank"
               rel="noopener noreferrer"
               onClick={dismiss}
-              className="group mt-6 flex w-full items-center justify-center gap-2 rounded-none py-3.5 text-[15px] font-semibold text-white transition-transform hover:-translate-y-0.5"
+              className="group mt-6 flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-[15px] font-semibold text-white transition-transform hover:-translate-y-0.5"
               style={{ background: "var(--wk-grad)" }}
             >
               {event.ctaLabel ?? "Learn more"}

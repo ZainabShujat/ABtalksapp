@@ -23,7 +23,7 @@ export default async function ProgramDashboardPage() {
 
   if (!data) {
     return (
-      <p className="text-sm text-ink-500">Dashboard unavailable.</p>
+      <p className="text-sm text-[#9CA3AF]">Dashboard unavailable.</p>
     );
   }
 

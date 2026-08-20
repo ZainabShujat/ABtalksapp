@@ -96,9 +96,9 @@ function toRows(
 
 function ScoreProgressBar({ score, color }: { score: number; color: string }) {
   return (
-    <div className="mt-2 h-1.5 overflow-hidden rounded-none bg-muted">
+    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
       <div
-        className="h-full rounded-none"
+        className="h-full rounded-full"
         style={{
           width: `${Math.min(100, Math.max(0, score))}%`,
           backgroundColor: color,
@@ -215,7 +215,7 @@ export default async function RecruiterProfilePage({
   return (
     <div
       className={cn(
-        "min-h-svh bg-muted/30 text-foreground print:min-h-0 print:bg-white",
+        "report-light min-h-svh bg-muted/30 text-foreground print:min-h-0 print:bg-white",
         "[print-color-adjust:exact] [-webkit-print-color-adjust:exact]",
       )}
     >
@@ -251,7 +251,7 @@ export default async function RecruiterProfilePage({
 
           {/* Light sidebar + white main */}
           <div className="grid grid-cols-1 md:grid-cols-[32%_1fr] print:grid-cols-[30%_minmax(0,1fr)]">
-            <aside className="min-w-0 space-y-6 border-r border-ink-200 bg-ink-100 px-5 py-6 print:space-y-3 print:bg-ink-100 print:py-4 print:text-[11px] print:leading-snug">
+            <aside className="min-w-0 space-y-6 border-r border-[#e5e7eb] bg-[#f3f4f6] px-5 py-6 print:space-y-3 print:bg-[#f3f4f6] print:py-4 print:text-[11px] print:leading-snug">
               <div className="aspect-square w-full max-w-[200px] break-inside-avoid print:max-w-[120px]">
                 <Avatar className="size-full rounded-lg">
                   {profile.image ? (

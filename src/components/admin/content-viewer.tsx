@@ -87,7 +87,7 @@ export function ContentViewer({
               type="button"
               onClick={() => setProblemDomain(d)}
               className={cn(
-                "rounded-none border px-3 py-1 text-xs",
+                "rounded-full border px-3 py-1 text-xs",
                 problemDomain === d
                   ? "border-primary bg-primary/10 text-primary"
                   : "hover:bg-accent",
@@ -168,7 +168,7 @@ export function ContentViewer({
               type="button"
               onClick={() => setQuizDomain(d)}
               className={cn(
-                "rounded-none border px-3 py-1 text-xs",
+                "rounded-full border px-3 py-1 text-xs",
                 quizDomain === d
                   ? "border-primary bg-primary/10 text-primary"
                   : "hover:bg-accent",

@@ -67,7 +67,7 @@ export default async function TalentMemberPage({ params }: Props) {
             {profile.skills.map((s) => (
               <span
                 key={s}
-                className="rounded-none border px-2.5 py-0.5 text-xs text-muted-foreground"
+                className="rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground"
               >
                 {s}
               </span>

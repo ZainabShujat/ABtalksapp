@@ -18,29 +18,29 @@ export const accentClasses = {
   violet: {
     border: "border-violet-500/25 hover:border-violet-500/50",
     glow: "from-violet-500/20",
-    pill: "border-violet-500/30 bg-violet-500/10 text-violet-600",
-    chip: "bg-violet-500/10 text-violet-700",
+    pill: "border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-300",
+    chip: "bg-violet-500/10 text-violet-700 dark:text-violet-300",
     cta: "bg-gradient-to-r from-violet-500 to-indigo-500 text-white",
   },
   indigo: {
     border: "border-indigo-500/25 hover:border-indigo-500/50",
     glow: "from-indigo-500/20",
-    pill: "border-indigo-500/30 bg-indigo-500/10 text-indigo-600",
-    chip: "bg-indigo-500/10 text-indigo-700",
+    pill: "border-indigo-500/30 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300",
+    chip: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300",
     cta: "bg-gradient-to-r from-indigo-500 to-indigo-600 text-white",
   },
   orange: {
     border: "border-orange-500/25 hover:border-orange-500/50",
     glow: "from-orange-500/20",
-    pill: "border-orange-500/30 bg-orange-500/10 text-orange-600",
-    chip: "bg-orange-500/10 text-orange-700",
+    pill: "border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-300",
+    chip: "bg-orange-500/10 text-orange-700 dark:text-orange-300",
     cta: "bg-gradient-to-r from-orange-500 to-pink-500 text-white",
   },
   amber: {
     border: "border-amber-500/25 hover:border-amber-500/50",
     glow: "from-amber-500/20",
-    pill: "border-amber-500/30 bg-amber-500/10 text-amber-700",
-    chip: "bg-amber-500/10 text-amber-800",
+    pill: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+    chip: "bg-amber-500/10 text-amber-800 dark:text-amber-300",
     cta: "bg-gradient-to-r from-amber-500 to-orange-500 text-white",
   },
 } as const;
@@ -75,7 +75,7 @@ export function TrackCard({
       <div className="relative flex items-start justify-between gap-3">
         <span
           className={cn(
-            "rounded-none border px-3 py-1 text-xs font-semibold",
+            "rounded-full border px-3 py-1 text-xs font-semibold",
             styles.pill,
           )}
         >
@@ -96,7 +96,7 @@ export function TrackCard({
           <span
             key={chip}
             className={cn(
-              "rounded-none px-3 py-1 text-xs font-medium",
+              "rounded-full px-3 py-1 text-xs font-medium",
               styles.chip,
             )}
           >

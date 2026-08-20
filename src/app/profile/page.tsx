@@ -314,7 +314,7 @@ export default async function ProfilePage() {
                 </div>
 
                 <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-none bg-primary/10">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                     <Users className="h-5 w-5 text-primary" aria-hidden />
                   </div>
                   <div>

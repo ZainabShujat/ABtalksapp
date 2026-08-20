@@ -264,7 +264,7 @@ export default function RegistrationForm({
                 href={whatsappLink || FALLBACK_WHATSAPP}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="register-btn inline-block w-full cursor-pointer rounded-none py-3.5 text-base font-semibold text-white"
+                className="register-btn inline-block w-full cursor-pointer rounded-full py-3.5 text-base font-semibold text-white"
               >
                 Join the WhatsApp group
               </a>
@@ -286,7 +286,7 @@ export default function RegistrationForm({
             <div className="text-center">
               <a
                 href="/login?from=%2Fai-workshop%23register"
-                className="register-btn inline-block w-full cursor-pointer rounded-none py-3.5 text-base font-semibold text-white"
+                className="register-btn inline-block w-full cursor-pointer rounded-full py-3.5 text-base font-semibold text-white"
               >
                 Continue with Google to reserve your seat
               </a>
@@ -297,134 +297,134 @@ export default function RegistrationForm({
           )}
 
           {state === "form" && (
-          <div className="space-y-4">
-            <Field label="Full Name" required error={errors.name}>
-              <input
-                type="text"
-                placeholder="Enter your full name"
-                value={form.name}
-                onChange={(e) => set("name", e.target.value)}
-                className={`wk-input ${errors.name ? "err" : ""}`}
-              />
-            </Field>
-
-            <Field label="Email Address">
-              <input
-                type="email"
-                value={sessionEmail ?? ""}
-                readOnly
-                disabled
-                className="wk-input cursor-not-allowed opacity-60"
-              />
-              <p className="mt-1.5 text-xs text-white/35">
-                Signed in as {sessionEmail} — your seat is confirmed to this address.
-              </p>
-            </Field>
-
-            <Field label="Phone Number" required error={errors.phone}>
-              <div className="flex gap-2">
-                <select
-                  value={form.countryCode}
-                  onChange={(e) => set("countryCode", e.target.value)}
-                  className="wk-input wk-select shrink-0 cursor-pointer"
-                  style={{ width: "104px", paddingRight: "8px" }}
-                >
-                  <option value="+91">🇮🇳 +91</option>
-                  <option value="+1">🇺🇸 +1</option>
-                  <option value="+44">🇬🇧 +44</option>
-                  <option value="+971">🇦🇪 +971</option>
-                  <option value="+966">🇸🇦 +966</option>
-                  <option value="+65">🇸🇬 +65</option>
-                  <option value="+60">🇲🇾 +60</option>
-                  <option value="+92">🇵🇰 +92</option>
-                  <option value="+880">🇧🇩 +880</option>
-                  <option value="+977">🇳🇵 +977</option>
-                  <option value="+94">🇱🇰 +94</option>
-                  <option value="+61">🇦🇺 +61</option>
-                  <option value="+64">🇳🇿 +64</option>
-                  <option value="+33">🇫🇷 +33</option>
-                  <option value="+49">🇩🇪 +49</option>
-                  <option value="+27">🇿🇦 +27</option>
-                  <option value="+234">🇳🇬 +234</option>
-                  <option value="+55">🇧🇷 +55</option>
-                  <option value="+353">🇮🇪 +353</option>
-                  <option value="+86">🇨🇳 +86</option>
-                  <option value="+82">🇰🇷 +82</option>
-                  <option value="+62">🇮🇩 +62</option>
-                  <option value="+66">🇹🇭 +66</option>
-                  <option value="+63">🇵🇭 +63</option>
-                  <option value="+84">🇻🇳 +84</option>
-                  <option value="+90">🇹🇷 +90</option>
-                  <option value="+20">🇪🇬 +20</option>
-                </select>
+            <div className="space-y-4">
+              <Field label="Full Name" required error={errors.name}>
                 <input
-                  type="tel"
-                  placeholder="Enter your phone number"
-                  value={form.phone}
-                  onChange={(e) => set("phone", e.target.value.replace(/[^0-9]/g, ""))}
-                  className={`wk-input ${errors.phone ? "err" : ""}`}
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={form.name}
+                  onChange={(e) => set("name", e.target.value)}
+                  className={`wk-input ${errors.name ? "err" : ""}`}
                 />
-              </div>
-            </Field>
+              </Field>
 
-            <Field label="I am a" required error={errors.role}>
-              <select
-                value={form.role}
-                onChange={(e) => set("role", e.target.value)}
-                className={`wk-input wk-select cursor-pointer ${errors.role ? "err" : ""}`}
-                style={{ color: form.role ? "var(--wk-text)" : "rgba(255,255,255,0.32)" }}
-              >
-                <option value="" disabled>Select an option</option>
-                <option value="Student">Student</option>
-                <option value="Professional">Professional</option>
-              </select>
-            </Field>
+              <Field label="Email Address">
+                <input
+                  type="email"
+                  value={sessionEmail ?? ""}
+                  readOnly
+                  disabled
+                  className="wk-input cursor-not-allowed opacity-60"
+                />
+                <p className="mt-1.5 text-xs text-white/35">
+                  Signed in as {sessionEmail} — your seat is confirmed to this address.
+                </p>
+              </Field>
 
-            <Field
-              label={form.role === "Professional" ? "Company" : "College / Company"}
-            >
-              <input
-                type="text"
-                placeholder={
-                  form.role === "Professional"
-                    ? "Your company (optional)"
-                    : "Your college or company (optional)"
-                }
-                value={form.organization}
-                onChange={(e) => set("organization", e.target.value)}
-                className="wk-input"
-              />
-            </Field>
+              <Field label="Phone Number" required error={errors.phone}>
+                <div className="flex gap-2">
+                  <select
+                    value={form.countryCode}
+                    onChange={(e) => set("countryCode", e.target.value)}
+                    className="wk-input wk-select shrink-0 cursor-pointer"
+                    style={{ width: "104px", paddingRight: "8px" }}
+                  >
+                    <option value="+91">🇮🇳 +91</option>
+                    <option value="+1">🇺🇸 +1</option>
+                    <option value="+44">🇬🇧 +44</option>
+                    <option value="+971">🇦🇪 +971</option>
+                    <option value="+966">🇸🇦 +966</option>
+                    <option value="+65">🇸🇬 +65</option>
+                    <option value="+60">🇲🇾 +60</option>
+                    <option value="+92">🇵🇰 +92</option>
+                    <option value="+880">🇧🇩 +880</option>
+                    <option value="+977">🇳🇵 +977</option>
+                    <option value="+94">🇱🇰 +94</option>
+                    <option value="+61">🇦🇺 +61</option>
+                    <option value="+64">🇳🇿 +64</option>
+                    <option value="+33">🇫🇷 +33</option>
+                    <option value="+49">🇩🇪 +49</option>
+                    <option value="+27">🇿🇦 +27</option>
+                    <option value="+234">🇳🇬 +234</option>
+                    <option value="+55">🇧🇷 +55</option>
+                    <option value="+353">🇮🇪 +353</option>
+                    <option value="+86">🇨🇳 +86</option>
+                    <option value="+82">🇰🇷 +82</option>
+                    <option value="+62">🇮🇩 +62</option>
+                    <option value="+66">🇹🇭 +66</option>
+                    <option value="+63">🇵🇭 +63</option>
+                    <option value="+84">🇻🇳 +84</option>
+                    <option value="+90">🇹🇷 +90</option>
+                    <option value="+20">🇪🇬 +20</option>
+                  </select>
+                  <input
+                    type="tel"
+                    placeholder="Enter your phone number"
+                    value={form.phone}
+                    onChange={(e) => set("phone", e.target.value.replace(/[^0-9]/g, ""))}
+                    className={`wk-input ${errors.phone ? "err" : ""}`}
+                  />
+                </div>
+              </Field>
 
-            {/* Students only — a professional has no graduation year to give. */}
-            {form.role !== "Professional" && (
-              <Field label="Graduation Year">
+              <Field label="I am a" required error={errors.role}>
                 <select
-                  value={form.graduationYear}
-                  onChange={(e) => set("graduationYear", e.target.value)}
-                  className="wk-input wk-select cursor-pointer"
-                  style={{
-                    color: form.graduationYear
-                      ? "var(--wk-text)"
-                      : "rgba(255,255,255,0.32)",
-                  }}
+                  value={form.role}
+                  onChange={(e) => set("role", e.target.value)}
+                  className={`wk-input wk-select cursor-pointer ${errors.role ? "err" : ""}`}
+                  style={{ color: form.role ? "var(--wk-text)" : "rgba(255,255,255,0.32)" }}
                 >
-                  <option value="">Select year (optional)</option>
-                  {GRAD_YEARS.map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
+                  <option value="" disabled>Select an option</option>
+                  <option value="Student">Student</option>
+                  <option value="Professional">Professional</option>
                 </select>
               </Field>
-            )}
 
-            {isExistingMember && (
-              <p className="text-xs text-white/35">
-                Prefilled from your ABTalks profile — any changes here update it.
-              </p>
-            )}
-          </div>
+              <Field
+                label={form.role === "Professional" ? "Company" : "College / Company"}
+              >
+                <input
+                  type="text"
+                  placeholder={
+                    form.role === "Professional"
+                      ? "Your company (optional)"
+                      : "Your college or company (optional)"
+                  }
+                  value={form.organization}
+                  onChange={(e) => set("organization", e.target.value)}
+                  className="wk-input"
+                />
+              </Field>
+
+              {/* Students only — a professional has no graduation year to give. */}
+              {form.role !== "Professional" && (
+                <Field label="Graduation Year">
+                  <select
+                    value={form.graduationYear}
+                    onChange={(e) => set("graduationYear", e.target.value)}
+                    className="wk-input wk-select cursor-pointer"
+                    style={{
+                      color: form.graduationYear
+                        ? "var(--wk-text)"
+                        : "rgba(255,255,255,0.32)",
+                    }}
+                  >
+                    <option value="">Select year (optional)</option>
+                    {GRAD_YEARS.map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              )}
+
+              {isExistingMember && (
+                <p className="text-xs text-white/35">
+                  Prefilled from your ABTalks profile — any changes here update it.
+                </p>
+              )}
+            </div>
           )}
 
           <div className="mt-5">
@@ -447,7 +447,7 @@ export default function RegistrationForm({
             <>
               <button
                 type="submit"
-disabled={isPending || !legalConsentAccepted(legalConsent)}
+                disabled={isPending || !legalConsentAccepted(legalConsent)}
                 className="register-btn mt-6 w-full cursor-pointer rounded-full py-3.5 text-base font-semibold text-white"
               >
                 {isPending ? "Registering..." : "Register Now"}
@@ -535,14 +535,14 @@ disabled={isPending || !legalConsentAccepted(legalConsent)}
             {/* animated check */}
             <div className="relative mx-auto mb-6 h-20 w-20">
               <span
-                className="absolute inset-0 rounded-none"
+                className="absolute inset-0 rounded-full"
                 style={{
                   border: "2px solid rgba(74,222,128,0.5)",
                   animation: "ring-pulse 1.4s ease-out 0.4s infinite",
                 }}
               />
               <div
-                className="check-wrap absolute inset-0 flex items-center justify-center rounded-none"
+                className="check-wrap absolute inset-0 flex items-center justify-center rounded-full"
                 style={{
                   background: "rgba(74,222,128,0.12)",
                   border: "1px solid rgba(74,222,128,0.35)",
@@ -579,7 +579,7 @@ disabled={isPending || !legalConsentAccepted(legalConsent)}
               We&apos;ve sent your webinar details to your email. (Please check your Spam or Promotions folders if you don&apos;t see it).
             </p>
             <div className="inline-flex select-none items-center gap-2 rounded-xl border border-green-400/25 bg-green-400/10 px-4 py-2.5">
-              <span className="h-2 w-2 animate-ping rounded-none bg-green-400" />
+              <span className="h-2 w-2 animate-ping rounded-full bg-green-400" />
               <span className="text-xs font-semibold tracking-wide text-green-300">
                 Redirecting to WhatsApp in{" "}
                 <strong className="text-sm font-bold text-green-200">{redirectCountdown}s</strong>...

@@ -1,11 +1,12 @@
 import "server-only";
-import type { ProgramMissionType } from "@prisma/client";
+import type { ProgramCohortStatus, ProgramMissionType } from "@prisma/client";
 import { differenceInCalendarDays } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "@/lib/db";
 import { parseCalendarKeyToUtcDate } from "@/lib/date-utils";
 import { isDayLockBypassEnabled } from "@/lib/feature-flags";
 import {
+  PROGRAM_HOLD_OPEN_COHORT_NAME,
   PROGRAM_MEMBER_START_DAY,
   PROGRAM_TOTAL_DAYS,
   PROGRAM_TZ,
@@ -99,8 +100,33 @@ export function getCohortCalendarDay(cohort: { startsAt: Date }): number {
   return Math.min(PROGRAM_TOTAL_DAYS, Math.max(1, diff + 1));
 }
 
-export function isCohortFrozen(cohort: { endsAt: Date }): boolean {
+export function isCohortPastEndsAt(cohort: { endsAt: Date }): boolean {
   return new Date() > cohort.endsAt;
+}
+
+/** Frozen when endsAt has passed, except the live US cohort which waits for all Day 31 passes. */
+export async function isCohortFrozen(cohort: {
+  id: string;
+  name: string;
+  status: ProgramCohortStatus;
+  endsAt: Date;
+}): Promise<boolean> {
+  if (
+    cohort.name === PROGRAM_HOLD_OPEN_COHORT_NAME &&
+    (cohort.status === "ENROLLING" || cohort.status === "ACTIVE")
+  ) {
+    const incomplete = await prisma.programMember.count({
+      where: {
+        cohortId: cohort.id,
+        status: { in: ["ENROLLED", "COMPLETED"] },
+        missionSubmissions: {
+          none: { dayNumber: PROGRAM_TOTAL_DAYS, passed: true },
+        },
+      },
+    });
+    return incomplete === 0;
+  }
+  return isCohortPastEndsAt(cohort);
 }
 
 /** Highest day number the member has PASSED (0 if none). */

@@ -31,7 +31,7 @@ function domainBadgeClass(domain: string | null): string {
   if (domain === "AI") return "border-domains-ai/50 bg-domains-ai-bg text-domains-ai";
   if (domain === "DS") return "border-domains-ds/50 bg-domains-ds-bg text-domains-ds";
   if (domain === "CLAUDE")
-    return "border-orange-500/40 bg-orange-50 text-orange-800";
+    return "border-orange-500/40 bg-orange-50 text-orange-800 dark:bg-orange-950/40 dark:text-orange-200";
   if (domain === "SE") return "border-domains-se/50 bg-domains-se-bg text-domains-se";
   return "border-border bg-muted text-muted-foreground";
 }

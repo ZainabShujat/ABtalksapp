@@ -17,6 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { SynergyChip } from "@/components/shared/synergy-chip";
 import { NotificationBellButton } from "@/components/shared/notification-bell-button";
 import {
@@ -127,7 +128,7 @@ export function AppHeader({
           <Link
             href="/jobs"
             className={cn(
-              "focus-spark group hidden shrink-0 items-center gap-1.5 rounded-none border px-2.5 py-1 text-sm font-medium transition-colors md:inline-flex",
+              "focus-spark group hidden shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm font-medium transition-colors md:inline-flex",
               jobsActive
                 ? "border-primary/30 bg-primary/10 text-primary"
                 : "border-transparent text-muted-foreground hover:border-border/60 hover:bg-muted/60 hover:text-foreground",
@@ -142,7 +143,7 @@ export function AppHeader({
           {user.isAdmin ? (
             <Link
               href="/admin"
-              className="focus-spark hidden shrink-0 items-center rounded-none border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/20 md:inline-flex"
+              className="focus-spark hidden shrink-0 items-center rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/20 md:inline-flex"
             >
               Admin
             </Link>
@@ -153,6 +154,11 @@ export function AppHeader({
           <div className="hidden md:block">
             <SynergyChip />
           </div>
+          {!isMarketplace ? (
+            <div className="hidden md:block">
+              <ThemeToggle />
+            </div>
+          ) : null}
           <span className="hidden h-6 w-px shrink-0 bg-border md:block" aria-hidden />
           <div className="hidden md:block">
             <DropdownMenu>

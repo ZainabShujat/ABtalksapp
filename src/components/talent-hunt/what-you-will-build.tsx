@@ -88,7 +88,7 @@ export function WhatYouWillBuild({ compact = false }: Props) {
                   {bullets.map((bullet) => (
                     <li key={bullet} className="flex gap-2">
                       <span
-                        className="mt-1.5 size-1.5 shrink-0 rounded-none bg-primary"
+                        className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary"
                         aria-hidden
                       />
                       <span>{bullet}</span>

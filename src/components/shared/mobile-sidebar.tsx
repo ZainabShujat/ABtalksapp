@@ -104,7 +104,7 @@ export function MobileSidebar({ user, isMarketplace }: Props) {
                         {label}
                       </span>
                       {user.isAdmin ? (
-                        <span className="shrink-0 rounded-none border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                        <span className="shrink-0 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
                           Admin
                         </span>
                       ) : null}

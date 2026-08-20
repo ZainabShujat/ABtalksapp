@@ -237,7 +237,7 @@ export default async function AdminStudentDetailPage({
               )}
               {data.profile.phone ? (
                 data.profile.phoneVerified ? (
-                  <Badge className="ml-2 gap-1 bg-emerald-100 text-emerald-700">
+                  <Badge className="ml-2 gap-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
                     <CheckCircle2 className="size-3.5" aria-hidden />
                     Verified
                   </Badge>

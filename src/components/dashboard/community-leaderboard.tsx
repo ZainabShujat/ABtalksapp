@@ -42,7 +42,7 @@ function domainBadgeClass(domain: Domain): string {
   if (domain === "AI") return "border-domains-ai/50 bg-domains-ai-bg text-domains-ai";
   if (domain === "DS") return "border-domains-ds/50 bg-domains-ds-bg text-domains-ds";
   if (domain === "CLAUDE")
-    return "border-violet-500/40 bg-violet-50 text-violet-800";
+    return "border-violet-500/40 bg-violet-50 text-violet-800 dark:bg-violet-950/40 dark:text-violet-200";
   return "border-domains-se/50 bg-domains-se-bg text-domains-se";
 }
 

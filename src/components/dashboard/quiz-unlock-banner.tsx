@@ -20,7 +20,7 @@ export function QuizUnlockBanner({
 }: QuizUnlockBannerProps) {
   return (
     <div className="relative overflow-hidden rounded-xl border bg-gradient-to-r from-primary/10 via-primary/5 to-background p-5 shadow-sm">
-      <div className="absolute -right-4 -top-4 h-24 w-24 rounded-none bg-primary/10 blur-2xl" />
+      <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-primary/10 blur-2xl" />
       <div className="relative flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-start gap-3">
           <div className="rounded-lg bg-primary/15 p-2">

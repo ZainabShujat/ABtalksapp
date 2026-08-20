@@ -15,8 +15,8 @@ function BuildersBadge({ totalCount }: { totalCount: number }) {
     : `🔥 Join ${displayCount}+ builders already enrolled`;
 
   return (
-    <div className="mb-3 inline-flex items-center gap-2 rounded-none border border-orange-500/20 bg-orange-500/10 px-3 py-1">
-      <span className="text-xs font-semibold text-orange-600">
+    <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1">
+      <span className="text-xs font-semibold text-orange-600 dark:text-orange-400">
         {badgeText}
       </span>
     </div>
@@ -70,7 +70,7 @@ export function ClaudeCtaSlide({ totalCount }: Props) {
           href="https://chat.whatsapp.com/LSru1BgvifpEB4OMZsaZEi"
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-3 inline-flex items-center gap-2 rounded-lg border border-emerald-500/30 px-3 py-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-500/10"
+          className="mt-3 inline-flex items-center gap-2 rounded-lg border border-emerald-500/30 px-3 py-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400"
         >
           Join WhatsApp Group
         </a>

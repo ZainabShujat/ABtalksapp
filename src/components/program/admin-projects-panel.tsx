@@ -234,7 +234,7 @@ export function AdminProjectsPanel({
                             <span>{c.name}</span>
                             <span>{c.score}/100</span>
                           </div>
-                          <div className="h-1.5 overflow-hidden rounded-none bg-muted">
+                          <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                             <div
                               className="h-full bg-primary"
                               style={{ width: `${c.score}%` }}

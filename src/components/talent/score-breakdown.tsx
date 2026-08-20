@@ -31,7 +31,7 @@ function Bar({
           {value}/{max}
         </span>
       </div>
-      <div className="h-1 overflow-hidden rounded-none bg-muted">
+      <div className="h-1 overflow-hidden rounded-full bg-muted">
         <div
           className="h-full bg-primary"
           style={{ width: `${max ? (value / max) * 100 : 0}%` }}

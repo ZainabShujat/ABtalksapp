@@ -70,9 +70,9 @@ export function ClaudeAudienceSlide() {
       transition={{ delay: 0.1, duration: 0.5 }}
       className="rounded-3xl border bg-card/80 p-5 shadow-lg backdrop-blur-sm md:p-6"
     >
-      <motion.div className="mb-3 inline-flex items-center gap-2 rounded-none border border-violet-500/20 bg-violet-500/10 px-3 py-1">
+      <motion.div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1">
         <span className="text-xs">👥</span>
-        <span className="text-xs font-semibold text-violet-600">
+        <span className="text-xs font-semibold text-violet-600 dark:text-violet-400">
           One challenge. Every role.
         </span>
       </motion.div>

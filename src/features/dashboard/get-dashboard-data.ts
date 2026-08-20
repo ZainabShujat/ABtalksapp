@@ -44,7 +44,6 @@ export type DashboardDataWithEnrollment = {
     ambassadorDismissedAt: Date | null;
     phone: string | null;
     phoneVerified: boolean;
-    synergyPoints: number;
   };
   enrollment: {
     id: string;
@@ -121,7 +120,6 @@ export async function getDashboardData(
     ambassadorDismissedAt: user.studentProfile.ambassadorDismissedAt,
     phone: user.studentProfile.phone,
     phoneVerified: user.studentProfile.phoneVerified,
-    synergyPoints: user.studentProfile.synergyPoints,
   };
 
   const enrollment = await resolveDashboardEnrollment(

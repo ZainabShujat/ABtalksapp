@@ -8,7 +8,7 @@ export default function ScrollToTop() {
           .getElementById("register")
           ?.scrollIntoView({ behavior: "smooth", block: "start" });
       }}
-      className="cursor-pointer rounded-none px-9 py-3.5 text-[15px] font-semibold text-white transition-transform hover:-translate-y-0.5"
+      className="cursor-pointer rounded-full px-9 py-3.5 text-[15px] font-semibold text-white transition-transform hover:-translate-y-0.5"
       style={{
         background: "var(--wk-grad)",
         boxShadow:

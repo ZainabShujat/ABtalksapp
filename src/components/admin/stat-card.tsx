@@ -67,7 +67,7 @@ export function StatCard({
       {showDelta ? (
         <p
           className={cn(
-            "mt-1 inline-flex rounded-none px-2 py-0.5 text-xs font-medium",
+            "mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
             deltaPositive
               ? "bg-emerald-500/10 text-emerald-400"
               : "bg-red-500/10 text-red-400",

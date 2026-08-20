@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { MotionProvider } from "@/components/shared/motion-provider";
 import { SynergyProvider } from "@/components/shared/synergy-provider";
@@ -14,104 +14,16 @@ import { ChatWidget } from "@/components/chatbot/ChatWidget";
 import { isChatbotEnabled } from "@/lib/feature-flags";
 import "./globals.css";
 
-const archivo = localFont({
-  src: [
-    {
-      path: "../fonts/archivo/archivo-latin-400-normal.woff2",
-      weight: "400",
-      style: "normal",
-    },
-    {
-      path: "../fonts/archivo/archivo-latin-600-normal.woff2",
-      weight: "600",
-      style: "normal",
-    },
-    {
-      path: "../fonts/archivo/archivo-latin-800-normal.woff2",
-      weight: "800",
-      style: "normal",
-    },
-  ],
-  variable: "--font-archivo",
-  display: "swap",
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-jakarta",
+  weight: ["500", "600", "700", "800"],
 });
 
-const hubSans = localFont({
-  src: [
-    {
-      path: "../fonts/inter/inter-latin-400-normal.woff2",
-      weight: "400",
-      style: "normal",
-    },
-    {
-      path: "../fonts/inter/inter-latin-500-normal.woff2",
-      weight: "500",
-      style: "normal",
-    },
-    {
-      path: "../fonts/inter/inter-latin-600-normal.woff2",
-      weight: "600",
-      style: "normal",
-    },
-    {
-      path: "../fonts/inter/inter-latin-700-normal.woff2",
-      weight: "700",
-      style: "normal",
-    },
-    {
-      path: "../fonts/inter/inter-latin-800-normal.woff2",
-      weight: "800",
-      style: "normal",
-    },
-  ],
-  variable: "--font-hub-sans",
-  display: "swap",
-});
-
-const hubSerif = localFont({
-  src: [
-    {
-      path: "../fonts/instrument-serif/instrument-serif-latin-400-normal.woff2",
-      weight: "400",
-      style: "normal",
-    },
-    {
-      path: "../fonts/instrument-serif/instrument-serif-latin-400-italic.woff2",
-      weight: "400",
-      style: "italic",
-    },
-  ],
-  variable: "--font-hub-serif",
-  display: "swap",
-});
-
-const hubDisplay = localFont({
-  src: [
-    {
-      path: "../fonts/gemunu-libre/gemunu-libre-latin-400-normal.woff2",
-      weight: "400",
-      style: "normal",
-    },
-    {
-      path: "../fonts/gemunu-libre/gemunu-libre-latin-700-normal.woff2",
-      weight: "700",
-      style: "normal",
-    },
-  ],
-  variable: "--font-hub-display",
-  display: "swap",
-});
-
-const hubQuote = localFont({
-  src: [
-    {
-      path: "../fonts/jacques-francois/jacques-francois-latin-400-normal.woff2",
-      weight: "400",
-      style: "normal",
-    },
-  ],
-  variable: "--font-hub-quote",
-  display: "swap",
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -133,11 +45,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${fontVars} h-full antialiased`} suppressHydrationWarning>
-      <body className={`${fontVars} min-h-full flex flex-col font-sans`}>
+    <html
+      lang="en"
+      className={`${jakarta.variable} ${inter.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
+      <body className={`${jakarta.variable} ${inter.variable} min-h-full flex flex-col font-sans`}>
         <ThemeProvider
           attribute="class"
-          forcedTheme="light"
+          defaultTheme="system"
+          enableSystem
           disableTransitionOnChange
         >
           <CookieConsentProvider>
