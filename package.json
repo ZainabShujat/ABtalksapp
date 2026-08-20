@@ -36,6 +36,7 @@
     "test:interview:adaptive": "tsx scripts/verify-interview-adaptive.ts",
     "demo:interview": "tsx scripts/demo-adaptive-interview.ts",
     "demo:interview:report": "tsx scripts/e2e-interview-report.ts",
+    "dev:interview": "node scripts/dev-interview.mjs",
     "test:interview:agent": "tsx scripts/verify-interview-agent.ts",
     "test:interview:db": "node scripts/db-preflight.mjs && tsx --conditions=react-server scripts/smoke-cohort-interview.ts"
   },

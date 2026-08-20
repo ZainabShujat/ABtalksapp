@@ -27,6 +27,8 @@ import {
   filterNarrative,
   parseReport,
 } from "../src/features/interview/report-assembly";
+import { coreProgressFor } from "../src/features/interview/report-analysis";
+import { coreProgressFor } from "../src/features/interview/report-analysis";
 import { buildInterviewReport } from "../src/features/interview/report";
 import { createInitialState, startInterview } from "../src/features/interview/state";
 import type { AskJson } from "../src/features/interview/agent/llm/json-provider";
@@ -140,6 +142,7 @@ async function buildWith(
   return buildInterviewReport(ask, {
     plan: activePlan,
     state,
+    turns: [],
     blueprint: "DAY_15",
     scopeDays,
     candidate,
@@ -654,15 +657,287 @@ async function main() {
     assert.ok(spoken!.text.startsWith(row!.answerExcerpt.replace(/…$/, "")));
   });
 
-  await check("skills are checklist items, split by what was produced", async () => {
+  await check("skills are checklist items, classified, never invented", async () => {
     const report = await buildWith(askFails, barState);
     const allExpected = new Set(
       plan.questions.flatMap((q) => q.expectedEvidence ?? []),
     );
-    for (const skill of [...report.skills.demonstrated, ...report.skills.notShown]) {
-      assert.ok(allExpected.has(skill), `invented skill: ${skill}`);
+
+    for (const s of report.skills) {
+      assert.ok(allExpected.has(s.skill), `invented skill: ${s.skill}`);
+      assert.ok(
+        ["STRONG", "DEVELOPING", "WEAK", "NOT_DEMONSTRATED", "NOT_ASSESSED"].includes(
+          s.level,
+        ),
+        `bad level ${s.level}`,
+      );
     }
-    assert.ok(report.skills.demonstrated.length > 0);
+    assert.ok(report.skills.some((s) => s.level === "STRONG"));
+  });
+
+  await check("a skill is never called absent unless its question was answered", async () => {
+    // Only the first question is answered; everything else was never reached,
+    // so its skills must read NOT_ASSESSED rather than as a shortcoming.
+    const partial = stateWith(plan, (i) =>
+      i === 0 ? [0, 1] : null,
+    );
+    const report = await buildWith(askFails, partial);
+
+    const unreachedIds = new Set(
+      plan.questions.slice(1).map((q) => q.id),
+    );
+    for (const s of report.expectedButNotDemonstrated) {
+      for (const ref of s.evidenceRefs) {
+        assert.ok(
+          !unreachedIds.has(ref),
+          `${s.skill} blamed on unreached question ${ref}`,
+        );
+      }
+    }
+  });
+
+  await check("every core question gets a full assessment with a reason", async () => {
+    const report = await buildWith(askFails, barState);
+    assert.equal(
+      report.questionAssessments.length,
+      plan.questions.filter((q) => (q.tier ?? "CORE") === "CORE").length,
+    );
+    for (const q of report.questionAssessments) {
+      assert.ok(q.whyThisScore.length > 0, `${q.questionId} has no reason`);
+      assert.ok(q.scoreOutOfTen >= 0 && q.scoreOutOfTen <= 10);
+      assert.equal(q.scoreOutOfTen, Math.round(q.score) / 10);
+      assert.ok(q.skillsTested.length > 0);
+    }
+  });
+
+  await check("an unassessed module is never scored", async () => {
+    const report = await buildWith(askFails, barState);
+    for (const m of report.modules) {
+      if (!m.assessed) {
+        assert.equal(m.score, null);
+        assert.equal(m.scoreOutOfTen, null);
+      }
+    }
+  });
+
+  await check("assessment status separates a low score from a broken run", async () => {
+    const clean = await buildWith(askFails, emptyState);
+    // Zero evidence, but no degraded turns: a valid low assessment, and the
+    // narrative fallback alone must not be reported as a broken assessment.
+    assert.notEqual(clean.assessmentStatus.status, "DEGRADED");
+
+    const degradedTurns = Array.from({ length: 4 }, (_, i) => ({
+      turnIndex: i, questionId: "d15-q03", tier: "CORE", depthLevel: 1,
+      action: "NEXT_QUESTION", promptText: "", answerText: "x",
+      evidence: null, degraded: true,
+    }));
+    const broken = await buildInterviewReport(askFails, {
+      plan, state: barState, turns: degradedTurns, blueprint: "DAY_15",
+      scopeDays: DAY_15_SCOPE, candidate, progressDay: 18, durationSec: 640,
+    });
+    assert.equal(broken.assessmentStatus.status, "DEGRADED");
+    assert.equal(broken.assessmentStatus.degradedTurns, 4);
+  });
+
+  /* ---------------------------------------------- exit thresholds */
+
+  section("Exit thresholds (core questions, never turns)");
+
+  const coreCount = plan.questions.filter(
+    (q) => (q.tier ?? "CORE") === "CORE",
+  ).length;
+
+  await check("progress counts CORE questions, not turns", () => {
+    // Two answered core questions plus a pile of probe evidence: the probes
+    // must not inflate progress, or the halfway warning fires far too early.
+    const state = stateWith(plan, (i) => (i < 2 ? [0] : null));
+    state.evidenceByQuestionId["d15-q03@L2"] = evidence([0, 1]);
+    state.evidenceByQuestionId["d15-q03@L3"] = evidence([0, 1]);
+    state.evidenceByQuestionId["d15-q09@L2"] = evidence([0, 1]);
+
+    const progress = coreProgressFor(plan, state);
+    assert.equal(progress.answered, 2);
+    assert.equal(progress.total, coreCount);
+  });
+
+  await check("below halfway stays under the threshold", () => {
+    const under = Math.max(0, Math.floor(coreCount / 2) - 1);
+    const progress = coreProgressFor(
+      plan,
+      stateWith(plan, (i) => (i < under ? [0] : null)),
+    );
+    assert.ok(progress.ratio < 0.5, `ratio was ${progress.ratio}`);
+  });
+
+  await check("exactly half trips the harder warning", () => {
+    const half = Math.ceil(coreCount / 2);
+    const progress = coreProgressFor(
+      plan,
+      stateWith(plan, (i) => (i < half ? [0] : null)),
+    );
+    assert.ok(progress.ratio >= 0.5, `ratio was ${progress.ratio}`);
+  });
+
+  await check("a fresh interview is at zero", () => {
+    const progress = coreProgressFor(plan, stateWith(plan, () => null));
+    assert.equal(progress.answered, 0);
+    assert.equal(progress.ratio, 0);
+  });
+
+  await check("a finished interview is at one", () => {
+    const progress = coreProgressFor(plan, stateWith(plan, () => [0]));
+    assert.equal(progress.ratio, 1);
+  });
+
+  /* ------------------------------------------ internal consistency */
+
+  section("Internal consistency (regression: evidence must not be lost)");
+
+  await check("an answer covering every expected item scores 100", () => {
+    const q = plan.questions[1]!;
+    const all = Array.from(
+      { length: q.expectedEvidence!.length },
+      (_, i) => i,
+    );
+    const state = stateWith(plan, (i) => (i === 1 ? all : null));
+
+    const score = scoreQuestion(q, state);
+    assert.equal(score.judged, true);
+    assert.equal(score.matched, q.expectedEvidence!.length);
+    assert.equal(score.score, 100);
+  });
+
+  await check("the report marks every item demonstrated and none missing", async () => {
+    const q = plan.questions[1]!;
+    const all = Array.from({ length: q.expectedEvidence!.length }, (_, i) => i);
+    const state = stateWith(plan, (i) => (i === 1 ? all : null));
+
+    const report = await buildWith(askFails, state);
+    const assessed = report.questionAssessments.find(
+      (a) => a.questionId === q.id,
+    );
+    assert.ok(assessed, "question missing from the report");
+    assert.equal(assessed!.scoreOutOfTen, 10);
+    assert.deepEqual(assessed!.demonstrated, q.expectedEvidence);
+    assert.deepEqual(assessed!.missing, []);
+
+    // The exact contradiction that was reported: an item may never appear in
+    // both lists at once.
+    for (const item of assessed!.demonstrated) {
+      assert.ok(!assessed!.missing.includes(item), `${item} in both lists`);
+    }
+  });
+
+  await check("a partial answer splits the checklist correctly", async () => {
+    const q = plan.questions[1]!;
+    const state = stateWith(plan, (i) => (i === 1 ? [0, 2] : null));
+
+    const report = await buildWith(askFails, state);
+    const a = report.questionAssessments.find((x) => x.questionId === q.id)!;
+
+    assert.deepEqual(a.demonstrated, [
+      q.expectedEvidence![0],
+      q.expectedEvidence![2],
+    ]);
+    assert.ok(a.missing.includes(q.expectedEvidence![1]!));
+    assert.ok(!a.missing.includes(q.expectedEvidence![0]!));
+    assert.ok(a.judged);
+    assert.ok(a.scoreOutOfTen > 0 && a.scoreOutOfTen < 10);
+  });
+
+  await check("no question ever lists an item as both demonstrated and missing", async () => {
+    const report = await buildWith(askFails, barState);
+    for (const a of report.questionAssessments) {
+      for (const item of a.demonstrated) {
+        assert.ok(
+          !a.missing.includes(item),
+          `${a.questionId}: "${item}" is both demonstrated and missing`,
+        );
+      }
+    }
+  });
+
+  /* ------------------------------- unjudged answers (provider outage) */
+
+  section("Unjudged answers are never reported as failures");
+
+  /** Evidence with NO checklist claim — what the deterministic fallback records. */
+  function unjudged(): AnswerEvidence {
+    return {
+      conceptualFound: true,
+      practicalFound: false,
+      tradeoffsFound: false,
+      flaggedIssues: [],
+      reasoning: "Structural heuristic — no semantic model was available.",
+      // matchedEvidence deliberately absent
+    };
+  }
+
+  function unjudgedState(): InterviewState {
+    const base = stateWith(plan, () => null);
+    const evidenceByQuestionId: Record<string, AnswerEvidence> = {};
+    const transcript: InterviewState["transcript"] = [];
+    for (const q of plan.questions) {
+      evidenceByQuestionId[q.id] = unjudged();
+      transcript.push({
+        role: "candidate",
+        text: "An answer that plainly contains the expected evidence.",
+        questionId: q.id,
+        ts: Date.now(),
+      });
+    }
+    return { ...base, evidenceByQuestionId, transcript };
+  }
+
+  await check("an unjudged answer is not scored zero, it is not scored at all", () => {
+    const score = scoreQuestion(plan.questions[1]!, unjudgedState());
+    assert.equal(score.answered, true);
+    assert.equal(score.judged, false);
+  });
+
+  await check("an unjudged question lists NOTHING as missing", async () => {
+    const report = await buildWith(askFails, unjudgedState());
+    for (const a of report.questionAssessments) {
+      assert.equal(a.judged, false);
+      assert.equal(a.strength, "NOT_JUDGED");
+      assert.deepEqual(
+        a.missing,
+        [],
+        `${a.questionId} claimed missing evidence without a verdict`,
+      );
+      assert.deepEqual(a.demonstrated, []);
+    }
+  });
+
+  await check("unjudged answers do not drag modules to zero", async () => {
+    const report = await buildWith(askFails, unjudgedState());
+    for (const m of report.modules) {
+      assert.equal(m.score, null, `module ${m.moduleNumber} scored on no verdict`);
+      assert.equal(m.assessed, false);
+    }
+  });
+
+  await check("unjudged skills are NOT_ASSESSED, never WEAK", async () => {
+    const report = await buildWith(askFails, unjudgedState());
+    assert.equal(report.expectedButNotDemonstrated.length, 0);
+    assert.ok(report.skills.every((s) => s.level === "NOT_ASSESSED"));
+  });
+
+  await check("a fully unjudged interview reports DEGRADED", async () => {
+    const report = await buildWith(askFails, unjudgedState());
+    assert.equal(report.assessmentStatus.status, "DEGRADED");
+    assert.ok(report.assessmentStatus.unjudgedQuestions > 0);
+  });
+
+  await check("an explicit empty match IS still a real zero", async () => {
+    // The evaluator looked and found nothing. That is a verdict, and it must
+    // still count — this fix must not become a way to dodge a bad answer.
+    const state = stateWith(plan, () => []);
+    const report = await buildWith(askFails, state);
+    const a = report.questionAssessments[0]!;
+    assert.equal(a.judged, true);
+    assert.equal(a.scoreOutOfTen, 0);
+    assert.ok(a.missing.length > 0);
   });
 
   console.log(`\n${passed} checks passed, ${failed} failed.\n`);

@@ -56,6 +56,8 @@ export function InterviewVoiceRunner({
   const [error, setError] = useState<string | null>(null);
   const [micDenied, setMicDenied] = useState(false);
   const [typed, setTyped] = useState("");
+  /** Which voice the candidate is hearing. Shown so nothing is misrepresented. */
+  const [voiceSource, setVoiceSource] = useState<"server" | "browser" | null>(null);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -73,36 +75,77 @@ export function InterviewVoiceRunner({
     return () => {
       streamRef.current?.getTracks().forEach((t) => t.stop());
       audioRef.current?.pause();
+      if (typeof window !== "undefined") window.speechSynthesis?.cancel();
     };
   }, []);
 
-  /** Plays whatever the interviewer last said. Never fatal. */
+  /**
+   * Speaks the interviewer's most recent line.
+   *
+   * Server synthesis first, because that voice is consistent for every
+   * candidate. When it is unavailable — no TTS key configured — the browser's
+   * own speech synthesis reads the line instead. That is a real spoken
+   * question, not a simulation: the words come from the same server transcript
+   * either way, only the voice differs. Falling back beats silence, because an
+   * interview the candidate must read is a different assessment from one they
+   * listen to.
+   *
+   * Never fatal: if both paths fail the question is still on screen.
+   */
   const speak = useCallback(async () => {
     setPhase("speaking");
+
+    const speakInBrowser = (text: string) =>
+      new Promise<void>((resolve) => {
+        if (typeof window === "undefined" || !window.speechSynthesis) {
+          resolve();
+          return;
+        }
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.95;
+        utterance.onend = () => resolve();
+        utterance.onerror = () => resolve();
+        window.speechSynthesis.speak(utterance);
+      });
+
     try {
       const res = await fetch("/api/interview/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ interviewId }),
       });
-      if (!res.ok) throw new Error(String(res.status));
 
-      const url = URL.createObjectURL(await res.blob());
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      await audio.play();
-      await new Promise<void>((resolve) => {
-        audio.onended = () => resolve();
-        audio.onerror = () => resolve();
-      });
-      URL.revokeObjectURL(url);
+      if (res.ok) {
+        const url = URL.createObjectURL(await res.blob());
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        await audio.play();
+        await new Promise<void>((resolve) => {
+          audio.onended = () => resolve();
+          audio.onerror = () => resolve();
+        });
+        URL.revokeObjectURL(url);
+        setVoiceSource("server");
+      } else {
+        // 503 means no server voice is configured. Anything else is a
+        // transient failure. Both are answered the same way.
+        const lastLine = [...lines].reverse().find((l) => l.role === "interviewer");
+        if (lastLine) {
+          setVoiceSource("browser");
+          await speakInBrowser(lastLine.text);
+        }
+      }
     } catch {
-      // Autoplay blocked, synthesis down, or offline. The question is on screen
-      // either way, so this is silent by design.
+      const lastLine = [...lines].reverse().find((l) => l.role === "interviewer");
+      if (lastLine) {
+        setVoiceSource("browser");
+        await speakInBrowser(lastLine.text);
+      }
     } finally {
       setPhase("idle");
     }
-  }, [interviewId]);
+  }, [interviewId, lines]);
 
   const send = useCallback(
     async (answerText: string) => {
@@ -252,6 +295,12 @@ export function InterviewVoiceRunner({
         >
           <Volume2 className="size-4" /> Replay question
         </Button>
+
+        {voiceSource === "browser" ? (
+          <span className="text-xs text-muted-foreground">
+            Using your browser&apos;s voice — no speech service is configured.
+          </span>
+        ) : null}
 
         {busy ? (
           <span className="flex items-center gap-2 text-sm text-muted-foreground">

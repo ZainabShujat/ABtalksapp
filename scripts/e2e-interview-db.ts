@@ -50,6 +50,7 @@ const MAX_USERS_FOR_TEST_DB = 500;
 const MAX_SUBMISSIONS_FOR_TEST_DB = 200;
 
 const TEST_EMAIL = "interview-e2e@abtalks.dev";
+const TEST_PASSWORD = "e2e-dev-password";
 const PASSED_THROUGH_DAY = 18; // unlocks DAY_15 and yields beyond-scope days
 
 /* --------------------------------------------------------------- helpers */
@@ -152,7 +153,14 @@ async function main() {
   });
 
   const user = await prisma.user.create({
-    data: { email: TEST_EMAIL, name: "Priya Raman (E2E)" },
+    // A plaintext dev password so the seeded member can sign in through the
+    // ENABLE_DEV_AUTH credentials provider and open the report in a browser.
+    // This is a disposable test database; nothing here ever reaches production.
+    data: {
+      email: TEST_EMAIL,
+      name: "Priya Raman (E2E)",
+      password: TEST_PASSWORD,
+    },
     select: { id: true },
   });
 
@@ -199,6 +207,27 @@ async function main() {
 
   console.log(`     member ${member.id} · cohort "${cohort.name}"`);
   ok("18 passed mission submissions written", true);
+
+  // --seed-only stops here, leaving the member with DAY_15 UNLOCKED and
+  // UNTAKEN so the interview can be run by hand in a browser. Each blueprint
+  // may be completed exactly once, so a full e2e run leaves nothing to
+  // demonstrate live.
+  if (process.argv.includes("--seed-only")) {
+    log("SEEDED — ready for a browser run");
+    console.log(`     member ${member.id}`);
+    console.log("     Sign in at  http://localhost:3000/login");
+    console.log(`       email     ${TEST_EMAIL}`);
+    console.log(`       password  ${TEST_PASSWORD}`);
+    console.log(
+      "     Interview   http://localhost:3000/program/cohort-interview/DAY_15",
+    );
+    console.log(
+      "     Report      http://localhost:3000/program/cohort-interview/DAY_15/report",
+    );
+    console.log("");
+    await prisma.$disconnect();
+    return;
+  }
 
   /* -------------------------------------------------- 2. candidate ctx */
 
@@ -394,8 +423,11 @@ async function main() {
   await fresh.$disconnect();
 
   log("DONE", `member ${member.id} · interview ${interviewId}`);
+  console.log("     Sign in at  http://localhost:3000/login");
+  console.log(`       email     ${TEST_EMAIL}`);
+  console.log(`       password  ${TEST_PASSWORD}`);
   console.log(
-    `     Sign in as ${TEST_EMAIL} to open the report in the browser.\n`,
+    "     Report      http://localhost:3000/program/cohort-interview/DAY_15/report",
   );
 }
 

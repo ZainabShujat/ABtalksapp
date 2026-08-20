@@ -11,6 +11,7 @@ import {
   type ReportCandidate,
 } from "@/features/interview/report-assembly";
 import type { AskJson } from "@/features/interview/agent/llm/json-provider";
+import type { TurnRow } from "@/features/interview/report-analysis";
 import type { InterviewPlan, InterviewState } from "@/features/interview/types";
 
 /**
@@ -91,7 +92,7 @@ function buildNarrativeUserMessage(
         `QUESTION ${question.id} (${question.mode ?? "CONCEPTUAL"}, ${question.competency})`,
         `Source: ${question.sourceRef.label}`,
         `Asked: ${question.text}`,
-        `Candidate said: """${(answer?.text ?? "(no answer recorded)").slice(0, 900)}"""`,
+        `Candidate said: """${(answer?.text ?? "(no answer recorded)").slice(0, 420)}"""`,
         `Covered: ${
           expected.filter((_, i) => indices.has(i)).join(" · ") || "(nothing on the checklist)"
         }`,
@@ -134,6 +135,12 @@ function coerceItems(
 export type BuildReportInput = {
   plan: InterviewPlan;
   state: InterviewState;
+  /**
+   * The durable turn rows. Required, not optional: deep-probe answers and the
+   * per-turn degraded flags exist only here, and a report built without them
+   * would silently under-report both depth and provider failures.
+   */
+  turns: TurnRow[];
   blueprint: InterviewBlueprintKey;
   scopeDays: number[];
   candidate: ReportCandidate;

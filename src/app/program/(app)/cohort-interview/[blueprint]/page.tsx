@@ -3,10 +3,8 @@ import { notFound } from "next/navigation";
 import { requireProgramMember } from "@/lib/program-auth";
 import { parseBlueprintParam, BLUEPRINT_LABEL } from "@/features/interview/cohort/blueprint";
 import { getCohortInterviewOverview } from "@/features/interview/service";
-import { CohortInterviewRunner } from "@/components/program/cohort-interview-runner";
-import { buttonVariants } from "@/components/ui/button";
-import { isInterviewVoiceEnabled } from "@/lib/feature-flags";
-import { cn } from "@/lib/utils";
+import { InterviewSession } from "@/components/interview/cohort/interview-session";
+import "@/components/interview/cohort/interview.css";
 
 export const dynamic = "force-dynamic";
 
@@ -39,29 +37,76 @@ export default async function CohortInterviewPage({
   const overview = await getCohortInterviewOverview(member.id, blueprint);
 
   if (!overview.ok) {
+    return <Notice blueprint={blueprint} message={overview.message} />;
+  }
+
+  const { eligibility, questionCount, durationSec } = overview.data;
+
+  // Eligibility is resolved on the SERVER and decides which screen exists at
+  // all. The room is never rendered for a member who may not sit the
+  // interview, so there is no client state that could reveal it.
+  if (eligibility.state === "locked") {
+    return <Notice blueprint={blueprint} message={eligibility.reason} />;
+  }
+
+  if (eligibility.state === "taken") {
     return (
-      <div className="mx-auto max-w-2xl space-y-4">
-        <h1 className="font-display text-2xl font-bold tracking-tight">
-          {BLUEPRINT_LABEL[blueprint]}
-        </h1>
-        <p className="text-sm text-muted-foreground">{overview.message}</p>
-        <Link
-          href="/program/dashboard"
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-        >
-          Back to dashboard
-        </Link>
-      </div>
+      <Notice
+        blueprint={blueprint}
+        message="You have already completed this interview."
+        reportHref={`/program/cohort-interview/${blueprint}/report`}
+      />
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <CohortInterviewRunner
-        overview={overview.data}
-        memberName={member.fullName}
-        voiceEnabled={isInterviewVoiceEnabled()}
-      />
+    <InterviewSession
+      blueprint={blueprint}
+      candidateName={member.fullName}
+      questionCount={questionCount}
+      durationSec={durationSec}
+    />
+  );
+}
+
+/**
+ * The one non-interview screen: a short explanation and a way out. Styled with
+ * the same interview-scoped tokens so a locked milestone does not look like a
+ * different product from the room itself.
+ */
+function Notice({
+  blueprint,
+  message,
+  reportHref,
+}: {
+  blueprint: "DAY_15" | "DAY_31";
+  message: string;
+  reportHref?: string;
+}) {
+  return (
+    <div className="interview-room mx-auto w-full max-w-2xl py-10">
+      <h1 className="font-display text-2xl font-bold tracking-tight text-[var(--iv-text)]">
+        {BLUEPRINT_LABEL[blueprint]}
+      </h1>
+      <p className="mt-3 text-[15px] leading-relaxed text-[var(--iv-text-muted)]">
+        {message}
+      </p>
+      <div className="mt-7 flex flex-wrap items-center gap-3">
+        {reportHref ? (
+          <Link
+            href={reportHref}
+            className="inline-flex h-11 items-center rounded-[12px] border border-[#968BEC]/50 bg-[#968BEC]/15 px-5 text-[14px] font-semibold text-white transition-colors hover:bg-[#968BEC]/25"
+          >
+            View interview report
+          </Link>
+        ) : null}
+        <Link
+          href="/program/dashboard"
+          className="text-[14px] text-white/55 underline underline-offset-4 transition-colors hover:text-white"
+        >
+          Back to dashboard
+        </Link>
+      </div>
     </div>
   );
 }

@@ -2,17 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "abtalks-dev",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": [
-        "cross-env",
-        "ENABLE_PROGRAM=true",
-        "next",
-        "dev",
-        "-p",
-        "3210"
-      ],
-      "port": 3210
+      "name": "abtalks-interview-testdb",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
     }
   ]
 }

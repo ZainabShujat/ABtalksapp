@@ -76,11 +76,17 @@ export function assessCompetencies(
       };
     }
 
+    // JUDGED only. An answer the evaluator never assessed carries no verdict,
+    // so averaging it in as a zero would manufacture a failure nobody
+    // established — the defect that made a good answer read as 0/10.
     const forCompetency = questionScores.filter(
-      (s) => s.competency === definition.competency && s.answered,
+      (s) => s.competency === definition.competency && s.answered && s.judged,
     );
 
     if (forCompetency.length === 0) {
+      const attempted = questionScores.filter(
+        (s) => s.competency === definition.competency && s.answered,
+      ).length;
       return {
         competency: definition.competency,
         label: definition.label,
@@ -88,7 +94,10 @@ export function assessCompetencies(
         score: 0,
         tier: "NONE" as EvidenceTier,
         evidenceRefs: [],
-        justification: "No question for this competency was answered.",
+        justification:
+          attempted > 0
+            ? `Not assessed — the evaluator was unavailable for ${attempted} answered question${attempted === 1 ? "" : "s"}.`
+            : "No question for this competency was answered.",
       };
     }
 

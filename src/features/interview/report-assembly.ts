@@ -6,14 +6,32 @@ import {
   scoreModules,
   scoreQuestion,
   scoreToTier,
-  type ModuleAssessment,
   type QuestionScore,
 } from "@/features/interview/module-scoring";
 import {
   assessCompetencies,
   overallFromCompetencies,
-  type CompetencyAssessment,
 } from "@/features/interview/scoring";
+import {
+  assessIntegrity,
+  buildAgentInsights,
+  buildCompetencyReports,
+  buildModuleReports,
+  buildQuestionAssessments,
+  classifySkills,
+  readinessFor,
+  selectTranscriptExcerpts,
+  toTen,
+  type AgentInsight,
+  type AssessmentIntegrity,
+  type CompetencyReport,
+  type ModuleReport,
+  type QuestionAssessment,
+  type Readiness,
+  type SkillAssessment,
+  type TranscriptExcerpt,
+  type TurnRow,
+} from "@/features/interview/report-analysis";
 import type {
   InterviewPlan,
   InterviewState,
@@ -40,7 +58,9 @@ import type {
  * Pure module: no `server-only`, no Prisma, no network.
  */
 
-export const INTERVIEW_REPORT_VERSION = 1 as const;
+/** Bumped when the document shape changes. Old rows fail validation and are
+ * surfaced as "report unavailable" rather than rendering half a page. */
+export const INTERVIEW_REPORT_VERSION = 2 as const;
 
 /* ------------------------------------------------------------------ types */
 
@@ -63,6 +83,9 @@ export type ReportMilestone = {
 
 export type ReportOverall = {
   score: number;
+  /** The same score on the scale the report speaks in. */
+  scoreOutOfTen: number;
+  readiness: Readiness;
   tier: ReturnType<typeof scoreToTier>;
   durationSec: number;
   questionsAsked: number;
@@ -114,15 +137,25 @@ export type InterviewReportDocument = {
   candidate: ReportCandidate;
   milestone: ReportMilestone;
   overall: ReportOverall;
-  modules: ModuleAssessment[];
-  competencies: CompetencyAssessment[];
+  /** Modules enriched with the skills behind each number. */
+  modules: ModuleReport[];
+  competencies: CompetencyReport[];
+  /** One entry per CORE question, with deep probes nested inside. */
+  questionAssessments: QuestionAssessment[];
+  /** Every expected-evidence item, classified with its evidence refs. */
+  skills: SkillAssessment[];
   strengths: NarrativeItem[];
   improvements: ImprovementItem[];
-  skills: { demonstrated: string[]; partial: string[]; notShown: string[] };
+  /** Skills a question explicitly tested that never appeared in an answer. */
+  expectedButNotDemonstrated: SkillAssessment[];
+  agentInsights: AgentInsight[];
+  transcriptExcerpts: TranscriptExcerpt[];
   beyondMilestone: BeyondMilestoneRow[];
   evidence: EvidenceRow[];
   summary: string;
   recommendation: string;
+  /** Whether provider failures thinned the evidence behind these numbers. */
+  assessmentStatus: AssessmentIntegrity;
   /** True when the prose came from the deterministic fallback, not a model. */
   narrativeDegraded: boolean;
 };
@@ -260,6 +293,8 @@ export type AssembleInput = {
     recommendation: string;
     degraded: boolean;
   };
+  /** Durable turn rows. Deep-probe answers and degraded flags live here. */
+  turns: TurnRow[];
   now?: Date;
 };
 
@@ -289,21 +324,10 @@ export function assembleReport(input: AssembleInput): InterviewReportDocument {
     0,
   );
 
-  // Skills are the checklist items themselves, split by whether the candidate
-  // actually produced them. No taxonomy is invented: every string here is a
-  // line an assessment author wrote and a judge matched against.
-  const demonstrated: string[] = [];
-  const notShown: string[] = [];
-  for (const question of coreQuestions) {
-    const { matched, missing } = matchedItems(question, state);
-    demonstrated.push(...matched);
-    if (answeredIds.has(question.id)) notShown.push(...missing);
-  }
-
-  // "Partial" = shown on one question but missed on another with the same text.
-  const demonstratedSet = new Set(demonstrated);
-  const partial = [...new Set(notShown.filter((s) => demonstratedSet.has(s)))];
-  const notShownOnly = [...new Set(notShown.filter((s) => !demonstratedSet.has(s)))];
+  // (Skill classification moved to `report-analysis.classifySkills`, which
+  // grades each expected-evidence item STRONG/DEVELOPING/WEAK/NOT_DEMONSTRATED
+  // /NOT_ASSESSED with its evidence refs, rather than sorting bare strings into
+  // three buckets.)
 
   const evidence: EvidenceRow[] = plan.questions.map((question) => {
     const score = scoreQuestion(question, state);
@@ -349,6 +373,20 @@ export function assembleReport(input: AssembleInput): InterviewReportDocument {
   const strengths = filterNarrative(input.narrative.strengths, answeredIds);
   const improvements = filterNarrative(input.narrative.improvements, answeredIds);
 
+  // The analytical layer. Every one of these is computed from the plan, the
+  // recorded state and the durable turn rows — never from the model.
+  const questionAssessments = buildQuestionAssessments(plan, state, input.turns);
+  const skills = classifySkills(questionAssessments);
+  const moduleReports = buildModuleReports(modules, questionAssessments);
+  const competencyReports = buildCompetencyReports(competencies, questionAssessments);
+  const agentInsights = buildAgentInsights(questionAssessments, skills);
+  const transcriptExcerpts = selectTranscriptExcerpts(questionAssessments);
+  const assessmentStatus = assessIntegrity(
+    input.turns,
+    input.narrative.degraded,
+    questionAssessments,
+  );
+
   return {
     version: INTERVIEW_REPORT_VERSION,
     generatedAt: (input.now ?? new Date()).toISOString(),
@@ -363,6 +401,8 @@ export function assembleReport(input: AssembleInput): InterviewReportDocument {
     },
     overall: {
       score: overallScore,
+      scoreOutOfTen: toTen(overallScore),
+      readiness: readinessFor(overallScore),
       tier: scoreToTier(overallScore),
       durationSec: input.durationSec,
       questionsAsked: coreQuestions.length,
@@ -371,20 +411,25 @@ export function assembleReport(input: AssembleInput): InterviewReportDocument {
       escalationsEarned,
       redirectsIssued: state.redirectsAsked ?? 0,
     },
-    modules,
-    competencies,
+    modules: moduleReports,
+    competencies: competencyReports,
+    questionAssessments,
+    skills,
     // A model that produced nothing usable must not leave the report empty.
     strengths: strengths.length > 0 ? strengths : fallback.strengths,
     improvements: improvements.length > 0 ? improvements : fallback.improvements,
-    skills: {
-      demonstrated: [...new Set(demonstrated)],
-      partial,
-      notShown: notShownOnly,
-    },
+    // Only skills a question actually tested and the candidate never produced.
+    // NOT_ASSESSED is deliberately excluded: never asked is not a shortcoming.
+    expectedButNotDemonstrated: skills.filter(
+      (s) => s.level === "NOT_DEMONSTRATED" || s.level === "WEAK",
+    ),
+    agentInsights,
+    transcriptExcerpts,
     beyondMilestone,
     evidence,
     summary: input.narrative.summary,
     recommendation: input.narrative.recommendation,
+    assessmentStatus,
     narrativeDegraded:
       input.narrative.degraded ||
       strengths.length === 0 ||

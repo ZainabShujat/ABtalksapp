@@ -41,10 +41,10 @@ export function CohortInterviewJourney({
   const isImmersive = stage === "live";
 
   return (
-    <div>
+    <div className="dark">
       {/* Pre-interview stages: standard AB Talks layout with subtle step indicator */}
       {!isImmersive && stage !== "completion" && stage !== "result" && (
-        <div>
+        <div className="text-foreground">
           {stage !== "intro" && (
             <header className="mb-8">
               <span className="kicker">AI Cohort Interview</span>

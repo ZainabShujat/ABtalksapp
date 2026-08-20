@@ -22,6 +22,7 @@ import {
   loadCompletedResult,
   loadReport,
   loadReportForBlueprint,
+  loadTurns,
   nextTurnIndex,
   saveReport,
   saveTurn,
@@ -30,6 +31,7 @@ import {
 } from "@/features/interview/repository";
 import { buildCohortCandidateContext } from "@/features/interview/cohort/candidate-context";
 import { buildInterviewReport } from "@/features/interview/report";
+import { coreProgressFor, type CoreProgress } from "@/features/interview/report-analysis";
 import { askForReport } from "@/features/interview/report-provider";
 import { scopeDaysFor } from "@/features/interview/cohort/planner";
 import {
@@ -61,6 +63,8 @@ import type {
  *
  * The only thing a client contributes to an interview is the text of an answer.
  */
+
+export type { CoreProgress };
 
 export type ServiceResult<T> =
   | { ok: true; data: T }
@@ -101,6 +105,7 @@ export type StartInterviewData = {
   interviewId: string;
   blueprint: InterviewBlueprintKey;
   question: ClientQuestion;
+  prompt?: string;
   /** True when an existing open attempt was resumed rather than created. */
   resumed: boolean;
   durationSec: number;
@@ -123,12 +128,25 @@ export async function startCohortInterview(
 ): Promise<ServiceResult<StartInterviewData>> {
   await abandonStaleAttempts(memberId, COHORT_INTERVIEW_STALE_MS);
 
+  // An interview is an assessment, not a conversation you can walk away from
+  // and pick up later. A half-finished attempt would let a candidate hear the
+  // questions, leave, prepare, and return — which is a different instrument
+  // from the one everyone else sat. So any open attempt is closed as ABANDONED
+  // and a fresh one begins. The row survives for audit; it is simply never
+  // resumable, and it consumes nothing because only COMPLETED rows do.
   const existingId = await findActiveAttemptId(memberId, blueprint);
   if (existingId) {
-    const resumed = await resumeCohortInterview(memberId, existingId);
-    if (resumed.ok) return resumed;
-    // The row vanished or went unresumable between the two reads. Fall through
-    // and let the gate decide whether a fresh attempt is allowed.
+    await closeAttemptWithoutConsuming(
+      existingId,
+      memberId,
+      "ABANDONED",
+      "Superseded by a new attempt; interviews are not resumable.",
+    );
+    logger.info("[cohort-interview] previous open attempt abandoned", {
+      interviewId: existingId,
+      memberId,
+      blueprint,
+    });
   }
 
   const gate = await gateStart(memberId, blueprint);
@@ -162,6 +180,7 @@ export async function startCohortInterview(
       interviewId: attempt.id,
       blueprint,
       question: toClientQuestion(firstQuestion, blueprint),
+      prompt: opened.data.nextPrompt,
       resumed: false,
       durationSec: COHORT_INTERVIEW_DURATION_SEC,
     },
@@ -208,6 +227,7 @@ export type AnswerTurnData = {
   prompt: string | null;
   question: ClientQuestion | null;
   finished: boolean;
+  progress: CoreProgress;
 };
 
 /**
@@ -261,7 +281,7 @@ export async function recordCohortAnswer(
         : (turn.data.state.evidenceByQuestionId[
             depthLevel > 1 ? `${questionId}@L${depthLevel}` : questionId
           ] ?? null),
-    degraded: false,
+    degraded: turn.data.degraded,
     latencyMs: Date.now() - startedMs,
   };
 
@@ -280,6 +300,7 @@ export async function recordCohortAnswer(
         ? toClientQuestion(turn.data.nextQuestion, attempt.blueprint)
         : null,
       finished: turn.data.finished,
+      progress: coreProgressFor(attempt.plan, turn.data.state),
     },
   };
 }
@@ -351,9 +372,14 @@ export async function finishCohortInterview(
   // candidate never sees a completed interview that has no report behind it.
   const context = await buildCohortCandidateContext(memberId, attempt.blueprint);
 
+  // The turn rows carry the deep-probe answers and the degraded flags, which
+  // the report cannot reconstruct from the runtime state alone.
+  const turns = await loadTurns(interviewId, memberId);
+
   const report = await buildInterviewReport(askForReport, {
     plan: attempt.plan,
     state: finalized.data.state,
+    turns,
     blueprint: attempt.blueprint,
     scopeDays: scopeDaysFor(attempt.blueprint),
     candidate: {

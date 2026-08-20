@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { isDayLockBypassEnabled } from "@/lib/feature-flags";
 import { collectPassSkipSets } from "@/features/program/progression";
 import {
   BLUEPRINT_SCOPE,
@@ -91,16 +92,22 @@ export async function getCohortInterviewState(
 
   const { passedDays } = collectPassSkipSets(submissions);
 
+  const bypassEnabled = isDayLockBypassEnabled();
+
   const build = (blueprint: InterviewBlueprintKey): BlueprintState => {
     const forBlueprint = interviews.filter((i) => i.blueprint === blueprint);
     const completed = forBlueprint.find((i) => i.status === "COMPLETED");
     const open = forBlueprint.find((i) => i.status === "IN_PROGRESS");
+    
+    // Day 15 interview unlocks after passing Day 15.
+    // Day 31 interview unlocks after passing Day 31.
+    const missing = missingDaysFor(blueprint, passedDays);
 
     return {
-      unlocked: isBlueprintUnlocked(blueprint, passedDays),
+      unlocked: bypassEnabled || isBlueprintUnlocked(blueprint, passedDays),
       taken: Boolean(completed),
       score: completed?.overallScore ?? null,
-      missingDays: missingDaysFor(blueprint, passedDays),
+      missingDays: bypassEnabled ? [] : missing,
       inProgressId: open?.id ?? null,
     };
   };
@@ -150,7 +157,18 @@ export async function getBlueprintEligibility(
   }
 
   const { passedDays } = collectPassSkipSets(submissions);
-  const missingDays = missingDaysFor(blueprint, passedDays);
+
+  // THE gate. `assertCanStart` calls this immediately before an attempt row is
+  // created, so whatever this returns is what actually opens an interview.
+  //
+  // The bypass is read from the flag and nowhere else. A previous unconditional
+  // `missingDays = []` here disabled the progress rule in EVERY environment,
+  // including production, which let any member sit a milestone interview at day
+  // one — and a milestone score only means something if everyone who holds one
+  // passed the same days first.
+  const missingDays = isDayLockBypassEnabled()
+    ? []
+    : missingDaysFor(blueprint, passedDays);
 
   if (missingDays.length > 0) {
     const scope = BLUEPRINT_SCOPE[blueprint];

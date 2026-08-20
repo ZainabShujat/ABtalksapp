@@ -10,9 +10,9 @@ import type { AskJson } from "@/features/interview/agent/llm/json-provider";
  * assembly, scoring, validation, the prompt — is pure and runs in a plain
  * script, which is what makes the report flow testable without a network.
  *
- * Provider order is availability-driven, learned the hard way: the Anthropic
- * key on this project reports a zero credit balance, so a Claude-only binding
- * silently produced a deterministic fallback narrative on every report. Groq is
+ * Provider order is availability-driven, learned the hard way on this project:
+ * the Anthropic key reports a zero credit balance, so a Claude-only binding
+ * silently produced a deterministic stub narrative on every report. Groq is
  * tried first when its key is present, Claude second.
  */
 
@@ -33,12 +33,21 @@ function extractJson(text: string): string | null {
   return null;
 }
 
+/** Milliseconds to wait after a 429, read from the body. Bounded. */
+function retryAfterMs(body: string): number {
+  const match = body.match(/try again in ([0-9.]+)s/i);
+  const seconds = match ? Number(match[1]) : NaN;
+  return Number.isFinite(seconds) ? Math.min(seconds * 1000 + 500, 65_000) : 20_000;
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const askGroq: AskJson = async ({ system, user, maxTokens }) => {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return { ok: false, message: "no GROQ_API_KEY" };
 
-  try {
-    const res = await fetch(GROQ_URL, {
+  const call = () =>
+    fetch(GROQ_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -47,6 +56,9 @@ const askGroq: AskJson = async ({ system, user, maxTokens }) => {
       body: JSON.stringify({
         model: process.env.GROQ_MODEL ?? DEFAULT_GROQ_REPORT_MODEL,
         max_tokens: maxTokens,
+        // A little warmth is wanted here — this is the only prose a candidate
+        // reads — but not enough to make two runs of the same interview
+        // describe it differently.
         temperature: 0.3,
         reasoning_effort: "low",
         messages: [
@@ -57,9 +69,29 @@ const askGroq: AskJson = async ({ system, user, maxTokens }) => {
       signal: AbortSignal.timeout(60_000),
     });
 
+  try {
+    let res = await call();
+
+    // The report is generated the instant the interview ends, which is exactly
+    // when a tokens-per-minute budget is most depleted — by the interview
+    // itself. Waiting out the window is worth it: the alternative is the
+    // candidate receiving a deterministic stub where their written assessment
+    // should be.
+    if (res.status === 429) {
+      const body = await res.text().catch(() => "");
+      logger.info("[interview-report] narrative rate-limited, waiting", {
+        waitMs: retryAfterMs(body),
+      });
+      await sleep(retryAfterMs(body));
+      res = await call();
+    }
+
     if (!res.ok) {
       const body = await res.text().catch(() => "");
-      return { ok: false, message: `Groq HTTP ${res.status}: ${body.slice(0, 200)}` };
+      return {
+        ok: false,
+        message: `Groq HTTP ${res.status}: ${body.slice(0, 200)}`,
+      };
     }
 
     const json = (await res.json()) as {
@@ -67,6 +99,7 @@ const askGroq: AskJson = async ({ system, user, maxTokens }) => {
     };
     const slice = extractJson(json.choices?.[0]?.message?.content ?? "");
     if (!slice) return { ok: false, message: "Groq returned no JSON object." };
+
     return { ok: true, data: JSON.parse(slice) };
   } catch (error) {
     return { ok: false, message: String(error) };
@@ -81,9 +114,12 @@ const askClaude: AskJson = async ({ system, user, maxTokens }) => {
 };
 
 /**
- * Tries each configured provider in turn. Falling through to the deterministic
- * narrative is still possible and still safe — it only costs prose, never a
- * score — but it should be the last resort rather than the first outcome.
+ * Tries each configured provider in turn.
+ *
+ * Falling through to the deterministic narrative is still safe — it costs prose,
+ * never a score, and the report is flagged `narrativeDegraded` so no reader
+ * mistakes terseness for a judgment. But it should be the last resort rather
+ * than the first outcome.
  */
 export const askForReport: AskJson = async (params) => {
   if (process.env.GROQ_API_KEY) {

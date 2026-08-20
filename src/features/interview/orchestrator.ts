@@ -44,6 +44,13 @@ export type TurnResult = {
   /** The question now on the floor — unchanged unless the turn moved on. */
   nextQuestion: PlannedQuestion | null;
   finished: boolean;
+  /**
+   * True when the model could not be reached and the deterministic fallback
+   * judged this answer. Carried all the way to the persisted turn row, because
+   * the report needs it to tell a genuinely weak interview apart from one the
+   * provider failed to grade.
+   */
+  degraded: boolean;
 };
 
 export type TurnOutcome =
@@ -64,15 +71,19 @@ export function beginInterview(
     return { ok: false, message: "This interview has no questions planned." };
   }
 
+  const intro = "Welcome to your AI Cohort Interview. I'll be asking you a few questions about what you've learned. Let's begin. ";
+  const firstPrompt = intro + first.text;
+
   const started = startInterview(state);
   return {
     ok: true,
     data: {
-      state: appendLine(started, "interviewer", first.text, first.id),
+      state: appendLine(started, "interviewer", firstPrompt, first.id),
       action: "NEXT_QUESTION",
-      nextPrompt: first.text,
+      nextPrompt: firstPrompt,
       nextQuestion: first,
       finished: false,
+      degraded: false,
     },
   };
 }
@@ -125,6 +136,7 @@ export async function submitAnswer(
       nextPrompt: data.prompt,
       nextQuestion,
       finished: data.finished,
+      degraded: data.degraded,
     },
   };
 }

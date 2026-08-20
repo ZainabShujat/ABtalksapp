@@ -55,6 +55,15 @@ export type QuestionScore = {
   rungsCleared: number;
   /** Answered at all — an unreached question is not a zero. */
   answered: boolean;
+  /**
+   * Whether the evaluator actually judged this answer against the checklist.
+   *
+   * False when the model was unavailable and the deterministic fallback
+   * handled the turn: the fallback records structural signals but makes no
+   * claim about which expected items an answer covered. An unjudged answer is
+   * NOT a failed answer, and must never be scored as one — see `scoreQuestion`.
+   */
+  judged: boolean;
 };
 
 /**
@@ -103,7 +112,21 @@ export function scoreQuestion(
       : 1;
 
   const answered = core !== undefined;
-  if (!answered || expected === 0) {
+
+  /**
+   * ABSENT and EMPTY differ, and conflating them produced a report that
+   * accused candidates of missing evidence their own transcript contained.
+   *
+   *   `[]`        the evaluator looked and found nothing → a real zero
+   *   `undefined` nothing judged it (provider outage) → no verdict exists
+   *
+   * An unjudged answer keeps a score of 0 as a placeholder but carries
+   * `judged: false`, and every aggregate excludes it rather than averaging in
+   * a failure that was never established.
+   */
+  const judged = answered && core?.matchedEvidence !== undefined;
+
+  if (!answered || !judged || expected === 0) {
     return {
       questionId: question.id,
       competency: question.competency,
@@ -117,6 +140,7 @@ export function scoreQuestion(
       depthReached,
       rungsCleared,
       answered,
+      judged: judged && expected > 0,
     };
   }
 
@@ -147,6 +171,7 @@ export function scoreQuestion(
     depthReached,
     rungsCleared,
     answered,
+    judged: true,
   };
 }
 
@@ -210,7 +235,10 @@ export function scoreModules(
 
   return modulesTouchedByScope.map((mod) => {
     const forModule = coreScores.filter((s) => s.moduleNumbers.includes(mod.number));
-    const answered = forModule.filter((s) => s.answered);
+    // Only JUDGED answers may move a module score. A question the evaluator
+    // never assessed leaves the module unassessed rather than dragging it to
+    // zero — the same rule that already applies to a question never reached.
+    const answered = forModule.filter((s) => s.answered && s.judged);
 
     if (forModule.length === 0 || answered.length === 0) {
       return {
@@ -226,7 +254,9 @@ export function scoreModules(
         note:
           forModule.length === 0
             ? "Not assessed — this milestone asks no question drawn from this module."
-            : "Not assessed — the questions from this module were not reached.",
+            : forModule.some((s) => s.answered)
+              ? "Not assessed — the evaluator was unavailable for these answers."
+              : "Not assessed — the questions from this module were not reached.",
       };
     }
 

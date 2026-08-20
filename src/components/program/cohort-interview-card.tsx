@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type {
@@ -45,50 +46,64 @@ function MilestoneRow({
   const remaining = state.missingDays.length;
 
   return (
-    <div className="min-w-0 flex-1">
-      <h3 className="text-sm font-semibold text-ink-100 md:text-[15px]">
-        {title}
-      </h3>
+    <div className="min-w-0 flex-1 flex gap-4 justify-between items-start">
+      <div className="flex-1">
+        <h3 className="text-sm font-semibold text-ink-100 md:text-[15px]">
+          {title}
+        </h3>
 
-      {state.taken ? (
-        <>
-          <p className="mt-1 text-sm text-ink-200 md:text-[15px]">
-            {state.score !== null
-              ? `Completed — ${state.score}/100 overall.`
-              : "Completed. Your result is being scored."}
-          </p>
-          <div className="mt-3">
-            <span className={completedBadge}>Completed</span>
-          </div>
-          <div className="mt-3">
-            <Link href={`${href}/report`} className={cn(figmaBtn)}>
-              View report →
-            </Link>
-          </div>
-        </>
-      ) : state.unlocked ? (
-        <>
-          <p className="mt-1 text-sm text-ink-200 md:text-[15px]">{blurb}</p>
-          <div className="mt-3">
-            <span className={availableBadge}>
-              {state.inProgressId ? "In progress" : "Available"}
-            </span>
-          </div>
-          <div className="mt-3">
-            <Link href={href} className={cn(figmaBtn)}>
-              {state.inProgressId ? "Resume Interview" : "Take Interview"} →
-            </Link>
-          </div>
-        </>
-      ) : (
-        <>
-          <p className="mt-1 text-sm text-ink-200 md:text-[15px]">{blurb}</p>
-          <div className="mt-3">
-            <span className={lockedBadge}>
-              {remaining} {remaining === 1 ? "day" : "days"} to go
-            </span>
-          </div>
-        </>
+        {state.taken ? (
+          <>
+            <p className="mt-1 text-sm text-ink-200 md:text-[15px]">
+              {state.score !== null
+                ? `Completed — ${state.score}/100 overall.`
+                : "Completed. Your result is being scored."}
+            </p>
+            <div className="mt-3">
+              <span className={completedBadge}>Completed</span>
+            </div>
+            <div className="mt-3">
+              <Link href={`${href}/report`} className={cn(figmaBtn)}>
+                View report →
+              </Link>
+            </div>
+          </>
+        ) : state.unlocked ? (
+          <>
+            <p className="mt-1 text-sm text-ink-200 md:text-[15px]">{blurb}</p>
+            <div className="mt-3">
+              <span className={availableBadge}>
+                {state.inProgressId ? "In progress" : "Available"}
+              </span>
+            </div>
+            <div className="mt-3">
+              <Link href={href} className={cn(figmaBtn)}>
+                {state.inProgressId ? "Resume Interview" : "Take Interview"} →
+              </Link>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="mt-1 text-sm text-ink-200 md:text-[15px]">{blurb}</p>
+            <div className="mt-3">
+              <span className={lockedBadge}>
+                {remaining} {remaining === 1 ? "day" : "days"} to go
+              </span>
+            </div>
+          </>
+        )}
+      </div>
+
+      {!state.taken && !state.unlocked && (
+        <div className="relative size-[64px] shrink-0 opacity-80 sm:size-[72px]">
+          <Image
+            src="/program/interview-key.png"
+            alt="Locked"
+            fill
+            className="object-contain"
+            sizes="72px"
+          />
+        </div>
       )}
     </div>
   );
@@ -110,7 +125,7 @@ export function CohortInterviewCard({ state }: Props) {
           <Sparkles className="size-3.5 md:size-4" strokeWidth={2.25} />
         </span>
         <h2 className="text-base font-semibold text-accent-700 md:text-lg">
-          AI Interview
+          AI Voice Interview
         </h2>
       </div>
 
