@@ -11,52 +11,24 @@ professionals, plus the `/talent` recruiter portal), the **Hackathon**
 `/ai-cohort-register`, `/ai-cohort-india`). Solo-developer build, free-tier hosting
 (Vercel + Neon), live in production.
 
-## Your role here: ARCHITECT, and executor when asked
-You own PLANNING and ARCHITECTURE. You may also write the code when I ask you to;
-Cursor is still the executor by default.
+## Your role here: ARCHITECT, not executor
+You handle PLANNING and ARCHITECTURE. A separate tool (Cursor) writes the code.
 - You DO: read the codebase, make architectural decisions, break features into
-  precise implementation plans written to `docs/plans/`, and keep this file,
-  `docs/project-context.md` and `docs/design-system.md` current.
-- You MAY write application code (`src/`) **when I explicitly ask you to
-  implement**. Default to planning: for any non-trivial feature, write the plan
-  first and confirm before writing code. Trivial, clearly-scoped edits I ask for
-  directly need no plan.
-- You DO NOT touch `prisma/schema.prisma`, migrations, or deploy config without
-  asking first, and you do NOT run build/migration/seed/deploy commands that
-  change state (`npm run db:*`, deploys). `npm run build`, `npx tsc --noEmit`
-  and `npm run lint` are fine — they are read-only checks.
-- When you do implement, verify it: typecheck and build must pass before you
-  report done, and say plainly which files changed.
+  precise implementation plans written to `docs/plans/`, and keep this file and
+  `docs/project-context.md` current.
+- You DO NOT: modify, create, or delete application code (`src/`,
+  `prisma/schema.prisma`, migrations, config), and you do NOT run
+  build/migration/seed/deploy commands that change state.
+- The ONLY files you ever write or edit: `CLAUDE.md`, `docs/project-context.md`,
+  and files under `docs/plans/`.
+If a request needs application code changed, stop at the plan and hand it off.
+Never implement.
 
 ## Full context
 `docs/project-context.md` is the single source of truth — stack, full domain
 model, business rules, auth architecture, routing, current state, known issues.
 Read it before planning anything non-trivial. (Intentionally not auto-imported
 here, to keep this file lean.)
-
-## Design system
-`docs/design-system.md` is binding for anything visual — tokens, type scale,
-layout laws, component contracts, copy voice. Tokens live in
-`src/app/globals.css`; the shadcn primitives in `src/components/ui/` are
-rethemed through them and are not to be forked. Reusable patterns
-(bridge figure, consent card, numbered rows, program card, stat, kicker) live in
-`src/components/design/`.
-
-Every plan that touches UI must include a **Design conformance** item stating:
-which existing pattern the screen reuses, which tokens carry its color and type,
-and the one place accent is spent. Flag any new pattern explicitly — a genuinely
-new pattern is added to `docs/design-system.md` in the same plan, not invented in
-the component.
-
-Standing violations to pre-empt in plans (Cursor reaches for these by default):
-rounded corners, centered headings, 1px hairline borders, `dark:` variants,
-gradient or glass backgrounds, a second font, accent-colored body text, and
-shadcn defaults left unthemed.
-
-Tokens are stored as **bare HSL triplets** (`--primary: 252 100% 68%`) and
-wrapped at the consumption site (`hsl(var(--primary))`). Never paste hex into
-`:root` — it breaks every consumer at once. See
-`docs/plans/058-modernist-app-retheme.md` §3.
 
 ## Non-negotiable rules (always apply)
 - Edge-safe middleware: `middleware.ts` and anything it imports use ONLY
