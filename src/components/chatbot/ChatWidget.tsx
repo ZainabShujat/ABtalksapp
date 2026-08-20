@@ -72,38 +72,12 @@ export function ChatWidget() {
   const hydrated = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Initialize and hydrate from localStorage
+  // Initialize
   useEffect(() => {
     if (hydrated.current) return;
     hydrated.current = true;
-    try {
-      const saved = localStorage.getItem(SESSION_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as Record<string, Session>;
-        setSessions(parsed);
-        const sortedIds = Object.keys(parsed).sort((a, b) => parsed[b].updatedAt - parsed[a].updatedAt);
-        if (sortedIds.length > 0) {
-          setCurrentSessionId(sortedIds[0]); // Load most recent session
-        } else {
-          startNewSession();
-        }
-      } else {
-        startNewSession();
-      }
-    } catch {
-      startNewSession();
-    }
+    startNewSession();
   }, []);
-
-  // Persist on change
-  useEffect(() => {
-    if (!hydrated.current) return;
-    try {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(sessions));
-    } catch (e) {
-      console.warn("localStorage unavailable for chat sessions", e);
-    }
-  }, [sessions]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });

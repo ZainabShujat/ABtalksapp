@@ -1,6 +1,6 @@
 # Programs
 
-ABTalks programs are built around shipping real work in public: daily or timed builds, documented via GitHub and LinkedIn, that create a public proof-of-work trail (see `abtalks.md`).
+ABTalks programs are built around shipping real work in public: daily or timed builds, documented via verified proof-of-work trails (see `abtalks.md`). Rules for submission, GitHub, or LinkedIn vary by specific program.
 
 ## Program index
 
