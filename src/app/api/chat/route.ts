@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { matchQuestion } from "@/lib/chatbot-matcher";
 
 const KB_DIR = path.join(process.cwd(), 'knowledge', 'processed');
 
@@ -126,6 +127,26 @@ function scoreQuery(queryTokens: string[], chunk: ProcessedChunk, idf: Record<st
 const FALLBACK_MESSAGE =
   "I couldn't find a direct answer to that in my knowledge base. Please reach out to team@abtalks.in.";
 
+const OUT_OF_SCOPE_RE =
+  /\b(accommodation|hostel|lodging|travel (allowance|reimbursement)|visa|stipend amount|salary|placement guarantee|job guarantee|revenue|funding|investor|valuation)\b/i;
+const OUT_OF_SCOPE_REPLY =
+  "I don't have reliable information about that in the ABTalks knowledge base. You can contact the ABTalks team directly at team@abtalks.in.";
+
+const CRISIS_RE =
+  /\b(suicid\w*|kill myself|end (my life|it all)|want (to )?end it\b|self[\s-]?harm|hurt myself|want to die|don'?t want to (live|be alive)|no reason to live|no point (in )?living)\b/i;
+const CRISIS_REPLY =
+  "I'm really sorry you're going through this — please know you don't have to handle it alone. If you're in India, you can reach iCall at 9152987821 or the Vandrevala Foundation at 1860-2662-345, both free and confidential, right now. If you're outside India, please contact your local emergency services or a crisis line where you are. You're also welcome to email team@abtalks.in — but please reach out to one of the helplines above first.";
+
+const HARASSMENT_ESCALATION_RE =
+  /\b(harass\w*|doxx\w*|being threatened|threat(en(ed|ing))? (me|us)|blackmail\w*|being bullied|is impersonating|fake (admin|staff)|sue (you|abtalks)|legal action against (you|abtalks)|report (someone|a participant|abuse)|being stalked)\b/i;
+const HARASSMENT_ESCALATION_REPLY =
+  "I'm sorry to hear that — this isn't something I can resolve here, but it's exactly the kind of thing the ABTalks team handles directly and seriously. Please email team@abtalks.in with as much detail as you're comfortable sharing (screenshots help), and they'll follow up with you personally.";
+
+const SCAM_RE =
+  /\b(ask(ed|ing)? (me )?for (payment|money) to (unlock|access|release|activate)|pay to (unlock|get) (my |the )?certificate|asked me to pay|wants? money to (verify|release))\b/i;
+const SCAM_REPLY =
+  "That's not legitimate — ABTalks never asks for payment to unlock a certificate, verify your account, or access program benefits. Every ABTalks program is free to participate in. Please don't send any money, and forward the message to team@abtalks.in so the team can look into it.";
+
 const SYSTEM_PROMPT = `You are the ABTalks Help Assistant.
 Your primary role is to answer questions about ABTalks using ONLY the provided context.
 - Always mention that ABTalks is an online community when introducing it.
@@ -139,6 +160,13 @@ Your primary role is to answer questions about ABTalks using ONLY the provided c
 - If a user's question is ambiguous (e.g., "How do I join?"), briefly explain the options (e.g., Hackathon, AI Cohort) and ask them which one they mean.
 - Do not repeat the prompt or context in your response.`;
 
+function sseTextResponse(text: string): Response {
+  return new Response(
+    `data: {"type":"content_block_delta","delta":{"text":${JSON.stringify(text)}}}\n\ndata: {"type":"message_stop"}\n\n`,
+    { headers: { 'Content-Type': 'text/event-stream' } }
+  );
+}
+
 export async function POST(req: Request) {
   try {
     const { messages } = await req.json();
@@ -150,6 +178,17 @@ export async function POST(req: Request) {
     if (lastMessage.role !== 'user') {
       return new Response(JSON.stringify({ error: 'Last message must be from user' }), { status: 400 });
     }
+
+    const trimmedLast = lastMessage.content.trim();
+    const exactMatch = matchQuestion(trimmedLast);
+    if (exactMatch) {
+      return sseTextResponse(exactMatch.answer);
+    }
+    
+    if (CRISIS_RE.test(trimmedLast)) return sseTextResponse(CRISIS_REPLY);
+    if (HARASSMENT_ESCALATION_RE.test(trimmedLast)) return sseTextResponse(HARASSMENT_ESCALATION_REPLY);
+    if (SCAM_RE.test(trimmedLast)) return sseTextResponse(SCAM_REPLY);
+    if (OUT_OF_SCOPE_RE.test(trimmedLast)) return sseTextResponse(OUT_OF_SCOPE_REPLY);
 
     let searchQuery = lastMessage.content;
     if (messages.length > 2) {
