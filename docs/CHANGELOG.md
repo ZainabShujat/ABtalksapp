@@ -36,6 +36,7 @@
 - 2026-08-10 — `/` now renders the landing hub for signed-in users too (no more redirect to /dashboard); track cards show "Open dashboard" per-track via `features/landing/get-landing-state.ts`; `/login` bounces signed-in users to `/` instead of `/dashboard`.
 
 ## Pending reconcile
+- 2026-08-20 [schema] Plan 078 Phase 1: additive learning/talent tables (CandidateProfile, Cohort, Activity, Credential, PointsAccount, …), User.deletedAt/anonymizedAt, Certificate/SynergyEvent/shortlist onDelete Restrict, actor FKs SetNull; applied only on Neon child plan-078-phase1
 - 2026-08-20 [convention] Landing page rebuilt from the final static build as `src/components/landing/site/` (page-scoped `--lp-*` CSS, shared ScrollEngine, contact form emails team@abtalks.in); previous hub landing retired
 - 2026-08-20 [convention] Landing hub from dev on feature/student-dashboard: selective checkout of hub UI/assets plus local font vars in root layout while keeping NotificationProvider and dashboard jakarta/fredoka tokens
 - 2026-08-20 [rule] Multi-enrollment routing is now status-aware: explicit track ids render that track at any status, ABANDONED blocks only its own re-join path, dashboard join/continue cards and streaks ignore ABANDONED rows, Claude dashboard join now enrolls via server action, and /program/apply legacy in-progress states render a terminal card instead of self-redirecting

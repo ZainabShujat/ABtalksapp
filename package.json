@@ -21,6 +21,7 @@
     "db:seed:hackathon-links": "tsx prisma/seed-hackathon-links.ts",
     "db:seed:hackathon-problems": "tsx prisma/seed-hackathon-problems.ts",
     "db:seed:colleges": "tsx prisma/seed-colleges.ts",
+    "db:seed:platform-taxonomy": "tsx prisma/seed-platform-taxonomy.ts",
     "db:cleanup": "tsx prisma/cleanup.ts test",
     "db:cleanup:test": "tsx prisma/cleanup.ts test",
     "db:cleanup:real": "tsx prisma/cleanup.ts real",
