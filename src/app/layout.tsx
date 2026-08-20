@@ -31,13 +31,7 @@ export const metadata: Metadata = {
   description: "Build your coding habit. Get discovered.",
 };
 
-const fontVars = [
-  archivo.variable,
-  hubSans.variable,
-  hubSerif.variable,
-  hubDisplay.variable,
-  hubQuote.variable,
-].join(" ");
+
 
 export default function RootLayout({
   children,
