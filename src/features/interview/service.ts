@@ -180,7 +180,7 @@ export async function startCohortInterview(
       interviewId: attempt.id,
       blueprint,
       question: toClientQuestion(firstQuestion, blueprint),
-      prompt: opened.data.nextPrompt,
+      prompt: opened.data.nextPrompt ?? undefined,
       resumed: false,
       durationSec: COHORT_INTERVIEW_DURATION_SEC,
     },
