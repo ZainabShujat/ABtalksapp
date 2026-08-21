@@ -438,21 +438,39 @@ async function migrate2a(ctx: StepContext) {
   }
 
   let eduCreated = 0;
-  await chunked(educationRows, 100, async (chunk) => {
-    const result = await ctx.prisma.candidateEducation.createMany({
-      data: chunk,
-      skipDuplicates: true,
-    });
-    eduCreated += result.count;
+  await chunked(educationRows, 50, async (chunk) => {
+    for (const row of chunk) {
+      await ctx.prisma.candidateEducation.upsert({
+        where: { id: row.id },
+        create: row,
+        update: {
+          institutionName: row.institutionName,
+          collegeId: row.collegeId,
+          degree: row.degree,
+          graduationYear: row.graduationYear,
+          sortOrder: row.sortOrder,
+        },
+      });
+      eduCreated += 1;
+    }
   });
 
   let expCreated = 0;
-  await chunked(experienceRows, 100, async (chunk) => {
-    const result = await ctx.prisma.candidateExperience.createMany({
-      data: chunk,
-      skipDuplicates: true,
-    });
-    expCreated += result.count;
+  await chunked(experienceRows, 50, async (chunk) => {
+    for (const row of chunk) {
+      await ctx.prisma.candidateExperience.upsert({
+        where: { id: row.id },
+        create: row,
+        update: {
+          companyName: row.companyName,
+          title: row.title,
+          startedOn: row.startedOn,
+          isCurrent: row.isCurrent,
+          totalMonths: row.totalMonths,
+        },
+      });
+      expCreated += 1;
+    }
   });
 
   const skillRows: Array<{ userId: string; skillId: string }> = [];

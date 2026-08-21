@@ -36,6 +36,9 @@
 - 2026-08-10 — `/` now renders the landing hub for signed-in users too (no more redirect to /dashboard); track cards show "Open dashboard" per-track via `features/landing/get-landing-state.ts`; `/login` bounces signed-in users to `/` instead of `/dashboard`.
 
 ## Pending reconcile
+- 2026-08-21 [convention] Plan 078 full rehearsal targets a new Neon child from latest production (plan-078-rehearsal); plan-078-phase1 stays sample-only; ENABLE_NEW_* off until two clean unscoped Phase 5 passes; production rollout is schema → dual-write → online backfill → freeze → delta → verify → reopen → ENABLE_NEW_* → Phase 7 → observe → Phase 8
+- 2026-08-21 [convention] Plan 078: plan-078-phase1 sample validation is sufficient; do not full-backfill that child or start Phase 6; fresh-from-prod child is the unscoped Phase 1–5 rehearsal and Phase 6 gate
+- 2026-08-21 [convention] Plan 078 sample validation: Phase 5 scoped to backfilled users; Phase 2 upserts mutable rows for catch-up; dual-write probe on child only; ENABLE_DUAL_WRITE stays default-off; rollout sequence in docs/plans/078-sample-validation-and-rollout.md
 - 2026-08-21 [env|convention] Plan 078 Phase 4: ENABLE_DUAL_WRITE (default off) dual-writes submitDay, verifyMission, points award/spend, and enrollment creation; new-write failures log and do not fail the request; drift via /api/cron/078-drift and db:check:078:drift
 - 2026-08-21 [convention] Plan 078 Phase 3: src/repositories with final signatures reading legacy tables; ENABLE_NEW_* flags default off; StudentProfile/ProgramMember prisma calls moved behind repositories/legacy
 - 2026-08-20 [env] PHASE2_SAMPLE=1 runs 078 Phase 2 against a representative user slice (full learning catalog); V1–V7 scoped to that slice

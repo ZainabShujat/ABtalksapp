@@ -1,4 +1,3 @@
-import "server-only";
 import type { Prisma } from "@prisma/client";
 import {
   AttemptLateness,
@@ -35,6 +34,9 @@ export async function runDualWrite(
   fn: () => Promise<void>,
 ): Promise<void> {
   if (!isDualWriteEnabled()) return;
+  // SAVEPOINT needs a session that supports interactive transactions.
+  // Neon transaction-mode pooler can drop the tx; app call sites already set
+  // maxWait/timeout. Probe with the direct (non-pooler) child URL.
   const sp = savepointName(label);
   try {
     await tx.$executeRawUnsafe(`SAVEPOINT ${sp}`);

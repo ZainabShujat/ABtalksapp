@@ -13,13 +13,13 @@ function withSocketTimeout(url: string | undefined): string | undefined {
   try {
     const parsed = new URL(url);
     if (!parsed.searchParams.has("connect_timeout")) {
-      parsed.searchParams.set("connect_timeout", "15");
+      parsed.searchParams.set("connect_timeout", "30");
     }
     if (!parsed.searchParams.has("socket_timeout")) {
-      parsed.searchParams.set("socket_timeout", "60");
+      parsed.searchParams.set("socket_timeout", "180");
     }
     if (!parsed.searchParams.has("pool_timeout")) {
-      parsed.searchParams.set("pool_timeout", "20");
+      parsed.searchParams.set("pool_timeout", "30");
     }
     return parsed.toString();
   } catch {
@@ -61,6 +61,11 @@ async function main() {
   if (process.env.PHASE2_SAMPLE === "1") {
     console.log("Phase 2 SAMPLE mode: representative users only (full learning catalog).");
   }
+  const { assertChildBranch, assertNotSampleChildForFullRun } = await import(
+    "./migrate-078-shared"
+  );
+  assertChildBranch();
+  assertNotSampleChildForFullRun();
   const only = process.argv[2];
   const files = only ? STEPS.filter((s) => s.includes(only)) : STEPS;
   if (files.length === 0) throw new Error(`No step matched ${only}`);

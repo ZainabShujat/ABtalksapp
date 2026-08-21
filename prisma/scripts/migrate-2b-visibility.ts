@@ -72,13 +72,25 @@ async function main() {
       optedIn += chunk.length;
     });
 
-    const closed = await ctx.prisma.candidateVisibility.updateMany({
-      where: {
-        searchableByRecruiters: true,
-        userId: { notIn: [...consentByUser.keys()] },
-      },
-      data: { searchableByRecruiters: false, consentSource: null, consentedAt: null },
-    });
+    const closeIds = sample
+      ? sample.filter((id) => !consentByUser.has(id))
+      : null;
+    const closed =
+      closeIds && closeIds.length === 0
+        ? { count: 0 }
+        : await ctx.prisma.candidateVisibility.updateMany({
+            where: {
+              searchableByRecruiters: true,
+              userId: closeIds
+                ? { in: closeIds }
+                : { notIn: [...consentByUser.keys()] },
+            },
+            data: {
+              searchableByRecruiters: false,
+              consentSource: null,
+              consentedAt: null,
+            },
+          });
 
     return {
       users: users.length,

@@ -98,6 +98,7 @@ async function main() {
     });
     const ledger = await ctx.prisma.pointsTransaction.groupBy({
       by: ["userId"],
+      where: sample ? { userId: { in: sample } } : undefined,
       _sum: { amount: true },
     });
     const ledgerByUser = new Map(ledger.map((l) => [l.userId, l._sum.amount ?? 0]));

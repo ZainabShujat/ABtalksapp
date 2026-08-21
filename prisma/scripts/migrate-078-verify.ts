@@ -6,6 +6,7 @@ import { PrismaClient } from "@prisma/client";
 import {
   assertChildBranch,
   isSampleMode,
+  reportSampleCoverage,
   resolveSampleUserIds,
   SAMPLE_DAY_CAP,
   sqlIn,
@@ -30,7 +31,16 @@ async function main() {
   const sample = await resolveSampleUserIds(prisma);
   if (isSampleMode()) {
     console.log(`Verification scoped to ${sample?.length ?? 0} sample users`);
+    if (sample) await reportSampleCoverage(prisma, sample);
   }
+  const samplePe = sample
+    ? `pe."userId" IN (${sample.map((id) => `'${id.replace(/'/g, "''")}'`).join(", ")})`
+    : "TRUE";
+  const sampleAttemptEnr = sample
+    ? `(a."enrollmentId" IN (SELECT id FROM "ProgramEnrollment" pe WHERE ${samplePe})
+        OR a."enrollmentId" IN (SELECT 'pe_enr_' || e.id FROM "Enrollment" e WHERE ${sqlIn('e."userId"', sample)})
+        OR a."enrollmentId" IN (SELECT 'pe_pm_' || m.id FROM "ProgramMember" m WHERE ${sqlIn('m."userId"', sample)}))`
+    : "TRUE";
   const v1 = await count(
     "V1 missing enrollments",
     `SELECT e.id FROM "Enrollment" e
@@ -85,11 +95,21 @@ async function main() {
       LEFT JOIN "CandidateProfile" cp ON cp."userId" = sp."userId"
      WHERE cp.id IS NULL AND ${sqlIn('sp."userId"', sample)}`,
   );
+  const v4b = await count(
+    "V4b visibility count (sample-scoped)",
+    `SELECT 1 WHERE (
+       (SELECT COUNT(*) FROM "CandidateVisibility" v
+         WHERE v."searchableByRecruiters" = true AND ${sqlIn('v."userId"', sample)})
+       <>
+       (SELECT COUNT(DISTINCT m."userId") FROM "ProgramMember" m
+         WHERE m."recruiterVisibilityConsentAt" IS NOT NULL AND ${sqlIn('m."userId"', sample)})
+     )`,
+  );
   const v8 = await count(
     "V8 orphan attempts",
     `SELECT a.id FROM "ActivityAttempt" a
       LEFT JOIN "ProgramEnrollment" pe ON pe.id = a."enrollmentId"
-     WHERE pe.id IS NULL`,
+     WHERE pe.id IS NULL AND ${sampleAttemptEnr}`,
   );
   const v9 = await count(
     "V9 version mismatch",
@@ -98,15 +118,18 @@ async function main() {
       JOIN "Module" m     ON m.id  = act."moduleId"
       JOIN "ProgramEnrollment" pe ON pe.id = a."enrollmentId"
       JOIN "Cohort" c     ON c.id  = pe."cohortId"
-     WHERE m."programVersionId" <> c."programVersionId"`,
+     WHERE m."programVersionId" <> c."programVersionId"
+       AND ${sqlIn('pe."userId"', sample)}`,
   );
   const v10 = await count(
     "V10 progress overflow",
     `SELECT ep.id FROM "EnrollmentProgress" ep
-     WHERE ep."completedActivities" > ep."totalActivities" OR ep."percentCompleteBp" > 10000`,
+      JOIN "ProgramEnrollment" pe ON pe.id = ep."enrollmentId"
+     WHERE (ep."completedActivities" > ep."totalActivities" OR ep."percentCompleteBp" > 10000)
+       AND ${sqlIn('pe."userId"', sample)}`,
   );
 
-  const failed = { v1, v2, v3, v4, v5, v6, v7, v8, v9, v10 };
+  const failed = { v1, v2, v3, v4, v4b, v5, v6, v7, v8, v9, v10 };
   const bad = Object.entries(failed).filter(([, n]) => n > 0);
   if (bad.length > 0) {
     throw new Error(`Verification failed: ${JSON.stringify(Object.fromEntries(bad))}`);
