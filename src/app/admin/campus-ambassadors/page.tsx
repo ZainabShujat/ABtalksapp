@@ -60,7 +60,16 @@ export default async function CampusAmbassadorsPage({
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {candidates.length} student{candidates.length !== 1 ? "s" : ""}{" "}
-            interested in being a campus ambassador
+            interested in being a campus ambassador. New ambassadors enroll at{" "}
+            <a
+              href="https://abtalksca.netlify.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              abtalksca.netlify.app
+            </a>
+            ; this list is students who opted in from the dashboard.
           </p>
         </div>
 
