@@ -85,11 +85,16 @@ export function createGroqInterviewLLM(
             // Zero temperature: two candidates giving the same answer must get
             // the same evidence read, or the interview stops being comparable.
             temperature: 0,
-            // This model reasons before answering, and those tokens count
-            // against a tokens-per-minute budget a 25-turn interview can
-            // exhaust. The task is extraction against a supplied checklist,
-            // not open reasoning, so low effort costs nothing that matters.
-            reasoning_effort: "low",
+            // gpt-oss reasons before answering and those tokens count against
+            // a per-minute budget a long interview can exhaust; the task is
+            // extraction against a supplied checklist, so low effort costs
+            // nothing that matters.
+            //
+            // Sent ONLY for models that accept it. qwen rejects the value
+            // outright ("must be one of `none` or `default`"), which made every
+            // call 400 and silently routed the whole interview to the keyword
+            // fallback — a provider-shaped outage that looked like a bad model.
+            ...(model.includes("gpt-oss") ? { reasoning_effort: "low" } : {}),
             ...(strictJson ? { response_format: { type: "json_object" } } : {}),
             messages: [
               { role: "system", content: system },
