@@ -18,6 +18,7 @@ import {
 } from "@/features/program/progression";
 import { askClaudeJson } from "@/lib/anthropic";
 import { generateProgramJoinCode } from "@/lib/program-auth";
+import { programMember } from "@/repositories/legacy/program-member";
 
 export type CohortOverview = {
   cohort: {
@@ -350,12 +351,12 @@ export async function getCohortOverview(
 
   const [statusCounts, members, modules, submissions, commitRows, atRisk] =
     await Promise.all([
-      prisma.programMember.groupBy({
+      programMember.groupBy({
         by: ["status"],
         where: { cohortId },
         _count: { id: true },
       }),
-      prisma.programMember.findMany({
+      programMember.findMany({
         where: {
           cohortId,
           status: { in: ["ENROLLED", "COMPLETED"] },
@@ -557,7 +558,7 @@ export async function getCohortMembers(
 
   const q = filters.q?.trim();
 
-  const members = await prisma.programMember.findMany({
+  const members = await programMember.findMany({
     where: {
       cohortId,
       ...(filters.status ? { status: filters.status } : {}),
@@ -650,7 +651,7 @@ export async function promoteWaitlisted(
   adminId: string,
   memberId: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const member = await prisma.programMember.findUnique({
+  const member = await programMember.findUnique({
     where: { id: memberId },
     select: {
       id: true,
@@ -701,7 +702,7 @@ export async function dropMember(
   memberId: string,
   reason: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const member = await prisma.programMember.findUnique({
+  const member = await programMember.findUnique({
     where: { id: memberId },
     select: { id: true, userId: true, status: true },
   });
@@ -738,7 +739,7 @@ export async function adminUnlockDay(
     return { ok: false, message: `Day must be 1–${PROGRAM_TOTAL_DAYS}.` };
   }
 
-  const member = await prisma.programMember.findUnique({
+  const member = await programMember.findUnique({
     where: { id: memberId },
     select: { id: true, userId: true, highestUnlockedDay: true },
   });
@@ -780,7 +781,7 @@ export async function grantSkipToken(
   memberId: string,
   reason: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const member = await prisma.programMember.findUnique({
+  const member = await programMember.findUnique({
     where: { id: memberId },
     select: { id: true, userId: true, skipTokensUsed: true },
   });
@@ -811,7 +812,7 @@ export async function regenerateMemberRecommendation(
   adminId: string,
   memberId: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const member = await prisma.programMember.findUnique({
+  const member = await programMember.findUnique({
     where: { id: memberId },
     select: {
       id: true,
@@ -880,7 +881,7 @@ export async function regenerateMemberRecommendation(
 }
 
 export async function getMemberAdminDetail(memberId: string) {
-  const member = await prisma.programMember.findUnique({
+  const member = await programMember.findUnique({
     where: { id: memberId },
     select: {
       id: true,

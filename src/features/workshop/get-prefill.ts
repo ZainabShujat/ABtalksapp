@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { studentProfile } from "@/repositories/legacy/student-profile";
 
 export interface WorkshopPrefill {
   name: string | null;
@@ -33,7 +34,7 @@ export async function getWorkshopPrefill(
   };
 
   try {
-    const profile = await prisma.studentProfile.findUnique({
+    const profile = await studentProfile.findUnique({
       where: { userId },
       select: {
         fullName: true,

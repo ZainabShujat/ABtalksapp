@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { RegistrationForm } from "./registration-form";
+import { studentProfile } from "@/repositories/legacy/student-profile";
 
 type PageProps = {
   searchParams: Promise<{ ref?: string; domain?: string }>;
@@ -39,7 +40,7 @@ export default async function RegisterPage({ searchParams }: PageProps) {
     redirect("/api/auth/signout?callbackUrl=/login");
   }
 
-  const profile = await prisma.studentProfile.findUnique({
+  const profile = await studentProfile.findUnique({
     where: { userId: session.user.id },
     select: { id: true },
   });
@@ -78,7 +79,7 @@ export default async function RegisterPage({ searchParams }: PageProps) {
   }
 
   if (profile && enrollmentCount === 0) {
-    await prisma.studentProfile.delete({
+    await studentProfile.delete({
       where: { userId: session.user.id },
     });
   }

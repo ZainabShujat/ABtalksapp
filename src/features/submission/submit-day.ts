@@ -14,6 +14,7 @@ import { validateLinkedinUrl } from "./validate-linkedin-url";
 import { computeStreakStats } from "./streak-utils";
 import { resolveChallengeEnrollment } from "@/features/enrollment/resolve-dashboard-enrollment";
 import { awardSubmissionSynergy } from "@/features/synergy/award-submission-synergy";
+import { dualWriteSubmissionAttempt } from "@/repositories/dual-write";
 
 /**
  * Relaxation window: today + previous 4 days = 5 calendar days total.
@@ -239,6 +240,17 @@ export async function submitDay(input: {
           },
         });
       }
+
+      await dualWriteSubmissionAttempt(tx, {
+        id: submission.id,
+        enrollmentId: enrollment.id,
+        dailyTaskId: task.id,
+        githubUrl: githubNormalized,
+        linkedinUrl: linkedinStored,
+        status: newStatus,
+        submittedAt: submission.submittedAt,
+        pointsAwarded: synergyAwarded ?? 0,
+      });
 
       const daysCompleted = await tx.submission.count({
         where: { enrollmentId: enrollment.id },

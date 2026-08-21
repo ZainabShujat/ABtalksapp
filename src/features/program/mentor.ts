@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { askClaudeJson } from "@/lib/anthropic";
 import { isCohortFrozen } from "@/features/program/progression";
+import { programMember } from "@/repositories/legacy/program-member";
 
 const MAX_PAYLOAD_CHARS = 8000;
 
@@ -32,7 +33,7 @@ export async function reviewMission(
   | { ok: true; feedback: string }
   | { ok: false; message: string }
 > {
-  const member = await prisma.programMember.findUnique({
+  const member = await programMember.findUnique({
     where: { id: memberId },
     select: { cohort: { select: { endsAt: true } } },
   });

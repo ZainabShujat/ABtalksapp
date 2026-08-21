@@ -1,9 +1,5 @@
-import { prisma } from "@/lib/db";
+import { getBalance } from "@/repositories/points";
 
 export async function getMySynergy(userId: string): Promise<number> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { synergyPoints: true },
-  });
-  return user?.synergyPoints ?? 0;
+  return getBalance(userId);
 }

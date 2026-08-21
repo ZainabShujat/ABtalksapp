@@ -1,5 +1,6 @@
 import { EnrollmentStatus, type UserType } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { studentProfile } from "@/repositories/legacy/student-profile";
 
 export type PublicProfile = {
   fullName: string;
@@ -32,7 +33,7 @@ type ProfileDomainEnrollment = {
 async function resolvePublicProfileEnrollment(
   userId: string,
 ): Promise<ProfileDomainEnrollment | null> {
-  const profile = await prisma.studentProfile.findUnique({
+  const profile = await studentProfile.findUnique({
     where: { userId },
     select: { domain: true },
   });

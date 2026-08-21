@@ -60,3 +60,28 @@ export function isHackathonPreviewEnabled(): boolean {
 export function isChatbotEnabled(): boolean {
   return process.env.ENABLE_CHATBOT === "true";
 }
+
+/** Plan 078 Phase 6 switches. Phase 3 keeps all of these false (legacy reads). */
+export function isNewCandidateRepoEnabled(): boolean {
+  return process.env.ENABLE_NEW_CANDIDATE === "true";
+}
+export function isNewLearningRepoEnabled(): boolean {
+  return process.env.ENABLE_NEW_LEARNING === "true";
+}
+export function isNewProgressRepoEnabled(): boolean {
+  return process.env.ENABLE_NEW_PROGRESS === "true";
+}
+export function isNewTalentRepoEnabled(): boolean {
+  return process.env.ENABLE_NEW_TALENT === "true";
+}
+export function isNewPointsRepoEnabled(): boolean {
+  return process.env.ENABLE_NEW_POINTS === "true";
+}
+export function isNewCredentialRepoEnabled(): boolean {
+  return process.env.ENABLE_NEW_CREDENTIAL === "true";
+}
+
+/** Plan 078 Phase 4. Off = skip new-table writes; legacy stays authoritative. */
+export function isDualWriteEnabled(): boolean {
+  return process.env.ENABLE_DUAL_WRITE === "true";
+}

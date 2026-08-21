@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { studentProfile } from "@/repositories/legacy/student-profile";
 
 const REFERRAL_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -13,7 +14,7 @@ function randomReferralCode(): string {
 export async function generateUniqueReferralCode(): Promise<string> {
   for (let i = 0; i < 10; i++) {
     const code = randomReferralCode();
-    const exists = await prisma.studentProfile.findUnique({
+    const exists = await studentProfile.findUnique({
       where: { referralCode: code },
       select: { id: true },
     });

@@ -1,6 +1,7 @@
 import { Domain, EnrollmentStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { dualWriteChallengeEnrollment } from "@/repositories/dual-write";
 
 export type CoreDomain = Extract<Domain, "AI" | "DS" | "SE">;
 
@@ -79,16 +80,27 @@ export async function createCoreEnrollment(
   }
 
   try {
-    await prisma.enrollment.create({
-      data: {
-        userId,
-        challengeId: challenge.id,
-        domain,
-        status: EnrollmentStatus.ACTIVE,
-        daysCompleted: 0,
-        currentStreak: 0,
-        longestStreak: 0,
-      },
+    await prisma.$transaction(async (tx) => {
+      const enrollment = await tx.enrollment.create({
+        data: {
+          userId,
+          challengeId: challenge.id,
+          domain,
+          status: EnrollmentStatus.ACTIVE,
+          daysCompleted: 0,
+          currentStreak: 0,
+          longestStreak: 0,
+        },
+        select: {
+          id: true,
+          userId: true,
+          domain: true,
+          status: true,
+          startedAt: true,
+          completedAt: true,
+        },
+      });
+      await dualWriteChallengeEnrollment(tx, enrollment);
     });
     return { ok: true };
   } catch (e) {

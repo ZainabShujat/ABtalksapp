@@ -2454,3 +2454,51 @@ model AssessmentReportShare {
 
   @@index([reportId, revokedAt])
 }
+
+/// Plan 078 Phase 2 audit. Each backfill step writes one run plus conflict rows.
+model MigrationRun {
+  id         String    @id @default(cuid())
+  step       String
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  ok         Boolean   @default(false)
+  counts     Json?
+  error      String?
+
+  conflicts   MigrationConflict[]
+  quarantine  MigrationQuarantine[]
+
+  @@index([step, startedAt(sort: Desc)])
+}
+
+model MigrationConflict {
+  id            String   @id @default(cuid())
+  runId         String?
+  userId        String
+  field         String
+  chosenValue   String
+  rejectedValue String
+  source        String
+  createdAt     DateTime @default(now())
+
+  run MigrationRun? @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  @@index([userId, field])
+  @@index([runId])
+}
+
+model MigrationQuarantine {
+  id          String   @id @default(cuid())
+  runId       String?
+  sourceTable String
+  sourceId    String
+  field       String
+  payload     Json
+  reason      String
+  createdAt   DateTime @default(now())
+
+  run MigrationRun? @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  @@index([sourceTable, sourceId])
+  @@index([runId])
+}

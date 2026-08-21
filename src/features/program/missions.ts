@@ -15,6 +15,8 @@ import {
   isSkippedPayload,
 } from "@/features/program/progression";
 import { isDayLockBypassEnabled } from "@/lib/feature-flags";
+import { programMember } from "@/repositories/legacy/program-member";
+import { dualWriteMissionAttempt } from "@/repositories/dual-write";
 import {
   getHiddenTestInputs,
   getShipItHints,
@@ -105,7 +107,7 @@ async function getDayAvailability(
   | { ok: true; state: "AVAILABLE"; member: { id: string; cohortId: string; highestUnlockedDay: number; skipTokensUsed: number; githubRepoUrl: string; missionPoints: number; cleanPassCount: number } }
   | { ok: false; message: string }
 > {
-  const member = await prisma.programMember.findUnique({
+  const member = await programMember.findUnique({
     where: { id: memberId },
     select: {
       id: true,
@@ -183,7 +185,7 @@ export async function getMissionState(
   memberId: string,
   dayNumber: number,
 ): Promise<MissionState | null> {
-  const member = await prisma.programMember.findUnique({
+  const member = await programMember.findUnique({
     where: { id: memberId },
     select: {
       highestUnlockedDay: true,
@@ -292,6 +294,7 @@ export async function submitMissionRun(
   const day = await prisma.programDay.findUnique({
     where: { dayNumber },
     select: {
+      id: true,
       dayNumber: true,
       missionType: true,
       missionSpec: true,
@@ -325,7 +328,7 @@ export async function submitMissionRun(
       pointsAwarded = day.missionPoints;
     }
 
-    await tx.programMissionSubmission.create({
+    const created = await tx.programMissionSubmission.create({
       data: {
         memberId,
         dayNumber,
@@ -335,6 +338,18 @@ export async function submitMissionRun(
         passed: verifyResult.passed,
         pointsAwarded,
       },
+      select: { id: true, createdAt: true },
+    });
+    await dualWriteMissionAttempt(tx, {
+      id: created.id,
+      memberId,
+      programDayId: day.id,
+      attemptNumber,
+      payload: payload as Prisma.InputJsonValue,
+      verdict: verifyResult.verdict as Prisma.InputJsonValue,
+      passed: verifyResult.passed,
+      pointsAwarded,
+      createdAt: created.createdAt,
     });
 
     if (verifyResult.passed && isFirstPass) {
