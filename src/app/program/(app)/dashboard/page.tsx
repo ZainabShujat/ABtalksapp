@@ -5,6 +5,7 @@ import { getMemberProjectsSummary } from "@/features/program/projects";
 import { getMemberRecommendation } from "@/features/program/recommendations";
 import { getInterviewDashboardCard } from "@/features/program/interview";
 import { getCohortInterviewState } from "@/features/interview/cohort-eligibility";
+import { toProgramMemberId } from "@/features/interview/provider";
 import { ProgramDashboardView } from "@/components/program/program-dashboard-view";
 
 export default async function ProgramDashboardPage() {
@@ -18,7 +19,7 @@ export default async function ProgramDashboardPage() {
       getInterviewDashboardCard(member.id),
       // Server-authoritative: unlocks are derived from the member's actual
       // PASSED mission days (1..15 / 1..31), never from a client-side count.
-      getCohortInterviewState(member.id),
+      getCohortInterviewState(toProgramMemberId(member.id)),
     ]);
 
   if (!data) {

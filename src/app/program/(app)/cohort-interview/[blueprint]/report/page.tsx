@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireProgramMember } from "@/lib/program-auth";
+import { toProgramMemberId } from "@/features/interview/provider";
 import {
   parseBlueprintParam,
   BLUEPRINT_LABEL,
@@ -37,7 +38,10 @@ export default async function CohortInterviewReportPage({
 
   // Member-scoped at the query level: another member's interview resolves to
   // "no report", never to their report.
-  const result = await getCohortInterviewReport(member.id, blueprint);
+  const result = await getCohortInterviewReport(
+    toProgramMemberId(member.id),
+    blueprint,
+  );
 
   if (!result.ok) {
     return (

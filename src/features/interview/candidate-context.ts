@@ -1,5 +1,5 @@
 import "server-only";
-import { prisma } from "@/lib/db";
+import { studentProfile } from "@/repositories/legacy/student-profile";
 import { buildChallengeContext } from "@/features/interview/challenge-context";
 import { buildResumeContext } from "@/features/interview/resume-context";
 import type { CandidateContext } from "@/features/interview/types";
@@ -12,7 +12,10 @@ export async function buildCandidateContext(
   userId: string,
 ): Promise<CandidateContext | null> {
   const [profile, challenge, resume] = await Promise.all([
-    prisma.studentProfile.findUnique({
+    // Plan 078 seam. NOT getCandidateProfile(): CandidateProfileView carries
+    // no domain/role/organization/yearsExperience/college, which the
+    // interviewer needs, so this stays on the legacy shim.
+    studentProfile.findUnique({
       where: { userId },
       select: {
         fullName: true,

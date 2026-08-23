@@ -45,7 +45,9 @@ export function ProgramDashboardView({
   atRisk,
   projects,
   aiRec,
-  interviewCard,
+  // interviewCard is still accepted (and passed by the page) but the body of
+  // the disclosure now renders CohortInterviewCard, which reads live unlock
+  // state. Kept in Props so the page contract is unchanged.
   cohortInterviewState,
 }: Props) {
   const [statsOpen, setStatsOpen] = useState(false);

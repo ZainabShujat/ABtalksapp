@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { programMember } from "@/repositories/legacy/program-member";
 import {
   collectPassSkipSets,
   getMemberDayStates,
@@ -118,7 +119,10 @@ export async function buildCohortCandidateContext(
   blueprint: InterviewBlueprintKey,
 ): Promise<CohortCandidateContext | null> {
   const [member, submissions, projects, dayStates] = await Promise.all([
-    prisma.programMember.findUnique({
+    // Plan 078 seam: ProgramMember reads go through repositories/legacy, never
+    // prisma directly. ProgramMissionSubmission and ProgramProject below have
+    // no shim in 078 Phase 3, so they stay on prisma until one exists.
+    programMember.findUnique({
       where: { id: memberId },
       select: {
         fullName: true,

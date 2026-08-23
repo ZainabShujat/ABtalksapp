@@ -1,6 +1,6 @@
 import "server-only";
-import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
+import { programMember } from "@/repositories/legacy/program-member";
 import type { InterviewBlueprintKey } from "@/features/interview/cohort/blueprint";
 
 /**
@@ -41,7 +41,7 @@ export async function resolveInterviewMemberId(): Promise<string | null> {
   const session = await auth();
   if (!session?.user?.id) return null;
 
-  const member = await prisma.programMember.findFirst({
+  const member = await programMember.findFirst({
     where: {
       userId: session.user.id,
       status: { in: ["ENROLLED", "COMPLETED"] },
@@ -51,6 +51,29 @@ export async function resolveInterviewMemberId(): Promise<string | null> {
   });
 
   return member?.id ?? null;
+}
+
+/**
+ * Normalises a membership id from the 078 repository layer to a
+ * `ProgramMember.id`.
+ *
+ * `GeneralInterview.memberId` is a foreign key to `ProgramMember`. Once
+ * `ENABLE_NEW_LEARNING` is on, `findActiveMembership()` in
+ * `@/repositories/learning` returns `ProgramEnrollment.id` instead, which
+ * `@/repositories/ids` mints as `pe_pm_<memberId>` (see `peIdForMember`).
+ * Writing that value straight through would violate the FK.
+ *
+ * So: strip the prefix when present, pass through otherwise. Callers that hold
+ * an id from `requireProgramMember()` / `resolveProgramMemberForUser()` must
+ * run it through here before it reaches the interview tables. This is the only
+ * place in the interview module that knows the prefix exists.
+ */
+const PE_MEMBER_PREFIX = "pe_pm_";
+
+export function toProgramMemberId(id: string): string {
+  return id.startsWith(PE_MEMBER_PREFIX)
+    ? id.slice(PE_MEMBER_PREFIX.length)
+    : id;
 }
 
 /**

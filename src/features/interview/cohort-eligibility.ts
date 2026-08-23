@@ -1,4 +1,6 @@
 import "server-only";
+// ProgramMissionSubmission has no repositories/legacy shim in 078 Phase 3,
+// so eligibility reads it through prisma directly.
 import { prisma } from "@/lib/db";
 import { isDayLockBypassEnabled } from "@/lib/feature-flags";
 import { collectPassSkipSets } from "@/features/program/progression";

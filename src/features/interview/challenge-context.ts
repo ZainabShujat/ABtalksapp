@@ -75,6 +75,9 @@ export async function buildChallengeContext(
   userId: string,
 ): Promise<ChallengeContext> {
   const [enrollments, submissions] = await Promise.all([
+    // Plan 078 Phase 3 ships no shim for Enrollment/Submission, and
+    // listChallengeEnrollments() drops `challengeId`, which the task join
+    // below needs. Direct prisma is correct here until a shim exists.
     prisma.enrollment.findMany({
       where: { userId },
       select: {

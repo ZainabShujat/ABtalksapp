@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireProgramMember } from "@/lib/program-auth";
 import { parseBlueprintParam, BLUEPRINT_LABEL } from "@/features/interview/cohort/blueprint";
 import { getCohortInterviewOverview } from "@/features/interview/service";
+import { toProgramMemberId } from "@/features/interview/provider";
 import { InterviewSession } from "@/components/interview/cohort/interview-session";
 import "@/components/interview/cohort/interview.css";
 
@@ -34,7 +35,10 @@ export default async function CohortInterviewPage({
   const blueprint = parseBlueprintParam(rawBlueprint);
   if (!blueprint) notFound();
 
-  const overview = await getCohortInterviewOverview(member.id, blueprint);
+  const overview = await getCohortInterviewOverview(
+    toProgramMemberId(member.id),
+    blueprint,
+  );
 
   if (!overview.ok) {
     return <Notice blueprint={blueprint} message={overview.message} />;

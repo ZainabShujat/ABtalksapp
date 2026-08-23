@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { studentProfile } from "@/repositories/legacy/student-profile";
 import {
   parseExperience,
   parseProjects,
@@ -23,7 +24,9 @@ export async function buildResumeContext(
   userId: string,
 ): Promise<ResumeContext> {
   const [profile, review] = await Promise.all([
-    prisma.studentProfile.findUnique({
+    // Plan 078 seam. NOT getCandidateProfile(): `role` is not on
+    // CandidateProfileView. RecruiterReview below has no shim in Phase 3.
+    studentProfile.findUnique({
       where: { userId },
       select: { skills: true, role: true, resumeUrl: true },
     }),
