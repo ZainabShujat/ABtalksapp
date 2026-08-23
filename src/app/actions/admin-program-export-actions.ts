@@ -7,13 +7,14 @@ import { getAtRiskMembers } from "@/features/program/commits";
 import { getCohortCalendarDay } from "@/features/program/progression";
 import { getAdminProgramCohort } from "@/features/program/admin";
 import { cohortIdSchema } from "@/lib/validations/program";
+import { programMember } from "@/repositories/legacy/program-member";
 
 export async function exportProgramMembersAction(input: unknown) {
   await requireAdmin();
   const parsed = cohortIdSchema.safeParse(input);
   if (!parsed.success) return { ok: false as const, message: "Invalid cohort." };
 
-  const members = await prisma.programMember.findMany({
+  const members = await programMember.findMany({
     where: {
       cohortId: parsed.data.cohortId,
       status: { in: ["ENROLLED", "COMPLETED"] },
@@ -69,7 +70,7 @@ export async function exportProgramAtRiskAction(input: unknown) {
 
   const cohortDay = getCohortCalendarDay(cohort);
   const atRisk = await getAtRiskMembers(parsed.data.cohortId);
-  const members = await prisma.programMember.findMany({
+  const members = await programMember.findMany({
     where: { id: { in: atRisk.map((a) => a.memberId) } },
     select: {
       id: true,
@@ -134,7 +135,7 @@ export async function exportProgramInterviewsAction(input: unknown) {
   const cohort = await getAdminProgramCohort();
   const cohortId = parsed.data.cohortId;
 
-  const members = await prisma.programMember.findMany({
+  const members = await programMember.findMany({
     where: { cohortId, status: { in: ["ENROLLED", "COMPLETED"] } },
     select: {
       id: true,

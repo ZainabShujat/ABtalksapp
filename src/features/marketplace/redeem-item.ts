@@ -1,5 +1,6 @@
-import { RedemptionStatus } from "@prisma/client";
+import { RedemptionStatus, PointsSourceType } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { dualWritePoints } from "@/repositories/dual-write";
 
 export type RedeemResult =
   | { ok: true; redemptionId: string; newBalance: number }
@@ -99,6 +100,14 @@ export async function redeemItem(input: {
           type: "REDEEM",
           reason: `Redeemed ${item.title} (redemptionId=${redemption.id})`,
         },
+      });
+      await dualWritePoints(tx, {
+        userId: input.userId,
+        amount: -item.costSP,
+        sourceType: PointsSourceType.REDEMPTION,
+        sourceId: redemption.id,
+        idempotencyKey: `redeem:${redemption.id}`,
+        reason: `Redeemed ${item.title} (redemptionId=${redemption.id})`,
       });
 
       return {

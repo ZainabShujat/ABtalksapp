@@ -1,5 +1,7 @@
 import type { Prisma } from "@prisma/client";
+import { PointsSourceType } from "@prisma/client";
 import { SYNERGY_REFERRAL } from "./scoring";
+import { dualWritePoints } from "@/repositories/dual-write";
 //synergy event for referral
 export async function awardReferralSynergy(
   tx: Prisma.TransactionClient,
@@ -24,6 +26,14 @@ export async function awardReferralSynergy(
   await tx.studentProfile.updateMany({
     where: { userId: args.referrerId },
     data: { synergyPoints: { increment: SYNERGY_REFERRAL } },
+  });
+  await dualWritePoints(tx, {
+    userId: args.referrerId,
+    amount: SYNERGY_REFERRAL,
+    sourceType: PointsSourceType.REFERRAL,
+    sourceId: args.referralId,
+    idempotencyKey: `referral:${args.referralId}`,
+    reason: `Referral signup (referralId=${args.referralId}, referredUserId=${args.referredUserId})`,
   });
   return SYNERGY_REFERRAL;
 }

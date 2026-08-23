@@ -1,5 +1,7 @@
 import type { Prisma } from "@prisma/client";
+import { PointsSourceType } from "@prisma/client";
 import { computeSubmissionSynergy } from "./scoring";
+import { dualWritePoints } from "@/repositories/dual-write";
 
 export async function awardSubmissionSynergy(
   tx: Prisma.TransactionClient,
@@ -36,6 +38,14 @@ export async function awardSubmissionSynergy(
   await tx.studentProfile.updateMany({
     where: { userId: args.userId },
     data: { synergyPoints: { increment: points } },
+  });
+  await dualWritePoints(tx, {
+    userId: args.userId,
+    amount: points,
+    sourceType: PointsSourceType.ACTIVITY_ATTEMPT,
+    sourceId: args.submissionId,
+    idempotencyKey: `submission:${args.submissionId}`,
+    reason: `submission day ${args.dayNumber}`,
   });
   return points;
 }

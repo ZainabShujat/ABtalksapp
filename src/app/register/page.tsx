@@ -4,6 +4,11 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { isClaudeEnabled, isOtpVerificationRequired } from "@/lib/feature-flags";
 import {
+  CORE_TRACK_PATH,
+  createCoreEnrollment,
+  isCoreDomain,
+} from "@/features/enrollment/create-core-enrollment";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -11,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { RegistrationForm } from "./registration-form";
+import { studentProfile } from "@/repositories/legacy/student-profile";
 
 type PageProps = {
   searchParams: Promise<{ ref?: string; domain?: string }>;
@@ -22,6 +28,9 @@ export default async function RegisterPage({ searchParams }: PageProps) {
     redirect("/login");
   }
 
+  const params = await searchParams;
+  const requestedDomain = params.domain;
+
   const userExists = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: { id: true },
@@ -31,30 +40,50 @@ export default async function RegisterPage({ searchParams }: PageProps) {
     redirect("/api/auth/signout?callbackUrl=/login");
   }
 
-  const profile = await prisma.studentProfile.findUnique({
+  const profile = await studentProfile.findUnique({
     where: { userId: session.user.id },
     select: { id: true },
   });
-  const enrollment = await prisma.enrollment.findFirst({
+  // Registration completeness gate: "has the user ever enrolled in anything",
+  // ANY status. Narrowing this would delete the profile of removed users.
+  const enrollmentCount = await prisma.enrollment.count({
     where: { userId: session.user.id },
-    select: { id: true, status: true },
   });
 
-  if (enrollment?.status === "ABANDONED") {
+  if (profile && enrollmentCount > 0) {
+    if (isCoreDomain(requestedDomain)) {
+      const existing = await prisma.enrollment.findFirst({
+        where: { userId: session.user.id, domain: requestedDomain },
+        select: { id: true, status: true },
+      });
+
+      // ABANDONED blocks this track only — other tracks stay joinable.
+      if (existing?.status === "ABANDONED") {
+        redirect(`/dashboard?joinBlocked=${requestedDomain}`);
+      }
+
+      if (!existing) {
+        const result = await createCoreEnrollment(session.user.id, requestedDomain);
+        if (!result.ok && result.reason === "abandoned") {
+          redirect(`/dashboard?joinBlocked=${requestedDomain}`);
+        }
+        if (!result.ok && result.reason !== "already_enrolled") {
+          redirect(`/dashboard?joinError=${result.reason}`);
+        }
+      }
+
+      redirect(CORE_TRACK_PATH[requestedDomain]);
+    }
+
     redirect("/dashboard");
   }
 
-  if (profile && enrollment) {
-    redirect("/dashboard");
-  }
-
-  if (profile && !enrollment) {
-    await prisma.studentProfile.delete({
+  if (profile && enrollmentCount === 0) {
+    await studentProfile.delete({
       where: { userId: session.user.id },
     });
   }
 
-  const params = await searchParams;
   const claudeEnabled = isClaudeEnabled();
   const requested = params.domain;
   const initialDomain =

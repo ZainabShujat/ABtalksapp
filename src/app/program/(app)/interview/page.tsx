@@ -12,6 +12,7 @@ export default async function ProgramInterviewPage() {
   const { eligibility, interview } = view;
 
   return (
+    <div className="-mx-4 -my-6 min-h-[calc(100svh-4.25rem)] bg-[#040A12] px-4 py-6 text-white md:px-6">
     <div className="mx-auto max-w-2xl space-y-6">
       <header className="space-y-2">
         <h1 className="font-display text-2xl font-bold tracking-tight">
@@ -127,6 +128,7 @@ export default async function ProgramInterviewPage() {
           )}
         </div>
       )}
+    </div>
     </div>
   );
 }

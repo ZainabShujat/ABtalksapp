@@ -1,5 +1,6 @@
 import { UserType } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { studentProfile } from "@/repositories/legacy/student-profile";
 import {
   updateProfessionalProfileSchema,
   updateStudentProfileSchema,
@@ -31,7 +32,7 @@ export async function updateProfile(
     ? input.skills.filter((x): x is string => typeof x === "string")
     : [];
 
-  const existing = await prisma.studentProfile.findUnique({
+  const existing = await studentProfile.findUnique({
     where: { userId },
     select: { id: true, userType: true },
   });
@@ -68,7 +69,7 @@ export async function updateProfile(
 
     const data = parsed.data;
 
-    await prisma.studentProfile.update({
+    await studentProfile.update({
       where: { userId },
       data: {
         fullName: data.fullName,
@@ -111,7 +112,7 @@ export async function updateProfile(
 
   const data = parsed.data;
 
-  await prisma.studentProfile.update({
+  await studentProfile.update({
     where: { userId },
     data: {
       fullName: data.fullName,

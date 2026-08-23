@@ -19,6 +19,7 @@ import {
   submitMissionRunAction,
 } from "@/app/actions/program-mission-actions";
 import { requestMentorReviewAction } from "@/app/actions/program-ai-actions";
+import { dsButtonVariants } from "@/components/design/ds-button";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -32,16 +33,15 @@ type Props = {
   verifyIntro?: string;
 };
 
-const figmaBtnClass =
-  "inline-flex h-9 items-center justify-center rounded-[12px] border border-black bg-[#7364E6] px-4 text-sm font-bold text-white shadow-[inset_3px_3px_3px_0_rgba(0,0,0,0.5)] hover:bg-[#7364E6]/90";
+const ctaClass = dsButtonVariants({ size: "sm" });
 
 const cardClass =
-  "rounded-[16px] border border-[rgba(46,57,75,0.69)] bg-[rgba(5,12,33,0.89)] p-4 md:p-5";
+  "rounded-[12px] border border-[#E0E0E0] bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] md:p-5";
 
 function MentorFeedbackCard({ feedback }: { feedback: string }) {
   return (
-    <div className="rounded-xl border border-[#8365E3]/40 bg-[#110528] p-4 text-sm text-white [&_h3]:mt-2 [&_h3]:font-semibold [&_li]:ml-5 [&_li]:list-disc [&_p]:text-[#BCBCBC]">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#968BEC]">
+    <div className="rounded-[12px] border border-[#E0E0E0] bg-[#FBF9F7] p-4 text-sm text-[#4B4B4B] [&_h3]:mt-2 [&_h3]:font-semibold [&_h3]:text-[#111111] [&_li]:ml-5 [&_li]:list-disc [&_p]:text-[#4B4B4B]">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#E05226]">
         AI Mentor review
       </p>
       <ReactMarkdown components={programMdComponents}>{feedback}</ReactMarkdown>
@@ -190,14 +190,14 @@ export function MissionPanel({
     return (
       <div
         id="mission-verify"
-        className={cn(cardClass, "space-y-4 border-emerald-500/40")}
+        className={cn(cardClass, "space-y-4")}
       >
-        <p className="font-semibold text-emerald-400">Mission cleared ✓</p>
+        <p className="font-semibold text-[#2E7D32]">Mission cleared ✓</p>
         {passedBanner?.unlockedDay &&
           passedBanner.unlockedDay <= PROGRAM_TOTAL_DAYS && (
             <Link
               href={`/program/day/${passedBanner.unlockedDay}`}
-              className={figmaBtnClass}
+              className={ctaClass}
             >
               Continue to Day {passedBanner.unlockedDay}
             </Link>
@@ -210,7 +210,7 @@ export function MissionPanel({
             type="button"
             variant="outline"
             size="sm"
-            className="gap-2 border-[#8365E3]/50 bg-transparent text-white"
+            className="gap-2 border-[#E05226] bg-white text-[#E05226] hover:bg-[#FFECE3]"
             onClick={() => void handleMentorReview()}
             disabled={mentorLoading}
           >
@@ -226,7 +226,7 @@ export function MissionPanel({
     return (
       <div
         id="mission-verify"
-        className={cn(cardClass, "border-amber-500/40 text-sm text-[#BCBCBC]")}
+        className={cn(cardClass, "text-sm text-[#4B4B4B]")}
       >
         You skipped this mission (0 points). Continue with the next unlocked
         day when you are ready.
@@ -249,14 +249,14 @@ export function MissionPanel({
     <div id="mission-verify" className={cn(cardClass, "space-y-5")}>
       <div className="flex items-center gap-2.5">
         <DaySectionIcon name="verify" />
-        <h2 className="text-base font-semibold text-[#968BEC] md:text-lg">
+        <h2 className="font-heading text-base font-semibold text-[#111111] md:text-lg">
           {sectionTitle(missionType, questionCount)}
         </h2>
       </div>
 
       {passedBanner && (
-        <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4">
-          <p className="font-semibold text-emerald-400">
+        <div className="rounded-[12px] border border-[#E0E0E0] bg-[#FFECE3] p-4">
+          <p className="font-semibold text-[#2E7D32]">
             Day {dayNumber} cleared — +{passedBanner.points} pts
             {passedBanner.unlockedDay
               ? ` · Day ${passedBanner.unlockedDay} unlocked`
@@ -266,7 +266,7 @@ export function MissionPanel({
             passedBanner.unlockedDay <= PROGRAM_TOTAL_DAYS && (
               <Link
                 href={`/program/day/${passedBanner.unlockedDay}`}
-                className={cn(figmaBtnClass, "mt-3")}
+                className={cn(ctaClass, "mt-3")}
               >
                 Go to Day {passedBanner.unlockedDay}
               </Link>
@@ -275,34 +275,34 @@ export function MissionPanel({
       )}
 
       {verifyIntro && questionCount > 0 && (
-        <p className="text-sm text-[#BCBCBC]">{verifyIntro}</p>
+        <p className="text-sm text-[#4B4B4B]">{verifyIntro}</p>
       )}
 
       {missionType === "SHIP_IT" && (
         <div className="space-y-2">
-          <p className="text-sm text-[#BCBCBC]">
+          <p className="text-sm text-[#4B4B4B]">
             Build locally in VS Code, then push your artifact to{" "}
             <a
               href={githubRepoUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#968BEC] underline-offset-4 hover:underline"
+              className="text-[#E05226] underline-offset-4 hover:underline"
             >
               {githubRepoUrl}
             </a>
             .{" "}
-            <mark className="rounded bg-[#968BEC] px-1.5 py-0.5 font-semibold text-[#030712]">
-              We verify the repo against the mission checklist.
-            </mark>
+           
+            <p className="text-[#4B4B4B]">We verify the repo against the mission checklist.</p>
+            
           </p>
           {missionState.shipItHints && missionState.shipItHints.length > 0 && (
             <ul className="space-y-2 text-sm">
               {missionState.shipItHints.map((h, i) => (
                 <li
                   key={`${h.check}:${h.path}:${i}`}
-                  className="font-mono text-[#A5A5A5]"
+                  className="font-mono text-[#8F8F8F]"
                 >
-                  {h.check}: <span className="text-white">{h.path}</span>
+                  {h.check}: <span className="text-[#111111]">{h.path}</span>
                 </li>
               ))}
             </ul>
@@ -312,23 +312,23 @@ export function MissionPanel({
 
       {missionType === "PROMPT_FORGE" && (
         <div className="space-y-2">
-          <Label htmlFor="prompt" className="text-[#BCBCBC]">
+          <Label htmlFor="prompt" className="text-[#4B4B4B]">
             Your system prompt
           </Label>
           <textarea
             id="prompt"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            className="min-h-40 w-full rounded-[10px] border border-[#8365E3] bg-[#110528] p-3 font-mono text-sm text-white"
+            className="min-h-40 w-full rounded-[10px] border border-[#E0E0E0] bg-white p-3 font-mono text-sm text-[#111111]"
             placeholder="Write the prompt that satisfies the mission spec…"
           />
         </div>
       )}
 
       {missionType === "BOSS_BUILD" && (
-        <div className="space-y-4 rounded-[20px] border border-[#8365E3] bg-[#110528] p-4">
+        <div className="space-y-4 rounded-[12px] border border-[#E0E0E0] bg-[#FBF9F7] p-4">
           <div className="space-y-2">
-            <Label htmlFor="boss-repo" className="text-[#BCBCBC]">
+            <Label htmlFor="boss-repo" className="text-[#4B4B4B]">
               Project repository URL
             </Label>
             <Input
@@ -336,18 +336,18 @@ export function MissionPanel({
               value={bossRepo}
               onChange={(e) => setBossRepo(e.target.value)}
               placeholder="https://github.com/you/project"
-              className="border-[#8365E3] bg-[#110528] text-white"
+              className="border-[#E0E0E0] bg-white text-[#111111]"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="boss-writeup" className="text-[#BCBCBC]">
+            <Label htmlFor="boss-writeup" className="text-[#4B4B4B]">
               Write-up
             </Label>
             <textarea
               id="boss-writeup"
               value={bossWriteup}
               onChange={(e) => setBossWriteup(e.target.value)}
-              className="min-h-32 w-full rounded-[10px] border border-[#8365E3] bg-[#030712] p-3 text-sm text-white"
+              className="min-h-32 w-full rounded-[10px] border border-[#E0E0E0] bg-white p-3 text-sm text-[#111111]"
               placeholder="Describe what you built and how to run it…"
             />
           </div>
@@ -364,13 +364,13 @@ export function MissionPanel({
             return (
               <div key={i} className="space-y-3">
                 {question ? (
-                  <div className="text-sm font-semibold text-white [&_p]:mb-0 [&_strong]:font-bold [&_strong]:text-white">
+                  <div className="text-sm font-semibold text-[#111111] [&_p]:mb-0 [&_strong]:font-semibold [&_strong]:text-[#111111]">
                     <ReactMarkdown components={programMdComponents}>
                       {`Q${i + 1}) ${question}`}
                     </ReactMarkdown>
                   </div>
                 ) : (
-                  <p className="text-sm font-semibold text-white">
+                  <p className="text-sm font-semibold text-[#111111]">
                     {`Answer ${i + 1}`}
                   </p>
                 )}
@@ -383,7 +383,7 @@ export function MissionPanel({
                     setAnswers(next);
                   }}
                   placeholder="Type answer here..."
-                  className="h-12 rounded-[10px] border border-[#8365E3] bg-[#110528] px-4 text-sm text-white placeholder:text-[#8F8F8F]"
+                  className="h-12 rounded-[10px] border border-[#E0E0E0] bg-white px-4 text-sm text-[#111111] placeholder:text-[#8F8F8F]"
                 />
               </div>
             );
@@ -392,15 +392,15 @@ export function MissionPanel({
       )}
 
       {missionType === "CODE_SPRINT" && (
-        <div className="rounded-[20px] border border-[#8365E3]/40 bg-[#110528] p-4 text-sm text-[#BCBCBC]">
+        <div className="rounded-[12px] border border-[#E0E0E0] bg-[#FBF9F7] p-4 text-sm text-[#4B4B4B]">
           In-browser Workbench was removed. CODE_SPRINT days are not used in the
           current curriculum — build and verify via SHIP_IT repo checks instead.
         </div>
       )}
 
       {verdict && (
-        <div className="rounded-[20px] border border-[#8365E3]/40 bg-[#110528] p-4">
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#968BEC]">
+        <div className="rounded-[12px] border border-[#E0E0E0] bg-[#FBF9F7] p-4">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#E05226]">
             Verification
           </h3>
           <CheckList items={verdict} running={submitting} />
@@ -413,7 +413,7 @@ export function MissionPanel({
             type="button"
             onClick={() => void handleSubmit()}
             disabled={submitting}
-            className={cn(figmaBtnClass, "disabled:opacity-60")}
+            className={cn(ctaClass, "disabled:opacity-60")}
           >
             {submitLabel}
           </button>

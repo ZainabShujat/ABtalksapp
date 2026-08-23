@@ -1,0 +1,62 @@
+# Plan 078 — sample validation and production rollout
+
+**Status (2026-08-21).**
+
+- `plan-078-phase1` remains the **sample-validation test bed**. Do not
+  full-backfill it. Do not start Phase 6 there.
+- Full unscoped Phase 1–5 rehearsal runs on a **new** Neon child created from
+  latest production (`plan-078-rehearsal`). That child is the Phase 6 gate.
+- `ENABLE_NEW_*` stay off until that rehearsal’s Phase 5 gate passes (two
+  clean verification passes, 24h apart per plan 078). The first completely
+  clean full-child run is **pass #1 only**.
+- Production is never written as part of rehearsal.
+
+Preserve on the sample child: `PHASE2_SAMPLE=1` tests, sample drift, upsert
+catch-up, direct-connection dual-write, this runbook.
+
+## Sample child (`plan-078-phase1`)
+
+```bash
+npm run db:migrate:078:phase2:sample
+npm run db:check:078:drift:sample
+# dual-write: DIRECT connection string, not -pooler
+npm run db:check:078:dual-write
+```
+
+## Rehearsal child (from latest production)
+
+Direct (non-pooler) `DATABASE_URL` only. Refuse production host
+`ep-nameless-term-ams9a5e3`. Full Phase 2 refuses the sample child host
+`ep-summer-field-amyzx79e`.
+
+1. Create child: `neonctl branches create --name plan-078-rehearsal --parent production --project-id little-fog-11679677`
+2. Apply Phase 1 SQL + Phase 2 audit SQL via `prisma db execute` (do not
+   `migrate deploy` — production has leftover `20260813000000_general_interview`)
+3. `npm run db:seed:platform-taxonomy`
+4. `npm run db:migrate:078:phase2` (unscoped, idempotent upserts)
+5. `npx tsx prisma/scripts/migrate-078-verify.ts` (V1–V10 unscoped)
+6. `npm run db:check:078:phase5` (points, visibility count+leak, member
+   statuses, shortlist, 200-user shadow)
+7. `npm run db:check:078:dual-write:rehearsal` then `npm run db:check:078:drift`
+8. Record as Phase 5 **pass #1**. Repeat after the required interval for pass #2.
+
+## Production rollout runbook
+
+Do this on production only after the fresh-child rehearsal passes twice:
+
+1. Additive schema (Phase 1 + audit tables)
+2. Dual-write on (`ENABLE_DUAL_WRITE=true`); legacy remains authoritative
+3. Online full historical backfill (Phase 2, idempotent upsert / catch-up)
+4. Short maintenance / write freeze
+5. Final delta / catch-up rerun
+6. Zero-drift verification (V1–V10 unscoped, points, visibility count+leak,
+   200-user shadow)
+7. Reopen
+8. Gradually enable `ENABLE_NEW_*` repositories (credentials → points →
+   progress+learning → candidate → talent last)
+9. Phase 7 — new-only writes (stop writing legacy)
+10. Observation period
+11. Phase 8 — legacy cleanup
+
+Neon transaction-mode pooling can drop Prisma interactive transactions that use
+`SAVEPOINT`. Migration and dual-write use the **direct** endpoint.

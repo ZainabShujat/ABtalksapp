@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { studentProfile } from "@/repositories/legacy/student-profile";
 
 export type ReferralBadgeTier = "none" | "bronze" | "silver" | "gold" | "platinum";
 
@@ -46,7 +47,7 @@ function nextBadgeForRewarded(
 export async function getReferralStats(
   userId: string,
 ): Promise<ReferralStats | null> {
-  const profile = await prisma.studentProfile.findUnique({
+  const profile = await studentProfile.findUnique({
     where: { userId },
     select: { referralCode: true },
   });

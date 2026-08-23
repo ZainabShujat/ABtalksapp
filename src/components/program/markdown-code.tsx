@@ -49,8 +49,8 @@ export function ProgramMarkdownCode({
       aria-label={`Copy ${text}`}
       onClick={() => void copy(text)}
       className={cn(
-        "mx-0.5 inline-flex max-w-full items-center rounded-[4px] border border-white/15 bg-white/10 px-1.5 py-0.5 align-baseline font-mono text-[0.85em] leading-snug text-[#E8E6E3] transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#968BEC]",
-        copied && "ring-2 ring-emerald-400/70",
+        "mx-0.5 inline-flex max-w-full items-center rounded-[4px] border border-[#E0E0E0] bg-[#FFECE3] px-1.5 py-0.5 align-baseline font-mono text-[0.85em] leading-snug text-[#C9411C] transition-colors hover:bg-[#FFF1E9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E05226]",
+        copied && "ring-2 ring-[#2E7D32]/70",
       )}
     >
       {text}
@@ -79,8 +79,8 @@ export function ProgramMarkdownPre({
       tabIndex={0}
       className={cn(
         className,
-        "cursor-pointer transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#968BEC]",
-        copied && "ring-2 ring-emerald-400/50",
+        "cursor-pointer transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E05226]",
+        copied && "ring-2 ring-[#2E7D32]/50",
       )}
       onClick={(e) => {
         onClick?.(e);

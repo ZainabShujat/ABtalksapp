@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
+import { studentProfile } from "@/repositories/legacy/student-profile";
 
 /**
  * Earliest registration date per user across StudentProfile, HackathonParticipant
@@ -14,7 +15,7 @@ import { prisma } from "@/lib/db";
  */
 export async function getRegistrationDatesSince(since: Date): Promise<Date[]> {
   const [profileHits, participantHits, workshopHits] = await Promise.all([
-    prisma.studentProfile.findMany({
+    studentProfile.findMany({
       where: { createdAt: { gte: since } },
       select: { userId: true },
     }),
@@ -38,7 +39,7 @@ export async function getRegistrationDatesSince(since: Date): Promise<Date[]> {
   const userIds = [...candidates];
 
   const [profiles, participants, workshops] = await Promise.all([
-    prisma.studentProfile.findMany({
+    studentProfile.findMany({
       where: { userId: { in: userIds } },
       select: { userId: true, createdAt: true },
     }),

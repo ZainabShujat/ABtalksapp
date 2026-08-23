@@ -41,11 +41,6 @@ export default async function ProgramApplyPage({ searchParams }: Props) {
 
   const state = await getEntryState(session.user.id, code);
 
-  // Assessment quiz removed — any in-progress attempt resumes at apply/enroll.
-  if (state.screen === "in_progress") {
-    redirect("/program/apply");
-  }
-
   const showGate =
     state.screen === "need_code" ||
     state.screen === "invalid_code" ||
@@ -126,8 +121,15 @@ export default async function ProgramApplyPage({ searchParams }: Props) {
     );
   }
 
-  // Legacy assessment failure screens (quiz removed; rare for old attempts).
-  if (state.screen === "cooldown" || state.screen === "failed") {
+  // Assessment quiz removed. `in_progress` / `intro` / `cooldown` / `failed` are
+  // unreachable while the entry bypass is on; render a terminal status card rather
+  // than redirecting to this same route (that would be an infinite loop).
+  if (
+    state.screen === "in_progress" ||
+    state.screen === "intro" ||
+    state.screen === "cooldown" ||
+    state.screen === "failed"
+  ) {
     return (
       <Shell>
         <Card className="border-border/60">
@@ -141,11 +143,6 @@ export default async function ProgramApplyPage({ searchParams }: Props) {
         </Card>
       </Shell>
     );
-  }
-
-  // Bypass enrolls on apply — "intro" should not appear; treat as form if it does.
-  if (state.screen === "intro") {
-    redirect(code ? `/program/apply?code=${encodeURIComponent(code)}` : "/program/apply");
   }
 
   // state.screen === "form"

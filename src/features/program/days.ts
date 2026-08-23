@@ -8,6 +8,7 @@ import {
   type DayState,
 } from "@/features/program/progression";
 import { isDayLockBypassEnabled } from "@/lib/feature-flags";
+import { programMember } from "@/repositories/legacy/program-member";
 
 export type { DayState } from "@/features/program/progression";
 
@@ -76,7 +77,7 @@ export async function getDayShell(
   });
   if (!day) return null;
 
-  const member = await prisma.programMember.findUnique({
+  const member = await programMember.findUnique({
     where: { id: memberId },
     select: {
       highestUnlockedDay: true,

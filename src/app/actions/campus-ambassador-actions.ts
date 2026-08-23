@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { studentProfile } from "@/repositories/legacy/student-profile";
 
 export async function applyCampusAmbassador() {
   const session = await auth();
@@ -11,7 +12,7 @@ export async function applyCampusAmbassador() {
   }
 
   try {
-    await prisma.studentProfile.update({
+    await studentProfile.update({
       where: { userId: session.user.id },
       data: {
         isCampusAmbassadorCandidate: true,
@@ -34,7 +35,7 @@ export async function dismissCampusAmbassador() {
   }
 
   try {
-    await prisma.studentProfile.update({
+    await studentProfile.update({
       where: { userId: session.user.id },
       data: {
         ambassadorDismissedAt: new Date(),
