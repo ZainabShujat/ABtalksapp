@@ -130,6 +130,7 @@ export async function getNotificationsForUser(
     ),
     isHackathonRegistered: Boolean(hackathonMembership),
     joinedCohortIds: new Set(programMemberships.map((m) => m.cohortId)),
+    hasChallengeEnrollment: Boolean(challengeMembership),
   });
 
   const items: AppNotification[] = [...adminItems, ...derivedItems]

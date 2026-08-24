@@ -23,6 +23,7 @@ import {
   setCohortStatusAction,
 } from "@/app/actions/admin-program-actions";
 import type { CohortOverview } from "@/features/program/admin";
+import { PROGRAM_HOLD_OPEN_COHORT_NAME } from "@/features/program/constants";
 
 const STATUSES = [
   "DRAFT",
@@ -285,6 +286,14 @@ export function ProgramCohortPanel({
               setForm((f) => ({ ...f, endsAt: e.target.value }))
             }
           />
+          {!createMode &&
+          overview?.name === PROGRAM_HOLD_OPEN_COHORT_NAME &&
+          (overview.status === "ENROLLING" || overview.status === "ACTIVE") ? (
+            <p className="text-xs text-muted-foreground">
+              Submissions stay open until every enrolled member has passed Day
+              31.
+            </p>
+          ) : null}
         </div>
         <div className="space-y-2 sm:col-span-2">
           <Label>Enrollment</Label>
