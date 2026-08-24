@@ -29,7 +29,8 @@ import { shouldShowClaudeBanner } from "@/features/user/check-claude-enrollment"
 import { getMyRedemptions } from "@/features/marketplace/get-my-redemptions";
 import { ClaudeEnrollmentBanner } from "@/components/shared/claude-enrollment-banner";
 
-function domainDisplayName(domain: Domain) {
+function domainDisplayName(domain: Domain | null) {
+  if (!domain) return "—";
   switch (domain) {
     case Domain.SE:
       return "Software Engineering";

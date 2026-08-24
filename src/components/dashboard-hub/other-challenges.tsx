@@ -25,11 +25,11 @@ export function OtherChallenges({
   }
 
   return (
-    <section className="ml-4 scroll-mt-20 px-4 py-8 sm:px-6">
+    <section className="scroll-mt-20 px-4 py-8 sm:px-6 lg:ml-4">
       <h2 className="font-heading text-xl font-semibold uppercase text-[#e05226]">
         Other challenges
       </h2>
-      <ul className="mt-4 ml-4 grid gap-3 sm:grid-cols-2">
+      <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:ml-4">
         {showClaude ? (
           <li
             className={cn(

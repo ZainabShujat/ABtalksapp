@@ -58,7 +58,6 @@ const registerPayloadBase = z
     countryCode: z.string().default(INDIA_DIALING_CODE),
     /** National number (no country code). Required + valid when countryCode is +91. */
     phoneNumber: z.string().default(""),
-    domain: domainSchema,
     skills: z.array(z.string().min(1).max(50)).max(10).default([]),
     linkedinUrl: z.union([empty, z.string().url()]).default(""),
     githubUsername: z

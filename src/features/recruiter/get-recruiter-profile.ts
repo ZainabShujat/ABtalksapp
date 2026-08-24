@@ -27,7 +27,7 @@ export type RecruiterProfileView = {
   linkedinUrl: string | null;
   githubUsername: string | null;
   userType: "STUDENT" | "PROFESSIONAL";
-  domain: string;
+  domain: string | null;
   college: string | null;
   graduationYear: number | null;
   organization: string | null;

@@ -12,6 +12,7 @@ import {
 import { ApplyForm } from "@/components/program/apply-form";
 import { JoinCodeGate } from "@/components/program/join-code-gate";
 import { getEntryState } from "@/features/program/entry";
+import { prisma } from "@/lib/db";
 import { cn } from "@/lib/utils";
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -40,6 +41,21 @@ export default async function ProgramApplyPage({ searchParams }: Props) {
   }
 
   const state = await getEntryState(session.user.id, code);
+
+  // Only gate people who are about to apply. Existing members (enrolled /
+  // waitlisted / closed / status screens) must never be bounced to /register —
+  // legacy cohort members have no StudentProfile and keep full access (D5).
+  const profile =
+    state.screen === "form"
+      ? await prisma.studentProfile.findUnique({
+          where: { userId: session.user.id },
+          select: { linkedinUrl: true, skills: true },
+        })
+      : null;
+
+  if (state.screen === "form" && !profile) {
+    redirect("/register");
+  }
 
   const showGate =
     state.screen === "need_code" ||
@@ -167,7 +183,11 @@ export default async function ProgramApplyPage({ searchParams }: Props) {
           </p>
         )}
       </div>
-      <ApplyForm joinCode={state.joinCode} />
+      <ApplyForm
+        joinCode={state.joinCode}
+        initialLinkedinUrl={profile?.linkedinUrl ?? ""}
+        initialSkills={profile?.skills ?? []}
+      />
     </Shell>
   );
 }

@@ -114,7 +114,7 @@ export default async function CampusAmbassadorsPage({
                     </CardDescription>
                   </div>
                   <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400 px-2 py-0.5 text-xs font-medium">
-                    {candidate.domain}
+                    {candidate.domain ?? "—"}
                   </span>
                 </div>
               </CardHeader>

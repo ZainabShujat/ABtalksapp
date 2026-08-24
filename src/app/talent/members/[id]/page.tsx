@@ -60,7 +60,7 @@ export default async function TalentMemberPage({ params }: Props) {
           </h1>
         </div>
         <p className="text-muted-foreground">
-          {profile.jobRole} · {profile.company} · {profile.yearsExperience} years
+          {profile.jobRole ?? "—"} · {profile.company ?? "—"} · {profile.yearsExperience ?? "—"} years
         </p>
         {profile.skills.length > 0 && (
           <div className="flex flex-wrap gap-1.5 pt-1">

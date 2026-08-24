@@ -2,13 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { enrollInClaudeChallenge } from "@/app/actions/enrollment-actions";
-import {
-  HUB_ARROW_HOVER_CLASS,
-  HUB_TEXT_LINK_CLASS,
-} from "@/components/dashboard-hub/nav-items";
+import { HUB_BUTTON_CLASS } from "@/components/dashboard-hub/nav-items";
 import { cn } from "@/lib/utils";
 
 export function JoinClaudeButton() {
@@ -36,10 +32,9 @@ export function JoinClaudeButton() {
       type="button"
       onClick={handleJoin}
       disabled={pending}
-      className={cn(HUB_TEXT_LINK_CLASS, "mt-4 disabled:opacity-60")}
+      className={cn(HUB_BUTTON_CLASS, "mt-4 w-full disabled:opacity-60")}
     >
       {pending ? "Joining…" : "Join"}
-      <ArrowRight className={HUB_ARROW_HOVER_CLASS} aria-hidden />
     </button>
   );
 }

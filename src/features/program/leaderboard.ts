@@ -7,9 +7,9 @@ export type ProgramLeaderboardRow = {
   rank: number;
   memberId: string;
   fullName: string;
-  company: string;
-  jobRole: string;
-  yearsExperience: number;
+  company: string | null;
+  jobRole: string | null;
+  yearsExperience: number | null;
   missionPoints: number;
   conceptPoints: number;
   commitPoints: number;

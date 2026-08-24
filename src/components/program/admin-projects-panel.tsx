@@ -15,7 +15,7 @@ import {
 type UngradedRow = {
   projectId: string;
   memberName: string;
-  company: string;
+  company: string | null;
   moduleNumber: number;
   repoUrl: string;
   submittedAt: string;
@@ -24,7 +24,7 @@ type UngradedRow = {
 type GradedRow = {
   projectId: string;
   memberName: string;
-  company: string;
+  company: string | null;
   moduleNumber: number;
   repoUrl: string;
   aiScore: number | null;
@@ -175,7 +175,7 @@ export function AdminProjectsPanel({
                 <p className="font-medium">
                   {row.memberName} · Module {row.moduleNumber}
                 </p>
-                <p className="text-muted-foreground">{row.company}</p>
+                <p className="text-muted-foreground">{row.company ?? "—"}</p>
                 <a
                   href={row.repoUrl}
                   target="_blank"
@@ -215,7 +215,7 @@ export function AdminProjectsPanel({
                       <p className="font-medium">
                         {row.memberName} · Module {row.moduleNumber}
                       </p>
-                      <p className="text-muted-foreground">{row.company}</p>
+                      <p className="text-muted-foreground">{row.company ?? "—"}</p>
                     </div>
                     <p className="font-display text-xl font-bold">
                       {row.effectiveScore}/100

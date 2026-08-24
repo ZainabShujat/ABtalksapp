@@ -19,9 +19,9 @@ export type TalentPoolRow = {
   rank: number;
   memberId: string;
   fullName: string;
-  jobRole: string;
-  company: string;
-  yearsExperience: number;
+  jobRole: string | null;
+  company: string | null;
+  yearsExperience: number | null;
   skills: string[];
   totalScore: number;
   missionPoints: number;
@@ -54,9 +54,9 @@ export type MissionPortfolioDay = {
 export type TalentProfile = {
   memberId: string;
   fullName: string;
-  jobRole: string;
-  company: string;
-  yearsExperience: number;
+  jobRole: string | null;
+  company: string | null;
+  yearsExperience: number | null;
   education: string | null;
   university: string | null;
   graduationYear: number | null;
@@ -100,8 +100,8 @@ export type TalentProfile = {
 export type ShortlistRow = {
   memberId: string;
   fullName: string;
-  jobRole: string;
-  company: string;
+  jobRole: string | null;
+  company: string | null;
   totalScore: number;
   note: string | null;
   shortlistedAt: string;

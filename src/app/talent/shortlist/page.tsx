@@ -48,7 +48,7 @@ export default async function TalentShortlistPage() {
                     {row.fullName}
                   </Link>
                   <p className="text-sm text-muted-foreground">
-                    {row.jobRole} · {row.company}
+                    {row.jobRole ?? "—"} · {row.company ?? "—"}
                   </p>
                 </div>
                 <span className="font-display font-bold">{row.totalScore} pts</span>

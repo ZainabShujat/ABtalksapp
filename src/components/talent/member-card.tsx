@@ -27,7 +27,7 @@ export function MemberCard({ member }: { member: TalentPoolRow }) {
             )}
           </div>
           <p className="text-sm text-muted-foreground">
-            {member.jobRole} · {member.company} · {member.yearsExperience} yrs
+            {member.jobRole ?? "—"} · {member.company ?? "—"} · {member.yearsExperience ?? "—"} yrs
           </p>
           {member.skills.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">
