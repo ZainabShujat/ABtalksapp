@@ -3,6 +3,8 @@ import { isProgramEnabled } from "@/lib/feature-flags";
 import { prisma } from "@/lib/db";
 import { isUserRegistered } from "@/features/hackathon/registration-status";
 import { resolveProgramMemberForUser } from "@/lib/program-auth";
+import { getProfileSummary } from "@/repositories/candidate";
+import { listChallengeEnrollments } from "@/repositories/learning";
 import {
   getActivityHeatmap,
   type ActivityHeatmap,
@@ -45,44 +47,24 @@ export async function getHubData(
     hasProgramMembership,
     isHackathonRegistered,
     heatmap,
+    profile,
   ] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        studentProfile: {
-          select: { fullName: true, referralCode: true },
-        },
-      },
+      select: { id: true },
     }),
-    prisma.enrollment.findMany({
-      where: { userId },
-      orderBy: { startedAt: "asc" },
-      select: {
-        id: true,
-        domain: true,
-        status: true,
-        daysCompleted: true,
-        currentStreak: true,
-        challenge: { select: { title: true } },
-      },
-    }),
+    listChallengeEnrollments(userId),
     programEnabled
       ? resolveProgramMemberForUser(userId).then((m) => m !== null)
       : Promise.resolve(false),
     isUserRegistered(userId),
     getActivityHeatmap(userId),
+    getProfileSummary(userId),
   ]);
 
   if (!user) {
     return { hasUser: false };
   }
-
-  const profile = user.studentProfile
-    ? {
-        fullName: user.studentProfile.fullName,
-        referralCode: user.studentProfile.referralCode,
-      }
-    : null;
 
   const joined = rows.filter(
     (r) => r.status === "ACTIVE" || r.status === "COMPLETED",
@@ -96,7 +78,7 @@ export async function getHubData(
     id: r.id,
     domain: r.domain,
     status: r.status as "ACTIVE" | "COMPLETED",
-    challengeTitle: r.challenge.title,
+    challengeTitle: r.challengeTitle,
     daysCompleted: r.daysCompleted,
     currentStreak: r.currentStreak,
   }));

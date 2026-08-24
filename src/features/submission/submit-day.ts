@@ -1,6 +1,6 @@
 import { formatInTimeZone } from "date-fns-tz";
 import { EnrollmentStatus, SubmissionStatus } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
 import { readDayNumberFromMetadata } from "@/lib/admin-action-metadata";
 import {
   getCurrentDayNumber,
@@ -14,6 +14,7 @@ import { validateLinkedinUrl } from "./validate-linkedin-url";
 import { computeStreakStats } from "./streak-utils";
 import { resolveChallengeEnrollment } from "@/features/enrollment/resolve-dashboard-enrollment";
 import { awardSubmissionSynergy } from "@/features/synergy/award-submission-synergy";
+import { dualWriteSubmissionAttempt } from "@/repositories/dual-write";
 
 /**
  * Relaxation window: today + previous 4 days = 5 calendar days total.
@@ -192,7 +193,7 @@ export async function submitDay(input: {
   const newStatus = SubmissionStatus.ON_TIME;
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await writeClient().$transaction(async (tx) => {
       const existing = await tx.submission.findUnique({
         where: {
           enrollmentId_dayNumber: {
@@ -239,6 +240,17 @@ export async function submitDay(input: {
           },
         });
       }
+
+      await dualWriteSubmissionAttempt(tx, {
+        id: submission.id,
+        enrollmentId: enrollment.id,
+        dailyTaskId: task.id,
+        githubUrl: githubNormalized,
+        linkedinUrl: linkedinStored,
+        status: newStatus,
+        submittedAt: submission.submittedAt,
+        pointsAwarded: synergyAwarded ?? 0,
+      });
 
       const daysCompleted = await tx.submission.count({
         where: { enrollmentId: enrollment.id },

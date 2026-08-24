@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { HACKATHON } from "@/components/hackathon/hackathon-config";
+import { ComingSoonCard } from "@/components/hackathon/dashboard/coming-soon-card";
 import { EventInfo } from "@/components/hackathon/dashboard/event-info";
 import { InvitePanel } from "@/components/hackathon/dashboard/invite-panel";
 import { MissionTimer } from "@/components/hackathon/dashboard/mission-timer";
@@ -9,6 +10,8 @@ import { ProblemStatementPanel } from "@/components/hackathon/dashboard/problem-
 import { SponsorPanel } from "@/components/hackathon/dashboard/sponsor-panel";
 import { SubmissionChecklist } from "@/components/hackathon/dashboard/submission-checklist";
 import { TeamRoster } from "@/components/hackathon/dashboard/team-roster";
+import { VICODATHON_WINNERS } from "@/components/hackathon/dashboard/vicodathon-winners";
+import { WinnerCard } from "@/components/hackathon/dashboard/winner-card";
 import { buttonVariants } from "@/components/ui/button";
 import { getMyRegistration } from "@/features/hackathon/get-my-registration";
 import { getSubmissionWindow } from "@/features/hackathon/submission-window";
@@ -18,10 +21,33 @@ export const metadata: Metadata = {
   title: "Your Dashboard | ABTalks Vibe Code Hackathon",
 };
 
+/** Flip to `true` to restore the live event dashboard UI. */
+const SHOW_LIVE_DASHBOARD = false;
+
 export default async function HackathonDashboardPage() {
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/login?from=/hackathon/dashboard");
+  }
+
+  if (!SHOW_LIVE_DASHBOARD) {
+    return (
+      <div className="mx-auto w-full max-w-3xl px-4 py-10 pb-28 md:pb-10">
+        <div className="space-y-6">
+          <ComingSoonCard />
+          <section className="space-y-4">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-[#A78BFA]">
+              Vicodathon Winners
+            </h2>
+            <div className="space-y-4">
+              {VICODATHON_WINNERS.map((place) => (
+                <WinnerCard key={place.place} place={place} />
+              ))}
+            </div>
+          </section>
+        </div>
+      </div>
+    );
   }
 
   const reg = await getMyRegistration(session.user.id);

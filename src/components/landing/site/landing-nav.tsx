@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { LandingUser } from "@/features/landing/get-landing-state";
 import { LandingUserMenu } from "@/components/landing/landing-user-menu";
-import { NAV_LINKS } from "./landing-content";
+import { GET_STARTED_ITEMS, NAV_LINKS } from "./landing-content";
 
 type Props = {
   user: LandingUser | null;
@@ -16,12 +16,79 @@ function scrollToId(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 }
 
-export function LandingNav({ user, getStartedHref }: Props) {
+type GetStartedCtaProps = {
+  size: "nav" | "sm";
+  className?: string;
+  ctaOpen: boolean;
+  menuId: string;
+  onOpen: () => void;
+  onClose: () => void;
+  onToggle: () => void;
+  onNavigate: () => void;
+};
+
+function GetStartedCta({
+  size,
+  className,
+  ctaOpen,
+  menuId,
+  onOpen,
+  onClose,
+  onToggle,
+  onNavigate,
+}: GetStartedCtaProps) {
+  const btnClass =
+    size === "nav" ? "btn btn--ghost btn--nav" : "btn btn--ghost btn--sm";
+  const wrapClass = [
+    className,
+    "nav__cta-menu",
+    ctaOpen ? "is-open" : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <div
+      className={wrapClass}
+      onMouseEnter={onOpen}
+      onMouseLeave={onClose}
+    >
+      <button
+        type="button"
+        className={btnClass}
+        aria-haspopup="menu"
+        aria-expanded={ctaOpen}
+        aria-controls={menuId}
+        onClick={onToggle}
+      >
+        Get Started
+        <span className="nav__cta-caret" aria-hidden="true"></span>
+      </button>
+      <ul className="nav__cta-dropdown" id={menuId} role="menu">
+        {GET_STARTED_ITEMS.map((item) => (
+          <li key={item.href} role="none">
+            <Link
+              href={item.href}
+              role="menuitem"
+              className="nav__cta-item"
+              onClick={onNavigate}
+            >
+              {item.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export function LandingNav({ user }: Props) {
   const wrapRef = useRef<HTMLElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const linksRef = useRef<HTMLUListElement>(null);
   const burgerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
+  const [ctaOpen, setCtaOpen] = useState(false);
   const [stuck, setStuck] = useState(false);
   const [activeId, setActiveId] = useState<string>(NAV_LINKS[0].id);
 
@@ -53,13 +120,17 @@ export function LandingNav({ user, getStartedHref }: Props) {
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        setCtaOpen(false);
+      }
     }
     function onClick(e: MouseEvent) {
-      if (!open) return;
+      if (!open && !ctaOpen) return;
       const target = e.target as Node;
       if (navRef.current?.contains(target)) return;
       setOpen(false);
+      setCtaOpen(false);
     }
     document.addEventListener("keydown", onKey);
     document.addEventListener("click", onClick);
@@ -67,7 +138,7 @@ export function LandingNav({ user, getStartedHref }: Props) {
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("click", onClick);
     };
-  }, [open]);
+  }, [open, ctaOpen]);
 
   function onAnchorClick(
     e: React.MouseEvent<HTMLAnchorElement>,
@@ -77,6 +148,12 @@ export function LandingNav({ user, getStartedHref }: Props) {
     e.preventDefault();
     scrollToId(href.slice(1));
     setOpen(false);
+    setCtaOpen(false);
+  }
+
+  function closeMenus() {
+    setOpen(false);
+    setCtaOpen(false);
   }
 
   return (
@@ -121,9 +198,15 @@ export function LandingNav({ user, getStartedHref }: Props) {
               {user ? (
                 <LandingUserMenu user={user} />
               ) : (
-                <Link href={getStartedHref} className="btn btn--primary btn--sm">
-                  Get Started
-                </Link>
+                <GetStartedCta
+                  size="sm"
+                  ctaOpen={ctaOpen}
+                  menuId="navCtaMenuMobile"
+                  onOpen={() => setCtaOpen(true)}
+                  onClose={() => setCtaOpen(false)}
+                  onToggle={() => setCtaOpen((v) => !v)}
+                  onNavigate={closeMenus}
+                />
               )}
             </li>
             {!user ? (
@@ -140,12 +223,16 @@ export function LandingNav({ user, getStartedHref }: Props) {
               <LandingUserMenu user={user} />
             </div>
           ) : (
-            <Link
-              href={getStartedHref}
-              className="btn btn--primary btn--nav nav__cta"
-            >
-              Get Started
-            </Link>
+            <GetStartedCta
+              size="nav"
+              className="nav__cta"
+              ctaOpen={ctaOpen}
+              menuId="navCtaMenu"
+              onOpen={() => setCtaOpen(true)}
+              onClose={() => setCtaOpen(false)}
+              onToggle={() => setCtaOpen((v) => !v)}
+              onNavigate={closeMenus}
+            />
           )}
 
           <button
@@ -156,7 +243,12 @@ export function LandingNav({ user, getStartedHref }: Props) {
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             aria-controls="navLinks"
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => {
+              setOpen((v) => {
+                if (v) setCtaOpen(false);
+                return !v;
+              });
+            }}
           >
             <span></span>
             <span></span>

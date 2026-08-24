@@ -252,6 +252,76 @@
 .abtalks-landing .nav__burger[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
 .abtalks-landing .nav__burger[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
+.abtalks-landing .nav__cta-menu {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.abtalks-landing .nav__cta-caret {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(-1px);
+  transition: transform var(--lp-dur-fast) var(--lp-ease);
+}
+.abtalks-landing .nav__cta-menu .btn--ghost,
+.abtalks-landing .nav__cta-menu .btn--ghost:hover,
+.abtalks-landing .nav__cta-menu:hover .btn--ghost,
+.abtalks-landing .nav__cta-menu:focus-within .btn--ghost,
+.abtalks-landing .nav__cta-menu.is-open .btn--ghost {
+  border-color: var(--lp-color-primary);
+}
+.abtalks-landing .nav__cta-menu:hover .nav__cta-caret,
+.abtalks-landing .nav__cta-menu:focus-within .nav__cta-caret,
+.abtalks-landing .nav__cta-menu.is-open .nav__cta-caret {
+  transform: rotate(-135deg) translateY(-1px);
+}
+.abtalks-landing .nav__cta-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  z-index: 2;
+  margin: 0;
+  padding: var(--lp-space-4);
+  list-style: none;
+  flex-direction: column;
+  background: rgba(255,255,255,.92);
+  border: 1px solid var(--lp-color-border);
+  border-top: 0;
+  border-radius: 0 0 var(--lp-radius-sm) var(--lp-radius-sm);
+  box-shadow: 0 6px 22px rgba(17, 17, 17, 0.07);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+}
+@media (hover: hover) and (pointer: fine) {
+  .abtalks-landing .nav__cta-menu:hover .nav__cta-dropdown,
+  .abtalks-landing .nav__cta-menu:focus-within .nav__cta-dropdown {
+    display: flex;
+  }
+}
+.abtalks-landing .nav__cta-menu:focus-within .nav__cta-dropdown,
+.abtalks-landing .nav__cta-menu.is-open .nav__cta-dropdown {
+  display: flex;
+}
+.abtalks-landing .nav__cta-item {
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--lp-space-8) var(--lp-space-12);
+  font-size: 14px; line-height: 20px; font-weight: 500;
+  color: var(--lp-color-text-primary);
+  border-radius: var(--lp-radius-xs);
+  text-align: center;
+  transition: background-color var(--lp-dur-fast) var(--lp-ease),
+              color var(--lp-dur-fast) var(--lp-ease);
+}
+.abtalks-landing .nav__cta-item:hover {
+  background: var(--lp-color-primary-light);
+  color: var(--lp-color-primary);
+}
+
 /* =========================================================
    7. HERO
    ========================================================= */
@@ -1383,6 +1453,17 @@
   .abtalks-landing .nav__links.is-open { display: flex; }
   .abtalks-landing .nav__links-cta { display: block; margin-top: var(--lp-space-8); }
   .abtalks-landing .nav__links-cta .btn { width: 100%; height: 44px; font-size: 16px; line-height: 20px; }
+  .abtalks-landing .nav__links-cta .nav__cta-menu { width: 100%; }
+  .abtalks-landing .nav__links-cta .nav__cta-dropdown {
+    position: static;
+    width: 100%;
+    border-top: 1px solid var(--lp-color-border);
+    border-radius: var(--lp-radius-sm);
+  }
+  .abtalks-landing .nav__links-cta .nav__cta-item {
+    min-height: 44px;
+    font-size: 16px; line-height: 20px;
+  }
   /* 44px minimum tap target, design-system body size */
   .abtalks-landing .nav__link { padding: var(--lp-space-12) var(--lp-space-16); font-size: 16px; line-height: 20px; }
   .abtalks-landing .nav__cta { display: none; }

@@ -12,6 +12,7 @@ import {
 } from "@/features/program/progression";
 import { getMemberRank } from "@/features/program/leaderboard";
 import type { VerdictLine } from "@/features/program/verify-mission";
+import { programMember } from "@/repositories/legacy/program-member";
 
 export type MemberDashboard = {
   totalScore: number;
@@ -73,7 +74,7 @@ export async function getMemberDashboard(
 ): Promise<MemberDashboard | null> {
   const [member, cohort, { modules, days }, rank, recentRuns, passedRows] =
     await Promise.all([
-      prisma.programMember.findUnique({
+      programMember.findUnique({
         where: { id: memberId },
         select: {
           totalScore: true,

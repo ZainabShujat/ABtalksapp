@@ -2,6 +2,8 @@ import "server-only";
 import type { ProgramMissionType } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getMissionHeatmap, type MissionHeatmapCell } from "@/features/program/progression";
+import { programMember } from "@/repositories/legacy/program-member";
+import { visibleProgramMemberWhere } from "@/repositories/talent";
 
 const PAGE_SIZE = 30;
 
@@ -181,7 +183,7 @@ export async function getTalentPool(
   const where = {
     cohortId: access.cohort.id,
     status: { in: ["ENROLLED", "COMPLETED"] as ("ENROLLED" | "COMPLETED")[] },
-    recruiterVisibilityConsentAt: { not: null },
+    ...visibleProgramMemberWhere(),
     ...(filters.minYears !== undefined
       ? { yearsExperience: { gte: filters.minYears } }
       : {}),
@@ -201,7 +203,7 @@ export async function getTalentPool(
   };
 
   const [allMembers, shortlistIds] = await Promise.all([
-    prisma.programMember.findMany({
+    programMember.findMany({
       where,
       orderBy: [
         { totalScore: "desc" },
@@ -346,12 +348,12 @@ export async function getTalentProfile(
   const access = await assertPoolAccess(recruiterUserId);
   if (!access.ok) return access;
 
-  const member = await prisma.programMember.findFirst({
+  const member = await programMember.findFirst({
     where: {
       id: memberId,
       cohortId: access.cohort.id,
       status: { in: ["ENROLLED", "COMPLETED"] },
-      recruiterVisibilityConsentAt: { not: null },
+      ...visibleProgramMemberWhere(),
     },
     select: {
       id: true,
@@ -403,11 +405,11 @@ export async function getTalentProfile(
 
   if (!member) return { ok: false, message: "Member not found." };
 
-  const ranked = await prisma.programMember.findMany({
+  const ranked = await programMember.findMany({
     where: {
       cohortId: access.cohort.id,
       status: { in: ["ENROLLED", "COMPLETED"] },
-      recruiterVisibilityConsentAt: { not: null },
+      ...visibleProgramMemberWhere(),
     },
     orderBy: [
       { totalScore: "desc" },
@@ -498,7 +500,7 @@ export async function toggleShortlist(
   const access = await assertPoolAccess(recruiterUserId);
   if (!access.ok) return access;
 
-  const member = await prisma.programMember.findFirst({
+  const member = await programMember.findFirst({
     where: {
       id: memberId,
       cohortId: access.cohort.id,

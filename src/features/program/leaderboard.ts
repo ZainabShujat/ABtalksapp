@@ -1,6 +1,7 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db";
+import { programMember } from "@/repositories/legacy/program-member";
 
 export type ProgramLeaderboardRow = {
   rank: number;
@@ -20,7 +21,7 @@ export type ProgramLeaderboardRow = {
 };
 
 async function fetchLeaderboard(cohortId: string): Promise<ProgramLeaderboardRow[]> {
-  const members = await prisma.programMember.findMany({
+  const members = await programMember.findMany({
     where: {
       cohortId,
       status: { in: ["ENROLLED", "COMPLETED"] },

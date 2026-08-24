@@ -1,6 +1,6 @@
 import "server-only";
 import type { Prisma, ProgramEntrySection } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
 import { isProgramEntryBypassEnabled } from "@/lib/feature-flags";
 import { logger } from "@/lib/logger";
 import {
@@ -11,6 +11,9 @@ import {
 } from "@/lib/program-auth";
 import type { ApplyProfileInput } from "@/lib/validations/program";
 import { bootstrapMemberStartDay } from "@/features/program/bootstrap-start-day";
+import { programMember } from "@/repositories/legacy/program-member";
+import { studentProfile } from "@/repositories/legacy/student-profile";
+import { dualWriteProgramMember } from "@/repositories/dual-write";
 
 export const ENTRY_DURATION_MIN = 25;
 export const ENTRY_PER_SECTION = 10;
@@ -103,7 +106,7 @@ function emptyToNull(value: string | undefined): string | null {
 
 /** Newest APPLIED (or mid-funnel) membership for assessment resume. */
 async function getAppliedMembership(userId: string) {
-  return prisma.programMember.findFirst({
+  return programMember.findFirst({
     where: { userId, status: "APPLIED" },
     orderBy: { createdAt: "desc" },
     select: {
@@ -137,7 +140,7 @@ async function getAppliedMembership(userId: string) {
 }
 
 async function getWaitlistedMembership(userId: string) {
-  return prisma.programMember.findFirst({
+  return programMember.findFirst({
     where: { userId, status: "WAITLISTED" },
     orderBy: { createdAt: "desc" },
     select: { id: true },
@@ -166,6 +169,7 @@ async function enrollOrWaitlist(
       : { status: "WAITLISTED" },
     select: { id: true },
   });
+  await dualWriteProgramMember(tx, memberAfter.id);
   if (hasRoom) {
     await bootstrapMemberStartDay(tx, memberAfter.id);
   }
@@ -187,7 +191,7 @@ export async function getEntryState(
     const cohort = applied.cohort;
 
     if (isProgramEntryBypassEnabled()) {
-      const outcome = await prisma.$transaction(
+      const outcome = await writeClient().$transaction(
         (tx) => enrollOrWaitlist(tx, userId, cohort.id),
         { maxWait: 10_000, timeout: 20_000 },
       );
@@ -275,7 +279,7 @@ export async function createApplication(
     return { ok: false, message: "You are already enrolled in a program cohort." };
   }
 
-  const studentProfile = await prisma.studentProfile.findUnique({
+  const existingStudent = await studentProfile.findUnique({
     where: { userId },
     select: {
       fullName: true,
@@ -288,11 +292,11 @@ export async function createApplication(
       resumeUrl: true,
     },
   });
-  if (!studentProfile) {
+  if (!existingStudent) {
     return { ok: false, message: "Complete your registration before applying." };
   }
 
-  const existing = await prisma.programMember.findUnique({
+  const existing = await programMember.findUnique({
     where: { userId_cohortId: { userId, cohortId: cohort.id } },
     select: { status: true },
   });
@@ -306,31 +310,36 @@ export async function createApplication(
   }
 
   const data = {
-    fullName: studentProfile.fullName,
-    jobRole: studentProfile.role,
-    company: studentProfile.organization,
-    yearsExperience: studentProfile.yearsExperience,
+    fullName: existingStudent.fullName,
+    jobRole: existingStudent.role,
+    company: existingStudent.organization,
+    yearsExperience: existingStudent.yearsExperience,
     education: null,
-    university: studentProfile.college,
-    graduationYear: studentProfile.graduationYear,
+    university: existingStudent.college,
+    graduationYear: existingStudent.graduationYear,
     skills: profile.skills,
     linkedinUrl: emptyToNull(profile.linkedinUrl),
-    resumeUrl: studentProfile.resumeUrl,
-    phone: studentProfile.phone,
+    resumeUrl: existingStudent.resumeUrl,
+    phone: existingStudent.phone,
     githubUsername: profile.githubUsername,
     githubRepoUrl: profile.githubRepoUrl,
-    recruiterVisibilityConsentAt: profile.recruiterVisibilityConsent
-      ? new Date()
-      : null,
   };
 
-  await prisma.$transaction(
+  await writeClient().$transaction(
     async (tx) => {
-      await tx.programMember.upsert({
+      const member = await tx.programMember.upsert({
         where: { userId_cohortId: { userId, cohortId: cohort.id } },
-        create: { userId, cohortId: cohort.id, status: "APPLIED", ...data },
+        create: {
+          userId,
+          cohortId: cohort.id,
+          status: "APPLIED",
+          ...data,
+          recruiterVisibilityConsentAt: new Date(),
+        },
         update: { status: "APPLIED", ...data },
+        select: { id: true },
       });
+      await dualWriteProgramMember(tx, member.id);
       if (isProgramEntryBypassEnabled()) {
         await enrollOrWaitlist(tx, userId, cohort.id);
       }
@@ -514,7 +523,7 @@ export async function submitEntryAttempt(
   answers: (number | null)[],
 ): Promise<EntrySubmitOk | { ok: false; message: string }> {
   try {
-    return await prisma.$transaction(async (tx) => {
+    return await writeClient().$transaction(async (tx) => {
       const attempt = await tx.programEntryAttempt.findFirst({
         where: { id: attemptId, userId },
         select: {

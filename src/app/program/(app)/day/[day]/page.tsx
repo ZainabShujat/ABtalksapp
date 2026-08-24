@@ -19,6 +19,7 @@ import {
 } from "@/components/program/day-section-card";
 import { programMdComponents } from "@/components/program/markdown-code";
 import { cn } from "@/lib/utils";
+import { programMember } from "@/repositories/legacy/program-member";
 
 type Props = { params: Promise<{ day: string }> };
 
@@ -43,7 +44,7 @@ export default async function ProgramDayPage({ params }: Props) {
 
   const [missionState, memberProfile, curriculum] = await Promise.all([
     getMissionState(member.id, dayNumber),
-    prisma.programMember.findUnique({
+    programMember.findUnique({
       where: { id: member.id },
       select: { githubRepoUrl: true },
     }),

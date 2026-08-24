@@ -1,6 +1,7 @@
 import { Domain, EnrollmentStatus } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { dualWriteChallengeEnrollment } from "@/repositories/dual-write";
 
 export type CoreDomain = Extract<Domain, "AI" | "DS" | "SE">;
 
@@ -79,8 +80,8 @@ export async function createCoreEnrollment(
   }
 
   try {
-    await prisma.$transaction(async (tx) => {
-      await tx.enrollment.create({
+    await writeClient().$transaction(async (tx) => {
+      const enrollment = await tx.enrollment.create({
         data: {
           userId,
           challengeId: challenge.id,
@@ -90,12 +91,21 @@ export async function createCoreEnrollment(
           currentStreak: 0,
           longestStreak: 0,
         },
+        select: {
+          id: true,
+          userId: true,
+          domain: true,
+          status: true,
+          startedAt: true,
+          completedAt: true,
+        },
       });
       // First track joined becomes the profile's primary domain. Never overwrite.
       await tx.studentProfile.updateMany({
         where: { userId, domain: null },
         data: { domain },
       });
+      await dualWriteChallengeEnrollment(tx, enrollment);
     });
     return { ok: true };
   } catch (e) {

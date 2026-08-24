@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { isClaudeEnabled } from "@/lib/feature-flags";
 import { ClaudeOnboardingClient } from "@/components/claude/claude-onboarding-client";
+import { studentProfile } from "@/repositories/legacy/student-profile";
 
 export default async function ClaudeSignupPage() {
   if (!isClaudeEnabled()) {
@@ -24,7 +25,7 @@ export default async function ClaudeSignupPage() {
       );
     }
 
-    const profile = await prisma.studentProfile.findUnique({
+    const profile = await studentProfile.findUnique({
       where: { userId: session.user.id },
       select: { id: true },
     });

@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { studentProfile } from "@/repositories/legacy/student-profile";
 
 export type RecruiterState =
   | { status: "none" }
@@ -30,12 +31,12 @@ export async function registerRecruiter(
   userId: string,
   input: { fullName: string; company: string; phone?: string },
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const [user, studentProfile, existing] = await Promise.all([
+  const [user, existingStudent, existing] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: { role: true },
     }),
-    prisma.studentProfile.findUnique({
+    studentProfile.findUnique({
       where: { userId },
       select: { id: true },
     }),
@@ -46,7 +47,7 @@ export async function registerRecruiter(
   ]);
 
   if (!user) return { ok: false, message: "Account not found." };
-  if (studentProfile) {
+  if (existingStudent) {
     return {
       ok: false,
       message:

@@ -1,6 +1,6 @@
 import type { Domain } from "@prisma/client";
 import { EnrollmentStatus } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { listChallengeEnrollments } from "@/repositories/learning";
 
 export interface UserEnrollmentSummary {
   id: string;
@@ -13,23 +13,14 @@ export interface UserEnrollmentSummary {
 export async function getUserActiveEnrollments(
   userId: string,
 ): Promise<UserEnrollmentSummary[]> {
-  const enrollments = await prisma.enrollment.findMany({
-    where: { userId, status: EnrollmentStatus.ACTIVE },
-    orderBy: { startedAt: "asc" },
-    select: {
-      id: true,
-      domain: true,
-      daysCompleted: true,
-      currentStreak: true,
-      challenge: { select: { title: true } },
-    },
-  });
-
-  return enrollments.map((e) => ({
-    id: e.id,
-    domain: e.domain,
-    challengeTitle: e.challenge.title,
-    daysCompleted: e.daysCompleted,
-    currentStreak: e.currentStreak,
-  }));
+  const enrollments = await listChallengeEnrollments(userId);
+  return enrollments
+    .filter((e) => e.status === EnrollmentStatus.ACTIVE)
+    .map((e) => ({
+      id: e.id,
+      domain: e.domain,
+      challengeTitle: e.challengeTitle,
+      daysCompleted: e.daysCompleted,
+      currentStreak: e.currentStreak,
+    }));
 }

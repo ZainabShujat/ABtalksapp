@@ -232,7 +232,9 @@ export async function TrackPage({ domain, searchParams }: TrackPageProps) {
           />
         ) : null}
         {hasClaudeEnrollment && shouldShowAmbassadorBanner ? (
-          <CampusAmbassadorBanner />
+          <CampusAmbassadorBanner
+            alreadyApplied={profile.isCampusAmbassadorCandidate}
+          />
         ) : null}
         <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1">
           <EnrollmentEndedScreen
@@ -271,7 +273,9 @@ export async function TrackPage({ domain, searchParams }: TrackPageProps) {
           />
         ) : null}
         {hasClaudeEnrollment && shouldShowAmbassadorBanner ? (
-          <CampusAmbassadorBanner />
+          <CampusAmbassadorBanner
+            alreadyApplied={profile.isCampusAmbassadorCandidate}
+          />
         ) : null}
         {hasClaudeEnrollment ? (
           <ClaudeDay0SharePrompt hasDay1Submission={hasClaudeDay1Submission} />
@@ -339,7 +343,9 @@ export async function TrackPage({ domain, searchParams }: TrackPageProps) {
         />
       ) : null}
       {hasClaudeEnrollment && shouldShowAmbassadorBanner ? (
-        <CampusAmbassadorBanner />
+        <CampusAmbassadorBanner
+          alreadyApplied={profile.isCampusAmbassadorCandidate}
+        />
       ) : null}
       {showClaudeModal && claudeModalStartsAt ? (
         <ClaudeChallengeModal startsAt={claudeModalStartsAt} />

@@ -124,7 +124,7 @@ model Certificate {
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Restrict)
   enrollment Enrollment? @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
 
   @@index([userId, status])
@@ -283,6 +283,9 @@ model User {
   password              String?
   role                  Role                     @default(STUDENT)
   synergyPoints         Int                      @default(0)
+  /// Soft delete. Set instead of DELETE; PII is scrubbed by the anonymizer.
+  deletedAt             DateTime?
+  anonymizedAt          DateTime?
   createdAt             DateTime                 @default(now())
   updatedAt             DateTime                 @updatedAt
   accounts              Account[]
@@ -307,7 +310,7 @@ model User {
   recruiterProfile      RecruiterProfile?
   shortlistItems        RecruiterShortlistItem[]
   hackathonParticipant  HackathonParticipant?
-  hackathonRemovals     HackathonRemoval[]
+  hackathonRemovals     HackathonRemoval[]       @relation("HackathonRemoved")
   newsletterSubscriptions NewsletterSubscription[]
   certificates          Certificate[]
   workshopRegistrations WorkshopRegistration[]
@@ -315,6 +318,28 @@ model User {
   dataRightsRequests    DataRightsRequest[]
   notificationReads     NotificationRead[]
 
+  // Plan 078 Phase 1 — new identity / learning / talent relations (legacy fields above stay).
+  roleAssignments            UserRoleAssignment[]    @relation("RoleSubject")
+  rolesGranted               UserRoleAssignment[]    @relation("RoleGranter")
+  candidateProfile           CandidateProfile?
+  visibility                 CandidateVisibility?
+  pointsAccount              PointsAccount?
+  pointsLedger               PointsTransaction[]
+  credentials                Credential[]
+  achievements               CandidateAchievement[]
+  programEnrollments         ProgramEnrollment[]
+  evaluationsGiven           ActivityEvaluation[]    @relation("Evaluator")
+  orgMemberships             OrganizationMember[]
+  talentListItems            TalentListItem[]
+  candidateNotes             CandidateNote[]         @relation("NoteSubject")
+  notesAuthored              CandidateNote[]         @relation("NoteAuthor")
+  assessmentReports          AssessmentReport[]      @relation("AssessedCandidate")
+  jobsCreated                Job[]                   @relation("JobCreator")
+  recruitersApproved         RecruiterProfile[]      @relation("RecruiterApprover")
+  notificationsCreated       Notification[]          @relation("NotificationAuthor")
+  hackathonRemovalsPerformed HackathonRemoval[]      @relation("HackathonRemover")
+
+  @@index([deletedAt, createdAt(sort: Desc)])
   @@index([createdAt(sort: Desc)])
   @@index([synergyPoints(sort: Desc)])
 }
@@ -517,10 +542,12 @@ model Job {
   description      String
   applyExternalUrl String?
   isOpen           Boolean          @default(true)
-  createdByAdminId String
+  createdByAdminId String?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   applications     JobApplication[]
+  createdByAdmin   User?            @relation("JobCreator", fields: [createdByAdminId], references: [id], onDelete: SetNull)
+  skills           JobSkill[]
 
   @@index([isOpen, createdAt(sort: Desc)])
 }
@@ -551,7 +578,7 @@ model SynergyEvent {
   reason           String?
   createdByAdminId String?
   createdAt        DateTime    @default(now())
-  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User        @relation(fields: [userId], references: [id], onDelete: Restrict)
   submission       Submission? @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -712,7 +739,8 @@ model ProgramMember {
   phone               String? // admin-only, NEVER shown to recruiters
   githubUsername      String
   githubRepoUrl       String // dedicated public repo for the program
-  /// Set when the member opts in to `/talent` recruiter visibility.
+  /// Legacy talent-gate timestamp. New applications stamp this automatically
+  /// (platform default). Existing rows are not rewritten. Not a user toggle.
   recruiterVisibilityConsentAt DateTime?
   // progression + denormalized scores
   highestUnlockedDay  Int                         @default(1)
@@ -947,6 +975,8 @@ model RecruiterProfile {
   approvedByAdminId String?
   createdAt         DateTime  @default(now())
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approvedByAdmin   User?     @relation("RecruiterApprover", fields: [approvedByAdminId], references: [id], onDelete: SetNull)
+  talentLists       TalentList[]
 }
 
 model RecruiterShortlistItem {
@@ -956,7 +986,7 @@ model RecruiterShortlistItem {
   note            String?
   createdAt       DateTime      @default(now())
   recruiter       User          @relation(fields: [recruiterUserId], references: [id], onDelete: Cascade)
-  member          ProgramMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member          ProgramMember @relation(fields: [memberId], references: [id], onDelete: Restrict)
 
   @@unique([recruiterUserId, memberId])
 }
@@ -1024,12 +1054,13 @@ model HackathonRemoval {
   slotIndex        Int
   sourceSlug       String?
   originalJoinedAt DateTime
-  removedByUserId  String
+  removedByUserId  String?
   removedByRole    HackathonRemovalActor
   reason           String?
   createdAt        DateTime              @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User  @relation("HackathonRemoved", fields: [userId], references: [id], onDelete: Cascade)
+  removedBy User? @relation("HackathonRemover", fields: [removedByUserId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([teamId])
@@ -1172,6 +1203,8 @@ model Notification {
   createdByAdminId String?
   createdAt        DateTime             @default(now())
 
+  createdByAdmin User? @relation("NotificationAuthor", fields: [createdByAdminId], references: [id], onDelete: SetNull)
+
   @@index([isActive, publishedAt(sort: Desc)])
 }
 
@@ -1194,4 +1227,1284 @@ model NotificationRead {
 
   @@unique([userId, notificationKey])
   @@index([userId])
+}
+
+// =============================================================================
+// Plan 078 Phase 1 — new models coexist with legacy tables. Nothing below
+// replaces Enrollment, StudentProfile, Certificate, ProgramMember, etc.
+// RecruiterProfile / Job / JobApplication stay in their legacy shape;
+// Organization.recruiters and Organization.jobs are wired in Phase 2h.
+// User.programEnrollments is named that way because User.enrollments already
+// points at legacy Enrollment.
+// =============================================================================
+
+enum PlatformRole {
+  CANDIDATE
+  RECRUITER
+  ADMIN
+  INSTRUCTOR
+  MENTOR
+  ORG_ADMIN
+}
+
+enum RoleScopeType {
+  GLOBAL
+  COHORT
+  ORGANIZATION
+  PROGRAM
+}
+
+enum CandidatePersona {
+  STUDENT
+  PROFESSIONAL
+  OTHER
+}
+
+enum SkillProficiency {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum ProgramFormat {
+  CHALLENGE
+  COHORT
+  COURSE
+  BOOTCAMP
+  WORKSHOP
+  ASSESSMENT
+}
+
+enum ProgramVersionStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CohortStartMode {
+  /// Every enrollment starts on its own join date. `startsAt`, when set, is a floor.
+  ROLLING
+  /// Every enrollment shares the cohort's `startsAt`.
+  FIXED
+}
+
+enum CohortStatus {
+  DRAFT
+  ENROLLING
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum ActivityType {
+  CODING
+  QUIZ
+  PROJECT
+  ASSIGNMENT
+  CONTENT
+  VIDEO
+  INTERVIEW
+  EXTERNAL_SUBMISSION
+  DAILY_CHALLENGE
+}
+
+enum ActivityUnlockRule {
+  /// Available as soon as the enrollment is active.
+  ALWAYS
+  /// Requires the previous activity in the module to be passed.
+  SEQUENTIAL
+  /// Requires the cohort calendar to have reached `dayNumber`.
+  SCHEDULED
+  /// Requires every row in ActivityPrerequisite to be passed.
+  PREREQUISITE
+}
+
+enum EnrollmentStatusV2 {
+  APPLIED
+  WAITLISTED
+  ACTIVE
+  COMPLETED
+  DROPPED
+  REMOVED
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  EVALUATED
+  ABANDONED
+}
+
+enum AttemptLateness {
+  ON_TIME
+  LATE
+  NOT_APPLICABLE
+}
+
+enum EvaluatorType {
+  AUTO
+  AI
+  HUMAN
+  EXTERNAL
+  SELF
+}
+
+enum DayActivitySource {
+  SUBMISSION
+  GITHUB_COMMIT
+  MANUAL
+}
+
+enum CredentialType {
+  COMPLETION
+  DISTINCTION
+  PARTICIPATION
+  PLACEMENT
+  ASSESSMENT
+}
+
+enum CredentialSourceType {
+  PROGRAM_ENROLLMENT
+  COHORT
+  HACKATHON_TEAM
+  WORKSHOP_REGISTRATION
+  ASSESSMENT_REPORT
+  MANUAL
+}
+
+enum CredentialStatus {
+  ISSUED
+  REVOKED
+}
+
+enum PointsSourceType {
+  ACTIVITY_ATTEMPT
+  REFERRAL
+  REDEMPTION
+  REDEMPTION_REFUND
+  ADMIN_GRANT
+  RECONCILIATION
+  LEGACY
+}
+
+enum AchievementSourceType {
+  PROGRAM_ENROLLMENT
+  HACKATHON_TEAM
+  WORKSHOP_REGISTRATION
+  ASSESSMENT_REPORT
+  CREDENTIAL
+  EXTERNAL
+}
+
+enum EvidenceSourceType {
+  ACTIVITY_EVALUATION
+  ASSESSMENT_SCORE
+  HACKATHON
+  CREDENTIAL
+  EXTERNAL
+}
+
+enum OrgMemberRole {
+  OWNER
+  ADMIN
+  RECRUITER
+  VIEWER
+}
+
+enum OrgMemberStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+}
+
+enum PipelineStage {
+  SOURCED
+  SHORTLISTED
+  CONTACTED
+  SCREENING
+  INTERVIEWING
+  OFFER
+  HIRED
+  REJECTED
+  WITHDRAWN
+}
+
+enum AssessmentReportStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum RecommendationLevelV2 {
+  STRONGLY_RECOMMEND
+  RECOMMEND
+  NEUTRAL
+  DO_NOT_RECOMMEND
+}
+
+/// Replaces `User.role` + the ADMIN_EMAILS env var. Scoped roles let an
+/// INSTRUCTOR be an instructor for one cohort only.
+model UserRoleAssignment {
+  id              String        @id @default(cuid())
+  userId          String
+  role            PlatformRole
+  scopeType       RoleScopeType @default(GLOBAL)
+  /// Cohort.id / Organization.id / LearningProgram.id. Null when scopeType=GLOBAL.
+  /// Deliberately not an FK: the target table varies by scopeType.
+  scopeId         String?
+  grantedByUserId String?
+  grantedAt       DateTime      @default(now())
+  revokedAt       DateTime?
+  revokedReason   String?
+
+  user      User  @relation("RoleSubject", fields: [userId], references: [id], onDelete: Cascade)
+  grantedBy User? @relation("RoleGranter", fields: [grantedByUserId], references: [id], onDelete: SetNull)
+
+  // SQL: CREATE UNIQUE INDEX ... ON "UserRoleAssignment"(userId, role, scopeType, COALESCE(scopeId,'')) WHERE "revokedAt" IS NULL;
+  @@index([userId, revokedAt])
+  @@index([role, scopeType, scopeId])
+  @@index([grantedByUserId])
+}
+
+/// THE canonical candidate identity. Nothing else stores a candidate's name,
+/// phone, links or resume.
+model CandidateProfile {
+  id                          String           @id @default(cuid())
+  userId                      String           @unique
+  fullName                    String
+  headline                    String?
+  summary                     String?
+  /// Soft display label only — never a schema branch.
+  primaryPersona              CandidatePersona @default(STUDENT)
+  phone                       String?
+  phoneVerified               Boolean          @default(false)
+  phoneVerifiedAt             DateTime?
+  locationCity                String?
+  locationRegion              String?
+  countryCode                 String?          @db.Char(2)
+  linkedinUrl                 String?
+  githubUsername              String?
+  portfolioUrl                String?
+  resumeUrl                   String?
+  referralCode                String           @unique
+  isReadyForInterview         Boolean          @default(false)
+  isCampusAmbassadorCandidate Boolean          @default(false)
+  ambassadorAppliedAt         DateTime?
+  ambassadorDismissedAt       DateTime?
+  createdAt                   DateTime         @default(now())
+  updatedAt                   DateTime         @updatedAt
+
+  user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  education      CandidateEducation[]
+  experience     CandidateExperience[]
+  projects       CandidateProjectEntry[]
+  certifications CandidateCertification[]
+  skills         CandidateSkill[]
+  preference     CandidatePreference?
+
+  // SQL: CREATE INDEX ... USING gin ("fullName" gin_trgm_ops);
+  // SQL: CREATE INDEX ... USING gin ("headline" gin_trgm_ops);
+  @@index([locationCity, countryCode])
+  @@index([isReadyForInterview])
+  @@index([updatedAt(sort: Desc)])
+}
+
+/// Recruiter-discovery enforcement. Kept for moderation, deletion, and policy —
+/// not a candidate preference. New rows default searchable (learning + talent
+/// platform). Per-field show* columns stay private-by-default. Only the search
+/// repository may read this.
+model CandidateVisibility {
+  id                     String    @id @default(cuid())
+  userId                 String    @unique
+  /// Enforcement switch. False = hidden from every recruiter surface (moderation
+  /// / deletion / future policy). New rows default true; not a user-facing opt-in.
+  searchableByRecruiters Boolean   @default(true)
+  showEmail              Boolean   @default(false)
+  showPhone              Boolean   @default(false)
+  showResume             Boolean   @default(false)
+  showLinkedin           Boolean   @default(true)
+  showGithub             Boolean   @default(true)
+  showAssessmentScores   Boolean   @default(false)
+  showInterviewResults   Boolean   @default(false)
+  showCurrentEmployer    Boolean   @default(true)
+  /// Audit trail for consent, required under DPDP.
+  consentSource          String?
+  consentedAt            DateTime?
+  withdrawnAt            DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([searchableByRecruiters, updatedAt(sort: Desc)])
+}
+
+model CandidateEducation {
+  id              String   @id @default(cuid())
+  userId          String
+  institutionName String
+  /// Soft reference to College.id — stays FK-free.
+  collegeId       String?
+  degree          String?
+  fieldOfStudy    String?
+  startYear       Int?
+  graduationYear  Int?
+  grade           String?
+  isCurrent       Boolean  @default(false)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  profile CandidateProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  // SQL: CREATE INDEX ... USING gin ("institutionName" gin_trgm_ops);
+  @@index([userId, sortOrder])
+  @@index([graduationYear])
+  @@index([collegeId])
+}
+
+model CandidateExperience {
+  id             String    @id @default(cuid())
+  userId         String
+  companyName    String
+  /// Set when the employer exists as a platform Organization.
+  organizationId String?
+  title          String
+  employmentType String?
+  locationCity   String?
+  startedOn      DateTime  @db.Date
+  endedOn        DateTime? @db.Date
+  isCurrent      Boolean   @default(false)
+  /// Cached from startedOn/endedOn so "min years experience" is one indexed compare.
+  totalMonths    Int       @default(0)
+  description    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  profile      CandidateProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  organization Organization?    @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([userId, startedOn(sort: Desc)])
+  @@index([isCurrent, totalMonths(sort: Desc)])
+  @@index([organizationId])
+}
+
+model CandidateProjectEntry {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  repoUrl     String?
+  liveUrl     String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  profile CandidateProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([userId, sortOrder])
+}
+
+/// EXTERNAL certifications (AWS, Databricks). Platform-issued proof is `Credential`.
+model CandidateCertification {
+  id            String    @id @default(cuid())
+  userId        String
+  name          String
+  issuer        String
+  issuedOn      DateTime? @db.Date
+  expiresOn     DateTime? @db.Date
+  credentialUrl String?
+  createdAt     DateTime  @default(now())
+
+  profile CandidateProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([issuer])
+}
+
+/// Job preferences + compensation. Absorbs RecruiterReview.logistics/compensation.
+/// Independent of recruiter searchability: a candidate may be searchable while
+/// not actively looking. NEVER joined by a recruiter-facing query unless
+/// openToWork is true (and the visibility gate already passed).
+model CandidatePreference {
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  openToWork         Boolean   @default(false)
+  availableFrom      DateTime? @db.Date
+  noticePeriodDays   Int?
+  preferredRoles     String[]  @default([])
+  preferredLocations String[]  @default([])
+  willingToRelocate  Boolean   @default(false)
+  remotePreference   String?
+  /// Private. Exposed only to admins, never on any recruiter or public surface.
+  expectedSalaryMin  Int?
+  expectedSalaryMax  Int?
+  salaryCurrency     String?   @db.Char(3)
+  currentSalary      Int?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  profile CandidateProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([openToWork, availableFrom])
+}
+
+model SkillCategory {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  sortOrder Int      @default(0)
+  skills    Skill[]
+}
+
+/// Canonical skill vocabulary. Replaces free-text `String[]` on two tables.
+model Skill {
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  name       String
+  categoryId String?
+  /// Alternate spellings folded into this skill during normalization.
+  aliases    String[] @default([])
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  category         SkillCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  candidateSkills  CandidateSkill[]
+  activitySkills   ActivitySkill[]
+  programSkills    ProgramSkill[]
+  jobSkills        JobSkill[]
+  assessmentScores AssessmentScore[]
+
+  // SQL: CREATE INDEX ... USING gin (aliases);
+  @@index([categoryId, name])
+  @@index([isActive])
+}
+
+/// A candidate's claim on a skill. `evidenceScore` and `verified` are CACHES,
+/// recomputed whenever a SkillEvidence row is inserted.
+model CandidateSkill {
+  id             String            @id @default(cuid())
+  userId         String
+  skillId        String
+  selfRated      SkillProficiency?
+  /// Cached 0–100 strength derived from SkillEvidence. Source of truth is the evidence rows.
+  evidenceScore  Int               @default(0)
+  /// Cached: true when at least one non-SELF evidence row exists.
+  verified       Boolean           @default(false)
+  evidenceCount  Int               @default(0)
+  lastEvidenceAt DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  profile  CandidateProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  skill    Skill            @relation(fields: [skillId], references: [id], onDelete: Restrict)
+  evidence SkillEvidence[]
+
+  @@unique([userId, skillId])
+  @@index([skillId, evidenceScore(sort: Desc)])
+  @@index([skillId, verified])
+  @@index([userId, evidenceScore(sort: Desc)])
+}
+
+/// Append-only proof that a skill was demonstrated.
+model SkillEvidence {
+  id               String             @id @default(cuid())
+  candidateSkillId String
+  sourceType       EvidenceSourceType
+  /// Polymorphic by design — evidence comes from four bounded contexts.
+  sourceId         String
+  /// Human-readable provenance shown to recruiters ("Databricks Assessment").
+  sourceLabel      String
+  score            Int?
+  maxScore         Int?
+  weight           Int                @default(1)
+  occurredAt       DateTime
+  createdAt        DateTime           @default(now())
+
+  candidateSkill CandidateSkill @relation(fields: [candidateSkillId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateSkillId, sourceType, sourceId])
+  @@index([candidateSkillId, occurredAt(sort: Desc)])
+  @@index([sourceType, sourceId])
+}
+
+/// Replaces the `Domain` enum with rows.
+model ProgramCategory {
+  id          String            @id @default(cuid())
+  slug        String            @unique
+  name        String
+  description String?
+  colorToken  String?
+  sortOrder   Int               @default(0)
+  isActive    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  programs    LearningProgram[]
+
+  @@index([isActive, sortOrder])
+}
+
+/// The reusable learning definition. "31 Days of Databricks" is ONE row,
+/// independent of how many times it runs.
+model LearningProgram {
+  id           String        @id @default(cuid())
+  slug         String        @unique
+  title        String
+  subtitle     String?
+  description  String
+  categoryId   String
+  format       ProgramFormat @default(COHORT)
+  heroImageUrl String?
+  cardImageUrl String?
+  isPublished  Boolean       @default(false)
+  sortOrder    Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  category ProgramCategory  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  versions ProgramVersion[]
+  skills   ProgramSkill[]
+
+  @@index([categoryId, isPublished])
+  @@index([isPublished, sortOrder])
+}
+
+/// An immutable-once-PUBLISHED content snapshot.
+model ProgramVersion {
+  id                    String               @id @default(cuid())
+  programId             String
+  versionNumber         Int
+  status                ProgramVersionStatus @default(DRAFT)
+  /// Null for programs with no fixed length (self-paced courses).
+  plannedDurationDays   Int?
+  /// Total points available. Cached from SUM(Activity.points); recomputed on publish.
+  totalPoints           Int                  @default(0)
+  /// Cached count of required activities — the denominator for progress %.
+  requiredActivityCount Int                  @default(0)
+  changelog             String?
+  publishedAt           DateTime?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  program LearningProgram @relation(fields: [programId], references: [id], onDelete: Restrict)
+  modules Module[]
+  cohorts Cohort[]
+
+  @@unique([programId, versionNumber])
+  @@index([programId, status])
+}
+
+/// A scheduled run of one ProgramVersion. `startMode` unifies the rolling
+/// 60-Day Challenge and the fixed-date AI Cohort in one model.
+model Cohort {
+  id                 String          @id @default(cuid())
+  programVersionId   String
+  slug               String          @unique
+  name               String
+  startMode          CohortStartMode @default(FIXED)
+  /// FIXED: the shared Day-1 anchor. ROLLING: a floor (null = pure rolling).
+  startsAt           DateTime?
+  endsAt             DateTime?
+  /// IANA zone. Replaces the hard-coded IST vs America/Chicago split.
+  timezone           String          @default("Asia/Kolkata")
+  status             CohortStatus    @default(DRAFT)
+  capacity           Int?
+  joinCode           String?         @unique
+  requiresJoinCode   Boolean         @default(false)
+  enrollmentOpensAt  DateTime?
+  enrollmentClosesAt DateTime?
+  /// Gates recruiter visibility of this cohort's results.
+  resultsPublishedAt DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  programVersion ProgramVersion      @relation(fields: [programVersionId], references: [id], onDelete: Restrict)
+  enrollments    ProgramEnrollment[]
+
+  @@index([programVersionId, status])
+  @@index([status, startsAt])
+  @@index([resultsPublishedAt(sort: Desc)])
+}
+
+/// Ordered grouping inside a version. Position is scoped to the parent.
+model Module {
+  id               String   @id @default(cuid())
+  programVersionId String
+  position         Int
+  title            String
+  subtitle         String?
+  description      String?
+  colorToken       String?
+  /// Day-based programs only; null for module-only programs.
+  startDay         Int?
+  endDay           Int?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  programVersion ProgramVersion @relation(fields: [programVersionId], references: [id], onDelete: Cascade)
+  activities     Activity[]
+
+  @@unique([programVersionId, position])
+  @@index([programVersionId])
+}
+
+/// THE unit of work. One row replaces DailyTask, ProgramDay, Quiz, ProgramExercise
+/// and the definition half of ProgramProject.
+model Activity {
+  id               String             @id @default(cuid())
+  moduleId         String
+  position         Int
+  type             ActivityType
+  title            String
+  summary          String?
+  /// Display day for day-based programs. NULL for programs with no days.
+  /// Never used as a join key.
+  dayNumber        Int?
+  points           Int                @default(0)
+  isRequired       Boolean            @default(true)
+  unlockRule       ActivityUnlockRule @default(SEQUENTIAL)
+  /// Null = unlimited. `1` reproduces today's single-attempt behavior as POLICY.
+  maxAttempts      Int?
+  /// Days after the activity unlocks that it is due. Null = no deadline.
+  dueOffsetDays    Int?
+  estimatedMinutes Int?
+  difficulty       String?
+  tags             String[]           @default([])
+  /// SERVER-ONLY verification spec. Shape genuinely varies per mission type.
+  verificationSpec Json?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  module         Module                    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  codingConfig   CodingActivityConfig?
+  quizConfig     QuizActivityConfig?
+  projectConfig  ProjectActivityConfig?
+  contentConfig  ContentActivityConfig?
+  externalConfig ExternalSubmissionConfig?
+  skills         ActivitySkill[]
+  prerequisites  ActivityPrerequisite[]    @relation("PrerequisiteHolder")
+  requiredBy     ActivityPrerequisite[]    @relation("PrerequisiteTarget")
+  attempts       ActivityAttempt[]
+
+  @@unique([moduleId, position])
+  @@index([moduleId, dayNumber])
+  @@index([type])
+}
+
+model ActivityPrerequisite {
+  id                 String @id @default(cuid())
+  activityId         String
+  requiresActivityId String
+
+  activity Activity @relation("PrerequisiteHolder", fields: [activityId], references: [id], onDelete: Cascade)
+  requires Activity @relation("PrerequisiteTarget", fields: [requiresActivityId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, requiresActivityId])
+  @@index([requiresActivityId])
+}
+
+model CodingActivityConfig {
+  id            String  @id @default(cuid())
+  activityId    String  @unique
+  language      String
+  starterCode   String?
+  setupSql      String?
+  solutionCode  String?
+  timeLimitSec  Int?
+  memoryLimitMb Int?
+
+  activity  Activity   @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  testCases TestCase[]
+}
+
+model TestCase {
+  id             String  @id @default(cuid())
+  configId       String
+  sortOrder      Int
+  input          String
+  expectedOutput String
+  /// Hidden cases are never serialized to the client.
+  isHidden       Boolean @default(true)
+  weight         Int     @default(1)
+
+  config CodingActivityConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  @@unique([configId, sortOrder])
+}
+
+model QuizActivityConfig {
+  id               String  @id @default(cuid())
+  activityId       String  @unique
+  passMark         Int     @default(60)
+  /// Null = ask every question. Set to sample N of them.
+  sampleSize       Int?
+  shuffle          Boolean @default(true)
+  timeLimitSec     Int?
+  showExplanations Boolean @default(true)
+
+  activity  Activity   @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  questions Question[]
+}
+
+/// Normalized quiz content. Replaces QuizQuestion's optionA..D columns and
+/// ProgramConceptQuestion's `options String[]` + `correctIndex`.
+model Question {
+  id          String  @id @default(cuid())
+  configId    String
+  position    Int
+  body        String
+  explanation String?
+  points      Int     @default(1)
+
+  config  QuizActivityConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  options QuestionOption[]
+
+  @@unique([configId, position])
+}
+
+model QuestionOption {
+  id         String  @id @default(cuid())
+  questionId String
+  position   Int
+  body       String
+  isCorrect  Boolean @default(false)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, position])
+  @@index([questionId, isCorrect])
+}
+
+model ProjectActivityConfig {
+  id               String  @id @default(cuid())
+  activityId       String  @unique
+  briefMarkdown    String
+  requiresRepo     Boolean @default(true)
+  requiresWriteup  Boolean @default(true)
+  rubricJson       Json?
+  aiGradingEnabled Boolean @default(false)
+  maxScore         Int     @default(100)
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+}
+
+/// Reading / video content. Replaces ProgramVideo and DailyTask.dayContent.
+model ContentActivityConfig {
+  id               String   @id @default(cuid())
+  activityId       String   @unique
+  bodyMarkdown     String?
+  /// Kept for rich structured day pages that do not reduce to markdown.
+  contentJson      Json?
+  /// Client-safe assets only (datasets, API specs). Never verification data.
+  assetsJson       Json?
+  videoProvider    String?
+  videoRef         String?
+  videoDurationMin Int?
+  resources        String[] @default([])
+  objectives       String[] @default([])
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+}
+
+/// GitHub / LinkedIn / URL proof requirements. Replaces Submission's hard-coded
+/// githubUrl / linkedinUrl columns.
+model ExternalSubmissionConfig {
+  id                           String  @id @default(cuid())
+  activityId                   String  @unique
+  requiresGithubUrl            Boolean @default(false)
+  requiresLinkedinUrl          Boolean @default(false)
+  requiresLiveUrl              Boolean @default(false)
+  /// Enforce global URL uniqueness for this activity (plagiarism guard).
+  enforceGlobalUrlUniqueness   Boolean @default(true)
+  linkedinTemplate             String?
+  solutionApproach             String?
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+}
+
+model ActivitySkill {
+  id         String @id @default(cuid())
+  activityId String
+  skillId    String
+  /// How strongly passing this activity evidences the skill (1–10).
+  weight     Int    @default(1)
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  skill    Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, skillId])
+  @@index([skillId])
+}
+
+model ProgramSkill {
+  id        String @id @default(cuid())
+  programId String
+  skillId   String
+
+  program LearningProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  skill   Skill           @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([programId, skillId])
+  @@index([skillId])
+}
+
+/// User × Cohort. Program-specific facts ONLY — no name, phone, college or skills.
+/// Replaces legacy `Enrollment` and the membership half of `ProgramMember`.
+model ProgramEnrollment {
+  id             String             @id @default(cuid())
+  userId         String
+  cohortId       String
+  status         EnrollmentStatusV2 @default(ACTIVE)
+  /// The rolling anchor. For FIXED cohorts, day math ignores this.
+  startedAt      DateTime           @default(now())
+  enrolledAt     DateTime?
+  completedAt    DateTime?
+  droppedAt      DateTime?
+  /// Program-specific: the dedicated repo for this run. Legitimately per-enrollment.
+  githubRepoUrl  String?
+  /// Admin floor override on the unlock ceiling.
+  unlockFloorDay Int?
+  skipTokensUsed Int                @default(0)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cohort      Cohort                  @relation(fields: [cohortId], references: [id], onDelete: Restrict)
+  progress    EnrollmentProgress?
+  attempts    ActivityAttempt[]
+  dayActivity EnrollmentDayActivity[]
+
+  @@unique([userId, cohortId])
+  @@index([userId, status])
+  @@index([cohortId, status])
+  @@index([cohortId, enrolledAt])
+}
+
+/// CACHE. Source of truth is ActivityAttempt + ActivityEvaluation.
+model EnrollmentProgress {
+  id                      String    @id @default(cuid())
+  enrollmentId            String    @unique
+  /// Denormalized for leaderboard indexes without a join.
+  cohortId                String
+  completedActivities     Int       @default(0)
+  totalActivities         Int       @default(0)
+  /// 0–10000 (basis points) — integer avoids float drift in ORDER BY.
+  percentCompleteBp       Int       @default(0)
+  pointsEarned            Int       @default(0)
+  pointsPossible          Int       @default(0)
+  currentStreak           Int       @default(0)
+  longestStreak           Int       @default(0)
+  lastActivityAt          DateTime?
+  currentActivityId       String?
+  nextActivityId          String?
+  /// Highest module position with a passed activity — drives the unlock ceiling.
+  unlockedThroughPosition Int       @default(0)
+  recomputedAt            DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  enrollment ProgramEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@index([cohortId, pointsEarned(sort: Desc)])
+  @@index([cohortId, percentCompleteBp(sort: Desc)])
+  @@index([lastActivityAt(sort: Desc)])
+}
+
+/// One try at one activity. ALWAYS multi-attempt — single-attempt is a policy on
+/// Activity.maxAttempts, not a schema constraint.
+model ActivityAttempt {
+  id            String          @id @default(cuid())
+  enrollmentId  String
+  activityId    String
+  attemptNumber Int
+  status        AttemptStatus   @default(IN_PROGRESS)
+  lateness      AttemptLateness @default(NOT_APPLICABLE)
+  /// Type-specific payload: {code} | {answers} | {repoUrl, writeup} | {githubUrl, linkedinUrl} | {transcript}
+  payload       Json?
+  /// CACHE of the winning evaluation, written in the same transaction.
+  passed        Boolean         @default(false)
+  score         Int?
+  pointsAwarded Int             @default(0)
+  startedAt     DateTime        @default(now())
+  submittedAt   DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  enrollment  ProgramEnrollment    @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  activity    Activity             @relation(fields: [activityId], references: [id], onDelete: Restrict)
+  evaluations ActivityEvaluation[]
+
+  // SQL: partial unique on (payload->>'githubUrl') WHERE payload ? 'githubUrl' — plagiarism guard
+  @@unique([enrollmentId, activityId, attemptNumber])
+  @@index([enrollmentId, submittedAt(sort: Desc)])
+  @@index([activityId, passed])
+  @@index([enrollmentId, activityId, passed])
+  @@index([submittedAt(sort: Desc)])
+}
+
+/// A grading decision. Multiple per attempt supports AI grade + human override
+/// WITHOUT destroying the original.
+model ActivityEvaluation {
+  id              String        @id @default(cuid())
+  attemptId       String
+  evaluatorType   EvaluatorType
+  evaluatorUserId String?
+  passed          Boolean       @default(false)
+  score           Int?
+  maxScore        Int?
+  /// Per-check verdicts, rubric breakdowns, test results.
+  detailJson      Json?
+  feedback        String?
+  /// True for the evaluation that currently determines the attempt's outcome.
+  isAuthoritative Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+
+  attempt   ActivityAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  evaluator User?           @relation("Evaluator", fields: [evaluatorUserId], references: [id], onDelete: SetNull)
+
+  // SQL: CREATE UNIQUE INDEX ... ON "ActivityEvaluation"(attemptId) WHERE "isAuthoritative";
+  @@index([attemptId, createdAt(sort: Desc)])
+  @@index([evaluatorType, createdAt(sort: Desc)])
+  @@index([evaluatorUserId])
+}
+
+/// Daily activity grain for streaks and heatmaps.
+model EnrollmentDayActivity {
+  id            String            @id @default(cuid())
+  enrollmentId  String
+  activityDate  DateTime          @db.Date
+  source        DayActivitySource @default(SUBMISSION)
+  activityCount Int               @default(0)
+  pointsEarned  Int               @default(0)
+
+  enrollment ProgramEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, activityDate, source])
+  @@index([enrollmentId, activityDate(sort: Desc)])
+}
+
+/// Verifiable credential from ANY source. Deliberately has NO foreign key to its
+/// source: a credential must outlive the thing that produced it.
+model Credential {
+  id            String               @id @default(cuid())
+  /// Public, human-readable. Format ABT-XX-XXXXX.
+  credentialId  String               @unique
+  userId        String
+  type          CredentialType
+  sourceType    CredentialSourceType
+  /// The source row's id. Not an FK — see the model doc above.
+  sourceKey     String
+  status        CredentialStatus     @default(ISSUED)
+  title         String
+  /// SNAPSHOT at issue time — never re-read from the profile.
+  recipientName String
+  /// SNAPSHOT: program title, cohort name, scores, placement, college.
+  metadata      Json?
+  issuedAt      DateTime             @default(now())
+  expiresAt     DateTime?
+  revokedAt     DateTime?
+  revokedReason String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  /// Restrict, not Cascade — deleting a user must not destroy public credentials.
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([type, sourceType, sourceKey])
+  @@index([userId, status])
+  @@index([sourceType, sourceKey])
+  @@index([issuedAt(sort: Desc)])
+}
+
+/// CACHED balance. One per user, replacing the two copies on User and
+/// StudentProfile. `version` gives optimistic locking.
+model PointsAccount {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  balance        Int       @default(0)
+  lifetimeEarned Int       @default(0)
+  lifetimeSpent  Int       @default(0)
+  version        Int       @default(0)
+  reconciledAt   DateTime?
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([balance(sort: Desc)])
+}
+
+/// Append-only ledger. `idempotencyKey` makes double-award structurally
+/// impossible — the guarantee SynergyEvent never had.
+model PointsTransaction {
+  id              String           @id @default(cuid())
+  userId          String
+  /// Positive = earn, negative = spend. SUM per user is the true balance.
+  amount          Int
+  sourceType      PointsSourceType
+  sourceId        String?
+  /// Deterministic, e.g. "attempt:<id>", "referral:<id>", "redeem:<id>".
+  idempotencyKey  String           @unique
+  reason          String?
+  metadata        Json?
+  createdByUserId String?
+  createdAt       DateTime         @default(now())
+
+  /// Restrict — the ledger is financial-grade history.
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([sourceType, sourceId])
+  @@index([createdAt(sort: Desc)])
+}
+
+/// The cross-subsystem bridge onto the unified candidate profile.
+model CandidateAchievement {
+  id           String                @id @default(cuid())
+  userId       String
+  sourceType   AchievementSourceType
+  sourceId     String
+  title        String
+  description  String?
+  /// e.g. "2nd place", "Completed", "Top 5%".
+  outcomeLabel String?
+  /// Optional numeric outcome for sorting/filtering (rank, score, percentile).
+  outcomeValue Int?
+  occurredAt   DateTime
+  /// False hides it from every recruiter surface regardless of visibility settings.
+  isPublic     Boolean               @default(true)
+  metadata     Json?
+  createdAt    DateTime              @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([sourceType, sourceId])
+  @@index([userId, occurredAt(sort: Desc)])
+  @@index([userId, isPublic])
+}
+
+model Organization {
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  name       String
+  websiteUrl String?
+  logoUrl    String?
+  industry   String?
+  sizeBucket String?
+  isVerified Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  members    OrganizationMember[]
+  talentLists TalentList[]
+  notes      CandidateNote[]
+  experience CandidateExperience[]
+
+  // SQL: CREATE INDEX ... USING gin (name gin_trgm_ops);
+  @@index([isVerified])
+}
+
+/// Person ↔ organization. This is what lets several recruiters share one
+/// company's talent lists and jobs.
+model OrganizationMember {
+  id              String          @id @default(cuid())
+  organizationId  String
+  userId          String
+  role            OrgMemberRole   @default(RECRUITER)
+  status          OrgMemberStatus @default(INVITED)
+  invitedByUserId String?
+  joinedAt        DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId, status])
+  @@index([organizationId, role])
+}
+
+/// A named shortlist. Owned by an organization (shared with teammates) or by one
+/// recruiter (private). Replaces the implicit single shortlist per recruiter.
+model TalentList {
+  id               String   @id @default(cuid())
+  organizationId   String
+  ownerRecruiterId String?
+  name             String
+  description      String?
+  /// False = visible only to ownerRecruiterId.
+  isSharedWithOrg  Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        RecruiterProfile? @relation(fields: [ownerRecruiterId], references: [id], onDelete: SetNull)
+  items        TalentListItem[]
+
+  @@unique([organizationId, name])
+  @@index([ownerRecruiterId])
+}
+
+/// A candidate on a list, keyed by User.id. A recruiter never sees an enrollment
+/// or membership id.
+model TalentListItem {
+  id              String        @id @default(cuid())
+  talentListId    String
+  candidateUserId String?
+  /// Tombstone: survives candidate deletion so the list does not silently shrink.
+  candidateLabel  String
+  stage           PipelineStage @default(SHORTLISTED)
+  addedByUserId   String?
+  addedAt         DateTime      @default(now())
+  stageChangedAt  DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  talentList TalentList @relation(fields: [talentListId], references: [id], onDelete: Cascade)
+  candidate  User?      @relation(fields: [candidateUserId], references: [id], onDelete: SetNull)
+
+  @@unique([talentListId, candidateUserId])
+  @@index([talentListId, stage, addedAt(sort: Desc)])
+  @@index([candidateUserId])
+}
+
+/// Private note about a candidate, scoped to ONE organization.
+model CandidateNote {
+  id              String   @id @default(cuid())
+  organizationId  String
+  candidateUserId String
+  authorUserId    String
+  body            String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  candidate    User         @relation("NoteSubject", fields: [candidateUserId], references: [id], onDelete: Cascade)
+  author       User         @relation("NoteAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, candidateUserId, createdAt(sort: Desc)])
+  @@index([authorUserId])
+}
+
+model JobSkill {
+  id       String  @id @default(cuid())
+  jobId    String
+  skillId  String
+  required Boolean @default(true)
+
+  job   Job   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, skillId])
+  @@index([skillId])
+}
+
+/// An admin/instructor-curated assessment. MULTI-ROW — a second assessment no
+/// longer overwrites the first.
+model AssessmentReport {
+  id               String                 @id @default(cuid())
+  candidateUserId  String
+  title            String
+  status           AssessmentReportStatus @default(DRAFT)
+  recommendation   RecommendationLevelV2?
+  summary          String?
+  strengths        String[]               @default([])
+  areasForGrowth   String[]               @default([])
+  assessorName     String?
+  assessedByUserId String?
+  assessedAt       DateTime?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  /// Restrict — assessment history is evidence.
+  candidate User                    @relation("AssessedCandidate", fields: [candidateUserId], references: [id], onDelete: Restrict)
+  scores    AssessmentScore[]
+  shares    AssessmentReportShare[]
+
+  @@index([candidateUserId, assessedAt(sort: Desc)])
+  @@index([status, assessedAt(sort: Desc)])
+}
+
+/// One numeric dimension. Indexed and filterable.
+model AssessmentScore {
+  id        String   @id @default(cuid())
+  reportId  String
+  /// "communication" | "programming" | "behavior" | "problem_solving" | a skill slug
+  dimension String
+  skillId   String?
+  score     Int
+  maxScore  Int      @default(100)
+  feedback  String?
+  createdAt DateTime @default(now())
+
+  report AssessmentReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  skill  Skill?           @relation(fields: [skillId], references: [id], onDelete: SetNull)
+
+  @@unique([reportId, dimension])
+  @@index([dimension, score(sort: Desc)])
+  @@index([skillId, score(sort: Desc)])
+}
+
+/// Public share token with expiry and revocation. Replaces the permanent,
+/// unrevocable RecruiterReview.shareToken.
+model AssessmentReportShare {
+  id              String    @id @default(cuid())
+  reportId        String
+  token           String    @unique
+  createdByUserId String?
+  expiresAt       DateTime?
+  revokedAt       DateTime?
+  lastViewedAt    DateTime?
+  viewCount       Int       @default(0)
+  createdAt       DateTime  @default(now())
+
+  report AssessmentReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId, revokedAt])
+}
+
+/// Plan 078 Phase 2 audit. Each backfill step writes one run plus conflict rows.
+model MigrationRun {
+  id         String    @id @default(cuid())
+  step       String
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  ok         Boolean   @default(false)
+  counts     Json?
+  error      String?
+
+  conflicts   MigrationConflict[]
+  quarantine  MigrationQuarantine[]
+
+  @@index([step, startedAt(sort: Desc)])
+}
+
+model MigrationConflict {
+  id            String   @id @default(cuid())
+  runId         String?
+  userId        String
+  field         String
+  chosenValue   String
+  rejectedValue String
+  source        String
+  createdAt     DateTime @default(now())
+
+  run MigrationRun? @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  @@index([userId, field])
+  @@index([runId])
+}
+
+model MigrationQuarantine {
+  id          String   @id @default(cuid())
+  runId       String?
+  sourceTable String
+  sourceId    String
+  field       String
+  payload     Json
+  reason      String
+  createdAt   DateTime @default(now())
+
+  run MigrationRun? @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  @@index([sourceTable, sourceId])
+  @@index([runId])
 }

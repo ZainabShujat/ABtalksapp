@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { askClaudeJson } from "@/lib/anthropic";
 import { logger } from "@/lib/logger";
 import { recomputeMemberScore } from "@/features/program/missions";
+import { programMember } from "@/repositories/legacy/program-member";
 import {
   encodeRepoContentsPath,
   parseRepo,
@@ -336,7 +337,7 @@ export async function overrideProjectScore(
 }
 
 export async function listProjectsForAdmin(cohortId: string) {
-  const members = await prisma.programMember.findMany({
+  const members = await programMember.findMany({
     where: {
       cohortId,
       status: { in: ["ENROLLED", "COMPLETED"] },

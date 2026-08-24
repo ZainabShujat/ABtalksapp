@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { askClaudeJson } from "@/lib/anthropic";
 import { logger } from "@/lib/logger";
 import { PROGRAM_TOTAL_DAYS } from "@/features/program/constants";
+import { programMember } from "@/repositories/legacy/program-member";
 import {
   collectPassSkipSets,
   getMemberDayStates,
@@ -74,7 +75,7 @@ async function ensureInterviewRecord(memberId: string) {
 
 async function loadMemberContext(memberId: string): Promise<MemberContext | null> {
   const [member, projects, { modules, days }] = await Promise.all([
-    prisma.programMember.findUnique({
+    programMember.findUnique({
       where: { id: memberId },
       select: {
         fullName: true,
@@ -182,7 +183,7 @@ export type InterviewEligibility =
 export async function getInterviewEligibility(
   memberId: string,
 ): Promise<InterviewEligibility> {
-  const member = await prisma.programMember.findUnique({
+  const member = await programMember.findUnique({
     where: { id: memberId },
     select: {
       cohort: { select: { endsAt: true } },
@@ -503,7 +504,7 @@ export async function adminResetInterview(
   memberId: string,
   reason: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const member = await prisma.programMember.findUnique({
+  const member = await programMember.findUnique({
     where: { id: memberId },
     select: { userId: true },
   });
@@ -544,7 +545,7 @@ export async function adminResetInterview(
 }
 
 export async function listInterviewsForAdmin(cohortId: string) {
-  const members = await prisma.programMember.findMany({
+  const members = await programMember.findMany({
     where: {
       cohortId,
       status: { in: ["ENROLLED", "COMPLETED"] },
