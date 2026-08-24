@@ -150,7 +150,7 @@ export function AppHeader({
           ) : null}
           {/* All breakpoints. On mobile this lands between the challenge
               switcher and the hamburger, which are the only other visible items. */}
-          <NotificationBellButton className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border/60 bg-card transition-colors hover:bg-muted" />
+          <NotificationBellButton className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border/60 bg-card text-foreground transition-colors hover:border-[#E05226] hover:bg-[#E05226]/10 hover:text-[#E05226]" />
           <div className="hidden md:block">
             <SynergyChip />
           </div>

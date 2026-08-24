@@ -301,7 +301,7 @@ function NotificationPanel({
                       "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border",
                       item.isRead
                         ? "border-border/60 text-muted-foreground"
-                        : "border-primary/30 bg-primary/10 text-primary",
+                        : "border-[#E05226]/30 bg-[#E05226]/10 text-[#E05226]",
                     )}
                   >
                     <Icon className="size-4" aria-hidden />
