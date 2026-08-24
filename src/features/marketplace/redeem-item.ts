@@ -1,5 +1,5 @@
 import { RedemptionStatus, PointsSourceType } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
 import { dualWritePoints } from "@/repositories/dual-write";
 
 export type RedeemResult =
@@ -16,7 +16,7 @@ export async function redeemItem(input: {
   shippingAddress: string;
   recipientPhone: string;
 }): Promise<RedeemResult> {
-  return prisma.$transaction(
+  return writeClient().$transaction(
     async (tx) => {
       const item = await tx.marketplaceItem.findUnique({
         where: { id: input.itemId },

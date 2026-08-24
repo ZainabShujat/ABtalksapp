@@ -2,7 +2,7 @@
 
 import { RedemptionStatus, PointsSourceType } from "@prisma/client";
 import { requireAdmin } from "@/lib/admin-auth";
-import { prisma } from "@/lib/db";
+import { writeClient } from "@/lib/db";
 import { updateRedemptionStatusSchema } from "@/lib/validations/marketplace";
 import { dualWritePoints } from "@/repositories/dual-write";
 
@@ -21,7 +21,7 @@ export async function updateRedemptionStatusAction(formData: FormData) {
   }
   const { redemptionId, nextStatus, trackingNote } = parsed.data;
 
-  return prisma.$transaction(async (tx) => {
+  return writeClient().$transaction(async (tx) => {
     const current = await tx.redemption.findUnique({
       where: { id: redemptionId },
       select: { status: true, userId: true, costSP: true },

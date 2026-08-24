@@ -20,6 +20,7 @@ import {
   whereUserId,
   type StepContext,
 } from "./migrate-078-shared";
+import { bulkUpsertBatched } from "./migrate-078-bulk";
 
 const prisma = new PrismaClient();
 
@@ -134,9 +135,9 @@ async function migrate2a(ctx: StepContext) {
   console.log(`2a identity: ${userIds.size} users`);
 
   const existingProfiles = await ctx.prisma.candidateProfile.findMany({
-    select: { userId: true, referralCode: true },
+    select: { id: true, userId: true, referralCode: true },
   });
-  const existingByUser = new Map(existingProfiles.map((e) => [e.userId, e.referralCode]));
+  const existingByUser = new Map(existingProfiles.map((e) => [e.userId, e]));
   const existingCodes = new Set(profiles.map((p) => p.referralCode));
   const takenCodes = new Set(existingProfiles.map((r) => r.referralCode));
 
@@ -274,7 +275,7 @@ async function migrate2a(ctx: StepContext) {
       linkedinUrl: linkedinPick.value,
       githubUsername: githubPick.value,
       resumeUrl: resumePick.value,
-      referralCode: existingByUser.get(userId) ?? nextCode(sp?.referralCode ?? null),
+      referralCode: existingByUser.get(userId)?.referralCode ?? nextCode(sp?.referralCode ?? null),
       isReadyForInterview: sp?.isReadyForInterview ?? false,
       isCampusAmbassadorCandidate: sp?.isCampusAmbassadorCandidate ?? false,
       ambassadorAppliedAt: sp?.ambassadorAppliedAt ?? null,
@@ -282,34 +283,35 @@ async function migrate2a(ctx: StepContext) {
     });
   }
 
-  let created = 0;
-  let updated = 0;
-  await chunked(toUpsert, 50, async (chunk) => {
-    await ctx.prisma.$transaction(
-      chunk.map((row) => {
-        const isNew = !existingByUser.has(row.userId);
-        if (isNew) created += 1;
-        else updated += 1;
-        return ctx.prisma.candidateProfile.upsert({
-          where: { userId: row.userId },
-          create: row,
-          update: {
-            fullName: row.fullName,
-            primaryPersona: row.primaryPersona,
-            phone: row.phone,
-            phoneVerified: row.phoneVerified,
-            phoneVerifiedAt: row.phoneVerifiedAt,
-            linkedinUrl: row.linkedinUrl,
-            githubUsername: row.githubUsername,
-            resumeUrl: row.resumeUrl,
-            isReadyForInterview: row.isReadyForInterview,
-            isCampusAmbassadorCandidate: row.isCampusAmbassadorCandidate,
-            ambassadorAppliedAt: row.ambassadorAppliedAt,
-            ambassadorDismissedAt: row.ambassadorDismissedAt,
-          },
-        });
-      }),
-    );
+  const now = new Date();
+  const created = toUpsert.filter((row) => !existingByUser.has(row.userId)).length;
+  const updated = toUpsert.length - created;
+  await bulkUpsertBatched(ctx.prisma, {
+    label: "2a-profiles",
+    table: "CandidateProfile",
+    cursorField: "userId",
+    rows: toUpsert.map((row) => ({
+      id: existingByUser.get(row.userId)?.id ?? `cp_${row.userId}`,
+      ...row,
+      updatedAt: now,
+    })),
+    conflict: ["userId"],
+    update: [
+      "fullName",
+      "primaryPersona",
+      "phone",
+      "phoneVerified",
+      "phoneVerifiedAt",
+      "linkedinUrl",
+      "githubUsername",
+      "resumeUrl",
+      "isReadyForInterview",
+      "isCampusAmbassadorCandidate",
+      "ambassadorAppliedAt",
+      "ambassadorDismissedAt",
+      "updatedAt",
+    ],
+    casts: { primaryPersona: '"CandidatePersona"' },
   });
 
   const skills = await ctx.prisma.skill.findMany({
@@ -437,40 +439,38 @@ async function migrate2a(ctx: StepContext) {
     }
   }
 
-  let eduCreated = 0;
-  await chunked(educationRows, 50, async (chunk) => {
-    for (const row of chunk) {
-      await ctx.prisma.candidateEducation.upsert({
-        where: { id: row.id },
-        create: row,
-        update: {
-          institutionName: row.institutionName,
-          collegeId: row.collegeId,
-          degree: row.degree,
-          graduationYear: row.graduationYear,
-          sortOrder: row.sortOrder,
-        },
-      });
-      eduCreated += 1;
-    }
+  const eduCreated = educationRows.length;
+  await bulkUpsertBatched(ctx.prisma, {
+    label: "2a-education",
+    table: "CandidateEducation",
+    cursorField: "id",
+    rows: educationRows.map((row) => ({ ...row, updatedAt: now })),
+    conflict: ["id"],
+    update: [
+      "institutionName",
+      "collegeId",
+      "degree",
+      "graduationYear",
+      "sortOrder",
+      "updatedAt",
+    ],
   });
 
-  let expCreated = 0;
-  await chunked(experienceRows, 50, async (chunk) => {
-    for (const row of chunk) {
-      await ctx.prisma.candidateExperience.upsert({
-        where: { id: row.id },
-        create: row,
-        update: {
-          companyName: row.companyName,
-          title: row.title,
-          startedOn: row.startedOn,
-          isCurrent: row.isCurrent,
-          totalMonths: row.totalMonths,
-        },
-      });
-      expCreated += 1;
-    }
+  const expCreated = experienceRows.length;
+  await bulkUpsertBatched(ctx.prisma, {
+    label: "2a-experience",
+    table: "CandidateExperience",
+    cursorField: "id",
+    rows: experienceRows.map((row) => ({ ...row, updatedAt: now })),
+    conflict: ["id"],
+    update: [
+      "companyName",
+      "title",
+      "startedOn",
+      "isCurrent",
+      "totalMonths",
+      "updatedAt",
+    ],
   });
 
   const skillRows: Array<{ userId: string; skillId: string }> = [];

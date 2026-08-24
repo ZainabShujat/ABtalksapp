@@ -1,6 +1,6 @@
 import "server-only";
 import type { Prisma, ProgramEntrySection } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
 import { isProgramEntryBypassEnabled } from "@/lib/feature-flags";
 import { logger } from "@/lib/logger";
 import {
@@ -192,7 +192,7 @@ export async function getEntryState(
     const cohort = applied.cohort;
 
     if (isProgramEntryBypassEnabled()) {
-      const outcome = await prisma.$transaction(
+      const outcome = await writeClient().$transaction(
         (tx) => enrollOrWaitlist(tx, userId, cohort.id),
         { maxWait: 10_000, timeout: 20_000 },
       );
@@ -308,16 +308,19 @@ export async function createApplication(
     phone: emptyToNull(profile.phone),
     githubUsername: profile.githubUsername,
     githubRepoUrl: profile.githubRepoUrl,
-    recruiterVisibilityConsentAt: profile.recruiterVisibilityConsent
-      ? new Date()
-      : null,
   };
 
-  await prisma.$transaction(
+  await writeClient().$transaction(
     async (tx) => {
       const member = await tx.programMember.upsert({
         where: { userId_cohortId: { userId, cohortId: cohort.id } },
-        create: { userId, cohortId: cohort.id, status: "APPLIED", ...data },
+        create: {
+          userId,
+          cohortId: cohort.id,
+          status: "APPLIED",
+          ...data,
+          recruiterVisibilityConsentAt: new Date(),
+        },
         update: { status: "APPLIED", ...data },
         select: { id: true },
       });
@@ -522,7 +525,7 @@ export async function submitEntryAttempt(
   answers: (number | null)[],
 ): Promise<EntrySubmitOk | { ok: false; message: string }> {
   try {
-    return await prisma.$transaction(async (tx) => {
+    return await writeClient().$transaction(async (tx) => {
       const attempt = await tx.programEntryAttempt.findFirst({
         where: { id: attemptId, userId },
         select: {

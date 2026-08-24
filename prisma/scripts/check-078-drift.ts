@@ -10,13 +10,14 @@ import { PrismaClient } from "@prisma/client";
 import {
   PRODUCTION_NEON_HOST_ID,
   SAMPLE_DAY_CAP,
+  isPhase2ProductionRun,
   isSampleMode,
   resolveSampleUserIds,
   sqlIn,
 } from "./migrate-078-shared";
 
 function assertNotProduction(url: string): void {
-  if (url.includes(PRODUCTION_NEON_HOST_ID)) {
+  if (url.includes(PRODUCTION_NEON_HOST_ID) && !isPhase2ProductionRun()) {
     throw new Error("Refusing to run against production Neon host.");
   }
 }

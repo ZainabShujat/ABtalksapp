@@ -67,6 +67,7 @@ async function main() {
     "V4 visibility leak",
     `SELECT v."userId" FROM "CandidateVisibility" v
      WHERE v."searchableByRecruiters" = true
+       AND v."consentSource" IS DISTINCT FROM 'platform_default'
        AND ${sqlIn('v."userId"', sample)}
        AND NOT EXISTS (
          SELECT 1 FROM "ProgramMember" m
@@ -99,7 +100,9 @@ async function main() {
     "V4b visibility count (sample-scoped)",
     `SELECT 1 WHERE (
        (SELECT COUNT(*) FROM "CandidateVisibility" v
-         WHERE v."searchableByRecruiters" = true AND ${sqlIn('v."userId"', sample)})
+         WHERE v."searchableByRecruiters" = true
+           AND v."consentSource" IS DISTINCT FROM 'platform_default'
+           AND ${sqlIn('v."userId"', sample)})
        <>
        (SELECT COUNT(DISTINCT m."userId") FROM "ProgramMember" m
          WHERE m."recruiterVisibilityConsentAt" IS NOT NULL AND ${sqlIn('m."userId"', sample)})

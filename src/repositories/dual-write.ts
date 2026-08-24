@@ -65,6 +65,23 @@ export async function runDualWrite(
   }
 }
 
+async function ensureCandidateVisibility(tx: Tx, userId: string): Promise<void> {
+  const existing = await tx.candidateVisibility.findUnique({
+    where: { userId },
+    select: { withdrawnAt: true },
+  });
+  if (existing?.withdrawnAt) return;
+  if (existing) return;
+  await tx.candidateVisibility.create({
+    data: {
+      userId,
+      searchableByRecruiters: true,
+      consentSource: "platform_default",
+      consentedAt: new Date(),
+    },
+  });
+}
+
 function mapChallengeStatus(status: EnrollmentStatus): EnrollmentStatusV2 {
   if (status === EnrollmentStatus.COMPLETED) return EnrollmentStatusV2.COMPLETED;
   if (status === EnrollmentStatus.ABANDONED) return EnrollmentStatusV2.DROPPED;
@@ -121,6 +138,7 @@ export async function dualWriteChallengeEnrollment(
         completedAt: enrollment.completedAt,
       },
     });
+    await ensureCandidateVisibility(tx, enrollment.userId);
   });
 }
 
@@ -175,6 +193,7 @@ export async function dualWriteProgramMember(
         skipTokensUsed: member.skipTokensUsed,
       },
     });
+    await ensureCandidateVisibility(tx, member.userId);
   });
 }
 

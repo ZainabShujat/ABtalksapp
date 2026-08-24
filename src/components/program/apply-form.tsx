@@ -36,8 +36,6 @@ export function ApplyForm({ joinCode }: { joinCode: string }) {
     acceptLegal: false,
     newsletterOptIn: true,
   });
-  const [recruiterVisibility, setRecruiterVisibility] = useState(false);
-
   const form = useForm<ApplyFormInput, unknown, ApplyProfileInput>({
     resolver: zodResolver(applyProfileSchema),
     defaultValues: {
@@ -54,7 +52,6 @@ export function ApplyForm({ joinCode }: { joinCode: string }) {
       githubRepoUrl: "",
       acceptLegal: false,
       newsletterOptIn: true,
-      recruiterVisibilityConsent: false,
     },
   });
 
@@ -112,7 +109,6 @@ export function ApplyForm({ joinCode }: { joinCode: string }) {
         joinCode,
         acceptLegal: legalConsent.acceptLegal,
         newsletterOptIn: legalConsent.newsletterOptIn,
-        recruiterVisibilityConsent: recruiterVisibility,
       });
       if (!res.ok) {
         toast.error(res.message);
@@ -297,25 +293,7 @@ export function ApplyForm({ joinCode }: { joinCode: string }) {
           setValue("acceptLegal", next.acceptLegal);
           setValue("newsletterOptIn", next.newsletterOptIn);
         }}
-      >
-        <label className="flex items-start gap-3 text-sm leading-snug">
-          <input
-            type="checkbox"
-            className="mt-0.5 size-4 shrink-0 rounded border"
-            checked={recruiterVisibility}
-            onChange={(e) => {
-              setRecruiterVisibility(e.target.checked);
-              setValue("recruiterVisibilityConsent", e.target.checked);
-            }}
-          />
-          <span>
-            I opt in to share my program profile with approved recruiters on the
-            ABTalks talent portal after results are published (email, LinkedIn,
-            resume, GitHub, scores, and interview summary — not my phone or full
-            interview transcript).
-          </span>
-        </label>
-      </LegalConsentFields>
+      />
 
       <Button
         type="submit"

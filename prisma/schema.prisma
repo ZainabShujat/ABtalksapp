@@ -739,7 +739,8 @@ model ProgramMember {
   phone               String? // admin-only, NEVER shown to recruiters
   githubUsername      String
   githubRepoUrl       String // dedicated public repo for the program
-  /// Set when the member opts in to `/talent` recruiter visibility.
+  /// Legacy talent-gate timestamp. New applications stamp this automatically
+  /// (platform default). Existing rows are not rewritten. Not a user toggle.
   recruiterVisibilityConsentAt DateTime?
   // progression + denormalized scores
   highestUnlockedDay  Int                         @default(1)
@@ -1509,13 +1510,16 @@ model CandidateProfile {
   @@index([updatedAt(sort: Desc)])
 }
 
-/// Recruiter-discovery consent. DEFAULT CLOSED — every column defaults to the
-/// most private value. Only the search repository may read this.
+/// Recruiter-discovery enforcement. Kept for moderation, deletion, and policy —
+/// not a candidate preference. New rows default searchable (learning + talent
+/// platform). Per-field show* columns stay private-by-default. Only the search
+/// repository may read this.
 model CandidateVisibility {
   id                     String    @id @default(cuid())
   userId                 String    @unique
-  /// Master switch. False = invisible to every recruiter surface, no exceptions.
-  searchableByRecruiters Boolean   @default(false)
+  /// Enforcement switch. False = hidden from every recruiter surface (moderation
+  /// / deletion / future policy). New rows default true; not a user-facing opt-in.
+  searchableByRecruiters Boolean   @default(true)
   showEmail              Boolean   @default(false)
   showPhone              Boolean   @default(false)
   showResume             Boolean   @default(false)
@@ -1620,7 +1624,9 @@ model CandidateCertification {
 }
 
 /// Job preferences + compensation. Absorbs RecruiterReview.logistics/compensation.
-/// NEVER joined by a recruiter-facing query unless the candidate opted in.
+/// Independent of recruiter searchability: a candidate may be searchable while
+/// not actively looking. NEVER joined by a recruiter-facing query unless
+/// openToWork is true (and the visibility gate already passed).
 model CandidatePreference {
   id                 String    @id @default(cuid())
   userId             String    @unique

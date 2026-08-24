@@ -52,7 +52,10 @@ async function main() {
     ) q
   `;
   const searchable = await prisma.candidateVisibility.count({
-    where: { searchableByRecruiters: true },
+    where: {
+      searchableByRecruiters: true,
+      NOT: { consentSource: "platform_default" },
+    },
   });
   const consented = await prisma.programMember.groupBy({
     by: ["userId"],
@@ -61,6 +64,7 @@ async function main() {
   const leak = await prisma.$queryRaw<{ n: bigint }[]>`
     SELECT COUNT(*)::bigint AS n FROM "CandidateVisibility" v
      WHERE v."searchableByRecruiters" = true
+       AND v."consentSource" IS DISTINCT FROM 'platform_default'
        AND NOT EXISTS (
          SELECT 1 FROM "ProgramMember" m
           WHERE m."userId" = v."userId" AND m."recruiterVisibilityConsentAt" IS NOT NULL)

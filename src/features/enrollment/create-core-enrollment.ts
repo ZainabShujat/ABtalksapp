@@ -1,5 +1,5 @@
 import { Domain, EnrollmentStatus } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { dualWriteChallengeEnrollment } from "@/repositories/dual-write";
 
@@ -80,7 +80,7 @@ export async function createCoreEnrollment(
   }
 
   try {
-    await prisma.$transaction(async (tx) => {
+    await writeClient().$transaction(async (tx) => {
       const enrollment = await tx.enrollment.create({
         data: {
           userId,

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { Role, PointsSourceType, type Prisma } from "@prisma/client";
 import { z } from "zod";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
 import { isAdminEmail, requireAdmin } from "@/lib/admin-auth";
 import { getCurrentDayNumber } from "@/lib/date-utils";
 import { computeStreakStats } from "@/features/submission/streak-utils";
@@ -101,7 +101,7 @@ export async function resetProgressAction(input: {
   let resetDomain: string | null = null;
 
   try {
-    await prisma.$transaction(async (tx) => {
+    await writeClient().$transaction(async (tx) => {
       const enrollment = await tx.enrollment.findFirst({
         where: { userId: targetUserId },
       });
@@ -226,7 +226,7 @@ export async function toggleReadyForInterviewAction(input: {
 
     const newValue = !profile.isReadyForInterview;
 
-    await prisma.$transaction(async (tx) => {
+    await writeClient().$transaction(async (tx) => {
       await tx.studentProfile.update({
         where: { userId: targetUserId },
         data: { isReadyForInterview: newValue },
@@ -267,7 +267,7 @@ export async function removeFromChallengeAction(input: {
   const { targetUserId, reason } = parsed.data;
 
   try {
-    await prisma.$transaction(async (tx) => {
+    await writeClient().$transaction(async (tx) => {
       const enrollment = await tx.enrollment.findFirst({
         where: { userId: targetUserId, status: "ACTIVE" },
         select: { id: true },
@@ -321,7 +321,7 @@ export async function rejectSubmissionAction(input: {
   try {
     let targetUserId = "";
 
-    await prisma.$transaction(async (tx) => {
+    await writeClient().$transaction(async (tx) => {
       const submission = await tx.submission.findUnique({
         where: { id: submissionId },
         select: {
@@ -443,7 +443,7 @@ export async function grantSynergyAction(input: {
   const { targetUserId, points, reason } = parsed.data;
 
   try {
-    await prisma.$transaction(async (tx) => {
+    await writeClient().$transaction(async (tx) => {
       const target = await tx.user.findUnique({
         where: { id: targetUserId },
         select: {

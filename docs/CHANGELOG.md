@@ -36,6 +36,9 @@
 - 2026-08-10 — `/` now renders the landing hub for signed-in users too (no more redirect to /dashboard); track cards show "Open dashboard" per-track via `features/landing/get-landing-state.ts`; `/login` bounces signed-in users to `/` instead of `/dashboard`.
 
 ## Pending reconcile
+- 2026-08-24 [schema] Additive migration `20260824153000_candidate_visibility_searchable_default`: `CandidateVisibility.searchableByRecruiters` DEFAULT false → true; existing rows unchanged
+- 2026-08-24 [schema|rule] Recruiter discoverability is a platform default for new CandidateVisibility rows (`searchableByRecruiters` default true), not a candidate preference; Phase 2b still copies legacy `ProgramMember.recruiterVisibilityConsentAt` and does not flip existing users; `openToWork` stays separate; no LeetCode/job-type models in this migration
+- 2026-08-24 [env|convention] Plan 078 conservative production cutover: additive Phase 1 schema + ENABLE_DUAL_WRITE on Neon direct; ENABLE_NEW_* stay off; Phase 2 uses batched INSERT ON CONFLICT with checkpoints; no Phase 6
 - 2026-08-21 [convention] Plan 078 full rehearsal targets a new Neon child from latest production (plan-078-rehearsal); plan-078-phase1 stays sample-only; ENABLE_NEW_* off until two clean unscoped Phase 5 passes; production rollout is schema → dual-write → online backfill → freeze → delta → verify → reopen → ENABLE_NEW_* → Phase 7 → observe → Phase 8
 - 2026-08-21 [convention] Plan 078: plan-078-phase1 sample validation is sufficient; do not full-backfill that child or start Phase 6; fresh-from-prod child is the unscoped Phase 1–5 rehearsal and Phase 6 gate
 - 2026-08-21 [convention] Plan 078 sample validation: Phase 5 scoped to backfilled users; Phase 2 upserts mutable rows for catch-up; dual-write probe on child only; ENABLE_DUAL_WRITE stays default-off; rollout sequence in docs/plans/078-sample-validation-and-rollout.md

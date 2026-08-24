@@ -3,7 +3,7 @@ import { clearRefCookie } from "@/lib/cookies";
 import { isClaudeEnabled, isOtpVerificationRequired } from "@/lib/feature-flags";
 import type { RegisterPayloadInput } from "@/lib/validations/register";
 import { INDIA_DIALING_CODE, toE164 } from "@/lib/validations/phone";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
 import { awardReferralSynergy } from "@/features/synergy/award-referral-synergy";
 import { recordLegalConsents } from "@/features/legal/record-consent";
 import { recordNewsletterOptIn } from "@/features/legal/record-newsletter-optin";
@@ -140,7 +140,7 @@ export async function completeRegistration(
   }
 
   try {
-    const profileId = await prisma.$transaction(async (tx) => {
+    const profileId = await writeClient().$transaction(async (tx) => {
       // Lock the account row before creating the rollback mirror so a
       // simultaneous grant cannot leave the two balances out of sync.
       const account = await tx.user.update({
@@ -218,7 +218,7 @@ export async function completeRegistration(
 
     if (referrerId) {
       try {
-        await prisma.$transaction(async (tx) => {
+        await writeClient().$transaction(async (tx) => {
           const referral = await tx.referral.create({
             data: {
               referrerId,

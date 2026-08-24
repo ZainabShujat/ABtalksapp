@@ -10,8 +10,9 @@ import type {
 
 /**
  * THE ONLY visibility fragment for recruiter candidate search (§8.3).
- * Legacy: ProgramMember.recruiterVisibilityConsentAt must be set.
- * New: CandidateVisibility.searchableByRecruiters.
+ * Legacy live reads: ProgramMember.recruiterVisibilityConsentAt must be set.
+ * New: CandidateVisibility.searchableByRecruiters (enforcement flag, not a
+ * candidate preference). openToWork is a separate availability filter.
  */
 export function visibleProgramMemberWhere(): Prisma.ProgramMemberWhereInput {
   return { recruiterVisibilityConsentAt: { not: null } };

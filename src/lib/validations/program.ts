@@ -52,7 +52,8 @@ export const applyProfileSchema = z
     hasLaptop8Gb: z.literal(true, {
       error: "Confirm you have a laptop with at least 8 GB RAM",
     }),
-    recruiterVisibilityConsent: z.boolean().default(false),
+    // Accepted if a stale client still posts it; ignored. Not a candidate preference.
+    recruiterVisibilityConsent: z.boolean().optional(),
   })
   .merge(legalAcceptanceSchema)
   .refine(
