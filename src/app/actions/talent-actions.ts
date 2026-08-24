@@ -82,7 +82,7 @@ export async function toggleShortlistAction(
   );
   if (!result.ok) return { ok: false, message: result.message };
 
-  revalidatePath("/talent");
+  revalidatePath("/hire");
   revalidatePath("/talent/shortlist");
   revalidatePath(`/talent/members/${parsed.data.memberId}`);
   // "layout" scope, not the bare path: the cart count lives in the /hire layout

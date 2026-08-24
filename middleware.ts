@@ -138,6 +138,7 @@ export default auth((req) => {
   // stay behind a session. Same for the cart — guests keep it locally.
   const isPublicRecruiterEntry =
     pathname === "/hire" ||
+    pathname === "/talent" ||
     pathname === "/hire/matches" ||
     pathname === "/talent/shortlist" ||
     pathname === "/talent/login" ||

@@ -95,7 +95,7 @@ export async function publishResultsAction(
   if (!result.ok) return result;
 
   revalidatePath("/admin/program");
-  revalidatePath("/talent");
+  revalidatePath("/hire");
   return { ok: true };
 }
 
@@ -130,7 +130,7 @@ export async function dropMemberAction(input: unknown): Promise<ActionResult> {
   revalidatePath("/admin/program/members");
   revalidatePath(`/admin/program/members/${parsed.data.memberId}`);
   revalidatePath("/program/leaderboard");
-  revalidatePath("/talent");
+  revalidatePath("/hire");
   return { ok: true };
 }
 

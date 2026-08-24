@@ -28,7 +28,7 @@ export function CtaBand() {
           Hire what you have already seen.
         </h2>
         <div className="cta-band__actions">
-          <Link href="/talent" className="btn btn--outline-light">
+          <Link href="/hire" className="btn btn--outline-light">
             Post a requirement
           </Link>
           <a href="#cohorts" className="btn btn--white">

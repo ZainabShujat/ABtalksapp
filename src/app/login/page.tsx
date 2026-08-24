@@ -61,6 +61,7 @@ export default async function LoginPage({ searchParams }: Props) {
     // the student /register redirect below — send them straight to their destination.
     if (
       redirectTo.startsWith("/program") ||
+      redirectTo.startsWith("/hire") ||
       redirectTo.startsWith("/talent") ||
       redirectTo.startsWith("/hackathon") ||
       redirectTo === "/dashboard" ||
