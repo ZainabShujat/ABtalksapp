@@ -697,6 +697,9 @@ suite("a track that did not exist becomes fully addressable", () => {
     geo: "IN",
     supportsEvidenceDays: true,
     dedupePriority: 45,
+    // A new track has to say where it lives in the 078 catalog, even if the
+    // answer is "nowhere yet" — that is the point of the field being required.
+    cohortSlug: "java-challenge-2026",
   };
   (TRACKS as TrackDescriptor[]).push(java);
   try {

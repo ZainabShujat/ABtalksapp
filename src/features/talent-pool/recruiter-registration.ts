@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { provisionRecruiterIdentity } from "@/features/hire/provision-recruiter";
 import { studentProfile } from "@/repositories/legacy/student-profile";
 
 export type RecruiterState =
@@ -146,13 +147,15 @@ export async function registerRecruiter(
     };
   }
 
+  const company = seat.company || input.company;
+
   await prisma.$transaction(async (tx) => {
     await tx.recruiterProfile.create({
       data: {
         userId,
         fullName: input.fullName,
         // The verified company wins over whatever was typed in the form.
-        company: seat.company || input.company,
+        company,
         phone: input.phone || null,
         approved: true,
       },
@@ -161,6 +164,11 @@ export async function registerRecruiter(
       where: { id: userId },
       data: { role: "RECRUITER" },
     });
+    // Legacy above stays authoritative while ENABLE_NEW_* is off. This writes
+    // the 078 identity alongside it so the recruiter product can be built on
+    // Organization / OrganizationMember / UserRoleAssignment without waiting for
+    // a backfill. See features/hire/provision-recruiter.ts.
+    await provisionRecruiterIdentity(tx, { userId, company });
   });
 
   return { ok: true };

@@ -71,7 +71,7 @@ The owner asked whether to "lagao RAG". **No.** Nothing here is a retrieval prob
 - The facts a recruiter asks for (how many, which skills, which tier) are small, structured, and already computable exactly — `poolSnapshot()` and `previewMatch()` are deterministic queries, not documents to embed.
 - A vector index over ~50 candidate rows would be slower, fuzzier, and unfalsifiable compared to a `groupBy`.
 
-Also rejected: **a full tool-calling agent loop.** Groq supports it, but it adds two round trips to every turn inside an 8s Server Action budget, and it hands filter selection to the model — the one thing plan 062 §14 forbids.
+Also rejected: **a full tool-calling agent loop.** Groq supports it, but it adds two round trips to every turn inside an 8s Server Action budget, and it hands filter selection to the model — the one thing plan 083 §14 forbids.
 
 **Chosen: intent routing + grounded fact injection.**
 
@@ -123,7 +123,7 @@ export type Capability = { id: string; supported: boolean; why?: string; instead
 | Asked for | Honest reply |
 |---|---|
 | Candidate country / city ("in the US", "from India") | No candidate has shared a location. `CandidateAvailability` is empty and the field is opt-in. Offer: ask at outreach. |
-| "completed the Claude challenge" / 60-day challenge | Only the AI Cohort (`PROGRAM`) is searchable. The challenge tracks need their own consent field — plan 069 §11. |
+| "completed the Claude challenge" / 60-day challenge | Only the AI Cohort (`PROGRAM`) is searchable. The challenge tracks need their own consent field — plan 088 §11. |
 | College / degree / graduation year as a filter | Declared and sparse; we rank on evidence, not credentials. |
 | Gender, age, caste, religion, marital status | Never. Refuse plainly and do not offer a workaround. |
 

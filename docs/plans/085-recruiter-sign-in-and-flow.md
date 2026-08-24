@@ -1,4 +1,4 @@
-# Plan 066 — Recruiter sign-in, and the whole recruiter flow
+# Plan 085 — Recruiter sign-in, and the whole recruiter flow
 
 > Successor to `065-recruiter-portal-requests-and-verified-access.md`.
 
@@ -219,7 +219,7 @@ The migration file is written **by hand** as `CREATE TABLE IF NOT EXISTS` plus
 still correct on a fresh one. Do **not** generate it with `migrate dev`: that
 would try to create a table that exists and fail.
 
-Before running anything, re-read plan 065 §5 — `DATABASE_URL` is the shared
+Before running anything, re-read plan 084 §5 — `DATABASE_URL` is the shared
 production database, and three migrations there are already in a failed state,
 so `prisma migrate deploy` is blocked on it regardless.
 

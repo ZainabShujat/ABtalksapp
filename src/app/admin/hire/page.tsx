@@ -46,18 +46,11 @@ export default async function AdminHirePage() {
         },
       },
       request: { select: { title: true } },
+      // Provenance, not identity — used to link to the cohort record and to look
+      // up the professional profile below. The candidate is `candidate`.
+      programMemberId: true,
       // Admin is the party that decides, so admin sees who the candidate is.
-      programMember: {
-        select: {
-          id: true,
-          fullName: true,
-          jobRole: true,
-          user: { select: { email: true } },
-        },
-      },
-      // Challenge candidates have no ProgramMember row. Reading identity only
-      // from that relation left the one person who has to phone the candidate
-      // looking at "(candidate removed)".
+      // Every track resolves through the User, which is why this is required.
       candidate: {
         select: {
           id: true,
@@ -75,6 +68,21 @@ export default async function AdminHirePage() {
       },
     },
   });
+
+  // Professionals keep their name on ProgramMember rather than StudentProfile,
+  // so resolve those separately from the provenance id. One query, and it never
+  // participates in identifying the candidate.
+  const memberIds = [
+    ...new Set(engagements.map((e) => e.programMemberId).filter((id): id is string => Boolean(id))),
+  ];
+  const members =
+    memberIds.length > 0
+      ? await prisma.programMember.findMany({
+          where: { id: { in: memberIds } },
+          select: { id: true, fullName: true, jobRole: true },
+        })
+      : [];
+  const memberById = new Map(members.map((m) => [m.id, m]));
 
   const sorted = [...engagements].sort(
     (a, b) => OPEN_FIRST.indexOf(a.status) - OPEN_FIRST.indexOf(b.status),
@@ -108,19 +116,20 @@ export default async function AdminHirePage() {
             {sorted.map((e) => {
               // Whichever pool this person came from, admin needs a name, a way
               // to reach them, and somewhere to read the rest.
+              const member = e.programMemberId
+                ? memberById.get(e.programMemberId)
+                : undefined;
               const name =
-                e.programMember?.fullName ??
-                e.candidate?.studentProfile?.fullName ??
-                e.candidate?.name ??
+                member?.fullName ??
+                e.candidate.studentProfile?.fullName ??
+                e.candidate.name ??
                 null;
-              const email = e.programMember?.user?.email ?? e.candidate?.email ?? null;
+              const email = e.candidate.email;
               const role =
-                e.programMember?.jobRole ?? e.candidate?.studentProfile?.role ?? null;
-              const profileHref = e.programMember?.id
-                ? `/admin/program/members/${e.programMember.id}`
-                : e.candidate?.id
-                  ? `/students/${e.candidate.id}`
-                  : null;
+                member?.jobRole ?? e.candidate.studentProfile?.role ?? null;
+              const profileHref = member
+                ? `/admin/program/members/${member.id}`
+                : `/students/${e.candidate.id}`;
               return (
               <li
                 key={e.id}

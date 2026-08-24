@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-auth";
 import { sendEmail } from "@/lib/email";
 import { prisma } from "@/lib/db";
+import { provisionRecruiterIdentity } from "@/features/hire/provision-recruiter";
+import { logger } from "@/lib/logger";
 import { adminRecruiterActionSchema } from "@/lib/validations/talent";
 
 type ActionResult =
@@ -77,6 +79,28 @@ export async function approveRecruiterAction(
       },
     }),
   ]);
+
+  // 078 identity, written after the approval rather than inside it.
+  //
+  // The transaction above is deliberately the array form (see the note on it),
+  // and provisioning needs an interactive client. Running it separately follows
+  // the same posture as the 078 dual-write: the legacy approval is authoritative
+  // and already committed, so a failure here is logged and does not undo it.
+  // `provisionRecruiterIdentity` is idempotent, so a retry costs nothing.
+  try {
+    await prisma.$transaction((tx) =>
+      provisionRecruiterIdentity(tx, {
+        userId: profile.user.id,
+        company: profile.company,
+        grantedByUserId: admin.userId,
+      }),
+    );
+  } catch (error) {
+    logger.error("[hire] 078 recruiter identity not provisioned on approve", {
+      recruiterProfileId: profile.id,
+      error: String(error),
+    });
+  }
 
   if (email) {
     const appUrl =

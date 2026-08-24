@@ -158,24 +158,27 @@ export function toPublicMatch(
   },
 ): MatchCardData {
   const dossier = match.dossier;
-  const declaredPay = dossier?.compensation.declared ?? null;
   const estimate = dossier?.compensation.estimate ?? null;
   const ev = dossier?.evidence;
   const interview = match.evidence.interview;
   const links = dossier?.links.value;
   const edu = dossier?.education.value;
   const availability = dossier?.availability;
-  const compensationDeclared = Boolean(declaredPay);
-  const compensationBand = declaredPay
-    ? formatBandLpa({
-        min: declaredPay.min,
-        max: declaredPay.max,
-        currency: "INR",
-        confidence: "MEDIUM",
-      })
-    : estimate
-      ? formatBandLpa(estimate)
-      : null;
+  // The candidate's OWN stated salary expectation is never shown to a recruiter.
+  //
+  // It lives on `CandidatePreference.expectedSalary*`, which the 078 schema marks
+  // "Private. Exposed only to admins, never on any recruiter or public surface."
+  // This used to render it whenever it existed. Nobody on the platform has filled
+  // one in yet, so the decision costs nothing today and would have been expensive
+  // to reverse later.
+  //
+  // What a recruiter sees is ABTalks' own indicative band, derived from role
+  // family and verified evidence, and labelled as ours — see
+  // `features/hire/compensation.ts` and COMPENSATION_DISCLAIMER. It never filters
+  // anyone out. `compensationDeclared` stays in the shape and stays false: the
+  // card reads it to decide whose number it is attributing.
+  const compensationDeclared = false;
+  const compensationBand = estimate ? formatBandLpa(estimate) : null;
 
   return {
     candidateRef: match.candidateRef,

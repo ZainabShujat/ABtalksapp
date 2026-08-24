@@ -216,7 +216,7 @@ A Java challenge then costs **one descriptor**. `list_tracks()` returns it, the
 agent reads its `evidenceKinds`, answers *"java, training complete, proof of
 work"*, and the cards render. **No agent code changes, no enum, no migration.**
 
-Follow-up **plan 081** (not this plan) moves the registry from a TS constant to a
+Follow-up **plan 094** (not this plan) moves the registry from a TS constant to a
 DB table and generalises evidence to `{ trackId, kind, label, value, verified }`,
 so "missions passed", "katas passed" and "sales roleplays completed" are one
 shape. The agent does not change then either — only where the registry is read
@@ -656,7 +656,7 @@ the prompt: *"`overallGap` must not use absolute quantifiers — no 'all', 'ever
 ## 10. DB safety
 
 Not applicable — no schema change, no migration, no seed, no backfill.
-`JobSpec.extra` is existing JSON and its keys are unchanged. Plan 081 will carry
+`JobSpec.extra` is existing JSON and its keys are unchanged. Plan 094 will carry
 its own DB-safety section when the registry moves to a table.
 
 ## 11. Design conformance

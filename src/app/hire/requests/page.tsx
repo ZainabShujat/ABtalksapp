@@ -45,15 +45,19 @@ export default async function HireRequestsPage() {
       note: true,
       createdAt: true,
       request: { select: { id: true, title: true } },
-      programMember: {
+      // Provenance only — used for the role label and the professional name.
+      programMemberId: true,
+      // Identity is selected only to be shown when the status says it may be.
+      // The gate is `status === "CONTACT_SHARED"` below, not this select.
+      // Reading it from the User means a challenge or hackathon candidate is
+      // released the same way a cohort member is; before, only cohort members
+      // ever resolved to a name and everyone else stayed a reference id even
+      // after the introduction had been approved.
+      candidate: {
         select: {
-          jobRole: true,
-          yearsExperience: true,
-          // Identity is selected only to be shown when the status says it may
-          // be. The gate is the query below, not this select — see the filter
-          // applied when building `identity`.
-          fullName: true,
-          user: { select: { email: true } },
+          email: true,
+          name: true,
+          studentProfile: { select: { fullName: true, role: true } },
         },
       },
       messages: {
@@ -63,6 +67,23 @@ export default async function HireRequestsPage() {
       },
     },
   });
+
+  const memberIds = [
+    ...new Set(
+      engagements
+        .map((e) => e.programMemberId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const memberById = new Map(
+    (memberIds.length > 0
+      ? await prisma.programMember.findMany({
+          where: { id: { in: memberIds } },
+          select: { id: true, fullName: true, jobRole: true },
+        })
+      : []
+    ).map((m) => [m.id, m]),
+  );
 
   return (
     <div className="space-y-6">
@@ -117,11 +138,18 @@ export default async function HireRequestsPage() {
             };
             // Identity is released by the decision, never by this page. Anything
             // other than CONTACT_SHARED renders the anonymous view.
+            const member = e.programMemberId
+              ? memberById.get(e.programMemberId)
+              : undefined;
             const identity =
-              e.status === "CONTACT_SHARED" && e.programMember
+              e.status === "CONTACT_SHARED"
                 ? {
-                    fullName: e.programMember.fullName,
-                    email: e.programMember.user?.email ?? null,
+                    fullName:
+                      member?.fullName ??
+                      e.candidate.studentProfile?.fullName ??
+                      e.candidate.name ??
+                      null,
+                    email: e.candidate.email,
                   }
                 : null;
 
@@ -133,7 +161,9 @@ export default async function HireRequestsPage() {
                       {identity?.fullName ?? e.candidatePublicId}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {e.programMember?.jobRole ?? "Candidate"}
+                      {member?.jobRole ??
+                        e.candidate.studentProfile?.role ??
+                        "Candidate"}
                       {e.request?.title ? ` · for ${e.request.title}` : ""}
                     </p>
                   </div>

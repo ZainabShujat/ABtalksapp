@@ -1,4 +1,4 @@
-# Plan 068 — Guest Scout; auth only at checkout (or nav popup)
+# Plan 087 — Guest Scout; auth only at checkout (or nav popup)
 
 ## 1. Goal
 

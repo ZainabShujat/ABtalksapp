@@ -5,7 +5,7 @@ import type { MatchTier } from "@/features/hire/types";
  * What ABTalks thinks the role pays — never what the candidate asked for.
  *
  * No member of the platform has ever filled in a salary expectation
- * (`CandidateAvailability` is empty), so a shortlist that shows a number
+ * (`CandidatePreference.expectedSalary*` is empty), so a shortlist that shows a number
  * without saying whose number it is invents a negotiating position for someone
  * who never gave one. This produces a band from the role family and the
  * verified evidence, labels it as ours, and never filters anybody out with it.

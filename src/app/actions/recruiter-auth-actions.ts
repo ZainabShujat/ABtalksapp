@@ -2,6 +2,7 @@
 
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/db";
+import { provisionRecruiterIdentity } from "@/features/hire/provision-recruiter";
 import { sendEmail } from "@/lib/email";
 import { recordLegalConsents } from "@/features/legal/record-consent";
 import { recordNewsletterOptIn } from "@/features/legal/record-newsletter-optin";
@@ -171,6 +172,17 @@ export async function registerRecruiterWithOtpAction(
 
       if (already) {
         await tx.user.update({ where: { id }, data: { role: "RECRUITER" } });
+      }
+
+      // Only for a verified seat. An unapproved application gets its 078
+      // identity when an admin approves it — granting a role assignment to
+      // somebody still under review would put the new model ahead of the
+      // decision the legacy model has not made yet.
+      if (approved) {
+        await provisionRecruiterIdentity(tx, {
+          userId: id,
+          company: seat?.company ?? company,
+        });
       }
       return id;
     });

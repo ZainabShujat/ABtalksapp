@@ -71,7 +71,7 @@ async function main() {
        AND ${sqlIn('v."userId"', sample)}
        AND NOT EXISTS (
          SELECT 1 FROM "ProgramMember" m
-          WHERE m."userId" = v."userId" AND m."recruiterVisibilityConsentAt" IS NOT NULL)`,
+          WHERE m."userId" = v."userId")`,
   );
   const v5 = await count(
     "V5 missing shortlist items",
@@ -99,13 +99,13 @@ async function main() {
   const v4b = await count(
     "V4b visibility count (sample-scoped)",
     `SELECT 1 WHERE (
-       (SELECT COUNT(*) FROM "CandidateVisibility" v
-         WHERE v."searchableByRecruiters" = true
-           AND v."consentSource" IS DISTINCT FROM 'platform_default'
-           AND ${sqlIn('v."userId"', sample)})
-       <>
        (SELECT COUNT(DISTINCT m."userId") FROM "ProgramMember" m
-         WHERE m."recruiterVisibilityConsentAt" IS NOT NULL AND ${sqlIn('m."userId"', sample)})
+         WHERE ${sqlIn('m."userId"', sample)})
+       <>
+       (SELECT COUNT(*) FROM "CandidateVisibility" v
+         JOIN "ProgramMember" m ON m."userId" = v."userId"
+         WHERE v."searchableByRecruiters" = true
+           AND ${sqlIn('v."userId"', sample)})
      )`,
   );
   const v8 = await count(

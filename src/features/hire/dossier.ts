@@ -1,8 +1,13 @@
 import "server-only";
 
 import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { listCandidateAvailability } from "@/repositories/candidate";
+import {
+  listCurriculumDays,
+  listMissionAttempts,
+  listProgramCandidates,
+} from "@/repositories/hire";
 import { encodeCandidateRef } from "@/features/hire/candidate-ref";
 import { candidatePublicId } from "@/features/hire/public-id";
 import {
@@ -79,52 +84,19 @@ async function getDayMeta(): Promise<
   if (dayMetaCache && Date.now() - dayMetaCache.at < DAY_META_TTL_MS) {
     return dayMetaCache.byDay;
   }
-  const days = await prisma.programDay.findMany({
-    select: { dayNumber: true, language: true, missionType: true },
-  });
+  const days = await listCurriculumDays();
   const byDay = new Map(
     days.map((d) => [
       d.dayNumber,
-      { language: d.language as string | null, missionType: d.missionType as string },
+      { language: d.language, missionType: d.missionType },
     ]),
   );
   dayMetaCache = { at: Date.now(), byDay };
   return byDay;
 }
 
-const MEMBER_SELECT = {
-  id: true,
-  userId: true,
-  cohortId: true,
-  status: true,
-  fullName: true,
-  jobRole: true,
-  company: true,
-  missionPoints: true,
-  totalScore: true,
-  yearsExperience: true,
-  education: true,
-  university: true,
-  graduationYear: true,
-  skills: true,
-  linkedinUrl: true,
-  githubUsername: true,
-  resumeUrl: true,
-  recruiterVisibilityConsentAt: true,
-  updatedAt: true,
-  cohort: { select: { id: true, startsAt: true } },
-  commitDays: { select: { date: true } },
-  projects: { select: { aiScore: true, adminScore: true, status: true } },
-  interview: {
-    select: {
-      status: true,
-      overallScore: true,
-      commScore: true,
-      techScore: true,
-      problemScore: true,
-    },
-  },
-} satisfies Prisma.ProgramMemberSelect;
+/* The candidate row shape is the repository's contract — see
+ * `PROGRAM_CANDIDATE_SELECT` in src/repositories/hire.ts. */
 
 export type AvailabilityRow = {
   userId: string;
@@ -139,38 +111,20 @@ export type AvailabilityRow = {
 };
 
 /**
- * Opt-in logistics, loaded separately so a missing `CandidateAvailability`
- * table cannot take the whole search down with it. Nested Prisma selects
- * JOIN that table; if the hire migration has not been applied, every
- * member query 500s and the recruiter sees a toast instead of cards.
+ * Opt-in logistics.
+ *
+ * Reads `CandidatePreference` through the repository — `/hire` no longer owns a
+ * table for this. Loaded separately from the member query rather than as a
+ * nested select, so a read failure costs the logistics line on a card instead
+ * of taking the whole search down with it.
  */
-let availabilityMissing = false;
-
 export async function loadAvailabilityByUserId(
   userIds: string[],
 ): Promise<Map<string, AvailabilityRow>> {
-  if (availabilityMissing) return new Map();
-  const ids = [...new Set(userIds.filter(Boolean))];
-  if (ids.length === 0) return new Map();
   try {
-    const rows = await prisma.candidateAvailability.findMany({
-      where: { userId: { in: ids } },
-      select: {
-        userId: true,
-        openToWork: true,
-        expectedSalaryMin: true,
-        expectedSalaryMax: true,
-        salaryCurrency: true,
-        noticePeriodDays: true,
-        preferredWorkMode: true,
-        preferredCities: true,
-        openToRelocate: true,
-      },
-    });
-    return new Map(rows.map((r) => [r.userId, r]));
+    return await listCandidateAvailability(userIds);
   } catch (error) {
-    availabilityMissing = true;
-    logger.error("[hire] CandidateAvailability unread", {
+    logger.error("[hire] candidate availability unread", {
       error: String(error).slice(0, 240),
     });
     return new Map();
@@ -192,10 +146,7 @@ export async function loadAvailabilityByUserId(
 export async function buildDossierSet(
   where: Prisma.ProgramMemberWhereInput,
 ): Promise<DossierSet> {
-  const members = await prisma.programMember.findMany({
-    where,
-    select: MEMBER_SELECT,
-  });
+  const members = await listProgramCandidates(where);
 
   if (members.length === 0) {
     return {
@@ -212,18 +163,7 @@ export async function buildDossierSet(
 
   const memberIds = members.map((m) => m.id);
   const [submissions, dayMeta, availability] = await Promise.all([
-    prisma.programMissionSubmission.findMany({
-      where: { memberId: { in: memberIds } },
-      select: {
-        memberId: true,
-        dayNumber: true,
-        attemptNumber: true,
-        passed: true,
-        payload: true,
-        createdAt: true,
-      },
-      orderBy: [{ dayNumber: "asc" }, { attemptNumber: "asc" }],
-    }),
+    listMissionAttempts(memberIds),
     getDayMeta(),
     loadAvailabilityByUserId(members.map((m) => m.userId)),
   ]);

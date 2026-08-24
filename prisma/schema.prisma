@@ -341,9 +341,9 @@ model User {
 
   // hire — Scout engagements, requests and availability
   talentRequests        TalentRequest[]
-  candidateAvailability CandidateAvailability?
   engagementsAsRecruiter TalentEngagementRequest[] @relation("RecruiterEngagements")
   engagementsAsCandidate TalentEngagementRequest[] @relation("CandidateEngagements")
+  candidateMatches       TalentRequestMatch[]      @relation("CandidateMatches")
   engagementMessages     TalentEngagementMessage[]
 
   @@index([deletedAt, createdAt(sort: Desc)])
@@ -773,12 +773,10 @@ model ProgramMember {
   projects            ProgramProject[]
   interview           ProgramInterview?
   shortlistedBy       RecruiterShortlistItem[]
-  requestMatches      TalentRequestMatch[]
 
   @@unique([userId, cohortId])
   @@index([cohortId, totalScore(sort: Desc)])
   @@index([cohortId, status])
-  engagements TalentEngagementRequest[]
 }
 
 model ProgramModule {
@@ -1088,11 +1086,19 @@ model TalentRequestMessage {
 }
 
 /// Scored candidate snapshot frozen at match time for auditability.
+///
+/// Keyed on `candidateUserId`, because a candidate is a person and not a cohort
+/// row. This carried `programMemberId` + `studentUserId` + `source` — three
+/// columns doing one column's job, which is what happens when the identity is a
+/// membership. `programMemberId` survives as PROVENANCE ONLY: it records which
+/// cohort row the evidence was read from, has no foreign key, and must never be
+/// used to identify or look up the candidate.
 model TalentRequestMatch {
   id                  String          @id @default(cuid())
   requestId           String
+  candidateUserId     String
+  /// Provenance only. No FK, never an identity. See the note above.
   programMemberId     String?
-  studentUserId       String?
   score               Int
   tier                TalentMatchTier
   scoreBreakdown      Json
@@ -1103,28 +1109,10 @@ model TalentRequestMatch {
   source              TalentCandidateSource @default(PROGRAM)
   createdAt           DateTime        @default(now())
   request             TalentRequest   @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  programMember       ProgramMember?  @relation(fields: [programMemberId], references: [id], onDelete: SetNull)
+  candidate           User            @relation("CandidateMatches", fields: [candidateUserId], references: [id], onDelete: Cascade)
 
   @@index([requestId, score(sort: Desc)])
-  @@index([programMemberId])
-}
-
-/// Opt-in candidate logistics. AND with recruiterVisibilityConsentAt for hire filters.
-model CandidateAvailability {
-  id                String          @id @default(cuid())
-  userId            String          @unique
-  openToWork        Boolean         @default(false)
-  expectedSalaryMin Int?
-  expectedSalaryMax Int?
-  salaryCurrency    String          @default("INR")
-  noticePeriodDays  Int?
-  preferredWorkMode TalentWorkMode?
-  preferredCities   String[]        @default([])
-  openToRelocate    Boolean         @default(false)
-  updatedAt         DateTime        @updatedAt
-  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([openToWork, updatedAt(sort: Desc)])
+  @@index([candidateUserId])
 }
 
 enum HackathonEntryType {
@@ -2674,8 +2662,9 @@ model TalentEngagementRequest {
   recruiterUserId  String
   requestId        String?
   source           TalentCandidateSource  @default(PROGRAM)
+  /// Provenance only. No FK, never an identity — the candidate is `candidateUserId`.
   programMemberId  String?
-  candidateUserId  String?
+  candidateUserId  String
   /// Denormalised AB-#### as shown to the recruiter, so admin and the
   /// recruiter are demonstrably talking about the same candidate.
   candidatePublicId String
@@ -2688,14 +2677,16 @@ model TalentEngagementRequest {
   updatedAt        DateTime               @updatedAt
 
   recruiter     User                      @relation("RecruiterEngagements", fields: [recruiterUserId], references: [id], onDelete: Cascade)
-  candidate     User?                     @relation("CandidateEngagements", fields: [candidateUserId], references: [id], onDelete: SetNull)
+  /// Restrict, not SetNull: an engagement is the record of a recruiter having
+  /// been given access to a person. It must not quietly detach from them.
+  /// Matches the 078 Phase 1 posture on Certificate / SynergyEvent /
+  /// RecruiterShortlistItem.
+  candidate     User                      @relation("CandidateEngagements", fields: [candidateUserId], references: [id], onDelete: Restrict)
   request       TalentRequest?            @relation(fields: [requestId], references: [id], onDelete: SetNull)
-  programMember ProgramMember?            @relation(fields: [programMemberId], references: [id], onDelete: SetNull)
   messages      TalentEngagementMessage[]
 
   @@index([recruiterUserId, status])
   @@index([status, submittedAt])
-  @@index([programMemberId])
   @@index([candidateUserId])
 }
 

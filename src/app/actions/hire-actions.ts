@@ -12,6 +12,7 @@ import {
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { upsertCandidateAvailability } from "@/repositories/candidate";
 import {
   candidateAvailabilitySchema,
   jobSpecSchema,
@@ -407,10 +408,11 @@ export async function runMatchAction(
           return {
             requestId: req.id,
             source: persistableSource(m.source)!,
-            // Null for anyone outside the cohort — the column is a foreign key to
-            // ProgramMember, and a challenge candidate has no row there.
+            // The candidate is the person. Every track has one of these.
+            candidateUserId: m.userId,
+            // Provenance: which cohort row the evidence came from, where there
+            // was one. Not a key, not a foreign key, never looked up by.
             programMemberId: m.programMemberId,
-            studentUserId: m.userId,
             score: m.score,
             tier: m.tier as TalentMatchTier,
             scoreBreakdown: m.scoreBreakdown as unknown as Prisma.InputJsonValue,
@@ -481,43 +483,22 @@ export async function saveCandidateAvailabilityAction(
   }
   const v = parsed.data;
   try {
-    await prisma.candidateAvailability.upsert({
-      where: { userId: session.user.id },
-      create: {
-        userId: session.user.id,
-        openToWork: v.openToWork,
-        expectedSalaryMin: v.expectedSalaryMin ?? null,
-        expectedSalaryMax: v.expectedSalaryMax ?? null,
-        salaryCurrency: v.salaryCurrency ?? "INR",
-        noticePeriodDays: v.noticePeriodDays ?? null,
-        preferredWorkMode: (v.preferredWorkMode ?? null) as TalentWorkMode | null,
-        preferredCities: (v.preferredCities ?? [])
-          .map((c) =>
-            c
-              .trim()
-              .replace(/\s+/g, " ")
-              .replace(/\b\w/g, (ch) => ch.toUpperCase()),
-          )
-          .slice(0, 5),
-        openToRelocate: v.openToRelocate ?? false,
-      },
-      update: {
-        openToWork: v.openToWork,
-        expectedSalaryMin: v.expectedSalaryMin ?? null,
-        expectedSalaryMax: v.expectedSalaryMax ?? null,
-        salaryCurrency: v.salaryCurrency ?? "INR",
-        noticePeriodDays: v.noticePeriodDays ?? null,
-        preferredWorkMode: (v.preferredWorkMode ?? null) as TalentWorkMode | null,
-        preferredCities: (v.preferredCities ?? [])
-          .map((c) =>
-            c
-              .trim()
-              .replace(/\s+/g, " ")
-              .replace(/\b\w/g, (ch) => ch.toUpperCase()),
-          )
-          .slice(0, 5),
-        openToRelocate: v.openToRelocate ?? false,
-      },
+    await upsertCandidateAvailability(session.user.id, {
+      openToWork: v.openToWork,
+      expectedSalaryMin: v.expectedSalaryMin ?? null,
+      expectedSalaryMax: v.expectedSalaryMax ?? null,
+      salaryCurrency: v.salaryCurrency ?? "INR",
+      noticePeriodDays: v.noticePeriodDays ?? null,
+      preferredWorkMode: v.preferredWorkMode ?? null,
+      preferredCities: (v.preferredCities ?? [])
+        .map((c) =>
+          c
+            .trim()
+            .replace(/\s+/g, " ")
+            .replace(/\b\w/g, (ch) => ch.toUpperCase()),
+        )
+        .slice(0, 5),
+      openToRelocate: v.openToRelocate ?? false,
     });
     revalidatePath("/profile");
     revalidatePath("/program/dashboard");
@@ -528,8 +509,7 @@ export async function saveCandidateAvailabilityAction(
     });
     return {
       ok: false,
-      message:
-        "Could not save availability. Apply the hire migration if tables are missing.",
+      message: "Could not save availability. Please try again.",
     };
   }
 }

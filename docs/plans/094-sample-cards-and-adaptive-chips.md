@@ -301,7 +301,7 @@ its 52 assertions break, you changed something you should not have.
 | 6 | A search that **does** return real candidates | **No sample card anywhere** — this is the one that must not regress |
 | 7 | Scout asks a non-standard question | Chips reflect it, and typing still works |
 | 8 | Tap an agent-supplied chip | Handled without a model round trip |
-| 9 | Run the guest cart flow from plan 080 (shortlist → sign in) | Unchanged |
+| 9 | Run the guest cart flow from plan 093 (shortlist → sign in) | Unchanged |
 
 **Regression** — `npx tsc --noEmit`, `npm run build`, `npm run lint`,
 `npm run test:hire-score`, `npm run test:scout`. Report each exit code.
@@ -400,7 +400,7 @@ if the code tells you otherwise:
 
 - §6's claim that `MergeGuestCart` is the right place to drain a pending demand.
   Verify it actually runs for a *pending* recruiter — the layouts mount it for
-  `approved || pending`, and plan 080 changed its retry behaviour.
+  `approved || pending`, and plan 093 changed its retry behaviour.
 - §4.1's claim that every consumer already rejects a `SAMPLE:` ref. Prove it
   yourself for each consumer listed rather than trusting this document.
 

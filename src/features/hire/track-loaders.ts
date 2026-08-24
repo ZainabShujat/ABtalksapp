@@ -43,7 +43,7 @@ import { findTrack } from "@/features/hire/track-registry";
  * This narrows explicitly and returns null rather than casting, so the limit
  * surfaces as a logged, handled case at the two write sites instead of a runtime
  * Prisma error a recruiter would meet as a failed intro request. Completing the
- * future-proofing means widening the enum; that is plan 081's job, and it needs
+ * future-proofing means widening the enum; that is plan 094's job, and it needs
  * a schema change nobody should make silently.
  */
 export function persistableSource(slug: string): TalentCandidateSource | null {

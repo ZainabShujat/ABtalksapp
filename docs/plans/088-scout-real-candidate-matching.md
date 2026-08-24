@@ -189,7 +189,7 @@ multiply the eligible pool by ~9× without touching the matching engine.
 `.env.local` has `GROQ_API_KEY` + `HIRE_GROQ_MODEL` and **no `ANTHROPIC_API_KEY`**.
 `scout-conversation.ts` and `explain-matches.ts` both call `askGroqJson`
 (`openai/gpt-oss-120b`, 8s timeout, JSON-schema structured output).
-`src/lib/claude-agent.ts` exists and is **imported by nothing** — dead code from plan 062.
+`src/lib/claude-agent.ts` exists and is **imported by nothing** — dead code from plan 083.
 
 Consequence for this plan: build the agent's tool layer on Groq's OpenAI-compatible tool
 calling, keep the existing deterministic fallback, and leave `claude-agent.ts` alone (deleting
@@ -616,7 +616,7 @@ consent field**. When it happens: add `StudentProfile.recruiterVisibilityConsent
 same self-service toggle, gate on `Certificate` issued **or** `isReadyForInterview` **or** ≥30
 submissions (176 + 54 users qualify on volume alone), build a `source: "CHALLENGE_60"` dossier
 from `Submission`/`DailyTask.domain`/`Certificate.metadata`, and cap the tier at PARTIAL as
-plan 062 §9 specifies. `TalentCandidateSource` already has the enum values. **Do not start this
+plan 083 §9 specifies. `TalentCandidateSource` already has the enum values. **Do not start this
 until phases 0–6 are live and observed.**
 
 ---
@@ -654,7 +654,7 @@ migrate command, in this file's changelog line.
 **Phase 0 — applying the three pending migrations:**
 
 1. Confirm `DATABASE_URL` **and** `DIRECT_URL` in `.env.local` both point at the **Neon branch**,
-   not production. Both. `DIRECT_URL` was the trap called out in plan 062 §15.
+   not production. Both. `DIRECT_URL` was the trap called out in plan 083 §15.
 2. `npx prisma migrate status` — read the host substring out loud before continuing.
 3. `npx prisma migrate deploy` on the branch. All three migrations are additive
    (CREATE TABLE / TYPE / INDEX). **Read the SQL before running.** If any statement contains

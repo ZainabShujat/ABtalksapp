@@ -8,12 +8,14 @@
  *
  * It writes nothing and reads no personal data beyond counts.
  *
- * The number that matters is the last column. Completing a challenge is not
- * consent to be shown to recruiters: only ProgramMember carries
- * `recruiterVisibilityConsentAt`, and for every other track the sole affirmative
- * signal a candidate has given is CandidateAvailability.openToWork. A source
- * whose consented count is 0 is not "broken" — it means nobody on that track
- * has agreed yet, and enabling it would show people who never opted in.
+ * The column that matters is `searchable`. Completing a challenge is not by
+ * itself grounds to show someone to a recruiter: discoverability is
+ * `CandidateVisibility.searchableByRecruiters`, one User-level gate that applies
+ * identically to every track.
+ *
+ * `openToWork` is printed alongside it and is a DIFFERENT question — whether the
+ * candidate is actively looking. A candidate can be searchable and not looking,
+ * or looking and not searchable. Never read one as the other.
  *
  *   npx tsx scripts/verify-hire-pool.ts
  */
@@ -21,38 +23,54 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-function row(label: string, total: number, eligible: number, consented: number) {
+function row(
+  label: string,
+  total: number,
+  eligible: number,
+  searchable: number,
+  openToWork: number,
+) {
   console.log(
-    `  ${label.padEnd(26)} ${String(total).padStart(6)} ${String(eligible).padStart(10)} ${String(consented).padStart(11)}`,
+    `  ${label.padEnd(26)} ${String(total).padStart(6)} ${String(eligible).padStart(10)} ${String(searchable).padStart(11)} ${String(openToWork).padStart(11)}`,
   );
 }
 
 async function main() {
   const openToWorkUserIds = new Set(
     (
-      await prisma.candidateAvailability.findMany({
+      await prisma.candidatePreference.findMany({
         where: { openToWork: true },
         select: { userId: true },
       })
     ).map((a) => a.userId),
   );
 
+  const searchableUserIds = new Set(
+    (
+      await prisma.candidateVisibility.findMany({
+        where: { searchableByRecruiters: true, withdrawnAt: null },
+        select: { userId: true },
+      })
+    ).map((v) => v.userId),
+  );
+
   console.log("\n  ABTalks hire pool\n");
   console.log(
-    `  ${"track".padEnd(26)} ${"total".padStart(6)} ${"eligible".padStart(10)} ${"consented".padStart(11)}`,
+    `  ${"track".padEnd(26)} ${"total".padStart(6)} ${"eligible".padStart(10)} ${"searchable".padStart(11)} ${"openToWork".padStart(11)}`,
   );
-  console.log(`  ${"-".repeat(56)}`);
+  console.log(`  ${"-".repeat(68)}`);
 
-  // ── AI cohort: the only track with a real recruiter-visibility consent ──
+  // ── AI cohort ──
   const members = await prisma.programMember.findMany({
     where: { status: { in: ["ENROLLED", "COMPLETED"] } },
-    select: { id: true, recruiterVisibilityConsentAt: true },
+    select: { id: true, userId: true },
   });
   row(
     "AI cohort (ProgramMember)",
     members.length,
     members.length,
-    members.filter((m) => m.recruiterVisibilityConsentAt !== null).length,
+    members.filter((m) => searchableUserIds.has(m.userId)).length,
+    members.filter((m) => openToWorkUserIds.has(m.userId)).length,
   );
 
   // ── 60-day challenge, split by domain ──
@@ -66,6 +84,7 @@ async function main() {
       `60-day · ${domain}`,
       rows.length,
       completed.length,
+      completed.filter((r) => searchableUserIds.has(r.userId)).length,
       completed.filter((r) => openToWorkUserIds.has(r.userId)).length,
     );
   }
@@ -87,20 +106,22 @@ async function main() {
     "Hackathon",
     participants.length,
     withSubmission.length,
+    withSubmission.filter((p) => searchableUserIds.has(p.userId)).length,
     withSubmission.filter((p) => openToWorkUserIds.has(p.userId)).length,
   );
 
-  console.log(`  ${"-".repeat(56)}`);
+  console.log(`  ${"-".repeat(68)}`);
   console.log(
-    `\n  CandidateAvailability rows with openToWork = true: ${openToWorkUserIds.size}`,
+    `\n  CandidateVisibility searchable rows: ${searchableUserIds.size}` +
+      `\n  CandidatePreference openToWork rows: ${openToWorkUserIds.size}`,
   );
 
-  if (openToWorkUserIds.size === 0) {
+  if (searchableUserIds.size < 100) {
     console.log(
-      "\n  Nobody outside the AI cohort has opted in yet, so no other source\n" +
-        "  can be enabled without showing candidates who never agreed to it.\n" +
-        "  The candidate-side availability form (plan 062 §5.1) is what unblocks\n" +
-        "  this — until it ships, these counts stay at zero.",
+      "\n  The searchable population is small. Phase 2b of the 078 migration is\n" +
+        "  the thing that sets it — see docs/project-context.md §5. Until 2b is\n" +
+        "  reconciled against the intended pool (AI Cohort + post-launch\n" +
+        "  candidates), /hire will rank a fraction of the people it holds.",
     );
   }
   console.log();

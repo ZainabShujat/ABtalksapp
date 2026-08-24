@@ -51,7 +51,7 @@ export type TrackDescriptor = {
    * Scout reads these out when asked what evidence exists. They are descriptive
    * today — the scorer still has fixed dimensions, so a track whose evidence is
    * not in that fixed set can be filtered and listed but not yet ranked on its
-   * own terms. Generalising the scorer is plan 081.
+   * own terms. Generalising the scorer is plan 094.
    */
   evidenceKinds: string[];
   /** Which geography this track's people are, when that is knowable at all. */
@@ -73,9 +73,41 @@ export type TrackDescriptor = {
    * `searchCandidates` previously spelled out with a `programUserIds` set.
    */
   dedupePriority: number;
+  /**
+   * Where this track lives in the 078 learning catalog.
+   *
+   * Phase 2d seeded the real catalog on production — 5 programs, 9 cohorts, 342
+   * activities — with deterministic slugs per legacy row: `legacy-se`,
+   * `legacy-ds`, `legacy-ai`, `legacy-claude` for the challenge domains, and
+   * `legacy-program-<programCohortId>` for each existing `ProgramCohort`.
+   *
+   * Recording the mapping here is what turns the Phase 6 switch into a lookup
+   * instead of a rename. It is deliberately NOT the wire slug: `slug` above is
+   * written into localStorage carts and stored match rows and can never change,
+   * whereas this is an internal pointer with no persisted copies.
+   *
+   * `null` means the track has no cohort in the learning spine. The hackathon is
+   * the standing example — 078 §3.4 keeps it a separate bounded subsystem, and it
+   * reaches the candidate profile through `CandidateAchievement` / `Credential` /
+   * `SkillEvidence` rather than through an enrollment.
+   *
+   * `"per-cohort"` means the destination is resolved per row rather than being a
+   * constant — the AI Cohort has one 078 `Cohort` per `ProgramCohort`.
+   */
+  cohortSlug: string | string[] | "per-cohort" | null;
   /** Absent means always on. */
   enabled?: () => boolean;
 };
+
+/** Cohort slug for a legacy challenge domain, mirroring `cohortSlugForDomain`. */
+export function legacyCohortSlugForDomain(domain: string): string {
+  return `legacy-${domain.toLowerCase()}`;
+}
+
+/** Cohort slug for an existing ProgramCohort, mirroring `cohortSlugForProgramCohort`. */
+export function legacyCohortSlugForProgramCohort(programCohortId: string): string {
+  return `legacy-program-${programCohortId}`;
+}
 
 export const TRACKS: readonly TrackDescriptor[] = [
   {
@@ -86,6 +118,7 @@ export const TRACKS: readonly TrackDescriptor[] = [
     geo: "US",
     supportsEvidenceDays: false,
     dedupePriority: 100,
+    cohortSlug: "per-cohort",
   },
   {
     slug: "CLAUDE",
@@ -96,6 +129,7 @@ export const TRACKS: readonly TrackDescriptor[] = [
     geo: "IN",
     supportsEvidenceDays: true,
     dedupePriority: 50,
+    cohortSlug: "legacy-claude",
     enabled: () => hireChallengePool().enabled,
   },
   {
@@ -106,6 +140,7 @@ export const TRACKS: readonly TrackDescriptor[] = [
     geo: "IN",
     supportsEvidenceDays: true,
     dedupePriority: 40,
+    cohortSlug: ["legacy-se", "legacy-ds", "legacy-ai"],
     enabled: () => hireChallengePool().enabled,
   },
   {
@@ -115,6 +150,8 @@ export const TRACKS: readonly TrackDescriptor[] = [
     evidenceKinds: ["shipped projects"],
     geo: "IN",
     supportsEvidenceDays: false,
+    // Hackathons are a separate bounded subsystem under 078 §3.4.
+    cohortSlug: null,
     dedupePriority: 30,
   },
 ];

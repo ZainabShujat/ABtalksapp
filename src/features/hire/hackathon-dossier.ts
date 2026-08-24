@@ -1,6 +1,6 @@
 import "server-only";
 
-import { prisma } from "@/lib/db";
+import { listHackathonCandidates } from "@/repositories/hire";
 import { encodeCandidateRef } from "@/features/hire/candidate-ref";
 import { computeCoverage } from "@/features/hire/dossier";
 import { declared, derived, verified } from "@/features/hire/dossier-provenance";
@@ -37,29 +37,7 @@ const EMPTY: HackathonDossierSet = {
  * project, optional profile skills. No 60-day denominator.
  */
 export async function buildHackathonDossierSet(): Promise<HackathonDossierSet> {
-  const rows = await prisma.hackathonParticipant.findMany({
-    where: { team: { submission: { isNot: null } } },
-    select: {
-      userId: true,
-      user: {
-        select: {
-          name: true,
-          studentProfile: {
-            select: {
-              skills: true,
-              role: true,
-              yearsExperience: true,
-              graduationYear: true,
-              linkedinUrl: true,
-              githubUsername: true,
-              resumeUrl: true,
-            },
-          },
-        },
-      },
-    },
-    take: 200,
-  });
+  const rows = await listHackathonCandidates();
   if (rows.length === 0) return EMPTY;
 
   const nameByUser = new Map<string, string>();

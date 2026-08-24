@@ -65,8 +65,9 @@ CREATE TABLE "TalentRequestMessage" (
 CREATE TABLE "TalentRequestMatch" (
     "id" TEXT NOT NULL,
     "requestId" TEXT NOT NULL,
+    "candidateUserId" TEXT NOT NULL,
+    -- Provenance only: which cohort row the evidence was read from. No FK.
     "programMemberId" TEXT,
-    "studentUserId" TEXT,
     "score" INTEGER NOT NULL,
     "tier" "TalentMatchTier" NOT NULL,
     "scoreBreakdown" JSONB NOT NULL,
@@ -77,23 +78,6 @@ CREATE TABLE "TalentRequestMatch" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "TalentRequestMatch_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "CandidateAvailability" (
-    "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "openToWork" BOOLEAN NOT NULL DEFAULT false,
-    "expectedSalaryMin" INTEGER,
-    "expectedSalaryMax" INTEGER,
-    "salaryCurrency" TEXT NOT NULL DEFAULT 'INR',
-    "noticePeriodDays" INTEGER,
-    "preferredWorkMode" "TalentWorkMode",
-    "preferredCities" TEXT[] DEFAULT ARRAY[]::TEXT[],
-    "openToRelocate" BOOLEAN NOT NULL DEFAULT false,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "CandidateAvailability_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -109,13 +93,7 @@ CREATE INDEX "TalentRequestMessage_requestId_createdAt_idx" ON "TalentRequestMes
 CREATE INDEX "TalentRequestMatch_requestId_score_idx" ON "TalentRequestMatch"("requestId", "score" DESC);
 
 -- CreateIndex
-CREATE INDEX "TalentRequestMatch_programMemberId_idx" ON "TalentRequestMatch"("programMemberId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "CandidateAvailability_userId_key" ON "CandidateAvailability"("userId");
-
--- CreateIndex
-CREATE INDEX "CandidateAvailability_openToWork_updatedAt_idx" ON "CandidateAvailability"("openToWork", "updatedAt" DESC);
+CREATE INDEX "TalentRequestMatch_candidateUserId_idx" ON "TalentRequestMatch"("candidateUserId");
 
 -- AddForeignKey
 ALTER TABLE "TalentRequest" ADD CONSTRAINT "TalentRequest_recruiterUserId_fkey" FOREIGN KEY ("recruiterUserId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -127,7 +105,4 @@ ALTER TABLE "TalentRequestMessage" ADD CONSTRAINT "TalentRequestMessage_requestI
 ALTER TABLE "TalentRequestMatch" ADD CONSTRAINT "TalentRequestMatch_requestId_fkey" FOREIGN KEY ("requestId") REFERENCES "TalentRequest"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TalentRequestMatch" ADD CONSTRAINT "TalentRequestMatch_programMemberId_fkey" FOREIGN KEY ("programMemberId") REFERENCES "ProgramMember"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "CandidateAvailability" ADD CONSTRAINT "CandidateAvailability_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "TalentRequestMatch" ADD CONSTRAINT "TalentRequestMatch_candidateUserId_fkey" FOREIGN KEY ("candidateUserId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

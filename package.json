@@ -47,6 +47,7 @@
     "test:hire-score": "tsx src/features/hire/score-candidate.test.ts",
     "test:scout": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/scout-agent.test.ts",
     "test:sample": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/sample-card.test.ts",
+    "test:visibility": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/visibility.test.ts",
     "verify:hire-pool": "tsx scripts/verify-hire-pool.ts"
   },
   "dependencies": {

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
+import { listProgramMemberLabels } from "@/repositories/hire";
 import { candidatePublicId } from "@/features/hire/public-id";
 import type { RecruiterAccountSnapshot } from "@/features/hire/recruiter-account-types";
 
@@ -48,13 +49,27 @@ export async function getRecruiterAccountSnapshot(
         id: true,
         candidatePublicId: true,
         status: true,
-        programMember: { select: { jobRole: true } },
+        // Provenance id only; the role label is resolved below.
+        programMemberId: true,
       },
     }),
     prisma.talentEngagementRequest.count({
       where: { recruiterUserId: userId },
     }),
   ]);
+
+  // The engagement no longer relates to ProgramMember — it relates to the
+  // person. The role label is a display detail read from the provenance id.
+  const roleMemberIds = [
+    ...new Set(
+      requestItems
+        .map((r) => r.programMemberId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const roleByMember = new Map(
+    (await listProgramMemberLabels(roleMemberIds)).map((m) => [m.id, m.jobRole]),
+  );
 
   return {
     fullName: profile.fullName,
@@ -71,7 +86,9 @@ export async function getRecruiterAccountSnapshot(
       id: item.id,
       publicId: item.candidatePublicId,
       status: item.status,
-      jobRole: item.programMember?.jobRole ?? null,
+      jobRole: item.programMemberId
+        ? (roleByMember.get(item.programMemberId) ?? null)
+        : null,
     })),
   };
 }

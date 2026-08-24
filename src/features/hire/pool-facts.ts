@@ -1,7 +1,6 @@
 import "server-only";
 
 import { logger } from "@/lib/logger";
-import { prisma } from "@/lib/db";
 import { hireChallengePool } from "@/lib/feature-flags";
 import { buildChallengeDossierSet } from "@/features/hire/challenge-dossier";
 import type { JobSpec } from "@/lib/validations/hire";
@@ -73,7 +72,7 @@ export async function poolSnapshot(): Promise<PoolSnapshot> {
 
     // The snapshot has to span exactly what the search spans. Counting only the
     // cohort while the shortlist returns 300 challenge candidates is the kind
-    // of small lie plan 076 was written to stop — and returning early on a
+    // of small lie plan 089 was written to stop — and returning early on a
     // closed cohort would have reported an empty pool while one was open.
     const flag = hireChallengePool();
     const [set, challenge] = await Promise.all([
@@ -224,48 +223,16 @@ export async function previewMatch(spec: JobSpec): Promise<MatchPreview | null> 
   }
 }
 
-export type ChallengeReach = {
-  /** Distinct Claude-challenge enrollees with 30+ days submitted. */
-  thirtyDayPlus: number;
-  /** Certificates issued for the Claude challenge. */
-  certified: number;
-};
-
-/**
- * How many people sit behind the consent wall on the challenge track.
+/* `challengeReach()` and its `ChallengeReach` type were removed here.
  *
- * Not searchable — `StudentProfile` has no recruiter-visibility field, so none
- * of these people has agreed to be discoverable and none may be shown. The
- * count is still worth knowing: it tells a recruiter the gap is consent rather
- * than supply, and it tells the owner what a consent drive would unlock.
+ * It counted challenge enrollees "sitting behind the consent wall" so the owner
+ * could see what a consent drive would unlock. Two reasons it went:
  *
- * Cached alongside the pool snapshot; this is a heavy aggregate over ~15k
- * submission rows and it changes by the day, not by the minute.
+ *  - It had no callers. Nothing rendered it.
+ *  - Its premise is gone. Recruiter discoverability is a platform default now,
+ *    enforced by `CandidateVisibility` at the User level, so "people who have not
+ *    consented" is no longer the shape of the gap. `scripts/verify-hire-pool.ts`
+ *    reports the real numbers — searchable and openToWork, side by side.
+ *
+ * It was also the last ungated read of a candidate table in this feature.
  */
-let reachCache: { at: number; value: ChallengeReach } | null = null;
-
-export async function challengeReach(): Promise<ChallengeReach | null> {
-  if (reachCache && Date.now() - reachCache.at < 10 * 60_000) {
-    return reachCache.value;
-  }
-  try {
-    const [rows, certified] = await Promise.all([
-      prisma.enrollment.findMany({
-        where: { challenge: { domain: "CLAUDE" } },
-        select: { _count: { select: { submissions: true } } },
-      }),
-      prisma.certificate.count({
-        where: { type: "CLAUDE_CHALLENGE", status: "ISSUED" },
-      }),
-    ]);
-    const value: ChallengeReach = {
-      thirtyDayPlus: rows.filter((r) => r._count.submissions >= 30).length,
-      certified,
-    };
-    reachCache = { at: Date.now(), value };
-    return value;
-  } catch (error) {
-    logger.error("[hire] challengeReach failed", { error: String(error) });
-    return null;
-  }
-}

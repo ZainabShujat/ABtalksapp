@@ -1,4 +1,4 @@
-# Plan 078 — Scout acts on the brief it was given
+# Plan 091 — Scout acts on the brief it was given
 
 > **Owner addendum:** whatever they ask — cohort, Claude, hackathon,
 > submissions, India or US — Scout must search that way, not restart the form.
@@ -25,7 +25,7 @@ Message hits `findUnsupported` in `capabilities.ts`.
 | `atleast 30 days` | No slot. `asRoleTitle` **rejects** any string containing `at least`. Not stored. Search uses the env floor (10), not 30. |
 | `only 5` | No slot. Search still aims for `MIN_RESULTS = 5` *minimum*, not a cap. |
 
-Then `nextSlot(spec)` is still `title`, so `turnFor` prints *What role are you hiring for?* plus the same five chips. Plan 076 made the location notice *additive*; it did **not** stop re-asking the first unanswered form field. That is the “ziddi” loop.
+Then `nextSlot(spec)` is still `title`, so `turnFor` prints *What role are you hiring for?* plus the same five chips. Plan 089 made the location notice *additive*; it did **not** stop re-asking the first unanswered form field. That is the “ziddi” loop.
 
 India is the wrong refuse here. This product’s challenge pool *is* Indian students. Treating “from India” like “from the US” (a field nobody filled) is why the first sentence dies.
 

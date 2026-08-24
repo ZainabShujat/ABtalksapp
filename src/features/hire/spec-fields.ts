@@ -40,7 +40,7 @@ export function isMonthlyContext(spec: JobSpec): boolean {
 /**
  * Free-text money → annual rupees, plus the period it was written in.
  *
- * Annual rupees is the canonical unit everywhere: CandidateAvailability stores
+ * Annual rupees is the canonical unit everywhere: CandidatePreference stores
  * expectations with no period of its own, so the budget has to be comparable to
  * them. `period` is kept only so the requirement can be read back in the units
  * the recruiter used.

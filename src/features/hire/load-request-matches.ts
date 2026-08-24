@@ -1,6 +1,11 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
+import {
+  listProgramMemberLabels,
+  listUserDisplayNames,
+} from "@/repositories/hire";
+import { filterSearchableUserIds } from "@/repositories/talent";
 import { encodeCandidateRef } from "@/features/hire/candidate-ref";
 import { existingEngagements } from "@/features/hire/contact-access";
 import { estimateCompensation, formatBandLpa } from "@/features/hire/compensation";
@@ -40,8 +45,8 @@ export async function loadRequestMatches(
       matches: {
         orderBy: { score: "desc" },
         select: {
+          candidateUserId: true,
           programMemberId: true,
-          studentUserId: true,
           source: true,
           score: true,
           tier: true,
@@ -50,51 +55,54 @@ export async function loadRequestMatches(
           gaps: true,
           availabilityUnknown: true,
           evidence: true,
-          programMember: {
-            select: {
-              jobRole: true,
-              fullName: true,
-              shortlistedBy: {
-                where: { recruiterUserId },
-                select: { id: true },
-                take: 1,
-              },
-            },
-          },
         },
       },
     },
   });
   if (!request) return null;
 
-  // Engagements are keyed on the candidate's user id, which both sources fill —
-  // a challenge candidate has no ProgramMember row to key on.
-  const candidateUserIds = request.matches
-    .map((m) => m.studentUserId)
-    .filter((id): id is string => id !== null);
+  // Every match is keyed on a person, so this needs no per-source branching.
+  const storedUserIds = request.matches.map((m) => m.candidateUserId);
 
-  const [engagements, cartCount, namedUsers] = await Promise.all([
+  // A saved match list is a discovery surface, not an archive. `TalentRequestMatch`
+  // is a snapshot frozen at match time, so a candidate who has since been made
+  // unsearchable would keep rendering on a recruiter's saved request forever
+  // unless the gate is re-applied on read. Engagement requests are different and
+  // deliberately not filtered — those are the record of an introduction that has
+  // already happened.
+  const stillSearchable = await filterSearchableUserIds(storedUserIds);
+  const visibleMatches = request.matches.filter((m) =>
+    stillSearchable.has(m.candidateUserId),
+  );
+  const candidateUserIds = visibleMatches.map((m) => m.candidateUserId);
+
+  // Professional name / role / shortlist state still live on ProgramMember.
+  // Loaded from the provenance id in a separate query rather than through a
+  // relation, because the match row no longer has one — the candidate is the
+  // user, and the cohort row is only where the evidence was read from.
+  const provenanceMemberIds = [
+    ...new Set(
+      visibleMatches
+        .map((m) => m.programMemberId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+
+  const [engagements, cartCount, nameByUser, members] = await Promise.all([
     existingEngagements(recruiterUserId, candidateUserIds),
     prisma.recruiterShortlistItem.count({ where: { recruiterUserId } }),
-    candidateUserIds.length
-      ? prisma.user.findMany({
-          where: { id: { in: candidateUserIds } },
-          select: { id: true, name: true },
-        })
-      : Promise.resolve([] as { id: string; name: string | null }[]),
+    listUserDisplayNames(candidateUserIds),
+    listProgramMemberLabels(provenanceMemberIds, {
+      shortlistedByRecruiterUserId: recruiterUserId,
+    }),
   ]);
-  const nameByUser = new Map(
-    namedUsers
-      .filter((u) => u.name && u.name.trim())
-      .map((u) => [u.id, u.name!.trim()]),
-  );
-
+  const memberById = new Map(members.map((m) => [m.id, m]));
   return {
     title: request.title,
     status: request.status,
     alertWhenAvailable: request.alertWhenAvailable,
     cartCount,
-    matches: request.matches.map((m): MatchCardData => {
+    matches: visibleMatches.map((m): MatchCardData => {
       const raw =
         m.evidence && typeof m.evidence === "object"
           ? (m.evidence as Record<string, unknown>)
@@ -123,10 +131,13 @@ export async function loadRequestMatches(
           : null;
       const source = m.source === "PROGRAM" ? "PROGRAM" : m.source;
       const isProgram = source === "PROGRAM";
+      const member = m.programMemberId
+        ? memberById.get(m.programMemberId)
+        : undefined;
       // The stored evidence blob carries the challenge candidate's role label;
       // there is no ProgramMember row to read it from.
       const rawRole =
-        m.programMember?.jobRole ??
+        member?.jobRole ??
         (typeof (m.evidence as { jobRole?: unknown })?.jobRole === "string"
           ? ((m.evidence as { jobRole: string }).jobRole)
           : "");
@@ -146,7 +157,7 @@ export async function loadRequestMatches(
             source === "HACKATHON"
             ? source
             : "CLAUDE",
-          (isProgram ? m.programMemberId : m.studentUserId) ?? "",
+          (isProgram ? m.programMemberId : m.candidateUserId) ?? "",
         ),
         source:
           source === "PROGRAM" ||
@@ -157,9 +168,7 @@ export async function loadRequestMatches(
             : "CLAUDE",
         programMemberId: m.programMemberId,
         displayName:
-          (m.programMember?.fullName?.trim() ||
-            (m.studentUserId ? nameByUser.get(m.studentUserId) : null)) ??
-          null,
+          (member?.fullName?.trim() || nameByUser.get(m.candidateUserId)) ?? null,
         jobRole: rawRole ? tidyRoleLabel(rawRole) : "Candidate",
         locationLabel: storedLocation,
         score: m.score,
@@ -167,19 +176,15 @@ export async function loadRequestMatches(
         rationale: m.rationale,
         gaps: m.gaps,
         availabilityUnknown: m.availabilityUnknown,
-        shortlisted: (m.programMember?.shortlistedBy?.length ?? 0) > 0,
-        engagementStatus: m.studentUserId
-          ? (engagements.get(m.studentUserId)?.status ?? null)
-          : null,
+        shortlisted: (member?.shortlistedBy?.length ?? 0) > 0,
+        engagementStatus: engagements.get(m.candidateUserId)?.status ?? null,
         scores: pickPublicScores(m.scoreBreakdown),
-        compensationBand:
-          raw.compensationDeclared === true &&
-          typeof raw.compensationBand === "string"
-            ? raw.compensationBand
-            : band
-              ? formatBandLpa(band)
-              : null,
-        compensationDeclared: raw.compensationDeclared === true,
+        // Always the recomputed ABTalks band, never a stored declared figure.
+        // The candidate's own expectation is admin-only (see to-public-match.ts);
+        // reading it back out of a frozen evidence blob would reopen exactly the
+        // exposure that was closed on the write side.
+        compensationBand: band ? formatBandLpa(band) : null,
+        compensationDeclared: false,
         highlightSkills: request.mustHaveStack.length
           ? request.mustHaveStack
           : undefined,

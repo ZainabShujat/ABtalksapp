@@ -13,8 +13,9 @@ CREATE TABLE "TalentEngagementRequest" (
     "recruiterUserId" TEXT NOT NULL,
     "requestId" TEXT,
     "source" "TalentCandidateSource" NOT NULL DEFAULT 'PROGRAM',
+    -- Provenance only: which cohort row the evidence was read from. No FK.
     "programMemberId" TEXT,
-    "candidateUserId" TEXT,
+    "candidateUserId" TEXT NOT NULL,
     "candidatePublicId" TEXT NOT NULL,
     "note" TEXT,
     "status" "TalentEngagementStatus" NOT NULL DEFAULT 'DRAFT',
@@ -63,9 +64,6 @@ CREATE INDEX "TalentEngagementRequest_recruiterUserId_status_idx" ON "TalentEnga
 CREATE INDEX "TalentEngagementRequest_status_submittedAt_idx" ON "TalentEngagementRequest"("status", "submittedAt");
 
 -- CreateIndex
-CREATE INDEX "TalentEngagementRequest_programMemberId_idx" ON "TalentEngagementRequest"("programMemberId");
-
--- CreateIndex
 CREATE INDEX "TalentEngagementRequest_candidateUserId_idx" ON "TalentEngagementRequest"("candidateUserId");
 
 -- CreateIndex
@@ -84,13 +82,12 @@ CREATE INDEX "VerifiedRecruiterSeat_company_idx" ON "VerifiedRecruiterSeat"("com
 ALTER TABLE "TalentEngagementRequest" ADD CONSTRAINT "TalentEngagementRequest_recruiterUserId_fkey" FOREIGN KEY ("recruiterUserId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TalentEngagementRequest" ADD CONSTRAINT "TalentEngagementRequest_candidateUserId_fkey" FOREIGN KEY ("candidateUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+-- RESTRICT: an engagement records that a recruiter was given access to a
+-- person. It must not silently detach from them on delete.
+ALTER TABLE "TalentEngagementRequest" ADD CONSTRAINT "TalentEngagementRequest_candidateUserId_fkey" FOREIGN KEY ("candidateUserId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TalentEngagementRequest" ADD CONSTRAINT "TalentEngagementRequest_requestId_fkey" FOREIGN KEY ("requestId") REFERENCES "TalentRequest"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "TalentEngagementRequest" ADD CONSTRAINT "TalentEngagementRequest_programMemberId_fkey" FOREIGN KEY ("programMemberId") REFERENCES "ProgramMember"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TalentEngagementMessage" ADD CONSTRAINT "TalentEngagementMessage_engagementId_fkey" FOREIGN KEY ("engagementId") REFERENCES "TalentEngagementRequest"("id") ON DELETE CASCADE ON UPDATE CASCADE;

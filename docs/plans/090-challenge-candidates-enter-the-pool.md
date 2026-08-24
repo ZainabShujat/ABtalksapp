@@ -49,7 +49,7 @@ The owner suggested exporting every candidate to JSON. Rejected, three reasons:
    public GitHub. A later delete does not remove it from history.
 2. **It goes stale on day one.** 14,696 submissions and growing daily. Scout
    quoting a snapshot number while the card shows a live one is exactly the
-   trust failure plan 076 was written to stop.
+   trust failure plan 089 was written to stop.
 3. **It is not less work.** The hard part is the evidence→dossier adapter, and
    that is identical whether rows come from a file or from Prisma. JSON adds an
    export script and a staleness bug on top.

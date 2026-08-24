@@ -1,7 +1,11 @@
 import "server-only";
 
 import { Domain } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import {
+  listChallengeCandidates,
+  listQuizAggregates,
+  listSubmissionActivity,
+} from "@/repositories/hire";
 import { encodeCandidateRef } from "@/features/hire/candidate-ref";
 import { computeCoverage, loadAvailabilityByUserId } from "@/features/hire/dossier";
 import {
@@ -192,44 +196,7 @@ export async function buildChallengeDossierSet(opts: {
 }): Promise<ChallengeDossierSet> {
   const domains = opts.domains ?? [Domain.CLAUDE];
 
-  const enrollments = await prisma.enrollment.findMany({
-    where: {
-      challenge: { domain: { in: domains } },
-      // A candidate is someone with a track record, and the floor is what makes
-      // that true. Applied in the query rather than after, so a pool of 2,708
-      // never lands in memory to be filtered down to 320.
-      submissions: { some: {} },
-    },
-    select: {
-      id: true,
-      userId: true,
-      domain: true,
-      status: true,
-      startedAt: true,
-      completedAt: true,
-      longestStreak: true,
-      currentStreak: true,
-      certificate: { select: { status: true } },
-      _count: { select: { submissions: true } },
-      user: {
-        select: {
-          name: true,
-          studentProfile: {
-            select: {
-              skills: true,
-              role: true,
-              yearsExperience: true,
-              graduationYear: true,
-              domain: true,
-              linkedinUrl: true,
-              githubUsername: true,
-              resumeUrl: true,
-            },
-          },
-        },
-      },
-    },
-  });
+  const enrollments = await listChallengeCandidates(domains);
 
   const eligible = enrollments.filter(
     (e) => e._count.submissions >= opts.minDays,
@@ -242,18 +209,8 @@ export async function buildChallengeDossierSet(opts: {
 
   const userIds = rows.map((e) => e.userId);
   const [lastSubmissions, quiz, availability] = await Promise.all([
-    prisma.submission.groupBy({
-      by: ["userId"],
-      where: { userId: { in: userIds } },
-      _max: { submittedAt: true, dayNumber: true },
-      _min: { submittedAt: true },
-    }),
-    prisma.quizAttempt.groupBy({
-      by: ["userId"],
-      where: { userId: { in: userIds } },
-      _avg: { score: true },
-      _count: true,
-    }),
+    listSubmissionActivity(userIds),
+    listQuizAggregates(userIds),
     loadAvailabilityByUserId(userIds),
   ]);
 

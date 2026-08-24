@@ -1,4 +1,4 @@
-# Plan 079 — Readable cards, guest session restore, fewer questions, cart back
+# Plan 092 — Readable cards, guest session restore, fewer questions, cart back
 
 > **Branch:** `fix/hire-scout-conversation`
 > **Trigger:** after the Claude/60-day/hackathon pool went live, recruiters
@@ -17,7 +17,7 @@ Four product holes, one careful pass:
 2. A guest who searches, opens “View N more”, then hits **Back to the
    requirement** must land on the *same* Scout turn, not a new chat.
 3. Default intake must ask fewer questions. A stated pool brief must still
-   skip the form entirely (plan 078).
+   skip the form entirely (plan 091).
 4. **Add to cart** must show and work on Claude / 60-day / hackathon cards,
    not only US-cohort `ProgramMember` rows.
 
@@ -60,7 +60,7 @@ Signed-in recruiters already persist via `TalentRequest` +
 `title → seniority → mustHaveStack → evidencePriority → salary →
 employmentType → workMode → locationCity → noticePeriodDays → experience`
 
-Plan 078 already calls `skipUnfilledIntake` when the first message is a
+Plan 091 already calls `skipUnfilledIntake` when the first message is a
 searchable brief. The long form only runs when they start with a role
 (“backend engineer”) or tap chips. Those six later slots are the grind.
 
@@ -75,7 +75,7 @@ is set:
 )}
 ```
 
-Plan 077 made that deliberate: `RecruiterShortlistItem.memberId` is a
+Plan 090 made that deliberate: `RecruiterShortlistItem.memberId` is a
 **hard FK to `ProgramMember`**. Claude / 60-day / hackathon have
 `programMemberId: null`. After those pools became the default search,
 almost every card lost the button. Request intro still works (it uses
@@ -109,7 +109,7 @@ Guest cart is `localStorage` keyed on `memberId`. Merge-on-signin calls
 | `src/lib/validations/hire.ts` | edit | Export `DEFAULT_SKIPPED_SLOTS` only — **do not remove** `HIRE_SLOTS` |
 | `src/features/hire/score-candidate.test.ts` | edit | Default-skip + cart-ref decode cases (pure) |
 | `docs/CHANGELOG.md` | edit | One pending-reconcile line |
-| `docs/plans/079-hire-card-session-cart-intake.md` | this file | — |
+| `docs/plans/092-hire-card-session-cart-intake.md` | this file | — |
 
 No Prisma, no migration, no `src/auth.ts`, no middleware.
 
@@ -210,7 +210,7 @@ export const DEFAULT_SKIPPED_SLOTS: HireSlot[] = [
 What they still get asked, in order: **role → seniority → stack →
 budget** (budget already has Skip). Then search.
 
-Plan 078 `skipUnfilledIntake` on a searchable brief still skips the rest,
+Plan 091 `skipUnfilledIntake` on a searchable brief still skips the rest,
 including these. No change to that branch.
 
 Gender / IIT / city refuses unchanged. AI may still *write* workMode if

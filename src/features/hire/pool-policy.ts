@@ -1,7 +1,6 @@
 import "server-only";
 
-import { Domain, ProgramCohortStatus, type Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { Domain, type Prisma } from "@prisma/client";
 import { hireChallengePool, hireOpenCohortIds } from "@/lib/feature-flags";
 import {
   decodeCandidateRef,
@@ -10,6 +9,12 @@ import {
   type CandidateSource,
 } from "@/features/hire/candidate-ref";
 import { candidatePublicId } from "@/features/hire/public-id";
+import {
+  listPoolCohorts,
+  resolveChallengeRefs,
+  resolveHackathonRefs,
+  resolveProgramRefs,
+} from "@/repositories/hire";
 
 /**
  * The floor below which someone is not a candidate.
@@ -57,25 +62,7 @@ export type PoolGateResult =
 export async function resolvePoolCohorts(): Promise<PoolGateResult> {
   const openIds = hireOpenCohortIds();
 
-  const cohorts = await prisma.programCohort.findMany({
-    where: {
-      OR: [
-        { resultsPublishedAt: { not: null } },
-        ...(openIds === "all"
-          ? [{ status: { in: [ProgramCohortStatus.ENROLLING, ProgramCohortStatus.ACTIVE] } }]
-          : openIds
-            ? [{ id: { in: openIds } }]
-            : []),
-      ],
-    },
-    orderBy: { startsAt: "desc" },
-    select: {
-      id: true,
-      name: true,
-      startsAt: true,
-      resultsPublishedAt: true,
-    },
-  });
+  const cohorts = await listPoolCohorts(openIds);
 
   if (cohorts.length === 0) {
     return {
@@ -97,10 +84,14 @@ export async function resolvePoolCohorts(): Promise<PoolGateResult> {
 }
 
 /**
- * The one where-clause every `/hire` surface must use to load candidates.
+ * Which *pool* `/hire` searches: the open cohorts, and members who are actually
+ * in them.
  *
- * Reused by search and by the engagement-request actions so a recruiter can
- * never raise a request against somebody Scout would not have shown them.
+ * Deliberately no visibility clause. This file used to build its own copy of the
+ * gate for program members while the challenge and hackathon paths carried none
+ * at all. The gate now lives in `repositories/hire.ts`, which merges it into
+ * every candidate query on the way out, so it cannot be forgotten by a caller or
+ * overwritten by a second `user:` key.
  */
 export function memberEligibilityWhere(
   cohortIds: string[],
@@ -108,9 +99,6 @@ export function memberEligibilityWhere(
   return {
     cohortId: { in: cohortIds },
     status: { in: ["ENROLLED", "COMPLETED"] },
-    // Non-negotiable. The member ticked a box saying recruiters may see their
-    // work; nothing else in this file may weaken it.
-    recruiterVisibilityConsentAt: { not: null },
   };
 }
 
@@ -168,43 +156,14 @@ export async function resolveEligibleCandidates(
 
   const [members, claudeEnrollments, sixtyEnrollments, hackathonRows] =
     await Promise.all([
-      programIds.length > 0
-        ? prisma.programMember.findMany({
-            where: {
-              id: { in: programIds },
-              status: { in: ["ENROLLED", "COMPLETED"] },
-              recruiterVisibilityConsentAt: { not: null },
-            },
-            select: { id: true, userId: true },
-          })
+      resolveProgramRefs(programIds),
+      flag.enabled
+        ? resolveChallengeRefs(claudeUserIds, [Domain.CLAUDE])
         : [],
-      flag.enabled && claudeUserIds.length > 0
-        ? prisma.enrollment.findMany({
-            where: {
-              userId: { in: claudeUserIds },
-              challenge: { domain: Domain.CLAUDE },
-            },
-            select: { userId: true, _count: { select: { submissions: true } } },
-          })
+      flag.enabled
+        ? resolveChallengeRefs(sixtyUserIds, [Domain.SE, Domain.DS, Domain.AI])
         : [],
-      flag.enabled && sixtyUserIds.length > 0
-        ? prisma.enrollment.findMany({
-            where: {
-              userId: { in: sixtyUserIds },
-              challenge: { domain: { in: [Domain.SE, Domain.DS, Domain.AI] } },
-            },
-            select: { userId: true, _count: { select: { submissions: true } } },
-          })
-        : [],
-      hackathonUserIds.length > 0
-        ? prisma.hackathonParticipant.findMany({
-            where: {
-              userId: { in: hackathonUserIds },
-              team: { submission: { isNot: null } },
-            },
-            select: { userId: true },
-          })
-        : [],
+      resolveHackathonRefs(hackathonUserIds),
     ]);
 
   const out: EligibleCandidate[] = [];
