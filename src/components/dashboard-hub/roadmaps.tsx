@@ -32,12 +32,12 @@ export function Roadmaps({
     <>
       <section
         id="domains"
-        className="scroll-mt-20 px-4 py-8 sm:px-6 lg:ml-4"
+        className="scroll-mt-20 px-4 py-8 sm:px-6 lg:ml-4 2xl:mx-auto 2xl:max-w-[1600px]"
       >
         <h2 className="font-heading text-xl font-semibold uppercase text-[#e05226] lg:ml-2">
           CHALLENGE TRACKS
         </h2>
-        <ul className="mt-4 grid gap-3 sm:grid-cols-3">
+        <ul className="mt-4 grid gap-3 sm:grid-cols-3 2xl:grid-cols-[repeat(3,minmax(0,1fr))]">
           {ROADMAPS.map(({ domain, label, path }) => {
             const isJoined = joined.has(domain);
             const isAbandoned = abandoned.has(domain);

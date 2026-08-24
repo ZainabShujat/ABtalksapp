@@ -68,9 +68,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       isAdmin={session.user.isAdmin ?? false}
     >
       <section className="px-4 py-8 sm:px-6">
-        <div className="max-w-[1020px] lg:ml-5">
+        <div className="w-full max-w-[1020px] lg:ml-5 2xl:mx-auto 2xl:max-w-[1600px]">
           <HeroGreeting firstName={firstName} />
-          <div className="mt-4 grid min-w-0 gap-6 lg:grid-cols-[1fr_320px] lg:items-center lg:gap-8">
+          <div className="mt-4 grid min-w-0 gap-6 lg:grid-cols-[1fr_320px] lg:items-center lg:gap-8 2xl:grid-cols-[minmax(0,1fr)_minmax(320px,360px)]">
             <div className="min-w-0 lg:pr-6">
               <ActivityHeatmap cells={data.heatmap.cells} embedded />
             </div>

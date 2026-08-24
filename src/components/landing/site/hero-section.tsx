@@ -23,7 +23,13 @@ function getPhoneServerSnapshot() {
   return false;
 }
 
-export function HeroSection({ getStartedHref }: { getStartedHref: string }) {
+export function HeroSection({
+  getStartedHref,
+  isSignedIn,
+}: {
+  getStartedHref: string;
+  isSignedIn: boolean;
+}) {
   const reduce = useSafeReducedMotion();
   const isMobile = useSyncExternalStore(
     subscribePhone,
@@ -200,7 +206,7 @@ export function HeroSection({ getStartedHref }: { getStartedHref: string }) {
 
           <div className="hero__actions">
             <Link href={getStartedHref} className="btn btn--primary btn--lg">
-              Get Started
+              {isSignedIn ? "Open Dashboard" : "Get Started"}
             </Link>
             <Link href="/talent" className="btn btn--ghost-light btn--lg">
               Post a requirement

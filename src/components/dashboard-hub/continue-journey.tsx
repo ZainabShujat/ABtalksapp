@@ -50,7 +50,7 @@ export function ContinueJourney({ enrollments }: ContinueJourneyProps) {
           </Link>
         </div>
       ) : (
-        <ul className="no-scrollbar mt-4 flex gap-4 overflow-x-auto pb-1 snap-x snap-mandatory">
+        <ul className="no-scrollbar mt-4 flex gap-4 overflow-x-auto pb-1 snap-x snap-mandatory 2xl:grid 2xl:grid-cols-3 2xl:overflow-visible 2xl:pb-0 2xl:snap-none">
           {enrollments.map((e) => {
             const isCompleted = e.status === "COMPLETED";
             const pct = isCompleted
@@ -63,7 +63,7 @@ export function ContinueJourney({ enrollments }: ContinueJourneyProps) {
               <li
                 key={e.id}
                 className={cn(
-                  "flex w-[min(100%,320px)] shrink-0 snap-start flex-col rounded-2xl border border-neutral-200 bg-white p-5 sm:w-[300px]",
+                  "flex w-[min(100%,320px)] shrink-0 snap-start flex-col rounded-2xl border border-neutral-200 bg-white p-5 sm:w-[300px] 2xl:w-full 2xl:max-w-none 2xl:shrink",
                   HUB_CARD_HOVER_CLASS,
                 )}
               >

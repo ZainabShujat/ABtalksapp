@@ -77,7 +77,10 @@ export function LandingPage({
       </a>
       <LandingNav user={state.user} getStartedHref={state.getStartedHref} />
       <main id="main">
-        <HeroSection getStartedHref={state.getStartedHref} />
+        <HeroSection
+          getStartedHref={state.getStartedHref}
+          isSignedIn={!!state.user}
+        />
         <StatsStrip />
         <BridgeSection />
         <CompaniesSection />
