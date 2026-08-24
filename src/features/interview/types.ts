@@ -198,6 +198,9 @@ export type CohortPlanContext = {
   progressDay?: number | null;
   /** How many questions referenced a real artifact of theirs. */
   groundedCount?: number;
+  /** First name, for the spoken opening. Optional: a missing profile must not
+   *  cost someone their interview, so the greeting degrades instead. */
+  candidateFirstName?: string | null;
 };
 
 export type GeneralPlanContext = {

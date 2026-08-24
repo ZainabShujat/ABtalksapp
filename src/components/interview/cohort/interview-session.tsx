@@ -33,7 +33,13 @@ import "./interview.css";
 
 type Stage =
   | { name: "brief" }
-  | { name: "live"; interviewId: string; question: ClientQuestion }
+  | {
+      name: "live";
+      interviewId: string;
+      question: ClientQuestion;
+      /** Full opening line + first question, as the server composed it. */
+      openingPrompt?: string;
+    }
   | { name: "done"; result: FinishInterviewData };
 
 export function InterviewSession({
@@ -80,6 +86,7 @@ export function InterviewSession({
       name: "live",
       interviewId: started.data.interviewId,
       question: started.data.question,
+      openingPrompt: started.data.prompt,
     });
   }
 
@@ -167,6 +174,7 @@ export function InterviewSession({
         interviewId={stage.interviewId}
         title={title}
         firstQuestion={stage.question}
+        openingPrompt={stage.openingPrompt}
         candidateName={candidateName.split(" ")[0] ?? "You"}
         onFinishedAction={(result) => setStage({ name: "done", result })}
         onAbandonedAction={() => {

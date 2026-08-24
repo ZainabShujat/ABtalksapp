@@ -8,6 +8,7 @@ import {
 } from "@/features/interview/scoring";
 import { appendLine, startInterview } from "@/features/interview/state";
 import { runInterviewTurn } from "@/features/interview/agent";
+import { openingLine } from "@/features/interview/agent/policy";
 import { resolveInterviewLLM } from "@/features/interview/agent/llm/registry";
 import type { AgentAction } from "@/features/interview/agent";
 import type {
@@ -71,8 +72,19 @@ export function beginInterview(
     return { ok: false, message: "This interview has no questions planned." };
   }
 
-  const intro = "Welcome to your AI Cohort Interview. I'll be asking you a few questions about what you've learned. Let's begin. ";
-  const firstPrompt = intro + first.text;
+  // The opening is spoken as its own paragraph, then the question. Previously
+  // both were one run-on string, so the interview appeared to begin mid-thought.
+  const ctx = plan.contextSummary;
+  const intro =
+    ctx.kind === "COHORT"
+      ? openingLine({
+          firstName: ctx.candidateFirstName,
+          blueprint: ctx.blueprint,
+          questionCount: ctx.questionCount,
+        })
+      : "Thanks for making the time. Talk me through your thinking rather than giving me the short version — and if you don't know something, just say so and we'll move on.\n\nLet's start here.";
+
+  const firstPrompt = `${intro}\n\n${first.text}`;
 
   const started = startInterview(state);
   return {

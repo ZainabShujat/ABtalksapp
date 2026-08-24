@@ -58,6 +58,7 @@ export function InterviewRoom({
   interviewId,
   title,
   firstQuestion,
+  openingPrompt,
   candidateName,
   onFinishedAction,
   onAbandonedAction,
@@ -65,12 +66,21 @@ export function InterviewRoom({
   interviewId: string;
   title: string;
   firstQuestion: ClientQuestion;
+  /**
+   * What the interviewer actually SAYS first: the greeting, the framing, then
+   * the question. The server composes it in `beginInterview`; this component
+   * used to render `firstQuestion.text` instead, which is the bare bank
+   * question — so the opening was generated and then silently discarded, and
+   * every interview appeared to start mid-thought.
+   */
+  openingPrompt?: string;
   candidateName: string;
   onFinishedAction: (data: FinishInterviewData) => void;
   onAbandonedAction: () => void;
 }) {
+  const opening = openingPrompt?.trim() || firstQuestion.text;
   const [turns, setTurns] = useState<Turn[]>([
-    { role: "interviewer", text: firstQuestion.text },
+    { role: "interviewer", text: opening },
   ]);
   const [question, setQuestion] = useState<ClientQuestion | null>(firstQuestion);
   const [phase, setPhase] = useState<Phase>("idle");
@@ -129,7 +139,16 @@ export function InterviewRoom({
    */
   const speak = useCallback(
     async (text: string) => {
-      if (spokenRef.current === text) return;
+      // Guard against speaking the same line twice in a row (React strict-mode
+      // double-invoke, or a re-render). It must still release the phase: the
+      // caller has already set "processing", and the `finally` below is what
+      // normally clears it. Returning bare left the room stuck mid-turn with
+      // the question appearing to repeat — which is exactly what it looked
+      // like from the outside.
+      if (spokenRef.current === text) {
+        setPhase("idle");
+        return;
+      }
       spokenRef.current = text;
       setPhase("speaking");
 
@@ -186,7 +205,7 @@ export function InterviewRoom({
   // within the user gesture that opened the room, which is what browsers
   // require before they will play anything.
   useEffect(() => {
-    const id = setTimeout(() => void speak(firstQuestion.text), 0);
+    const id = setTimeout(() => void speak(opening), 0);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -196,7 +215,21 @@ export function InterviewRoom({
   const send = useCallback(
     async (answerText: string) => {
       const text = answerText.trim();
-      if (!question || text.length === 0) return;
+      if (!question) return;
+
+      // An empty transcript is the normal result of a long pause, a very quiet
+      // answer, or the recorder capturing silence. This used to `return`
+      // straight out of a function the caller had already put into the
+      // "processing" phase, so the room sat on "Evaluating your answer"
+      // forever with no way back. Hand the turn back to the candidate instead —
+      // nothing was submitted, so nothing is spent.
+      if (text.length === 0) {
+        setError(
+          "I didn't catch that — nothing came through. Tap the microphone and try again, or type your answer.",
+        );
+        setPhase("idle");
+        return;
+      }
 
       setTurns((prev) => [...prev, { role: "candidate", text }]);
       setPhase("processing");

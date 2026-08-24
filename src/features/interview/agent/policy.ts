@@ -38,6 +38,48 @@ export const REDIRECT_LINE =
 
 export const REPEAT_LINE = "Sure — here's the question again.";
 
+/**
+ * The interviewer's opening, spoken before the first question.
+ *
+ * This used to be one flat sentence — "Welcome to your AI Cohort Interview.
+ * I'll be asking you a few questions about what you've learned. Let's begin." —
+ * concatenated straight onto the first banked question. It announced a product
+ * rather than opening a conversation, and because the question followed in the
+ * same breath, the interview appeared to start mid-sentence.
+ *
+ * What a real interviewer does in the first fifteen seconds, and what this now
+ * does: greet the person by name, say what the next fifteen minutes are, set
+ * two expectations that change how someone answers (think out loud; "I don't
+ * know" is a fine answer), and hand over to the first question as a deliberate
+ * move rather than a collision.
+ *
+ * Deterministic, never model-drafted. Every candidate hears the same opening,
+ * which is part of what makes two interviews comparable — and the one line
+ * guaranteed to be spoken cannot be left to a provider that might be down.
+ */
+export function openingLine(params: {
+  firstName?: string | null;
+  blueprint: "DAY_15" | "DAY_31";
+  questionCount: number;
+}): string {
+  const name = (params.firstName ?? "").trim();
+  const greeting = name ? `Hi ${name}, thanks for making the time.` : "Thanks for making the time.";
+
+  const framing =
+    params.blueprint === "DAY_15"
+      ? "This is your Day 15 checkpoint — a short conversation about the work you've submitted so far."
+      : "This is your final interview for the cohort — a conversation about the work you've built across all thirty-one days.";
+
+  const shape = `I'll ask you around ${params.questionCount} questions over about fifteen minutes, and I'll follow up on your answers as we go.`;
+
+  const permission =
+    "Talk me through your thinking rather than giving me the short version — and if you don't know something, just say so and we'll move on.";
+
+  const handover = "Let's start here.";
+
+  return `${greeting} ${framing}\n\n${shape} ${permission}\n\n${handover}`;
+}
+
 /** Said once, when the interview ends. */
 export const CLOSING_LINE =
   "That's everything I wanted to cover. Thanks for walking me through your work.";

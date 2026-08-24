@@ -185,6 +185,7 @@ export function planCohortInterview(
       extensionCount: extensions.length,
       progressDay: context?.progressDay ?? null,
       groundedCount: questions.filter((q) => q.grounded).length,
+      candidateFirstName: context?.fullName?.trim().split(/\s+/)[0] ?? null,
     },
   };
 }
