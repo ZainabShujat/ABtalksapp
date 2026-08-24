@@ -300,21 +300,45 @@ export function InterviewRoom({
             method: "POST",
             body: form,
           });
-          const json = (await res.json()) as
+
+          // Read as text first. The route answers with JSON on every path it
+          // controls, so a non-JSON body means the request never got there —
+          // a crash, a proxy, or a framework error page. Parsing blind turned
+          // all of those into one useless "could not reach" message that hid
+          // the status code, which made this undebuggable for anyone but the
+          // person who wrote it.
+          const raw = await res.text();
+          let json:
             | { ok: true; data: { text: string } }
-            | { ok: false; message: string };
+            | { ok: false; message: string }
+            | null = null;
+          try {
+            json = JSON.parse(raw);
+          } catch {
+            json = null;
+          }
+
+          if (!json) {
+            setError(
+              `Transcription failed (HTTP ${res.status}). The server did not return a readable response — check the dev server log for /api/interview/stt. You can type your answer instead.`,
+            );
+            setPhase("idle");
+            return;
+          }
 
           if (!json.ok) {
             // The recording is lost but the turn is not spent — the candidate
             // simply answers again, by voice or by typing.
-            setError(json.message);
+            setError(`${json.message} (HTTP ${res.status})`);
             setPhase("idle");
             return;
           }
           await send(json.data.text);
-        } catch {
+        } catch (err) {
           setError(
-            "Could not reach the transcription service. You can type your answer instead.",
+            `Could not reach the transcription service (${
+              err instanceof Error ? err.message : "network error"
+            }). You can type your answer instead.`,
           );
           setPhase("idle");
         }
