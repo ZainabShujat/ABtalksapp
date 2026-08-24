@@ -288,18 +288,18 @@ export function StageLiveVoice({
   const isListening = sessionState === "listening" && recorderRef.current != null;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)] min-h-[600px] w-full max-w-4xl mx-auto font-sans text-white bg-[#030712] rounded-xl overflow-hidden border border-[#1e293b] shadow-2xl relative">
+    <div className="flex flex-col h-[calc(100vh-8rem)] min-h-[600px] w-full max-w-4xl mx-auto font-sans text-[#111111] bg-[#FFFFFF] rounded-xl overflow-hidden border border-[#E0E0E0] shadow-[0_2px_8px_rgba(0,0,0,0.06)] relative">
       
       {/* Top Header */}
       <div className="pt-8 pb-4 shrink-0 px-6 md:px-12 flex justify-between items-center relative z-10">
-        <h2 className="text-[11px] font-bold tracking-[0.2em] text-[#968BEC] uppercase">
+        <h2 className="text-[11px] font-bold tracking-[0.2em] text-[#E05226] uppercase">
           AI INTERVIEWER
         </h2>
         
         <Button 
           variant="outline" 
           size="sm" 
-          className="border-[rgba(46,57,75,0.69)] bg-transparent text-[#9CA3AF] hover:text-white hover:bg-white/5 h-8 text-xs px-3" 
+          className="border-[#E0E0E0] bg-transparent text-[#8F8F8F] hover:text-[#111111] hover:bg-[#FFF5F0] h-8 text-xs px-3" 
           onClick={onAbandonedAction}
         >
           End Session
@@ -309,7 +309,7 @@ export function StageLiveVoice({
       {/* Main Conversation Area */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 relative z-10">
         <div className="max-w-3xl w-full text-center">
-          <h1 className="font-display text-2xl md:text-3xl lg:text-4xl font-medium tracking-tight text-[#e2e8f0] leading-relaxed transition-opacity duration-500">
+          <h1 className="font-display text-2xl md:text-3xl lg:text-4xl font-medium tracking-tight text-[#111111] leading-relaxed transition-opacity duration-500">
             {displayText}
           </h1>
         </div>
@@ -317,24 +317,24 @@ export function StageLiveVoice({
 
       {/* Error Banner */}
       {error && (
-        <div className="mx-auto max-w-lg mb-8 text-sm font-medium text-[#FACC15] bg-[#C9282B]/20 border border-[#C9282B]/50 px-4 py-2 rounded-[8px] text-center backdrop-blur-sm relative z-10">
+        <div className="mx-auto max-w-lg mb-8 text-sm font-medium text-[#9A6700] bg-[#C9282B]/20 border border-[#C9282B]/50 px-4 py-2 rounded-[8px] text-center backdrop-blur-sm relative z-10">
           {error}
         </div>
       )}
 
       {/* Controls Area */}
-      <div className="shrink-0 pb-12 flex flex-col items-center gap-8 border-t border-[rgba(255,255,255,0.05)] pt-12 bg-gradient-to-t from-black/20 to-transparent relative z-10">
+      <div className="shrink-0 pb-12 flex flex-col items-center gap-8 border-t border-[#E0E0E0] pt-12 bg-gradient-to-t from-black/20 to-transparent relative z-10">
         
         {/* Your Turn Status */}
         <div className="text-center h-12">
           {sessionState === "speaking" || sessionState === "processing" || sessionState === "connecting" ? (
-             <p className="text-sm font-semibold text-[#968BEC] animate-pulse">
+             <p className="text-sm font-semibold text-[#E05226] animate-pulse">
                 {sessionState === 'connecting' ? 'CONNECTING...' : sessionState === 'speaking' ? 'INTERVIEWER SPEAKING' : 'THINKING...'}
              </p>
           ) : (
              <>
-                <p className="text-sm font-semibold text-white mb-1">Your turn</p>
-                <p className="text-xs text-[#9CA3AF]">
+                <p className="text-sm font-semibold text-[#111111] mb-1">Your turn</p>
+                <p className="text-xs text-[#8F8F8F]">
                   {sessionState === "mic-check" ? "Tap the microphone to test your audio." : "Tap the microphone and answer out loud."}
                 </p>
              </>
@@ -346,7 +346,7 @@ export function StageLiveVoice({
           {/* Audio Visualizer Ring */}
           {isListening && audioLevel > 0 && (
             <div 
-              className="absolute rounded-full bg-[#968BEC]/20 transition-transform duration-75 ease-out"
+              className="absolute rounded-full bg-[#E05226]/20 transition-transform duration-75 ease-out"
               style={{ 
                   width: '120px', 
                   height: '120px',
@@ -361,8 +361,8 @@ export function StageLiveVoice({
             className={cn(
               "relative z-10 flex size-20 items-center justify-center rounded-full border transition-all duration-300",
               isListening
-                ? "bg-[#C9282B] border-[#C9282B] text-white"
-                : "bg-[#1e293b]/50 border-[#475569]/50 text-[#9CA3AF] hover:bg-[#1e293b] hover:border-[#64748b] hover:text-white",
+                ? "bg-[#C9282B] border-[#C9282B] text-[#111111]"
+                : "bg-[#E0E0E0]/50 border-[#8F8F8F]/50 text-[#8F8F8F] hover:bg-[#E0E0E0] hover:border-[#8F8F8F] hover:text-[#111111]",
               (sessionState === "processing" || sessionState === "connecting" || sessionState === "speaking") && "opacity-50 cursor-not-allowed"
             )}
           >
@@ -376,13 +376,13 @@ export function StageLiveVoice({
           </button>
         </div>
 
-        <p className="text-xs text-[#5B6270]">
+        <p className="text-xs text-[#8F8F8F]">
           {micDenied ? "Microphone access denied." : "Using your browser's voice — no speech service is configured."}
         </p>
 
         {/* Typing Fallback */}
         <div className="w-full max-w-xl px-6 mt-4">
-          <p className="text-xs text-[#9CA3AF] mb-2 text-center">Prefer typing?</p>
+          <p className="text-xs text-[#8F8F8F] mb-2 text-center">Prefer typing?</p>
           <form 
             onSubmit={(e) => {
               e.preventDefault();
@@ -393,7 +393,7 @@ export function StageLiveVoice({
             className="flex items-center gap-2"
           >
             <div className="flex-1 relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5B6270]">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8F8F8F]">
                   <Terminal className="size-4" />
               </div>
               <input 
@@ -402,13 +402,13 @@ export function StageLiveVoice({
                 onChange={(e) => setTyped(e.target.value)}
                 disabled={sessionState === "processing" || sessionState === "connecting" || sessionState === "speaking"}
                 placeholder="Type your answer..."
-                className="w-full bg-[#0f172a] border border-[#1e293b] rounded-[8px] pl-10 pr-4 py-3 text-sm text-white placeholder:text-[#475569] focus:outline-none focus:border-[#968BEC]/50 transition-colors"
+                className="w-full bg-[#FFFFFF] border border-[#E0E0E0] rounded-[8px] pl-10 pr-4 py-3 text-sm text-[#111111] placeholder:text-[#8F8F8F] focus:outline-none focus:border-[#E05226]/50 transition-colors"
               />
             </div>
             <Button 
               type="submit"
               disabled={!typed.trim() || sessionState === "processing" || sessionState === "connecting" || sessionState === "speaking"}
-              className="h-[46px] px-6 bg-transparent border border-[#1e293b] rounded-[8px] text-[#9CA3AF] hover:text-white hover:bg-[#1e293b]"
+              className="h-[46px] px-6 bg-transparent border border-[#E0E0E0] rounded-[8px] text-[#8F8F8F] hover:text-[#111111] hover:bg-[#E0E0E0]"
             >
               Send
             </Button>

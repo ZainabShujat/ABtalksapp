@@ -80,7 +80,7 @@ export function StageReady({
         </Button>
         <Button
           type="button"
-          className="bg-accent-600 hover:bg-accent-700 text-white"
+          className="bg-[#E05226] hover:bg-[#C9411C] text-white"
           onClick={() => {
             // Future: requestFullscreen() here
             onBeginAction();

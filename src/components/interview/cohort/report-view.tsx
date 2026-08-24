@@ -17,11 +17,11 @@ import {
  */
 
 const LEVEL_STYLE: Record<string, string> = {
-  STRONG: "border-[#6AE276]/40 bg-[#6AE276]/10 text-[#6AE276]",
-  DEVELOPING: "border-[#E2C56A]/40 bg-[#E2C56A]/10 text-[#E2C56A]",
-  WEAK: "border-[#F98080]/40 bg-[#F98080]/10 text-[#F98080]",
-  NOT_DEMONSTRATED: "border-[#F98080]/30 bg-[#F98080]/5 text-[#F98080]/85",
-  NOT_ASSESSED: "border-[var(--iv-border)] bg-white/5 text-[var(--iv-text-faint)]",
+  STRONG: "border-[#1A7F37]/40 bg-[#1A7F37]/10 text-[#1A7F37]",
+  DEVELOPING: "border-[#9A6700]/40 bg-[#9A6700]/10 text-[#9A6700]",
+  WEAK: "border-[#C9282B]/40 bg-[#C9282B]/10 text-[#C9282B]",
+  NOT_DEMONSTRATED: "border-[#C9282B]/30 bg-[#C9282B]/5 text-[#C9282B]/85",
+  NOT_ASSESSED: "border-[var(--iv-border)] bg-[#FFF5F0] text-[var(--iv-text-faint)]",
 };
 
 const STRENGTH_LABEL: Record<string, string> = {
@@ -38,9 +38,9 @@ function Score({ value, size = "md" }: { value: number; size?: "md" | "lg" | "xl
     <span
       className={
         size === "xl"
-          ? "font-display text-[56px] font-bold tabular-nums text-white leading-none"
+          ? "font-display text-[56px] font-bold tabular-nums text-[#111111] leading-none"
           : size === "lg"
-            ? "font-display text-4xl font-bold tabular-nums text-white"
+            ? "font-display text-4xl font-bold tabular-nums text-[#111111]"
             : "font-display text-xl font-bold tabular-nums text-[var(--iv-text)]"
       }
     >
@@ -62,9 +62,9 @@ function Score({ value, size = "md" }: { value: number; size?: "md" | "lg" | "xl
 
 function Meter({ value }: { value: number }) {
   const pct = Math.max(0, Math.min(100, value * 10));
-  const tone = value >= 7 ? "#6AE276" : value >= 4.5 ? "#E2C56A" : "#F98080";
+  const tone = value >= 7 ? "#1A7F37" : value >= 4.5 ? "#9A6700" : "#C9282B";
   return (
-    <span className="mt-2 block h-1 w-full rounded-full bg-white/5">
+    <span className="mt-2 block h-1 w-full rounded-full bg-[#FFF5F0]">
       <span
         className="block h-1 rounded-full"
         style={{ width: `${pct}%`, backgroundColor: tone }}
@@ -99,7 +99,7 @@ function Section({
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-[14px] border border-[var(--iv-border)] bg-[#0A0D14] p-5 ${className}`}>
+    <div className={`rounded-[14px] border border-[var(--iv-border)] bg-[#FFFFFF] p-5 ${className}`}>
       {children}
     </div>
   );
@@ -120,10 +120,22 @@ export function InterviewReportView({
   const weakSkills = report.skills.filter((s) => s.level === "WEAK");
   const notDemonstratedSkills = report.skills.filter((s) => s.level === "NOT_DEMONSTRATED");
 
+  // "Developing / Weak" and "Expected but Missing" draw from different fields,
+  // but a skill that was expected and never shown is usually recorded in both —
+  // so the two columns rendered identical lists under different headings, which
+  // reads as a bug. Display-only de-duplication: the left column keeps the
+  // skill, the right shows only what is not already accounted for there.
+  const shownAsWeak = new Set(
+    [...developingSkills, ...weakSkills].slice(0, 5).map((s) => s.skill),
+  );
+  const expectedOnly = report.expectedButNotDemonstrated.filter(
+    (s) => !shownAsWeak.has(s.skill),
+  );
+
   const readinessColor = 
-    report.overall.readiness.toLowerCase().includes("strong") ? "text-[#6AE276]" :
-    report.overall.readiness.toLowerCase().includes("promising") ? "text-[#6AE276]" :
-    report.overall.readiness.toLowerCase().includes("developing") ? "text-[#E2C56A]" : "text-[#F98080]";
+    report.overall.readiness.toLowerCase().includes("strong") ? "text-[#1A7F37]" :
+    report.overall.readiness.toLowerCase().includes("promising") ? "text-[#1A7F37]" :
+    report.overall.readiness.toLowerCase().includes("developing") ? "text-[#9A6700]" : "text-[#C9282B]";
 
   return (
     <div className="interview-room mx-auto max-w-5xl space-y-20 pb-24 pt-8 text-[var(--iv-text)]">
@@ -134,10 +146,10 @@ export function InterviewReportView({
       
       <header className="space-y-8">
         <div>
-          <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[#968BEC]">
+          <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[#E05226]">
             AI Cohort Interview Report
           </p>
-          <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-white md:text-4xl">
+          <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-[#111111] md:text-4xl">
             {report.candidate.name}
           </h1>
           <p className="mt-2 text-[15px] text-[var(--iv-text-muted)]">
@@ -175,8 +187,8 @@ export function InterviewReportView({
               {report.competencies.map((c) => (
                 <div key={c.competency} className="rounded-[10px] border border-[var(--iv-border)] bg-white/[0.02] p-4">
                   <div className="flex justify-between items-end mb-2">
-                    <span className="text-[13px] font-medium text-white">{c.label}</span>
-                    <span className="font-display text-[15px] font-bold text-white">{c.scoreOutOfTen.toFixed(1)}</span>
+                    <span className="text-[13px] font-medium text-[#111111]">{c.label}</span>
+                    <span className="font-display text-[15px] font-bold text-[#111111]">{c.scoreOutOfTen.toFixed(1)}</span>
                   </div>
                   <Meter value={c.scoreOutOfTen} />
                 </div>
@@ -186,9 +198,9 @@ export function InterviewReportView({
         </div>
 
         {/* Key Strengths & Weaknesses (Scannable) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-white/5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-[#E0E0E0]">
           <div>
-            <h3 className="text-[12px] font-bold uppercase tracking-wider text-[#6AE276] mb-3 flex items-center gap-2">
+            <h3 className="text-[12px] font-bold uppercase tracking-wider text-[#1A7F37] mb-3 flex items-center gap-2">
               <CheckCircle2 className="size-4" /> Key Strengths
             </h3>
             <ul className="space-y-2">
@@ -202,7 +214,7 @@ export function InterviewReportView({
           </div>
           
           <div>
-            <h3 className="text-[12px] font-bold uppercase tracking-wider text-[#E2C56A] mb-3 flex items-center gap-2">
+            <h3 className="text-[12px] font-bold uppercase tracking-wider text-[#9A6700] mb-3 flex items-center gap-2">
               <AlertTriangle className="size-4" /> Developing / Weak
             </h3>
             <ul className="space-y-2">
@@ -220,12 +232,12 @@ export function InterviewReportView({
               <Circle className="size-4" /> Expected but Missing
             </h3>
             <ul className="space-y-2">
-              {report.expectedButNotDemonstrated.slice(0, 5).map((s, i) => (
+              {expectedOnly.slice(0, 5).map((s, i) => (
                 <li key={i} className="text-[14px] text-[var(--iv-text-muted)] leading-snug">
                   {s.skill}
                 </li>
               ))}
-              {report.expectedButNotDemonstrated.length === 0 && <li className="text-[13px] text-[var(--iv-text-faint)]">Nothing missing</li>}
+              {expectedOnly.length === 0 && <li className="text-[13px] text-[var(--iv-text-faint)]">Nothing further missing</li>}
             </ul>
           </div>
         </div>
@@ -242,13 +254,13 @@ export function InterviewReportView({
             <Card key={m.moduleNumber} className="flex flex-col h-full">
               <div className="flex justify-between items-start mb-3">
                 <div>
-                  <h3 className="text-[15px] font-semibold text-white">Module {m.moduleNumber}</h3>
+                  <h3 className="text-[15px] font-semibold text-[#111111]">Module {m.moduleNumber}</h3>
                   <p className="text-[13px] text-[var(--iv-text-faint)] mt-1">{m.title}</p>
                 </div>
                 <div className="text-right">
                   <Score value={m.scoreOutOfTen ?? 0} />
                   <p className={`text-[11px] font-bold uppercase mt-1 ${
-                    (m.scoreOutOfTen ?? 0) >= 7 ? "text-[#6AE276]" : (m.scoreOutOfTen ?? 0) >= 4.5 ? "text-[#E2C56A]" : "text-[#F98080]"
+                    (m.scoreOutOfTen ?? 0) >= 7 ? "text-[#1A7F37]" : (m.scoreOutOfTen ?? 0) >= 4.5 ? "text-[#9A6700]" : "text-[#C9282B]"
                   }`}>
                     {(m.scoreOutOfTen ?? 0) >= 7 ? "Strong" : (m.scoreOutOfTen ?? 0) >= 4.5 ? "Developing" : "Weak"}
                   </p>
@@ -263,13 +275,13 @@ export function InterviewReportView({
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--iv-text-faint)] mb-2">Demonstrated</p>
                   <ul className="space-y-1">
-                    {m.strengths.slice(0,3).map((s, i) => <li key={i} className="text-[13px] text-[#6AE276] flex gap-2"><span>✓</span><span className="text-[var(--iv-text-muted)]">{s}</span></li>)}
+                    {m.strengths.slice(0,3).map((s, i) => <li key={i} className="text-[13px] text-[#1A7F37] flex gap-2"><span>✓</span><span className="text-[var(--iv-text-muted)]">{s}</span></li>)}
                   </ul>
                 </div>
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--iv-text-faint)] mb-2">Development Areas</p>
                   <ul className="space-y-1">
-                    {m.missingSkills.slice(0,3).map((s, i) => <li key={i} className="text-[13px] text-[#E2C56A] flex gap-2"><span>△</span><span className="text-[var(--iv-text-muted)]">{s}</span></li>)}
+                    {m.missingSkills.slice(0,3).map((s, i) => <li key={i} className="text-[13px] text-[#9A6700] flex gap-2"><span>△</span><span className="text-[var(--iv-text-muted)]">{s}</span></li>)}
                   </ul>
                 </div>
               </div>
@@ -278,7 +290,7 @@ export function InterviewReportView({
           
           {unassessedModules.length > 0 && (
              <div className="col-span-1 lg:col-span-2 rounded-[14px] border border-dashed border-[var(--iv-border)] p-5 bg-white/[0.01]">
-               <h3 className="text-[13px] font-semibold text-white mb-2">Not Assessed</h3>
+               <h3 className="text-[13px] font-semibold text-[#111111] mb-2">Not Assessed</h3>
                <p className="text-[13px] text-[var(--iv-text-muted)]">
                  {unassessedModules.map(m => `Module ${m.moduleNumber} (${m.title})`).join(", ")}
                </p>
@@ -303,11 +315,11 @@ export function InterviewReportView({
                  <ul className="mt-4 space-y-3">
                    {list.map((s, i) => (
                      <li key={i} className="text-[14px] leading-relaxed text-[var(--iv-text-muted)] flex items-start gap-3">
-                       <span className={`mt-0.5 ${level === 'STRONG' ? 'text-[#6AE276]' : level === 'DEVELOPING' ? 'text-[#E2C56A]' : 'text-[#F98080]'}`}>
+                       <span className={`mt-0.5 ${level === 'STRONG' ? 'text-[#1A7F37]' : level === 'DEVELOPING' ? 'text-[#9A6700]' : 'text-[#C9282B]'}`}>
                          {level === 'STRONG' ? '✓' : level === 'DEVELOPING' ? '△' : '○'}
                        </span>
                        <span>
-                         <strong className="text-white font-medium">{s.skill}</strong> — {s.note}
+                         <strong className="text-[#111111] font-medium">{s.skill}</strong> — {s.note}
                        </span>
                      </li>
                    ))}
@@ -326,14 +338,14 @@ export function InterviewReportView({
       <Section title="Evidence & Deep Dive" subtitle="Expand any question to read the specific exchange and grading justification.">
         <div className="space-y-3">
           {report.questionAssessments.map((q, idx) => (
-            <details key={q.questionId} className="group rounded-[12px] border border-[var(--iv-border)] bg-[#0A0D14] overflow-hidden [&_summary::-webkit-details-marker]:hidden">
+            <details key={q.questionId} className="group rounded-[12px] border border-[var(--iv-border)] bg-[#FFFFFF] overflow-hidden [&_summary::-webkit-details-marker]:hidden">
               <summary className="flex cursor-pointer items-center justify-between p-4 md:p-5 hover:bg-white/[0.02] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent-500">
                 <div className="flex items-center gap-4">
-                  <div className="shrink-0 flex items-center justify-center size-8 rounded-full bg-white/5 text-[var(--iv-text-faint)] group-open:bg-[#968BEC]/20 group-open:text-[#968BEC] transition-colors">
+                  <div className="shrink-0 flex items-center justify-center size-8 rounded-full bg-[#FFF5F0] text-[var(--iv-text-faint)] group-open:bg-[#E05226]/20 group-open:text-[#E05226] transition-colors">
                     <ChevronRight className="size-4 group-open:rotate-90 transition-transform duration-200" />
                   </div>
                   <div>
-                    <h3 className="text-[15px] font-semibold text-white">Q{q.order} · {q.moduleTitle ?? "General"}</h3>
+                    <h3 className="text-[15px] font-semibold text-[#111111]">Q{q.order} · {q.moduleTitle ?? "General"}</h3>
                     <p className="text-[13px] text-[var(--iv-text-faint)] mt-1 truncate max-w-[200px] md:max-w-md">{q.question}</p>
                   </div>
                 </div>
@@ -352,7 +364,7 @@ export function InterviewReportView({
                 </div>
               </summary>
               
-              <div className="border-t border-[var(--iv-border)] p-5 md:p-6 space-y-8 bg-[#05070A]">
+              <div className="border-t border-[var(--iv-border)] p-5 md:p-6 space-y-8 bg-[var(--iv-page)]">
                 
                 {/* 1. What was asked */}
                 <div>
@@ -377,10 +389,10 @@ export function InterviewReportView({
                       <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--iv-text-faint)] mb-3">Demonstrated</h4>
                       <ul className="space-y-2">
                         {q.demonstrated.map((item, i) => (
-                          <li key={i} className="text-[13px] text-[var(--iv-text-muted)] flex gap-2"><span className="text-[#6AE276]">✓</span> {item}</li>
+                          <li key={i} className="text-[13px] text-[var(--iv-text-muted)] flex gap-2"><span className="text-[#1A7F37]">✓</span> {item}</li>
                         ))}
                         {q.partiallyDemonstrated.map((item, i) => (
-                          <li key={`p-${i}`} className="text-[13px] text-[var(--iv-text-muted)] flex gap-2"><span className="text-[#E2C56A]">△</span> {item} <span className="text-[11px] text-[var(--iv-text-faint)]">(after probing)</span></li>
+                          <li key={`p-${i}`} className="text-[13px] text-[var(--iv-text-muted)] flex gap-2"><span className="text-[#9A6700]">△</span> {item} <span className="text-[11px] text-[var(--iv-text-faint)]">(after probing)</span></li>
                         ))}
                         {q.demonstrated.length === 0 && q.partiallyDemonstrated.length === 0 && <li className="text-[13px] text-[var(--iv-text-faint)]">Nothing clearly demonstrated</li>}
                       </ul>
@@ -389,7 +401,7 @@ export function InterviewReportView({
                       <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--iv-text-faint)] mb-3">Missing</h4>
                       <ul className="space-y-2">
                         {q.missing.map((item, i) => (
-                          <li key={i} className="text-[13px] text-[var(--iv-text-muted)] flex gap-2"><span className="text-[#F98080]">○</span> {item}</li>
+                          <li key={i} className="text-[13px] text-[var(--iv-text-muted)] flex gap-2"><span className="text-[#C9282B]">○</span> {item}</li>
                         ))}
                         {q.missing.length === 0 && <li className="text-[13px] text-[var(--iv-text-faint)]">Nothing missing</li>}
                       </ul>
@@ -418,11 +430,11 @@ export function InterviewReportView({
                 {q.probes.length > 0 && (
                   <div>
                     <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--iv-text-faint)] mb-4">Adaptive Follow-ups</h4>
-                    <div className="space-y-6 border-l border-[#968BEC]/30 ml-2 pl-6 relative">
+                    <div className="space-y-6 border-l border-[#E05226]/30 ml-2 pl-6 relative">
                       {q.probes.map((p, pIdx) => (
                         <div key={p.level} className="relative">
-                          <span className="absolute -left-[30px] top-1 size-[9px] rounded-full bg-[#968BEC]" />
-                          <p className="text-[11px] font-semibold uppercase tracking-wider text-[#968BEC] mb-2">
+                          <span className="absolute -left-[30px] top-1 size-[9px] rounded-full bg-[#E05226]" />
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-[#E05226] mb-2">
                             {p.mode === "CLARIFY" ? "Clarification Requested" : "Deep Probe"}
                           </p>
                           <p className="text-[14px] leading-relaxed text-[var(--iv-text)]">{p.question}</p>
@@ -498,7 +510,7 @@ export function InterviewReportView({
       {/* ================================================== */}
       
       <Section title="Final Recommendation">
-        <Card className="bg-gradient-to-br from-white/[0.03] to-transparent border-[#968BEC]/20">
+        <Card className="bg-gradient-to-br from-white/[0.03] to-transparent border-[#E05226]/20">
           <p className={`text-xl font-bold tracking-wide ${readinessColor}`}>
             {report.overall.readiness}
           </p>
@@ -514,7 +526,7 @@ export function InterviewReportView({
               <ul className="space-y-3">
                 {report.improvements.map((item, i) => (
                   <li key={i} className="text-[14px] leading-relaxed flex items-start gap-3 text-[var(--iv-text-muted)]">
-                    <span className="mt-1 text-[#E2C56A]"><ChevronRight className="size-4" /></span>
+                    <span className="mt-1 text-[#9A6700]"><ChevronRight className="size-4" /></span>
                     <span>
                       {item.text}
                       {item.suggestedDays.length > 0 && (
@@ -538,13 +550,13 @@ export function InterviewReportView({
       
       <div className="pt-20">
         <details className="group [&_summary::-webkit-details-marker]:hidden">
-          <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-wider text-[var(--iv-text-faint)] hover:text-white transition-colors flex items-center justify-center gap-2">
+          <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-wider text-[var(--iv-text-faint)] hover:text-[#111111] transition-colors flex items-center justify-center gap-2">
             Technical Audit & Metadata <ChevronDown className="size-4 group-open:rotate-180 transition-transform" />
           </summary>
           <div className="mt-6 p-6 rounded-[14px] border border-[var(--iv-border)] bg-black/20 text-[12px] text-[var(--iv-text-faint)] space-y-6">
             
             {report.assessmentStatus.status !== "NORMAL" && (
-              <div className="border border-[#F98080]/30 bg-[#F98080]/10 text-[#F98080] p-4 rounded-lg">
+              <div className="border border-[#C9282B]/30 bg-[#C9282B]/10 text-[#C9282B] p-4 rounded-lg">
                 <span className="font-bold">Assessment Integrity Flag: {report.assessmentStatus.status}</span>
                 <p className="mt-1">{report.assessmentStatus.note}</p>
               </div>

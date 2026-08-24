@@ -305,6 +305,21 @@ export function InterviewRoom({
   async function endInterview() {
     stopRecording();
     if (typeof window !== "undefined") window.speechSynthesis?.cancel();
+
+    // Past halfway the answers already given are enough to assess, so ending
+    // early SCORES the attempt instead of discarding it. Throwing away a
+    // substantially complete interview served nobody: the evidence existed and
+    // the candidate had earned a report. `finalizeInterview` gates on the
+    // 3-minute minimum, so a session too short to be meaningful still cannot
+    // produce one — in that case we fall back to abandoning.
+    if (progress.total > 0 && progress.ratio >= 0.5) {
+      const finished = await finishInterviewAction({ interviewId });
+      if (finished.ok) {
+        onFinishedAction(finished.data);
+        return;
+      }
+    }
+
     await abandonInterviewAction({ interviewId });
     onAbandonedAction();
   }
@@ -329,7 +344,7 @@ export function InterviewRoom({
           aria-modal="true"
           aria-labelledby="iv-exit-title"
         >
-          <div className="w-full max-w-md rounded-[16px] border border-[var(--iv-border)] bg-[#050C21] p-6">
+          <div className="w-full max-w-md rounded-[16px] border border-[var(--iv-border)] bg-[#FFFFFF] p-6">
             <h2
               id="iv-exit-title"
               className="font-display text-lg font-bold text-[var(--iv-text)]"
@@ -339,9 +354,10 @@ export function InterviewRoom({
 
             {pastHalfway ? (
               <p className="mt-3 text-[14px] leading-relaxed text-[var(--iv-text-muted)]">
-                You&apos;re more than halfway through this assessment. If you end
-                the session now, your current progress will not be resumable and
-                you&apos;ll lose this attempt.
+                You&apos;re more than halfway through this assessment, so ending
+                now will score what you&apos;ve answered and generate your
+                report. Questions you haven&apos;t reached count as unanswered,
+                and this milestone will be marked complete.
               </p>
             ) : (
               <p className="mt-3 text-[14px] leading-relaxed text-[var(--iv-text-muted)]">
@@ -361,9 +377,9 @@ export function InterviewRoom({
               <button
                 type="button"
                 onClick={() => void endInterview()}
-                className="inline-flex h-10 items-center rounded-[10px] border border-[#F98080]/40 px-4 text-[14px] text-[#F98080] transition-colors hover:bg-[#F98080]/10"
+                className="inline-flex h-10 items-center rounded-[10px] border border-[#C9282B]/40 px-4 text-[14px] text-[#C9282B] transition-colors hover:bg-[#C9282B]/10"
               >
-                {pastHalfway ? "End & lose attempt" : "End interview"}
+                {pastHalfway ? "End & get my report" : "End interview"}
               </button>
             </div>
           </div>
@@ -382,8 +398,8 @@ export function InterviewRoom({
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-[#6AE276]/40 bg-[#6AE276]/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#6AE276]">
-            <span className="iv-dot size-1.5 rounded-full bg-[#6AE276]" />
+          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-[#1A7F37]/40 bg-[#1A7F37]/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#1A7F37]">
+            <span className="iv-dot size-1.5 rounded-full bg-[#1A7F37]" />
             Live
           </span>
           <span
@@ -395,7 +411,7 @@ export function InterviewRoom({
           <button
             type="button"
             onClick={() => setConfirmExit(true)}
-            className="rounded-[8px] border border-[var(--iv-border)] px-3 py-1.5 text-[13px] text-[var(--iv-text-muted)] transition-colors hover:border-white/30 hover:text-[var(--iv-text)]"
+            className="rounded-[8px] border border-[var(--iv-border)] px-3 py-1.5 text-[13px] text-[var(--iv-text-muted)] transition-colors hover:border-[#E0E0E0] hover:text-[var(--iv-text)]"
           >
             End interview
           </button>
@@ -439,10 +455,10 @@ export function InterviewRoom({
       </div>
 
       {/* ----------------------------------------------------- controls */}
-      <div className="sticky bottom-0 border-t border-[var(--iv-border)] bg-[#040A12]/95 pt-5 pb-6 backdrop-blur">
+      <div className="sticky bottom-0 border-t border-[var(--iv-border)] bg-[#FBF9F7]/95 pt-5 pb-6 backdrop-blur">
         <div className="mx-auto w-full max-w-2xl">
           {error ? (
-            <p className="mb-4 text-[13px] text-[#F98080]" role="status">
+            <p className="mb-4 text-[13px] text-[#C9282B]" role="status">
               {error}
             </p>
           ) : null}
@@ -473,7 +489,7 @@ export function InterviewRoom({
             {!micUnavailable ? (
               <div className="relative">
                 {phase === "listening" ? (
-                  <span className="iv-listening-ring pointer-events-none absolute inset-0 rounded-full border border-[#6AE276]/50" />
+                  <span className="iv-listening-ring pointer-events-none absolute inset-0 rounded-full border border-[#1A7F37]/50" />
                 ) : null}
                 <button
                   type="button"
@@ -485,7 +501,7 @@ export function InterviewRoom({
                   className={cn(
                     "relative flex size-14 items-center justify-center rounded-full border transition-all duration-200",
                     phase === "listening"
-                      ? "border-[#6AE276]/60 bg-[#6AE276]/15 text-[#6AE276]"
+                      ? "border-[#1A7F37]/60 bg-[#1A7F37]/15 text-[#1A7F37]"
                       : "border-[var(--iv-border)] bg-[var(--iv-surface-raised)] text-[var(--iv-text)] hover:border-[var(--iv-accent)]/60",
                     (busy || !question) && "cursor-not-allowed opacity-40",
                   )}

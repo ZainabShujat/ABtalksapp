@@ -155,8 +155,19 @@ export function ProgramDashboardView({
             onClick={() => setInterviewOpen((v) => !v)}
           >
             <span className="flex min-w-0 items-center gap-2.5">
-              <Mic className="size-5 shrink-0 text-[#8F8F8F]" aria-hidden />
-              <span className="font-heading text-xl leading-[26px] font-semibold text-[#8F8F8F]">
+              <Mic
+                className={cn(
+                  "size-5 shrink-0",
+                  interviewFullyLocked ? "text-[#8F8F8F]" : "text-[#111111]",
+                )}
+                aria-hidden
+              />
+              <span
+                className={cn(
+                  "font-heading text-xl leading-[26px] font-semibold",
+                  interviewFullyLocked ? "text-[#8F8F8F]" : "text-[#111111]",
+                )}
+              >
                 Mock Interview
               </span>
               {interviewFullyLocked && (
@@ -168,7 +179,8 @@ export function ProgramDashboardView({
             </span>
             <ChevronDown
               className={cn(
-                "size-5 text-[#8F8F8F] transition-transform",
+                "size-5 transition-transform",
+                interviewFullyLocked ? "text-[#8F8F8F]" : "text-[#111111]",
                 interviewOpen && "rotate-180",
               )}
               aria-hidden

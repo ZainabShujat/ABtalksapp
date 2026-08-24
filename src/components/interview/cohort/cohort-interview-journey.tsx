@@ -41,7 +41,10 @@ export function CohortInterviewJourney({
   const isImmersive = stage === "live";
 
   return (
-    <div className="dark">
+    // `interview-room` carries the design-system tokens the stages read. The
+    // wrapper used to force `dark`; the interview now follows the cream/orange
+    // system the rest of the site uses, so forcing a theme here would fight it.
+    <div className="interview-room">
       {/* Pre-interview stages: standard AB Talks layout with subtle step indicator */}
       {!isImmersive && stage !== "completion" && stage !== "result" && (
         <div className="text-foreground">

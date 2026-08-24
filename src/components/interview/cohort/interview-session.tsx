@@ -125,7 +125,7 @@ export function InterviewSession({
         </div>
 
         {error ? (
-          <p className="mt-5 text-[13px] text-[#F98080]" role="status">
+          <p className="mt-5 text-[13px] text-[#C9282B]" role="status">
             {error}
           </p>
         ) : null}
@@ -182,7 +182,7 @@ export function InterviewSession({
   return (
     <div className="interview-room mx-auto w-full max-w-2xl py-10">
       <div className="flex items-center gap-2.5">
-        <CheckCircle2 className="size-5 text-[#6AE276]" strokeWidth={1.75} />
+        <CheckCircle2 className="size-5 text-[#1A7F37]" strokeWidth={1.75} />
         <h1 className="font-display text-2xl font-bold tracking-tight text-[var(--iv-text)]">
           Interview complete
         </h1>

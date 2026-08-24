@@ -99,14 +99,14 @@ function Notice({
         {reportHref ? (
           <Link
             href={reportHref}
-            className="inline-flex h-11 items-center rounded-[12px] border border-[#968BEC]/50 bg-[#968BEC]/15 px-5 text-[14px] font-semibold text-white transition-colors hover:bg-[#968BEC]/25"
+            className="inline-flex h-11 items-center rounded-[12px] border border-[#E05226] bg-[#E05226] px-5 text-[14px] font-semibold text-white transition-colors hover:bg-[#C9411C]"
           >
             View interview report
           </Link>
         ) : null}
         <Link
           href="/program/dashboard"
-          className="text-[14px] text-white/55 underline underline-offset-4 transition-colors hover:text-white"
+          className="text-[14px] text-[#4B4B4B] underline underline-offset-4 transition-colors hover:text-[#111111]"
         >
           Back to dashboard
         </Link>

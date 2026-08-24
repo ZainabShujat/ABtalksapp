@@ -4,6 +4,12 @@
     {
       "name": "abtalks-interview-testdb",
       "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:interview"],
+      "port": 3000
+    },
+    {
+      "name": "abtalks-plain-dev",
+      "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000
     }

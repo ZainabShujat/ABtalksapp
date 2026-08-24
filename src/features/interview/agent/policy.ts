@@ -103,6 +103,20 @@ export function routeDecision(
     };
   }
 
+  // "I don't know" / "I can't do that" is checked BEFORE relevance, for the
+  // same reason REPEAT is. A candidate who admits they cannot answer has not
+  // changed the subject — they have answered honestly with nothing. Relevance
+  // scoring reads that as OFF_TOPIC because it shares no vocabulary with the
+  // question, and the candidate then gets "I'll keep us focused on the
+  // interview", which accuses an honest person of dodging. Moving on records
+  // the question as unanswered, which is the correct and sufficient penalty.
+  if (stuck) {
+    return {
+      action: "NEXT_QUESTION",
+      rationale: "Candidate does not know; recorded unanswered and moving on.",
+    };
+  }
+
   // Off-topic is decided by the EVIDENCE as well as the proposed action. A
   // model that reports off_topic but proposes NEXT_QUESTION would otherwise let
   // a non-answer count as an answered question.
@@ -196,6 +210,23 @@ const NEUTRAL_ACKNOWLEDGEMENTS = [
   "Thanks, that's useful.",
 ];
 
+/**
+ * Used instead when the candidate said they did not know.
+ *
+ * Thanking someone "for walking me through that" after they said "I don't
+ * know" is the single most obviously wrong thing the interviewer can say: it
+ * proves nothing was listened to. These lines accept the gap without praising
+ * an answer that was never given, and without scolding. The question is already
+ * recorded unanswered, so the transcript carries the penalty — the spoken line
+ * does not need to.
+ */
+const STUCK_ACKNOWLEDGEMENTS = [
+  "That's alright — let's move on.",
+  "No problem, we can leave that one.",
+  "That's fine. Let's try a different one.",
+  "Okay, no problem.",
+];
+
 /** Hard ceiling on a spoken acknowledgement. */
 const MAX_ACKNOWLEDGEMENT_CHARS = 200;
 
@@ -218,6 +249,7 @@ export function resolveAcknowledgement(
   decision: InterviewDecision,
   questionOrder: number,
 ): string {
+  const stuck = decision.evidence.flaggedIssues.includes("stuck_or_evasive");
   const drafted = (decision.acknowledgement ?? "").replace(/\s+/g, " ").trim();
 
   const usable =
@@ -225,11 +257,13 @@ export function resolveAcknowledgement(
     drafted.length <= MAX_ACKNOWLEDGEMENT_CHARS &&
     !drafted.includes("?");
 
-  if (usable) return drafted;
+  // A drafted line is only trusted when there was something to react to. On a
+  // stuck answer the model has nothing to work from and tends to thank the
+  // candidate anyway, so the deterministic pool wins.
+  if (usable && !stuck) return drafted;
 
-  return NEUTRAL_ACKNOWLEDGEMENTS[
-    Math.max(0, questionOrder - 1) % NEUTRAL_ACKNOWLEDGEMENTS.length
-  ]!;
+  const pool = stuck ? STUCK_ACKNOWLEDGEMENTS : NEUTRAL_ACKNOWLEDGEMENTS;
+  return pool[Math.max(0, questionOrder - 1) % pool.length]!;
 }
 
 /**

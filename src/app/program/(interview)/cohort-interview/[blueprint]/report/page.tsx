@@ -54,7 +54,7 @@ export default async function CohortInterviewReportPage({
         </p>
         <Link
           href="/program/dashboard"
-          className="mt-6 inline-flex h-10 items-center rounded-[10px] border border-[var(--iv-border)] px-4 text-[14px] text-[var(--iv-text-muted)] transition-colors hover:border-white/30 hover:text-[var(--iv-text)]"
+          className="mt-6 inline-flex h-10 items-center rounded-[10px] border border-[var(--iv-border)] px-4 text-[14px] text-[var(--iv-text-muted)] transition-colors hover:border-[#8F8F8F] hover:text-[var(--iv-text)]"
         >
           Back to dashboard
         </Link>
@@ -71,7 +71,7 @@ export default async function CohortInterviewReportPage({
       <div className="interview-room mx-auto max-w-4xl pb-10">
         <Link
           href="/program/dashboard"
-          className="inline-flex h-10 items-center rounded-[10px] border border-[var(--iv-border)] px-4 text-[14px] text-[var(--iv-text-muted)] transition-colors hover:border-white/30 hover:text-[var(--iv-text)]"
+          className="inline-flex h-10 items-center rounded-[10px] border border-[var(--iv-border)] px-4 text-[14px] text-[var(--iv-text-muted)] transition-colors hover:border-[#8F8F8F] hover:text-[var(--iv-text)]"
         >
           Back to dashboard
         </Link>

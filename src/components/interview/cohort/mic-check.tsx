@@ -128,11 +128,11 @@ export function MicCheck({
         </div>
 
         {state === "passed" ? (
-          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-[#6AE276]/40 bg-[#6AE276]/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#6AE276]">
+          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-[#1A7F37]/40 bg-[#1A7F37]/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#1A7F37]">
             Working
           </span>
         ) : state === "denied" ? (
-          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-[#E2C56A]/40 bg-[#E2C56A]/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#E2C56A]">
+          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-[#9A6700]/40 bg-[#9A6700]/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#9A6700]">
             Unavailable
           </span>
         ) : (
@@ -155,7 +155,7 @@ export function MicCheck({
               key={i}
               className={cn(
                 "block w-[4px] rounded-full transition-[height,background-color] duration-75",
-                i < active ? "bg-[#6AE276]" : "bg-white/10",
+                i < active ? "bg-[#1A7F37]" : "bg-white/10",
               )}
               style={{ height: i < active ? 6 + i * 1.6 : 6 }}
             />

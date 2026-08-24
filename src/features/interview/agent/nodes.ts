@@ -323,10 +323,15 @@ export function updateState(state: InterviewAgentState): NodeUpdate {
     (advanced.action === "FOLLOW_UP" || advanced.action === "ESCALATE") &&
     state.nextPrompt
   ) {
+    // React before probing. Previously only NEXT_QUESTION carried an
+    // acknowledgement, so a follow-up or an escalation arrived as a bare
+    // harder question with no sign the previous answer had been heard — which
+    // reads as the interviewer ignoring you and moving the goalposts.
+    const probeAck = resolveAcknowledgement(state.decision, question.order);
     nextState = appendLine(
       nextState,
       "interviewer",
-      state.nextPrompt,
+      `${probeAck}\n\n${state.nextPrompt}`,
       question.id,
     );
     return {

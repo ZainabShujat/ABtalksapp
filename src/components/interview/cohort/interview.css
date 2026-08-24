@@ -4,24 +4,36 @@
  * Scoped entirely to `.interview-room`. Imported by the room component only,
  * never by globals.css, so nothing here can reach another AB Talks page.
  *
- * The palette is taken from the surfaces the program shell already uses
- * (`src/app/program/(app)/layout.tsx` and the cohort dashboard cards) rather
- * than invented: #040A12 page, rgba(5,12,33,.89) card, rgba(46,57,75,.69)
- * border, #968BEC accent, #6AE276 live. Note that `ink-*` and `accent-500`
- * utilities referenced elsewhere in the codebase do not exist in this Tailwind
- * v4 theme, which is why literal values are used.
+ * The palette is the ABTalks design system (docs/design-system.md, plan 071):
+ * #FBF9F7 cream page, #FFFFFF cards, #E0E0E0 border, #E05226 orange accent,
+ * #111111 / #4B4B4B / #8F8F8F text. It was previously a dark navy palette
+ * copied from the old program shell — that shell has since been rebuilt on
+ * cream, and an interview that looks like a different product from the
+ * dashboard that launched it is a bug, not a mood.
+ *
+ * Status colours (live green, error red, warning amber) are darkened from
+ * their dark-theme values because they now sit on white: the light tints that
+ * read fine on navy fail contrast on cream.
  */
 
 .interview-room {
-  --iv-surface: rgba(5, 12, 33, 0.89);
-  --iv-surface-raised: rgba(255, 255, 255, 0.04);
-  --iv-border: rgba(46, 57, 75, 0.69);
-  --iv-border-soft: rgba(46, 57, 75, 0.4);
-  --iv-text: rgba(255, 255, 255, 0.94);
-  --iv-text-muted: rgba(255, 255, 255, 0.55);
-  --iv-text-faint: rgba(255, 255, 255, 0.38);
-  --iv-accent: #968bec;
-  --iv-live: #6ae276;
+  --iv-page: #fbf9f7;
+  --iv-surface: #ffffff;
+  --iv-surface-raised: #fff5f0;
+  --iv-border: #e0e0e0;
+  --iv-border-soft: #ececec;
+  --iv-text: #111111;
+  --iv-text-muted: #4b4b4b;
+  --iv-text-faint: #8f8f8f;
+  --iv-accent: #e05226;
+  --iv-accent-hover: #c9411c;
+  --iv-accent-soft: #ffece3;
+  --iv-live: #1a7f37;
+  --iv-danger: #c9282b;
+  --iv-warning: #9a6700;
+
+  background: var(--iv-page);
+  color: var(--iv-text);
 }
 
 /* Older exchanges stay legible but recede, so the current one reads first. */

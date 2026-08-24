@@ -14,19 +14,19 @@ type Props = {
 };
 
 const figmaBtn =
-  "inline-flex h-11 items-center justify-center rounded-[12px] border border-black bg-accent-500 px-6 text-sm font-semibold text-white shadow-[inset_3px_3px_3px_0_rgba(0,0,0,0.5)] transition-[background-color,box-shadow] duration-300 ease-out hover:bg-accent-500/90 hover:shadow-[inset_3px_3px_3px_0_rgba(0,0,0,0.5),0_0_12px_rgba(115,100,230,0.2)]";
+  "inline-flex h-11 items-center justify-center rounded-[12px] bg-[#E05226] px-6 text-sm font-semibold text-white transition-colors duration-200 ease-out hover:bg-[#C9411C] focus-visible:ring-2 focus-visible:ring-[#E05226] focus-visible:ring-offset-2 focus-visible:outline-none";
 
 const cardClass =
-  "rounded-[16px] border border-[rgba(46,57,75,0.69)] bg-[rgba(5,12,33,0.89)] p-4 transition-[border-color,box-shadow] duration-300 ease-out md:p-5 hover:border-accent-600/55 hover:shadow-[0_4px_20px_rgba(115,100,230,0.08)]";
+  "rounded-[16px] border border-[#E0E0E0] bg-[#FFF5F0] p-4 transition-colors duration-200 ease-out md:p-5 hover:border-[#E05226]/40";
 
 const availableBadge =
-  "inline-flex rounded-[4px] border border-[#6AE276] bg-[#6AE276]/10 px-3 py-1 text-xs text-[#6AE276]";
+  "inline-flex rounded-[4px] border border-[#1A7F37]/40 bg-[#1A7F37]/10 px-3 py-1 text-xs font-semibold text-[#1A7F37]";
 
 const completedBadge =
-  "inline-flex rounded-[4px] border border-accent-500 bg-[rgba(93,8,183,0.2)] px-3 py-1 text-xs text-accent-700";
+  "inline-flex rounded-[4px] border border-[#E05226]/40 bg-[#FFECE3] px-3 py-1 text-xs font-semibold text-[#E05226]";
 
 const lockedBadge =
-  "inline-flex rounded-[4px] border border-[rgba(46,57,75,0.9)] bg-[rgba(46,57,75,0.25)] px-3 py-1 text-xs text-ink-300";
+  "inline-flex rounded-[4px] border border-[#E0E0E0] bg-[#F5F5F5] px-3 py-1 text-xs font-semibold text-[#8F8F8F]";
 
 /**
  * One milestone row. `unlocked` describes CURRICULUM progress (every scope day
@@ -48,13 +48,13 @@ function MilestoneRow({
   return (
     <div className="min-w-0 flex-1 flex gap-4 justify-between items-start">
       <div className="flex-1">
-        <h3 className="text-sm font-semibold text-ink-100 md:text-[15px]">
+        <h3 className="text-sm font-semibold text-[#111111] md:text-[15px]">
           {title}
         </h3>
 
         {state.taken ? (
           <>
-            <p className="mt-1 text-sm text-ink-200 md:text-[15px]">
+            <p className="mt-1 text-sm text-[#4B4B4B] md:text-[15px]">
               {state.score !== null
                 ? `Completed — ${state.score}/100 overall.`
                 : "Completed. Your result is being scored."}
@@ -70,7 +70,7 @@ function MilestoneRow({
           </>
         ) : state.unlocked ? (
           <>
-            <p className="mt-1 text-sm text-ink-200 md:text-[15px]">{blurb}</p>
+            <p className="mt-1 text-sm text-[#4B4B4B] md:text-[15px]">{blurb}</p>
             <div className="mt-3">
               <span className={availableBadge}>
                 {state.inProgressId ? "In progress" : "Available"}
@@ -84,7 +84,7 @@ function MilestoneRow({
           </>
         ) : (
           <>
-            <p className="mt-1 text-sm text-ink-200 md:text-[15px]">{blurb}</p>
+            <p className="mt-1 text-sm text-[#4B4B4B] md:text-[15px]">{blurb}</p>
             <div className="mt-3">
               <span className={lockedBadge}>
                 {remaining} {remaining === 1 ? "day" : "days"} to go
@@ -121,10 +121,10 @@ export function CohortInterviewCard({ state }: Props) {
   return (
     <section className={cn(cardClass, "group flex flex-1 flex-col")}>
       <div className="mb-2.5 flex items-center gap-2.5">
-        <span className="flex size-6 shrink-0 items-center justify-center rounded-[6px] bg-[rgba(93,8,183,0.25)] text-accent-700 transition-colors duration-200 group-hover:bg-[rgba(115,100,230,0.35)] group-hover:text-accent-700 md:size-7">
+        <span className="flex size-6 shrink-0 items-center justify-center rounded-[6px] bg-[#FFECE3] text-[#E05226] transition-colors duration-200 group-hover:bg-[#FFDBC9] md:size-7">
           <Sparkles className="size-3.5 md:size-4" strokeWidth={2.25} />
         </span>
-        <h2 className="text-base font-semibold text-accent-700 md:text-lg">
+        <h2 className="text-base font-semibold text-[#E05226] md:text-lg">
           AI Voice Interview
         </h2>
       </div>
@@ -136,7 +136,7 @@ export function CohortInterviewCard({ state }: Props) {
           state={state.day15}
           href="/program/cohort-interview/DAY_15"
         />
-        <div className="hidden w-px shrink-0 bg-[rgba(46,57,75,0.69)] md:block" />
+        <div className="hidden w-px shrink-0 bg-[#E0E0E0] md:block" />
         <MilestoneRow
           title="Day 31 Final Interview"
           blurb="Assess what you've learned across the full cohort."
