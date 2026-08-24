@@ -20,7 +20,7 @@ type InterviewRow = {
   interviewId: string | null;
   memberId: string;
   memberName: string;
-  company: string;
+  company: string | null;
   status: string;
   durationSec: number | null;
   commScore: number | null;
@@ -106,7 +106,7 @@ export function AdminInterviewsPanel({ rows }: { rows: InterviewRow[] }) {
               <tr key={row.memberId} className="border-b last:border-0">
                 <td className="px-4 py-3">
                   <p className="font-medium">{row.memberName}</p>
-                  <p className="text-xs text-muted-foreground">{row.company}</p>
+                  <p className="text-xs text-muted-foreground">{row.company ?? "—"}</p>
                 </td>
                 <td className="px-4 py-3">
                   <span className="rounded-full bg-muted px-2 py-0.5 text-xs">

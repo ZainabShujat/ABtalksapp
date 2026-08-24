@@ -3,6 +3,7 @@ import { LandingNav } from "./landing-nav";
 import { HeroSection } from "./hero-section";
 import { StatsStrip } from "./stats-strip";
 import { BridgeSection } from "./bridge-section";
+import { CompaniesSection } from "./companies-section";
 import { HowItWorksSection } from "./how-it-works-section";
 import { KeepThreeSection } from "./keep-three-section";
 import { CohortsSection } from "./cohorts-section";
@@ -74,18 +75,22 @@ export function LandingPage({
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <LandingNav user={state.user} />
+      <LandingNav user={state.user} getStartedHref={state.getStartedHref} />
       <main id="main">
-        <HeroSection />
+        <HeroSection
+          getStartedHref={state.getStartedHref}
+          isSignedIn={!!state.user}
+        />
         <StatsStrip />
         <BridgeSection />
+        <CompaniesSection />
         <HowItWorksSection />
         <KeepThreeSection />
         <CohortsSection cards={cards} />
         <TestimonialsSection />
         <FaqSection />
         <CommunitySection />
-        <ContactSection />
+        {/* <ContactSection /> */}
         <CtaBand />
       </main>
       <SiteFooter />

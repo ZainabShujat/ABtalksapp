@@ -229,7 +229,7 @@ model StudentProfile {
   organization                String?
   role                        String?
   yearsExperience             Int?
-  domain                      Domain
+  domain                      Domain?   // null until the user joins their first track
   skills                      String[]  @default([])
   resumeUrl                   String?
   phone                       String?
@@ -734,9 +734,9 @@ model ProgramMember {
   status              ProgramMemberStatus         @default(APPLIED)
   // professional profile (deliberately NOT StudentProfile)
   fullName            String
-  jobRole             String
-  company             String
-  yearsExperience     Int
+  jobRole             String?
+  company             String?
+  yearsExperience     Int?
   education           String?
   university          String?
   graduationYear      Int?

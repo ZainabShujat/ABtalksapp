@@ -52,7 +52,7 @@ export default async function TalentShortlistPage() {
   const rows: CartRow[] = result.data.map((r) => ({
     candidateRef: encodeCandidateRef("PROGRAM", r.memberId),
     memberId: r.memberId,
-    jobRole: r.jobRole,
+    jobRole: r.jobRole ?? "Candidate",
     totalScore: r.totalScore,
     note: r.note,
     displayName: r.displayName,

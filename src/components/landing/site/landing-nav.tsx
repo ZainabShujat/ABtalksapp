@@ -9,6 +9,7 @@ import { GET_STARTED_ITEMS, NAV_LINKS } from "./landing-content";
 
 type Props = {
   user: LandingUser | null;
+  getStartedHref: string;
 };
 
 function scrollToId(id: string) {

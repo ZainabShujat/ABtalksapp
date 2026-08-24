@@ -164,9 +164,13 @@ export default async function AdminStudentDetailPage({
               {data.user.email} · Joined {formatDateIST(data.user.joinedAt)}
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
-              <Badge variant="outline" className={domainBadgeClass(data.profile.domain)}>
-                {data.profile.domain}
-              </Badge>
+              {data.profile.domain ? (
+                <Badge variant="outline" className={domainBadgeClass(data.profile.domain)}>
+                  {data.profile.domain}
+                </Badge>
+              ) : (
+                <Badge variant="outline">—</Badge>
+              )}
               <Badge>{data.enrollment?.status ?? "UNASSIGNED"}</Badge>
               {data.profile.isReadyForInterview ? (
                 <Badge variant="secondary">Ready for Interview</Badge>

@@ -18,9 +18,9 @@ export type MissionPortfolioDay = {
 export type TalentProfile = {
   memberId: string;
   fullName: string;
-  jobRole: string;
-  company: string;
-  yearsExperience: number;
+  jobRole: string | null;
+  company: string | null;
+  yearsExperience: number | null;
   education: string | null;
   university: string | null;
   graduationYear: number | null;
@@ -69,13 +69,13 @@ export type TalentProfile = {
 export type ShortlistRow = {
   memberId: string;
   userId: string;
-  jobRole: string;
+  jobRole: string | null;
   totalScore: number;
   note: string | null;
   shortlistedAt: string;
   displayName: string | null;
   skills: string[];
-  yearsExperience: number;
+  yearsExperience: number | null;
   /**
    * The real name, and only once an engagement request for this recruiter and
    * this candidate has reached CONTACT_SHARED. Null everywhere else — the

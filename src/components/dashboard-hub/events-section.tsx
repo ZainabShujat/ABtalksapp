@@ -4,7 +4,10 @@ import Link from "next/link";
 import { formatInTimeZone } from "date-fns-tz";
 import { IST } from "@/lib/date-utils";
 import { EVENTS } from "@/components/workshop/events-data";
-import { HUB_CARD_HOVER_CLASS } from "@/components/dashboard-hub/nav-items";
+import {
+  HUB_BUTTON_CLASS,
+  HUB_CARD_HOVER_CLASS,
+} from "@/components/dashboard-hub/nav-items";
 import { cn } from "@/lib/utils";
 
 function todayIstKey(): string {
@@ -22,8 +25,8 @@ export function EventsSection() {
   );
 
   return (
-    <section id="events" className="scroll-mt-20 ml-5 px-4 py-8 sm:px-6">
-      <h2 className="ml-2 font-heading text-xl font-semibold uppercase text-[#e05226]">Events</h2>
+    <section id="events" className="scroll-mt-20 px-4 py-8 sm:px-6 lg:ml-5">
+      <h2 className="font-heading text-xl font-semibold uppercase text-[#e05226] lg:ml-2">Events</h2>
 
       {upcoming.length > 0 ? (
         <EventRail title="Upcoming events" events={upcoming} />
@@ -108,9 +111,9 @@ function EventCard({
           {...(event.href
             ? { target: "_blank", rel: "noopener noreferrer" }
             : {})}
-          className="mt-4 inline-flex text-sm font-medium text-black transition-colors duration-200 ease-[var(--ease-spark)] hover:text-[#e05226]"
+          className={cn(HUB_BUTTON_CLASS, "mt-4 w-full")}
         >
-          {ctaLabel} →
+          {ctaLabel}
         </Link>
       )}
     </article>

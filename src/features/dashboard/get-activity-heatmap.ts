@@ -6,6 +6,10 @@ import {
   parseCalendarKeyToUtcDate,
 } from "@/lib/date-utils";
 import { prisma } from "@/lib/db";
+import {
+  computeActivityStreak,
+  type ActivityStreak,
+} from "@/features/dashboard/compute-activity-streak";
 
 export type ActivityCell = {
   date: string;
@@ -17,7 +21,7 @@ export type ActivityHeatmap = {
   cells: ActivityCell[];
   maxCount: number;
   totalActiveDays: number;
-  weekTicks: boolean[];
+  streak: ActivityStreak;
 };
 
 export const HEATMAP_MONTHS = 4;
@@ -62,9 +66,9 @@ export async function getActivityHeatmap(
     countByDate.set(key, (countByDate.get(key) ?? 0) + 1);
   }
 
-  const totalActiveDays = countByDate.size;
-
   const todayKey = formatInTimeZone(new Date(), IST, "yyyy-MM-dd");
+  const streak = computeActivityStreak(countByDate, todayKey);
+  const totalActiveDays = streak.totalActiveDays;
   const anchorKey = getFourMonthAnchorKey(todayKey);
   const gridStart = getMondayOfWeekContaining(anchorKey);
 
@@ -85,12 +89,5 @@ export async function getActivityHeatmap(
     cells[i]!.level = countToLevel(cells[i]!.count, maxCount);
   }
 
-  const currentWeekMonday = getMondayOfWeekContaining(todayKey);
-  const weekTicks: boolean[] = [];
-  for (let i = 0; i < 7; i++) {
-    const weekDate = addCalendarDaysToKey(currentWeekMonday, i);
-    weekTicks.push((countByDate.get(weekDate) ?? 0) > 0);
-  }
-
-  return { cells, maxCount, totalActiveDays, weekTicks };
+  return { cells, maxCount, totalActiveDays, streak };
 }

@@ -1,7 +1,7 @@
 export type RecruiterAccountCartItem = {
   memberId: string;
   publicId: string;
-  jobRole: string;
+  jobRole: string | null;
 };
 
 export type RecruiterAccountRequestItem = {

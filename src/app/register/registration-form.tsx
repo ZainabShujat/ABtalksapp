@@ -1,23 +1,16 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  BarChart3,
-  BrainCircuit,
-  Code2,
-  Loader2,
-  Sparkles,
-  X,
-} from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { type Resolver, Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { completeRegistrationAction } from "@/app/actions/registration-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CollegeCombobox } from "@/components/shared/college-combobox";
@@ -37,7 +30,6 @@ import {
   type LegalConsentValues,
 } from "@/components/legal/legal-consent-fields";
 import {
-  type RegisterPayloadInput,
   registerPayloadSchema,
 } from "@/lib/validations/register";
 
@@ -51,7 +43,6 @@ type RegistrationFormValues = {
   organization: string;
   role: string;
   yearsExperience: number | undefined;
-  domain: RegisterPayloadInput["domain"];
   skills: string[];
   linkedinUrl: string;
   countryCode: string;
@@ -67,55 +58,13 @@ const GRADUATION_YEARS = [2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 
 type Props = {
   initialName: string;
   initialRef: string;
-  /** Controls whether the Claude domain card is offered. */
-  claudeEnabled: boolean;
-  /** When set from `/register?domain=…`, pre-select this track. */
-  initialDomain?: RegistrationDomain;
   /** When false (local `next dev`), OTP is not required to submit. */
   otpVerificationRequired: boolean;
 };
 
-type RegistrationDomain = RegisterPayloadInput["domain"];
-
-const domainCards: {
-  value: RegistrationDomain;
-  title: string;
-  icon: typeof Code2;
-  accent: string;
-  featured?: boolean;
-}[] = [
-  {
-    value: "CLAUDE",
-    title: "Claude AI Mastery",
-    icon: Sparkles,
-    accent: "border-l-primary",
-    featured: true,
-  },
-  {
-    value: "SE",
-    title: "Software Engineering",
-    icon: Code2,
-    accent: "border-l-domains-se",
-  },
-  {
-    value: "DS",
-    title: "Data Science",
-    icon: BarChart3,
-    accent: "border-l-domains-ds",
-  },
-  {
-    value: "AI",
-    title: "Artificial Intelligence",
-    icon: BrainCircuit,
-    accent: "border-l-domains-ai",
-  },
-];
-
 export function RegistrationForm({
   initialName,
   initialRef,
-  claudeEnabled,
-  initialDomain,
   otpVerificationRequired,
 }: Props) {
   const router = useRouter();
@@ -126,14 +75,6 @@ export function RegistrationForm({
     newsletterOptIn: true,
   });
   const [phoneVerified, setPhoneVerified] = useState(!otpVerificationRequired);
-
-  const domainCardList = useMemo(
-    () =>
-      claudeEnabled
-        ? domainCards
-        : domainCards.filter((card) => card.value !== "CLAUDE"),
-    [claudeEnabled],
-  );
 
   const form = useForm<RegistrationFormValues>({
     resolver: zodResolver(registerPayloadSchema) as unknown as Resolver<RegistrationFormValues>,
@@ -147,7 +88,6 @@ export function RegistrationForm({
       organization: "",
       role: "",
       yearsExperience: undefined,
-      domain: initialDomain ?? "SE",
       skills: [],
       linkedinUrl: "",
       countryCode: "+91",
@@ -170,7 +110,6 @@ export function RegistrationForm({
   } = form;
 
   const skills = watch("skills") ?? [];
-  const selectedDomain = watch("domain");
   const userType = watch("userType");
 
   const handlePhoneChange = useCallback(
@@ -239,7 +178,6 @@ export function RegistrationForm({
       const fd = new FormData();
       fd.append("fullName", values.fullName);
       fd.append("userType", values.userType);
-      fd.append("domain", values.domain);
       fd.append("skills", values.skills.join(","));
       fd.append("linkedinUrl", values.linkedinUrl ?? "");
       fd.append("countryCode", values.countryCode);
@@ -268,13 +206,6 @@ export function RegistrationForm({
         return;
       }
       toast.success("Welcome to ABTalks!");
-      if (values.domain === "CLAUDE") {
-        try {
-          window.localStorage.setItem("claude-day0-share-pending", "1");
-        } catch {
-          // ignore storage failures
-        }
-      }
       router.push("/dashboard");
       router.refresh();
     } finally {
@@ -514,84 +445,6 @@ export function RegistrationForm({
           </motion.div>
         )}
       </AnimatePresence>
-
-      <div className="space-y-3">
-        <Label>Domain</Label>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {domainCardList.map(({ value, title, icon: Icon, accent, featured }) => {
-            const selected = selectedDomain === value;
-            return (
-              <Card
-                key={value}
-                role="button"
-                tabIndex={0}
-                onClick={() =>
-                  setValue("domain", value, { shouldValidate: true })
-                }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setValue("domain", value, { shouldValidate: true });
-                  }
-                }}
-                className={cn(
-                  "min-w-0 cursor-pointer border-l-4 bg-card shadow-sm outline-none transition-transform hover:scale-[1.02] hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary/25",
-                  accent,
-                  featured &&
-                    "bg-gradient-to-br from-primary/15 via-primary/5 to-card",
-                  featured &&
-                    !selected &&
-                    "ring-2 ring-primary/40 ring-offset-0",
-                  selected
-                    ? "ring-2 ring-primary ring-offset-2 ring-offset-background bg-primary/5"
-                    : !featured && "border-border/60",
-                )}
-              >
-                <CardHeader className="gap-2 pb-4">
-                  <Icon
-                    className={cn(
-                      "size-10 shrink-0",
-                      selected ? "text-primary" : "text-muted-foreground",
-                    )}
-                    aria-hidden
-                  />
-                  {featured ? (
-                    <CardTitle className="flex flex-wrap items-center gap-2 text-base leading-snug">
-                      <span className="text-lg leading-none" aria-hidden>
-                        ✨
-                      </span>
-                      <span className="font-display font-semibold">{title}</span>
-                      <Badge
-                        variant="default"
-                        className="text-[10px] font-semibold uppercase tracking-wide"
-                      >
-                        New
-                      </Badge>
-                    </CardTitle>
-                  ) : (
-                    <CardTitle className="text-base leading-snug">{title}</CardTitle>
-                  )}
-                </CardHeader>
-              </Card>
-            );
-          })}
-        </div>
-        {errors.domain ? (
-          <p className="text-sm text-destructive">{errors.domain.message}</p>
-        ) : null}
-      </div>
-
-      {selectedDomain === "CLAUDE" ? (
-        <div className="flex items-center gap-2 rounded-lg border border-orange-500/20 bg-orange-500/5 p-3">
-          <Sparkles className="h-4 w-4 shrink-0 text-orange-500" aria-hidden />
-          <div>
-            <p className="text-sm font-medium">Claude AI Mastery Challenge</p>
-            <p className="text-xs text-muted-foreground">
-              Build practical Claude skills across 60 days.
-            </p>
-          </div>
-        </div>
-      ) : null}
 
       <div className="space-y-2">
         <Label htmlFor="skills">Skills</Label>

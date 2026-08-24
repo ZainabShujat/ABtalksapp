@@ -39,6 +39,7 @@
 - 2026-08-10 — `/` now renders the landing hub for signed-in users too (no more redirect to /dashboard); track cards show "Open dashboard" per-track via `features/landing/get-landing-state.ts`; `/login` bounces signed-in users to `/` instead of `/dashboard`.
 
 ## Pending reconcile
+- 2026-08-24 [schema] Production 078 catalog seeded (ProgramCategory + 2d learning spine: 5 programs / 9 cohorts / 342 activities); operator dual-write probe wrote ProgramEnrollment/ActivityAttempt/CandidateVisibility; ENABLE_NEW_* stay off; historical backfill not started
 - 2026-08-24 [schema] Additive migration `20260824153000_candidate_visibility_searchable_default`: `CandidateVisibility.searchableByRecruiters` DEFAULT false → true; existing rows unchanged
 - 2026-08-24 [schema|rule] Recruiter discoverability is a platform default for new CandidateVisibility rows (`searchableByRecruiters` default true), not a candidate preference; Phase 2b still copies legacy `ProgramMember.recruiterVisibilityConsentAt` and does not flip existing users; `openToWork` stays separate; no LeetCode/job-type models in this migration
 - 2026-08-24 [env|convention] Plan 078 conservative production cutover: additive Phase 1 schema + ENABLE_DUAL_WRITE on Neon direct; ENABLE_NEW_* stay off; Phase 2 uses batched INSERT ON CONFLICT with checkpoints; no Phase 6
@@ -50,6 +51,8 @@
 - 2026-08-20 [env] PHASE2_SAMPLE=1 runs 078 Phase 2 against a representative user slice (full learning catalog); V1–V7 scoped to that slice
 - 2026-08-20 [schema] Plan 078 Phase 2: idempotent legacy→new backfill (identity, visibility default-closed, roles, learning spine, attempts, points, credentials, talent lists); audit tables MigrationRun/Conflict/Quarantine; child branch plan-078-phase1 only
 - 2026-08-20 [schema] Plan 078 Phase 1: additive learning/talent tables (CandidateProfile, Cohort, Activity, Credential, PointsAccount, …), User.deletedAt/anonymizedAt, Certificate/SynergyEvent/shortlist onDelete Restrict, actor FKs SetNull; applied only on Neon child plan-078-phase1
+- 2026-08-20 [schema|rule] Registration is now profile-only (no domain pick, no enrollment); StudentProfile.domain and ProgramMember.jobRole/company/yearsExperience are nullable; registered = has a StudentProfile; first joined track backfills domain
 - 2026-08-20 [convention] Landing page rebuilt from the final static build as `src/components/landing/site/` (page-scoped `--lp-*` CSS, shared ScrollEngine, contact form emails team@abtalks.in); previous hub landing retired
 - 2026-08-20 [convention] Landing hub from dev on feature/student-dashboard: selective checkout of hub UI/assets plus local font vars in root layout while keeping NotificationProvider and dashboard jakarta/fredoka tokens
 - 2026-08-20 [rule] Multi-enrollment routing is now status-aware: explicit track ids render that track at any status, ABANDONED blocks only its own re-join path, dashboard join/continue cards and streaks ignore ABANDONED rows, Claude dashboard join now enrolls via server action, and /program/apply legacy in-progress states render a terminal card instead of self-redirecting
+- 2026-08-21 [rule] Hub `/dashboard` streak card uses consecutive IST calendar days of submissions (same as the activity heatmap), not Enrollment.currentStreak dayNumber runs

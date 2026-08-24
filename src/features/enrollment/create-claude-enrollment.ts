@@ -19,7 +19,7 @@ export type CreateClaudeEnrollmentResult =
 
 /**
  * Adds a CLAUDE challenge enrollment for an existing user (dashboard modal).
- * Does not modify StudentProfile.domain — primary dashboard stays on original track.
+ * First track joined backfills a null profile domain; never overwrites an existing one.
  */
 export async function createClaudeEnrollment(
   userId: string,
@@ -90,6 +90,11 @@ export async function createClaudeEnrollment(
           startedAt: true,
           completedAt: true,
         },
+      });
+      // First track joined becomes the profile's primary domain. Never overwrite.
+      await tx.studentProfile.updateMany({
+        where: { userId, domain: null },
+        data: { domain: Domain.CLAUDE },
       });
       await dualWriteChallengeEnrollment(tx, enrollment);
     });

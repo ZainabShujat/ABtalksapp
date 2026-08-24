@@ -30,7 +30,7 @@ export type CreateCoreEnrollmentResult =
 
 /**
  * Adds an AI / DS / SE challenge enrollment for an existing user joining a
- * second (or third) core track. Does not modify StudentProfile.domain.
+ * second (or third) core track. First track joined backfills a null profile domain.
  */
 export async function createCoreEnrollment(
   userId: string,
@@ -99,6 +99,11 @@ export async function createCoreEnrollment(
           startedAt: true,
           completedAt: true,
         },
+      });
+      // First track joined becomes the profile's primary domain. Never overwrite.
+      await tx.studentProfile.updateMany({
+        where: { userId, domain: null },
+        data: { domain },
       });
       await dualWriteChallengeEnrollment(tx, enrollment);
     });

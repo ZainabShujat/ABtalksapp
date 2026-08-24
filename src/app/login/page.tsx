@@ -73,12 +73,10 @@ export default async function LoginPage({ searchParams }: Props) {
       where: { userId: session.user.id },
       select: { id: true },
     });
-    const enrollment = await prisma.enrollment.findFirst({
-      where: { userId: session.user.id },
-      select: { id: true },
-    });
 
-    if (profile && enrollment) {
+    // Registered = has a StudentProfile. Registration no longer creates an
+    // enrollment, so requiring one here would loop every new user back to /register.
+    if (profile) {
       redirect(redirectTo);
     }
 

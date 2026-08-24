@@ -17,7 +17,7 @@ export const HUB_BG = "#FBF9F7";
 export const HUB_CONTENT = "#555555";
 
 export const HUB_HEADING_CLASS =
-  "ml-4 font-heading text-xl font-semibold uppercase text-[#e05226]";
+  "lg:ml-4 font-heading text-xl font-semibold uppercase text-[#e05226]";
 export const HUB_CONTENT_CLASS = "text-[#555555]";
 export const HUB_TAB_HOVER_CLASS = "hover:text-[#e05226]";
 export const HUB_NAV_ACTIVE_CLASS = "bg-[#e05226]/10 text-[#e05226]";
@@ -30,6 +30,10 @@ export const HUB_CARD_HOVER_CLASS =
 
 export const HUB_TEXT_LINK_CLASS =
   "group inline-flex items-center gap-1 text-sm font-medium text-black transition-colors duration-200 ease-[var(--ease-spark)] hover:text-[#e05226]";
+
+/** Outline CTA — orange border, no fill, black text → orange on hover. */
+export const HUB_BUTTON_CLASS =
+  "inline-flex h-10 items-center justify-center rounded-lg border border-[#E05226] bg-transparent px-4 text-sm font-semibold text-black shadow-none transition-colors duration-200 ease-[var(--ease-spark)] hover:bg-transparent hover:text-[#E05226] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E05226] disabled:opacity-60";
 
 export const HUB_ARROW_HOVER_CLASS =
   "size-4 transition-transform duration-200 ease-[var(--ease-spark)] motion-safe:group-hover:translate-x-0.5";

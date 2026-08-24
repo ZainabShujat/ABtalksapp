@@ -1,12 +1,9 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import type { Domain } from "@prisma/client";
 import { isProgramEnabled } from "@/lib/feature-flags";
-import { dsButtonVariants } from "@/components/design/ds-button";
 import {
-  HUB_ARROW_HOVER_CLASS,
+  HUB_BUTTON_CLASS,
   HUB_CARD_HOVER_CLASS,
-  HUB_TEXT_LINK_CLASS,
 } from "@/components/dashboard-hub/nav-items";
 import { cn } from "@/lib/utils";
 
@@ -33,11 +30,14 @@ export function Roadmaps({
 
   return (
     <>
-      <section className="scroll-mt-20 ml-4 px-4 py-8 sm:px-6">
-        <h2 className="ml-2 font-heading text-xl font-semibold uppercase text-[#e05226]">
+      <section
+        id="domains"
+        className="scroll-mt-20 px-4 py-8 sm:px-6 lg:ml-4 2xl:mx-auto 2xl:max-w-[1600px]"
+      >
+        <h2 className="font-heading text-xl font-semibold uppercase text-[#e05226] lg:ml-2">
           CHALLENGE TRACKS
         </h2>
-        <ul className="mt-4 grid gap-3 sm:grid-cols-3">
+        <ul className="mt-4 grid gap-3 sm:grid-cols-3 2xl:grid-cols-[repeat(3,minmax(0,1fr))]">
           {ROADMAPS.map(({ domain, label, path }) => {
             const isJoined = joined.has(domain);
             const isAbandoned = abandoned.has(domain);
@@ -63,9 +63,8 @@ export function Roadmaps({
                 <p className="mt-1 flex-1 text-sm text-[#555555]">
                   60-day challenge track
                 </p>
-                <Link href={href} className={cn(HUB_TEXT_LINK_CLASS, "mt-4")}>
+                <Link href={href} className={cn(HUB_BUTTON_CLASS, "mt-4 w-full")}>
                   {ctaLabel}
-                  <ArrowRight className={HUB_ARROW_HOVER_CLASS} aria-hidden />
                 </Link>
               </li>
             );
@@ -74,9 +73,12 @@ export function Roadmaps({
       </section>
 
       {showProgramPrepKit ? (
-        <section className="ml-4 px-4 py-2 sm:px-6 sm:py-4">
-          <h2 className="ml-2 font-heading text-xl font-semibold uppercase text-[#e05226]">
-            AI Prep Kit
+        <section
+          id="prep-kit"
+          className="scroll-mt-20 px-4 py-2 sm:px-6 sm:py-4 lg:ml-4"
+        >
+          <h2 className="font-heading text-xl font-semibold uppercase text-[#e05226] lg:ml-2">
+            Prep Kit
           </h2>
           <div
             className={cn(
@@ -90,15 +92,14 @@ export function Roadmaps({
                   31 Days AI Cohort
                 </p>
                 <p className="mt-1 text-sm text-[#555555]">
-                  Live cohort roadmap, projects, and guided prep for working
-                  professionals.
+                Build and deploy a production-grade enterprise AI chatbot in 31 days.
                 </p>
               </div>
               <Link
-                href={hasProgramMembership ? "/program/dashboard" : "/program"}
-                className={cn(dsButtonVariants(), "shrink-0")}
+                href={hasProgramMembership ? "/program/dashboard" : "/program/apply"}
+                className={cn(HUB_BUTTON_CLASS, "shrink-0")}
               >
-                {hasProgramMembership ? "Continue" : "Start"}
+                {hasProgramMembership ? "Continue" : "Start Challenge"}
               </Link>
             </div>
           </div>

@@ -99,9 +99,13 @@ export default async function PublicStudentProfilePage({
             <div className="space-y-2">
               <h1 className="font-display text-3xl font-semibold">{publicProfile.fullName}</h1>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className={domainBadgeClass(publicProfile.domain)}>
-                  {publicProfile.domain}
-                </Badge>
+                {publicProfile.domain ? (
+                  <Badge variant="outline" className={domainBadgeClass(publicProfile.domain)}>
+                    {publicProfile.domain}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline">—</Badge>
+                )}
                 {publicProfile.isReadyForInterview ? (
                   <Badge variant="secondary">Ready for Interview</Badge>
                 ) : null}

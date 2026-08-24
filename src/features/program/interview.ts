@@ -34,9 +34,9 @@ type EvaluateResponse = {
 
 type MemberContext = {
   fullName: string;
-  jobRole: string;
-  company: string;
-  yearsExperience: number;
+  jobRole: string | null;
+  company: string | null;
+  yearsExperience: number | null;
   missionPoints: number;
   conceptPoints: number;
   commitPoints: number;
@@ -147,8 +147,8 @@ export function buildInterviewInstructions(member: MemberContext): string {
     "",
     "Candidate context:",
     `- Name: ${member.fullName}`,
-    `- Role: ${member.jobRole} at ${member.company}`,
-    `- Experience: ${member.yearsExperience} years`,
+    `- Role: ${member.jobRole ?? "—"} at ${member.company ?? "—"}`,
+    `- Experience: ${member.yearsExperience ?? "—"} years`,
     `- Score components: missions ${member.missionPoints}, concepts ${member.conceptPoints}, commits ${member.commitPoints}, projects ${member.projectPoints}`,
     moduleLines,
     "Projects:",
@@ -456,7 +456,7 @@ export async function evaluateInterview(
     system:
       'You evaluate B2B program exit voice interviews. Reply JSON only: {"commScore":0-100,"techScore":0-100,"problemScore":0-100,"overallScore":0-100,"summary":"2-3 recruiter-readable sentences"}. Score communication clarity, technical depth, and structured problem-solving separately; overall is holistic.',
     user: [
-      `Candidate: ${interview.member.fullName}, ${interview.member.jobRole} at ${interview.member.company}, ${interview.member.yearsExperience} yrs exp.`,
+      `Candidate: ${interview.member.fullName}, ${interview.member.jobRole ?? "—"} at ${interview.member.company ?? "—"}, ${interview.member.yearsExperience ?? "—"} yrs exp.`,
       `Duration: ${interview.durationSec ?? "?"} seconds`,
       `Transcript:\n${transcriptText || "(empty transcript)"}`,
     ].join("\n\n"),

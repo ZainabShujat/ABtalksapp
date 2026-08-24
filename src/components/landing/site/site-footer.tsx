@@ -30,8 +30,8 @@ export function SiteFooter() {
       </div>
 
       <div className="container footer__legal">
-        <span>ABTalks © {year}</span>
-        <span>Profiles are shared only with candidate consent.</span>
+        <span>© ABTalks {year} All rights reserved.</span>
+       
       </div>
     </footer>
   );

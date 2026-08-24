@@ -29,8 +29,8 @@ import { getCohortCalendarDay } from "@/features/program/progression";
  */
 export type MemberIdentity = {
   fullName: string;
-  jobRole: string;
-  company: string;
+  jobRole: string | null;
+  company: string | null;
 };
 
 export type DossierSet = {
@@ -359,7 +359,7 @@ export async function buildDossierSet(
 
       roleFamily: derived(roleFamilyFor(m.jobRole)),
       rawRoleLabel: declared(tidyRoleLabel(m.jobRole)),
-      yearsExperience: declared(m.yearsExperience),
+      yearsExperience: declared(m.yearsExperience ?? 0),
       education: declared({
         level: m.education,
         university: m.university,

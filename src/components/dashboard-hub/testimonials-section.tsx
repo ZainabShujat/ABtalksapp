@@ -59,8 +59,8 @@ function TestimonialCard({ name, org, photo, quote }: Testimonial) {
 export function TestimonialsSection() {
   return (
     <section id="testimonials" className="scroll-mt-20 py-8">
-      <div className="px-4 sm:px-6 ml-4">
-        <h2 className="ml-4 font-heading text-xl font-semibold uppercase text-[#e05226]">
+      <div className="px-4 sm:px-6 lg:ml-4">
+        <h2 className="font-heading text-xl font-semibold uppercase text-[#e05226] lg:ml-4">
           WHAT STUDENTS SAY
         </h2>
       </div>
