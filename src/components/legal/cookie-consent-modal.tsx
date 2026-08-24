@@ -57,6 +57,7 @@ export function CookieConsentModal() {
         // Clear mobile bottom nav without floating too high.
         "bottom-[4.5rem] sm:bottom-5 md:bottom-6",
         "overflow-hidden rounded-lg border border-border/80 bg-background shadow-xl sm:rounded-xl sm:shadow-2xl",
+        "theme-abtalks-orange",
       )}
     >
       <div className="h-1 w-full bg-primary sm:h-1.5" aria-hidden="true" />

@@ -1,7 +1,5 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { CampusAmbassadorBanner } from "@/components/dashboard/campus-ambassador-banner";
-import { HackathonPromoModal } from "@/components/dashboard/hackathon-promo-modal";
 import { DashboardShell } from "@/components/dashboard-hub/dashboard-shell";
 import { HeroGreeting } from "@/components/dashboard-hub/hero-greeting";
 import { StreakCard } from "@/components/dashboard-hub/streak-card";
@@ -13,7 +11,6 @@ import { EventsSection } from "@/components/dashboard-hub/events-section";
 import { FaqSection } from "@/components/dashboard-hub/faq-section";
 import { HUB_CARD_HOVER_CLASS } from "@/components/dashboard-hub/nav-items";
 import { getHubData } from "@/features/dashboard/get-hub-data";
-import { studentProfile } from "@/repositories/legacy/student-profile";
 import type { Domain } from "@prisma/client";
 
 const TRACK_PATH: Record<Domain, string> = {
@@ -40,16 +37,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   }
 
   const params = await searchParams;
-  const [data, studentMeta] = await Promise.all([
-    getHubData(session.user.id),
-    studentProfile.findUnique({
-      where: { userId: session.user.id },
-      select: {
-        userType: true,
-        isCampusAmbassadorCandidate: true,
-      },
-    }),
-  ]);
+  const data = await getHubData(session.user.id);
   if (!data.hasUser) {
     redirect("/api/auth/signout?callbackUrl=/login");
   }
@@ -60,7 +48,6 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     redirect("/register");
   }
 
-  const shouldShowAmbassadorBanner = studentMeta?.userType === "STUDENT";
   const firstName = data.profile?.fullName.split(/\s+/)[0] ?? null;
   const firstActive = data.enrollments.find((e) => e.status === "ACTIVE");
   const restartHref = firstActive
@@ -86,12 +73,6 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       user={shellUser}
       isAdmin={session.user.isAdmin ?? false}
     >
-      {shouldShowAmbassadorBanner ? (
-        <CampusAmbassadorBanner
-          alreadyApplied={studentMeta?.isCampusAmbassadorCandidate ?? false}
-        />
-      ) : null}
-      <HackathonPromoModal />
       <section className="px-4 py-8 sm:px-6">
         <div className="w-full max-w-[1020px] lg:ml-5 2xl:mx-auto 2xl:max-w-[1600px]">
           <HeroGreeting firstName={firstName} />

@@ -42,7 +42,7 @@ export function ConsentRefreshBanner({
   }
 
   return (
-    <div className="relative mb-4 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3.5 pr-10">
+    <div className="theme-abtalks-orange relative mb-4 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3.5 pr-10">
       <p className="text-sm font-medium text-foreground">
         We&apos;ve updated our Terms and Privacy Policy
       </p>

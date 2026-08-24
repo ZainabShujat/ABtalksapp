@@ -39,6 +39,10 @@
 - 2026-08-10 — `/` now renders the landing hub for signed-in users too (no more redirect to /dashboard); track cards show "Open dashboard" per-track via `features/landing/get-landing-state.ts`; `/login` bounces signed-in users to `/` instead of `/dashboard`.
 
 ## Pending reconcile
+- 2026-08-25 [convention] Campus Ambassador onboarding banner and derived notification-bell item removed from student surfaces.
+- 2026-08-25 [convention] Campus Ambassador onboarding banner unmounted from dashboard hub and challenge track pages.
+- 2026-08-25 [convention] AUTH_SECRET + session cookie v2 to stop JWTSessionError; login/register use scoped orange outline CTAs.
+- 2026-08-25 [convention] Promo Claude/hackathon overlays unmounted; cookie/terms consent and AI Cohort landing use scoped orange; apply pages stay purple.
 - 2026-08-24 [schema] Additive migration `20260824153000_candidate_visibility_searchable_default`: `CandidateVisibility.searchableByRecruiters` DEFAULT false → true; existing rows unchanged
 - 2026-08-24 [schema|rule] Recruiter discoverability is a platform default for new CandidateVisibility rows (`searchableByRecruiters` default true), not a candidate preference; Phase 2b still copies legacy `ProgramMember.recruiterVisibilityConsentAt` and does not flip existing users; `openToWork` stays separate; no LeetCode/job-type models in this migration
 - 2026-08-24 [env|convention] Plan 078 conservative production cutover: additive Phase 1 schema + ENABLE_DUAL_WRITE on Neon direct; ENABLE_NEW_* stay off; Phase 2 uses batched INSERT ON CONFLICT with checkpoints; no Phase 6

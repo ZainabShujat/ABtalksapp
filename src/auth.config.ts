@@ -61,4 +61,14 @@ export default {
     },
   },
   session: { strategy: "jwt" },
+  // v2 name ignores stale JWTs encrypted with a previous secret
+  // ("no matching decryption secret" on /login and /register).
+  cookies: {
+    sessionToken: {
+      name:
+        process.env.NODE_ENV === "production"
+          ? "__Secure-authjs.session-token.v2"
+          : "authjs.session-token.v2",
+    },
+  },
 } satisfies NextAuthConfig;

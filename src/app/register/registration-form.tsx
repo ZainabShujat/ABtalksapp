@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { HUB_BUTTON_CLASS } from "@/components/dashboard-hub/nav-items";
 import {
   LegalConsentFields,
   legalConsentAccepted,
@@ -588,7 +589,11 @@ export function RegistrationForm({
 
       <Button
         type="submit"
-        className="inline-flex w-full items-center justify-center gap-2 sm:w-auto"
+        variant="outline"
+        className={cn(
+          HUB_BUTTON_CLASS,
+          "inline-flex h-11 w-full items-center justify-center gap-2 sm:w-auto",
+        )}
         disabled={isSubmitting || !legalConsentAccepted(legalConsent)}
       >
         {isSubmitting ? (
