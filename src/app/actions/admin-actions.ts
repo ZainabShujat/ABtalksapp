@@ -2,13 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { Role, type Prisma } from "@prisma/client";
+import { Role, PointsSourceType, type Prisma } from "@prisma/client";
 import { z } from "zod";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
 import { isAdminEmail, requireAdmin } from "@/lib/admin-auth";
 import { getCurrentDayNumber } from "@/lib/date-utils";
 import { computeStreakStats } from "@/features/submission/streak-utils";
 import { sendChallengeResetEmail } from "@/features/email/challenge-reset-email";
+import { studentProfile } from "@/repositories/legacy/student-profile";
+import { dualWritePoints } from "@/repositories/dual-write";
 
 const baseInput = z.object({
   targetUserId: z.string().min(1),
@@ -52,13 +54,22 @@ async function recordSpentSynergyClamp(
   reason: string,
 ) {
   if (shortfall <= 0) return;
-  await tx.synergyEvent.create({
+  const event = await tx.synergyEvent.create({
     data: {
       userId,
       points: shortfall,
       type: "BALANCE_RECONCILIATION",
       reason,
     },
+    select: { id: true },
+  });
+  await dualWritePoints(tx, {
+    userId,
+    amount: shortfall,
+    sourceType: PointsSourceType.RECONCILIATION,
+    sourceId: event.id,
+    idempotencyKey: `legacy:${event.id}`,
+    reason,
   });
 }
 
@@ -90,7 +101,7 @@ export async function resetProgressAction(input: {
   let resetDomain: string | null = null;
 
   try {
-    await prisma.$transaction(async (tx) => {
+    await writeClient().$transaction(async (tx) => {
       const enrollment = await tx.enrollment.findFirst({
         where: { userId: targetUserId },
       });
@@ -207,7 +218,7 @@ export async function toggleReadyForInterviewAction(input: {
   const { targetUserId, reason } = parsed.data;
 
   try {
-    const profile = await prisma.studentProfile.findUnique({
+    const profile = await studentProfile.findUnique({
       where: { userId: targetUserId },
       select: { isReadyForInterview: true },
     });
@@ -215,7 +226,7 @@ export async function toggleReadyForInterviewAction(input: {
 
     const newValue = !profile.isReadyForInterview;
 
-    await prisma.$transaction(async (tx) => {
+    await writeClient().$transaction(async (tx) => {
       await tx.studentProfile.update({
         where: { userId: targetUserId },
         data: { isReadyForInterview: newValue },
@@ -256,7 +267,7 @@ export async function removeFromChallengeAction(input: {
   const { targetUserId, reason } = parsed.data;
 
   try {
-    await prisma.$transaction(async (tx) => {
+    await writeClient().$transaction(async (tx) => {
       const enrollment = await tx.enrollment.findFirst({
         where: { userId: targetUserId, status: "ACTIVE" },
         select: { id: true },
@@ -310,7 +321,7 @@ export async function rejectSubmissionAction(input: {
   try {
     let targetUserId = "";
 
-    await prisma.$transaction(async (tx) => {
+    await writeClient().$transaction(async (tx) => {
       const submission = await tx.submission.findUnique({
         where: { id: submissionId },
         select: {
@@ -432,7 +443,7 @@ export async function grantSynergyAction(input: {
   const { targetUserId, points, reason } = parsed.data;
 
   try {
-    await prisma.$transaction(async (tx) => {
+    await writeClient().$transaction(async (tx) => {
       const target = await tx.user.findUnique({
         where: { id: targetUserId },
         select: {
@@ -452,7 +463,7 @@ export async function grantSynergyAction(input: {
         throw new Error("Registered student not found");
       }
 
-      await tx.synergyEvent.create({
+      const grantEvent = await tx.synergyEvent.create({
         data: {
           userId: targetUserId,
           points,
@@ -460,6 +471,7 @@ export async function grantSynergyAction(input: {
           reason,
           createdByAdminId: admin.userId,
         },
+        select: { id: true },
       });
       await tx.user.update({
         where: { id: targetUserId },
@@ -468,6 +480,15 @@ export async function grantSynergyAction(input: {
       await tx.studentProfile.updateMany({
         where: { userId: targetUserId },
         data: { synergyPoints: { increment: points } },
+      });
+      await dualWritePoints(tx, {
+        userId: targetUserId,
+        amount: points,
+        sourceType: PointsSourceType.ADMIN_GRANT,
+        sourceId: grantEvent.id,
+        idempotencyKey: `legacy:${grantEvent.id}`,
+        reason,
+        createdByUserId: admin.userId,
       });
       await tx.adminAction.create({
         data: {

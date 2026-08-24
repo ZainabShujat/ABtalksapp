@@ -5,7 +5,6 @@ import { ProgramNav } from "@/components/program/program-nav";
 
 const navItems = [
   { href: "/program/dashboard", label: "Dashboard" },
-  { href: "/program/curriculum", label: "Curriculum" },
   { href: "/program/videos", label: "Videos" },
   { href: "/program/leaderboard", label: "Leaderboard" },
 ];
@@ -18,32 +17,25 @@ export default async function ProgramAppLayout({
   await requireProgramMember();
 
   return (
-    <div className="min-h-svh bg-[#040A12] text-white">
-      <header className="sticky top-0 z-40 border-b border-[#1E1E1E] bg-[#040A12]/95 backdrop-blur">
-        <div className="container mx-auto flex items-center gap-4 px-4 py-3 md:gap-6">
+    <div className="min-h-svh bg-[#FBF9F7] font-content text-[#111111]">
+      <header className="sticky top-0 z-40 border-b border-[#E0E0E0] bg-white/95 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-[1536px] items-center gap-2 px-3 py-2.5 md:gap-6 md:px-4 md:py-4">
           <Link href="/" className="shrink-0" aria-label="ABTalks home">
             <Image
               src="/abtalks-logo.png"
               alt="ABTalks"
               width={160}
               height={42}
-              className="h-8 w-auto md:h-9"
+              className="h-5 w-auto brightness-0 md:h-9"
               priority
             />
           </Link>
-          <div className="hidden items-center gap-2 sm:flex">
-            <Link
-              href="/program/dashboard"
-              className="shrink-0 text-base font-semibold tracking-tight"
-            >
-              <span className="text-[#968BEC]">AI</span>{" "}
-              <span className="text-white">Cohort</span>
-            </Link>
-          </div>
           <ProgramNav items={navItems} />
         </div>
       </header>
-      <main className="container mx-auto min-w-0 px-4 py-6">{children}</main>
+      <main className="mx-auto w-full min-w-0 max-w-[1536px] px-4 py-6">
+        {children}
+      </main>
     </div>
   );
 }

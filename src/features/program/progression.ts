@@ -5,6 +5,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "@/lib/db";
 import { parseCalendarKeyToUtcDate } from "@/lib/date-utils";
 import { isDayLockBypassEnabled } from "@/lib/feature-flags";
+import { programMember } from "@/repositories/legacy/program-member";
 import {
   PROGRAM_HOLD_OPEN_COHORT_NAME,
   PROGRAM_MEMBER_START_DAY,
@@ -37,6 +38,14 @@ export function isSkippedPayload(payload: unknown): boolean {
     !!payload &&
     typeof payload === "object" &&
     (payload as { skipped?: unknown }).skipped === true
+  );
+}
+
+export function isWaivedPayload(payload: unknown): boolean {
+  return (
+    !!payload &&
+    typeof payload === "object" &&
+    (payload as { waived?: unknown }).waived === true
   );
 }
 
@@ -175,7 +184,7 @@ export function collectPassSkipSets(
 export async function getMemberDayStates(
   memberId: string,
 ): Promise<{ modules: CurriculumModule[]; days: CurriculumDay[] }> {
-  const member = await prisma.programMember.findUnique({
+  const member = await programMember.findUnique({
     where: { id: memberId },
     select: {
       highestUnlockedDay: true,
@@ -244,7 +253,7 @@ export async function getMemberDayStates(
 export async function getMemberCurrentModuleNumber(
   memberId: string,
 ): Promise<number> {
-  const member = await prisma.programMember.findUnique({
+  const member = await programMember.findUnique({
     where: { id: memberId },
     select: {
       highestUnlockedDay: true,

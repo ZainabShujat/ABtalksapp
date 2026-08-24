@@ -23,6 +23,7 @@ import {
 } from "@/features/program/constants";
 import { logger } from "@/lib/logger";
 import type { Prisma } from "@prisma/client";
+import { programMember } from "@/repositories/legacy/program-member";
 
 const MAX_COMMIT_POINTS = PROGRAM_MAX_COMMIT_POINTS;
 const CHUNK_SIZE = 10;
@@ -218,7 +219,7 @@ export async function creditCommitDayForMember(
   memberId: string,
   programDateKey: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const member = await prisma.programMember.findUnique({
+  const member = await programMember.findUnique({
     where: { id: memberId },
     select: {
       id: true,
@@ -366,7 +367,7 @@ export async function runProgramCommitsCron(): Promise<{
     const graceKey = addCalendarDaysToKey(endKey, 1);
     if (todayKey > graceKey) continue;
 
-    const members = await prisma.programMember.findMany({
+    const members = await programMember.findMany({
       where: {
         cohortId: cohort.id,
         status: { in: ["ENROLLED", "COMPLETED"] },
@@ -500,7 +501,7 @@ export async function getAtRiskMembers(
   });
   if (!cohort) return [];
 
-  const members = await prisma.programMember.findMany({
+  const members = await programMember.findMany({
     where: {
       cohortId,
       status: { in: ["ENROLLED", "COMPLETED"] },
@@ -527,7 +528,7 @@ export async function getMemberAtRiskStatus(
   cohortId: string,
 ): Promise<MemberAtRiskStatus> {
   const [member, cohort] = await Promise.all([
-    prisma.programMember.findUnique({
+    programMember.findUnique({
       where: { id: memberId },
       select: { id: true, highestUnlockedDay: true },
     }),

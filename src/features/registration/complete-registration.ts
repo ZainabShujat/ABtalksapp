@@ -3,11 +3,13 @@ import { clearRefCookie } from "@/lib/cookies";
 import { isClaudeEnabled, isOtpVerificationRequired } from "@/lib/feature-flags";
 import type { RegisterPayloadInput } from "@/lib/validations/register";
 import { INDIA_DIALING_CODE, toE164 } from "@/lib/validations/phone";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
 import { awardReferralSynergy } from "@/features/synergy/award-referral-synergy";
 import { recordLegalConsents } from "@/features/legal/record-consent";
 import { recordNewsletterOptIn } from "@/features/legal/record-newsletter-optin";
 import { generateUniqueReferralCode } from "./generate-referral-code";
+import { studentProfile } from "@/repositories/legacy/student-profile";
+import { dualWriteChallengeEnrollment } from "@/repositories/dual-write";
 
 export type CompleteRegistrationResult =
   | { ok: true; profileId: string }
@@ -32,7 +34,7 @@ export async function completeRegistration(
     };
   }
 
-  const existingProfile = await prisma.studentProfile.findUnique({
+  const existingProfile = await studentProfile.findUnique({
     where: { userId },
     select: { id: true },
   });
@@ -50,7 +52,7 @@ export async function completeRegistration(
   }
 
   if (existingProfile && !existingEnrollment) {
-    await prisma.studentProfile.delete({ where: { userId } });
+    await studentProfile.delete({ where: { userId } });
   }
 
   if (input.domain === "CLAUDE" && !isClaudeEnabled()) {
@@ -63,7 +65,7 @@ export async function completeRegistration(
 
   let referrerId: string | null = null;
   if (input.referralCode) {
-    const matchingReferrer = await prisma.studentProfile.findUnique({
+    const matchingReferrer = await studentProfile.findUnique({
       where: { referralCode: input.referralCode },
       select: { userId: true },
     });
@@ -138,7 +140,7 @@ export async function completeRegistration(
   }
 
   try {
-    const profileId = await prisma.$transaction(async (tx) => {
+    const profileId = await writeClient().$transaction(async (tx) => {
       // Lock the account row before creating the rollback mirror so a
       // simultaneous grant cannot leave the two balances out of sync.
       const account = await tx.user.update({
@@ -190,14 +192,23 @@ export async function completeRegistration(
               },
       });
 
-      await tx.enrollment.create({
+      const enrollment = await tx.enrollment.create({
         data: {
           userId,
           challengeId: challenge.id,
           domain: input.domain,
           status: EnrollmentStatus.ACTIVE,
         },
+        select: {
+          id: true,
+          userId: true,
+          domain: true,
+          status: true,
+          startedAt: true,
+          completedAt: true,
+        },
       });
+      await dualWriteChallengeEnrollment(tx, enrollment);
 
       return profile.id;
     }, {
@@ -207,7 +218,7 @@ export async function completeRegistration(
 
     if (referrerId) {
       try {
-        await prisma.$transaction(async (tx) => {
+        await writeClient().$transaction(async (tx) => {
           const referral = await tx.referral.create({
             data: {
               referrerId,

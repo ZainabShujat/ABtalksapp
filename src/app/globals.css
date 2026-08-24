@@ -7,11 +7,13 @@
 @theme inline {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), var(--font-hub-sans), ui-sans-serif, system-ui,
+    sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
-  --font-heading: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-fredoka), serif;
   --font-display: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-content: var(--font-inter), sans-serif;
   --color-sidebar-ring: hsl(var(--sidebar-ring));
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
@@ -48,6 +50,25 @@
   --color-domains-ds-bg: #ecfeff;
   --color-domains-se: #10b981;
   --color-domains-se-bg: #ecfdf5;
+  /* Kept so leftover ink-/accent-* utilities still resolve */
+  --color-ink-100: hsl(0 22% 96%);
+  --color-ink-200: hsl(0 7% 91%);
+  --color-ink-300: hsl(0 5% 84%);
+  --color-ink-400: hsl(0 3% 72%);
+  --color-ink-500: hsl(0 2% 60%);
+  --color-ink-600: hsl(0 2% 48%);
+  --color-ink-700: hsl(0 2% 37%);
+  --color-ink-800: hsl(0 2% 26%);
+  --color-ink-900: hsl(0 2% 17%);
+  --color-accent-100: hsl(252 100% 97%);
+  --color-accent-200: hsl(254 100% 93%);
+  --color-accent-300: hsl(253 100% 88%);
+  --color-accent-400: hsl(252 100% 80%);
+  --color-accent-500: hsl(252 100% 68%);
+  --color-accent-600: hsl(253 77% 58%);
+  --color-accent-700: hsl(253 61% 47%);
+  --color-accent-800: hsl(254 63% 35%);
+  --color-accent-900: hsl(252 57% 24%);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -110,6 +131,9 @@
   --input: 220 13% 91%;
   --ring: 239 84% 67%;
   --radius: 0.625rem;
+  --divider: 20 5% 12%;
+  --rule: 2px;
+  --grid-unit: 96px;
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -194,10 +218,10 @@
     transition: box-shadow var(--dur-2) var(--ease-spark);
   }
 
-  /* Thin purple scrollbar — day page left curriculum rail */
+  /* Thin orange scrollbar — day page left curriculum rail */
   .scrollbar-program-purple {
     scrollbar-width: thin;
-    scrollbar-color: #8365e3 transparent;
+    scrollbar-color: #e05226 transparent;
   }
 
   .scrollbar-program-purple::-webkit-scrollbar {
@@ -210,12 +234,12 @@
   }
 
   .scrollbar-program-purple::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #968bec 0%, #7364e6 100%);
+    background: #e05226;
     border-radius: 999px;
   }
 
   .scrollbar-program-purple::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #b9b2f3 0%, #8365e3 100%);
+    background: #c9411c;
   }
 
   /* Thin ABTalks purple scrollbar — admin desktop panes */
@@ -381,6 +405,7 @@
   body.marketplace-page {
     background-color: #030712;
   }
+  body.landing-page { overflow-x: hidden; }
   body.not-found-page footer {
     display: none;
   }

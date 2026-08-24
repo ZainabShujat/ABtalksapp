@@ -2,6 +2,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { auth } from "@/auth";
 import { UserType } from "@prisma/client";
@@ -146,5 +147,6 @@ export async function completeRegistrationAction(formData: FormData) {
     });
   }
 
+  revalidatePath("/dashboard");
   return { ok: true as const };
 }

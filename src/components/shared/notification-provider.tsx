@@ -17,6 +17,7 @@ import {
   Megaphone,
   Presentation,
   Trophy,
+  X,
 } from "lucide-react";
 import {
   getMyNotificationsAction,
@@ -54,11 +55,13 @@ const NOOP_CTX: Ctx = {
 };
 
 /** Where the panel should hang from, measured off the bell. */
-type AnchorRect = { bottom: number; left: number };
+type AnchorRect = { bottom: number; right: number };
 
-/** Must match the panel's `md:w-96`, used to keep it on screen. */
-const PANEL_WIDTH = 384;
 const VIEWPORT_GUTTER = 8;
+/** Extra space from the viewport right edge — the old left-clamp pinned the panel flush right. */
+const PANEL_RIGHT_INSET = 40;
+/** Extra leftward offset past the bell's right edge. */
+const PANEL_LEFT_SHIFT = 28;
 
 function readCache(): { feed: NotificationFeed; t: number } | null {
   try {
@@ -89,7 +92,7 @@ export function NotificationProvider({
     const el = anchorRef.current;
     if (!el) return;
     const box = el.getBoundingClientRect();
-    setAnchorRect({ bottom: box.bottom, left: box.left });
+    setAnchorRect({ bottom: box.bottom, right: box.right });
   }, []);
 
   const writeCache = useCallback((next: NotificationFeed) => {
@@ -235,18 +238,16 @@ function NotificationPanel({
 
   if (typeof document === "undefined") return null;
 
-  // Left edge on the bell, opening rightward — clamped so a bell sitting near
-  // the right edge of the window can't push the panel off screen.
+  // Hang from the bell's right edge, then pull left so it is not flush with
+  // the viewport. `right` (not a left clamp) is what actually moves it inward.
   const anchored =
     isDesktop && anchorRect
       ? {
           top: anchorRect.bottom + VIEWPORT_GUTTER,
-          left: Math.max(
-            VIEWPORT_GUTTER,
-            Math.min(
-              anchorRect.left,
-              window.innerWidth - PANEL_WIDTH - VIEWPORT_GUTTER,
-            ),
+          left: "auto",
+          right: Math.max(
+            PANEL_RIGHT_INSET,
+            window.innerWidth - anchorRect.right + PANEL_LEFT_SHIFT,
           ),
         }
       : undefined;
@@ -267,18 +268,22 @@ function NotificationPanel({
           "fixed z-[70] flex flex-col overflow-hidden rounded-xl border border-border/60 bg-card shadow-xl animate-in fade-in-0 zoom-in-95 duration-150",
           // Mobile: drops from under the sticky header, full width.
           "inset-x-3 top-16 max-h-[70vh]",
-          // Desktop: width only — `anchored` supplies top/right so the panel
-          // lines up with the bell instead of the viewport edge.
-          "md:inset-x-auto md:w-96",
+          // Desktop: width only — `anchored` supplies top/right.
+          "md:inset-x-auto md:left-auto md:w-96",
         )}
       >
         <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
-          <span className="font-display text-sm font-semibold">
+          <span className="font-heading text-22px leading-7 font-semibold">
             Notifications
           </span>
-          <span className="text-xs text-muted-foreground">
-            {items.length > 0 ? "Latest updates" : null}
-          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close notifications"
+            className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <X className="size-4" aria-hidden />
+          </button>
         </div>
 
         {items.length === 0 ? (
@@ -302,11 +307,11 @@ function NotificationPanel({
                     <Icon className="size-4" aria-hidden />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium leading-snug">
+                    <p className="font-content text-sm font-bold leading-snug">
                       {item.title}
                     </p>
                     {item.body ? (
-                      <p className="mt-0.5 text-xs text-muted-foreground">
+                      <p className="mt-0.5 font-content text-xs font-light text-muted-foreground">
                         {item.body}
                       </p>
                     ) : null}

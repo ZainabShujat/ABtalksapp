@@ -11,6 +11,7 @@ import { prisma } from "@/lib/db";
 import { hackathonRedirectForProfilelessUser } from "@/features/hackathon/registration-status";
 import { redirect } from "next/navigation";
 import { LoginClient } from "./login-client";
+import { studentProfile } from "@/repositories/legacy/student-profile";
 
 type Props = {
   searchParams: Promise<{ from?: string; ref?: string }>;
@@ -52,12 +53,14 @@ export default async function LoginPage({ searchParams }: Props) {
     if (
       redirectTo.startsWith("/program") ||
       redirectTo.startsWith("/talent") ||
-      redirectTo.startsWith("/hackathon")
+      redirectTo.startsWith("/hackathon") ||
+      redirectTo === "/dashboard" ||
+      redirectTo.startsWith("/dashboard?")
     ) {
       redirect(redirectTo);
     }
 
-    const profile = await prisma.studentProfile.findUnique({
+    const profile = await studentProfile.findUnique({
       where: { userId: session.user.id },
       select: { id: true },
     });

@@ -3,6 +3,7 @@ import { randomBytes } from "crypto";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { findActiveMembership } from "@/repositories/learning";
 
 const JOIN_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -56,52 +57,7 @@ export async function getOpenEnrollmentCohort() {
  * Prefers ENROLLED over COMPLETED; among ties, newest enrolledAt.
  */
 export async function resolveProgramMemberForUser(userId: string) {
-  const memberships = await prisma.programMember.findMany({
-    where: { userId, status: { in: ["ENROLLED", "COMPLETED"] } },
-    select: {
-      id: true,
-      status: true,
-      fullName: true,
-      highestUnlockedDay: true,
-      cohortId: true,
-      enrolledAt: true,
-      cohort: {
-        select: {
-          id: true,
-          name: true,
-          status: true,
-          startsAt: true,
-          endsAt: true,
-          capacity: true,
-          resultsPublishedAt: true,
-          joinCode: true,
-        },
-      },
-    },
-  });
-
-  if (memberships.length === 0) return null;
-
-  memberships.sort((a, b) => {
-    if (a.status !== b.status) {
-      return a.status === "ENROLLED" ? -1 : 1;
-    }
-    const at = a.enrolledAt?.getTime() ?? 0;
-    const bt = b.enrolledAt?.getTime() ?? 0;
-    return bt - at;
-  });
-
-  const member = memberships[0]!;
-  return {
-    member: {
-      id: member.id,
-      status: member.status,
-      fullName: member.fullName,
-      highestUnlockedDay: member.highestUnlockedDay,
-      cohortId: member.cohortId,
-    },
-    cohort: member.cohort,
-  };
+  return findActiveMembership(userId);
 }
 
 /**

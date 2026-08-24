@@ -127,7 +127,14 @@ export default auth((req) => {
   const hasAttributionCookies =
     req.cookies.has(REF_COOKIE_NAME) || alreadyAttributed;
 
-  const isProtected = protectedPaths.some((p) => pathname.startsWith(p));
+  // Exact match only — `/ai` must not capture `/ai-workshop`,
+  // `/ai-cohort-*` or `/ai-talent-hunt`, and `/claude` must not
+  // capture `/claude-signup`. All of those are public.
+  const exactProtectedPaths = ["/ai", "/ds", "/se", "/claude"];
+
+  const isProtected =
+    protectedPaths.some((p) => pathname.startsWith(p)) ||
+    exactProtectedPaths.includes(pathname);
   const isAuthPage = pathname === "/login";
 
   if (isProtected && !isLoggedIn) {

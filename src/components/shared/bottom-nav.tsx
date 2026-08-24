@@ -75,6 +75,7 @@ export function BottomNav() {
 
   if (
     pathname === "/" ||
+    pathname === "/dashboard" ||
     pathname === "/ai-workshop" ||
     pathname.startsWith("/ai-workshop/") ||
     pathname === "/hackathon" ||

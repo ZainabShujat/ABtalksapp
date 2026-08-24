@@ -37,12 +37,12 @@ export function DaySectionIcon({
   return (
     <span
       className={cn(
-        "flex size-7 shrink-0 items-center justify-center rounded-md border border-[#8365E3]/40 bg-[#110528]",
+        "flex size-7 shrink-0 items-center justify-center rounded-md bg-[#FFECE3]",
         className,
       )}
       aria-hidden
     >
-      <Icon className="size-4 text-[#968BEC]" strokeWidth={2} />
+      <Icon className="size-4 text-[#E05226]" strokeWidth={2} />
     </span>
   );
 }
@@ -65,7 +65,7 @@ export function DaySectionCard({
   return (
     <section
       className={cn(
-        "rounded-[16px] border border-[rgba(46,57,75,0.69)] bg-[rgba(5,12,33,0.89)] p-4 md:p-5",
+        "rounded-[12px] border border-[#E0E0E0] bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] md:p-5",
         className,
       )}
     >
@@ -75,11 +75,11 @@ export function DaySectionCard({
             <DaySectionIcon name={icon} />
           ) : (
             <span
-              className="size-9 shrink-0 rounded-md bg-[#D9D9D9]/80"
+              className="size-9 shrink-0 rounded-md bg-[#FFECE3]"
               aria-hidden
             />
           ))}
-        <h2 className="text-base font-semibold text-[#968BEC] md:text-lg">
+        <h2 className="font-heading text-base font-semibold text-[#111111] md:text-lg">
           {title}
         </h2>
       </div>
@@ -88,75 +88,13 @@ export function DaySectionCard({
   );
 }
 
-const TOOL_CHIP_STYLES: Record<string, { border: string; text: string; bg: string }> = {
-  python: {
-    border: "#C92883",
-    text: "#C92883",
-    bg: "rgba(108, 52, 82, 0.69)",
-  },
-  "python 3": {
-    border: "#C92883",
-    text: "#C92883",
-    bg: "rgba(108, 52, 82, 0.69)",
-  },
-  "vs code": {
-    border: "#C96628",
-    text: "#DE5701",
-    bg: "rgba(108, 80, 52, 0.69)",
-  },
-  pip: {
-    border: "#3592E8",
-    text: "#3592E8",
-    bg: "rgba(26, 98, 125, 0.69)",
-  },
-  "ollama (pip)": {
-    border: "#C96628",
-    text: "#DE5701",
-    bg: "rgba(108, 80, 52, 0.69)",
-  },
-  ollama: {
-    border: "#C96628",
-    text: "#DE5701",
-    bg: "rgba(108, 80, 52, 0.69)",
-  },
-  fastapi: {
-    border: "#3592E8",
-    text: "#3592E8",
-    bg: "rgba(26, 98, 125, 0.69)",
-  },
-  uvicorn: {
-    border: "#6AE276",
-    text: "#62CF6F",
-    bg: "rgba(52, 108, 70, 0.69)",
-  },
-  "git & github": {
-    border: "#FFCC00",
-    text: "#FFCC00",
-    bg: "rgba(113, 99, 7, 0.69)",
-  },
-};
-
-const DEFAULT_CHIP = {
-  border: "#3592E8",
-  text: "#3592E8",
-  bg: "rgba(26, 98, 125, 0.69)",
-};
-
 export function ToolChip({ label }: { label: string }) {
-  const style = TOOL_CHIP_STYLES[label.toLowerCase()] ?? DEFAULT_CHIP;
   return (
-    <span
-      className="inline-flex items-center rounded-[5px] border px-2.5 py-0.5 text-xs"
-      style={{
-        borderColor: style.border,
-        color: style.text,
-        backgroundColor: style.bg,
-      }}
-    >
+    <span className="inline-flex items-center rounded-[4px] bg-[#FFECE3] px-2 py-0.5 text-[12px] font-semibold text-[#E05226]">
       {label}
     </span>
   );
 }
 
 export const dayMdClassName =
-  "text-sm leading-6 text-white [&_a]:text-[#968BEC] [&_a]:underline [&_code]:rounded [&_code]:bg-[#110528] [&_code]:px-1 [&_code]:text-xs [&_code]:text-[#968BEC] [&_li]:ml-4 [&_li]:list-disc [&_p]:mb-2 [&_p]:last:mb-0 [&_pre]:overflow-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-[#8365E3]/40 [&_pre]:bg-[#110528] [&_pre]:p-3 [&_pre]:text-xs [&_pre]:text-[#A5A5A5] [&_strong]:font-semibold [&_strong]:text-[#7528C9]";
+  "text-sm leading-6 text-[#4B4B4B] [&_a]:text-[#E05226] [&_a]:underline [&_code]:rounded [&_code]:bg-[#FFECE3] [&_code]:px-1 [&_code]:text-xs [&_code]:text-[#C9411C] [&_li]:ml-4 [&_li]:list-disc [&_p]:mb-2 [&_p]:last:mb-0 [&_pre]:overflow-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-[#E0E0E0] [&_pre]:bg-[#FBF9F7] [&_pre]:p-3 [&_pre]:text-xs [&_pre]:text-[#4B4B4B] [&_strong]:font-semibold [&_strong]:text-[#111111]";

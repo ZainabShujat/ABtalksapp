@@ -5,10 +5,14 @@ import {
   getCohortCalendarDay,
   getMemberDayStates,
   getMemberProgressDay,
+  isWaivedPayload,
+  type CurriculumDay,
+  type CurriculumModule,
   type MissionHeatmapCell,
 } from "@/features/program/progression";
 import { getMemberRank } from "@/features/program/leaderboard";
 import type { VerdictLine } from "@/features/program/verify-mission";
+import { programMember } from "@/repositories/legacy/program-member";
 
 export type MemberDashboard = {
   totalScore: number;
@@ -43,6 +47,14 @@ export type MemberDashboard = {
     createdAt: string;
   }[];
   missionHeatmap: MissionHeatmapCell[];
+  /** All 8 modules, ordered by number. */
+  modules: CurriculumModule[];
+  /** All 31 days with their per-member state, ordered by dayNumber. */
+  days: CurriculumDay[];
+  /** True when at least one non-waived day has been passed. */
+  hasStarted: boolean;
+  /** Lowest LOCKED day number, or null when nothing is locked. */
+  nextLockedDay: number | null;
 };
 
 function parseVerdict(json: unknown): VerdictLine[] {
@@ -60,37 +72,42 @@ export async function getMemberDashboard(
   memberId: string,
   cohortId: string,
 ): Promise<MemberDashboard | null> {
-  const [member, cohort, { modules, days }, rank, recentRuns] = await Promise.all([
-    prisma.programMember.findUnique({
-      where: { id: memberId },
-      select: {
-        totalScore: true,
-        missionPoints: true,
-        conceptPoints: true,
-        commitPoints: true,
-        projectPoints: true,
-        cleanPassCount: true,
-      },
-    }),
-    prisma.programCohort.findUnique({
-      where: { id: cohortId },
-      select: { startsAt: true },
-    }),
-    getMemberDayStates(memberId),
-    getMemberRank(cohortId, memberId),
-    prisma.programMissionSubmission.findMany({
-      where: { memberId },
-      select: {
-        dayNumber: true,
-        passed: true,
-        verdict: true,
-        createdAt: true,
-        payload: true,
-      },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-    }),
-  ]);
+  const [member, cohort, { modules, days }, rank, recentRuns, passedRows] =
+    await Promise.all([
+      programMember.findUnique({
+        where: { id: memberId },
+        select: {
+          totalScore: true,
+          missionPoints: true,
+          conceptPoints: true,
+          commitPoints: true,
+          projectPoints: true,
+          cleanPassCount: true,
+        },
+      }),
+      prisma.programCohort.findUnique({
+        where: { id: cohortId },
+        select: { startsAt: true },
+      }),
+      getMemberDayStates(memberId),
+      getMemberRank(cohortId, memberId),
+      prisma.programMissionSubmission.findMany({
+        where: { memberId },
+        select: {
+          dayNumber: true,
+          passed: true,
+          verdict: true,
+          createdAt: true,
+          payload: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      }),
+      prisma.programMissionSubmission.findMany({
+        where: { memberId, passed: true },
+        select: { payload: true },
+      }),
+    ]);
 
   if (!member || !cohort) return null;
 
@@ -106,6 +123,10 @@ export async function getMemberDashboard(
     dayNumber: d.dayNumber,
     completed: d.state === "PASSED",
   }));
+
+  const hasStarted = passedRows.some((r) => !isWaivedPayload(r.payload));
+  const nextLockedDay =
+    days.find((d) => d.state === "LOCKED")?.dayNumber ?? null;
 
   const availableDay = days.find((d) => d.state === "AVAILABLE");
   let currentDay: MemberDashboard["currentDay"] = null;
@@ -174,5 +195,9 @@ export async function getMemberDashboard(
     moduleProgress,
     recentVerdicts,
     missionHeatmap,
+    modules,
+    days,
+    hasStarted,
+    nextLockedDay,
   };
 }

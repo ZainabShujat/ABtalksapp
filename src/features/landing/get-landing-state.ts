@@ -72,7 +72,7 @@ export async function getLandingState(): Promise<LandingState> {
         : null,
       claudeCta: claudeEnrollment
         ? {
-            href: `/dashboard?challenge=${claudeEnrollment.id}`,
+            href: "/claude",
             ctaLabel: "Open dashboard",
           }
         : null,

@@ -35,6 +35,7 @@ Use a **constrained token system** throughout the website.
 | Primary / Orange       | `#E05226` | CTAs, highlights, labels     |
 | Primary / Orange Dark  | `#C9411C` | Hover / active               |
 | Primary / Orange Light | `#FFECE3` | Light backgrounds            |
+| Card hover surface     | `#FFF5F0` | Subtle card hover on cream pages |
 | Background / Cream     | `#FBF9F7` | Main page                    |
 | Background / Peach     | `#FFF1E9` | Contact / secondary sections |
 | Black                  | `#111111` | Main headings                |
@@ -50,6 +51,7 @@ Use a **constrained token system** throughout the website.
 --color-primary: #E05226;
 --color-primary-hover: #C9411C;
 --color-primary-light: #FFECE3;
+--color-card-hover: #FFF5F0;
 --color-background: #FBF9F7;
 --color-background-alt: #FFF1E9;
 --color-text-primary: #111111;
@@ -478,6 +480,46 @@ The navbar should remain compact and unobtrusive.
 * Border: `1px solid #E0E0E0`
 * Background: `#FFFFFF`
 
+### Interactive hover (dashboard / cream surfaces)
+
+Use on clickable or informational cards on `#FBF9F7` pages (student dashboard hub, similar light layouts). Keep motion **subtle** — no lift, scale, or border-color change on the card itself.
+
+| Property            | Value                                              |
+| ------------------- | -------------------------------------------------- |
+| Hover background    | `#FFF5F0` (lighter than `#FFECE3` primary-light)   |
+| Hover shadow        | `0 2px 10px rgba(17, 17, 17, 0.04)`              |
+| Default border      | unchanged (`1px solid #E0E0E0` / `border-neutral-200`) |
+| Transform on hover  | **none** (do not translate or scale the card)      |
+| Transition          | `box-shadow`, `background-color` only              |
+| Duration            | `200ms` (`--dur-2`)                                |
+| Easing              | `--ease-spark` (`cubic-bezier(0.22, 1, 0.36, 1)`) |
+
+Reference implementation: `HUB_CARD_HOVER_CLASS` in `src/components/dashboard-hub/nav-items.ts`.
+
+```css
+transition: box-shadow 200ms var(--ease-spark), background-color 200ms var(--ease-spark);
+```
+
+```css
+/* hover */
+background-color: #fff5f0;
+box-shadow: 0 2px 10px rgba(17, 17, 17, 0.04);
+```
+
+**Do not** on card hover: orange border (`#E05226`), `-translate-y`, `scale`, or heavy elevated shadows (`0 8px 24px …`).
+
+#### Related interactive hovers (same pages)
+
+| Element              | Hover behavior                                                                 |
+| -------------------- | ------------------------------------------------------------------------------ |
+| Nav / sidebar link   | Text `#E05226`, background `#E05226` at 10% opacity; `transition: color, background-color` 200ms `--ease-spark` |
+| Text link + arrow    | Text `#E05226`; arrow `translateX(2px)` inside `motion-safe:group-hover` only |
+| Orange CTA button    | Background `#C9411C`; **no scale** on cream-surface CTAs (`dsButtonVariants`)  |
+| FAQ accordion row    | Row background `#FFF5F0`; question text may use `#C9411C`                      |
+| Icon / bell controls | Border/text `#E05226`, tint background 10%; optional `scale(1.04)` on icon only |
+
+Respect `prefers-reduced-motion`: wrap non-essential transforms (arrow nudge, icon scale) in `motion-safe:`.
+
 ---
 
 ## 17. Border Radius System
@@ -509,6 +551,14 @@ box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 ```css
 box-shadow: 0 8px 24px rgba(0,0,0,0.08);
 ```
+
+### Card hover (cream / dashboard)
+
+```css
+box-shadow: 0 2px 10px rgba(17, 17, 17, 0.04);
+```
+
+Use with hover background `#FFF5F0` — see §16 Interactive hover.
 
 ### Floating Element
 
@@ -868,10 +918,28 @@ Mobile gutter       16px
 
 ### Core Colors
 
+| Token              | Hex       |
+| ------------------ | --------- |
+| Primary            | `#E05226` |
+| Primary hover      | `#C9411C` |
+| Primary light      | `#FFECE3` |
+| Card hover surface | `#FFF5F0` |
+| Background cream   | `#FBF9F7` |
+
+### Motion (cream-surface cards)
+
+| Token        | Value                                      |
+| ------------ | ------------------------------------------ |
+| Duration     | `200ms` (`--dur-2`)                        |
+| Easing       | `--ease-spark`                             |
+| Card hover   | bg `#FFF5F0` + shadow `0 2px 10px rgba(17,17,17,0.04)` |
+| Card motion  | no translate / scale on the card container |
+
 ```text
 Primary          #E05226
 Primary Hover    #C9411C
 Primary Light    #FFECE3
+Card Hover       #FFF5F0
 Background       #FBF9F7
 Background Alt   #FFF1E9
 Text Primary     #111111
