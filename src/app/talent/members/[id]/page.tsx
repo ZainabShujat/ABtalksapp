@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink, Lock } from "lucide-react";
 import { auth } from "@/auth";
 import { requireRecruiter } from "@/lib/program-auth";
+import { encodeCandidateRef } from "@/features/hire/candidate-ref";
+import { candidatePublicId } from "@/features/hire/public-id";
 import { getTalentProfile } from "@/features/talent-pool/pool";
 import { MissionHeatmap } from "@/components/program/mission-heatmap";
 import { ShortlistButton } from "@/components/talent/shortlist-button";
@@ -38,14 +40,15 @@ export default async function TalentMemberPage({ params }: Props) {
     <div className="mx-auto max-w-3xl space-y-8">
       <div className="flex items-center gap-3">
         <Link
-          href="/talent"
+          href="/talent/shortlist"
           className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "gap-1")}
         >
           <ArrowLeft className="size-4" />
-          Pool
+          Cart
         </Link>
         <ShortlistButton
-          memberId={profile.memberId}
+          candidateRef={encodeCandidateRef("PROGRAM", profile.memberId)}
+          programMemberId={profile.memberId}
           initialShortlisted={profile.shortlisted}
         />
       </div>
@@ -56,11 +59,11 @@ export default async function TalentMemberPage({ params }: Props) {
             #{profile.rank}
           </span>
           <h1 className="font-display text-3xl font-bold tracking-tight">
-            {profile.fullName}
+            {candidatePublicId(profile.memberId)}
           </h1>
         </div>
         <p className="text-muted-foreground">
-          {profile.jobRole} · {profile.company} · {profile.yearsExperience} years
+          {profile.jobRole} · {profile.yearsExperience} years
         </p>
         {profile.skills.length > 0 && (
           <div className="flex flex-wrap gap-1.5 pt-1">
@@ -77,64 +80,19 @@ export default async function TalentMemberPage({ params }: Props) {
       </header>
 
       <section className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border p-4">
-          <h2 className="mb-3 text-sm font-semibold">Contact</h2>
-          <dl className="space-y-2 text-sm">
-            <div>
-              <dt className="text-muted-foreground">Email</dt>
-              <dd>
-                <a
-                  href={`mailto:${profile.email}`}
-                  className="text-primary hover:underline"
-                >
-                  {profile.email}
-                </a>
-              </dd>
-            </div>
-            {profile.linkedinUrl && (
-              <div>
-                <dt className="text-muted-foreground">LinkedIn</dt>
-                <dd>
-                  <a
-                    href={profile.linkedinUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-primary hover:underline"
-                  >
-                    Profile <ExternalLink className="size-3" />
-                  </a>
-                </dd>
-              </div>
-            )}
-            <div>
-              <dt className="text-muted-foreground">GitHub</dt>
-              <dd>
-                <a
-                  href={profile.githubRepoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-primary hover:underline"
-                >
-                  {profile.githubUsername} <ExternalLink className="size-3" />
-                </a>
-              </dd>
-            </div>
-            {profile.resumeUrl && (
-              <div>
-                <dt className="text-muted-foreground">Resume</dt>
-                <dd>
-                  <a
-                    href={profile.resumeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-primary hover:underline"
-                  >
-                    View resume <ExternalLink className="size-3" />
-                  </a>
-                </dd>
-              </div>
-            )}
-          </dl>
+        <div className="rounded-xl border border-dashed p-4">
+          <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
+            <Lock className="size-3.5" aria-hidden="true" />
+            Contact
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Name, email, LinkedIn and GitHub stay hidden while you evaluate the
+            evidence. Shortlist this candidate and place a request — our team
+            confirms the engagement and shares full details.
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Everything below is verified platform work, not self-reported.
+          </p>
         </div>
         <div className="rounded-xl border p-4">
           <h2 className="mb-3 text-sm font-semibold">Score breakdown</h2>

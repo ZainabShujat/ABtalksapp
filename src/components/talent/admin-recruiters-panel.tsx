@@ -15,6 +15,7 @@ type PendingRecruiter = {
   phone: string | null;
   createdAt: string;
   email: string;
+  pendingCandidateAsks: number;
 };
 
 export function AdminRecruitersPanel({
@@ -74,6 +75,13 @@ export function AdminRecruitersPanel({
               <p className="mt-1 text-muted-foreground">{row.email}</p>
               {row.phone && (
                 <p className="text-xs text-muted-foreground">Phone: {row.phone}</p>
+              )}
+              {row.pendingCandidateAsks > 0 && (
+                <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-900 dark:text-amber-100">
+                  Already asked for {row.pendingCandidateAsks} candidate
+                  {row.pendingCandidateAsks === 1 ? "" : "s"} — see Hire
+                  requests
+                </p>
               )}
               <p className="mt-1 text-xs text-muted-foreground">
                 Applied{" "}

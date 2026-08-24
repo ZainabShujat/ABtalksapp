@@ -10,11 +10,13 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { hackathonRedirectForProfilelessUser } from "@/features/hackathon/registration-status";
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { LoginClient } from "./login-client";
 import { studentProfile } from "@/repositories/legacy/student-profile";
 
 type Props = {
-  searchParams: Promise<{ from?: string; ref?: string }>;
+  searchParams: Promise<{ from?: string; ref?: string; as?: string }>;
 };
 
 /** Valid same-origin `from`, or null. */
@@ -42,6 +44,13 @@ function registerHrefWithRef(refRaw: string | undefined): string {
 export default async function LoginPage({ searchParams }: Props) {
   const params = await searchParams;
   const from = safeFrom(params.from);
+  // This page is the candidate door and nothing else. Recruiters have their own,
+  // and the old `?as=recruiter` links are forwarded there rather than left to
+  // land on a Google button that was never meant for them.
+  if (params.as === "recruiter") {
+    redirect(from ?? "/hire");
+  }
+
   const redirectTo = from ?? "/dashboard";
 
   const session = await auth();

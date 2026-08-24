@@ -7,11 +7,62 @@ import { cookies } from "next/headers";
 import { recordLegalConsents } from "@/features/legal/record-consent";
 import { recordNewsletterOptIn } from "@/features/legal/record-newsletter-optin";
 import { logger } from "@/lib/logger";
+import { verifyRecruiterOtp } from "@/features/recruiter-auth/otp";
 //auth is the full config with PrismaAdapter and real Credentials authorize. Used everywhere else.
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(prisma),
   providers: [
+    /**
+     * Recruiter sign-in by emailed code.
+     *
+     * Credentials providers bypass the adapter, so `events.createUser` below
+     * never fires for this path — the User row and its consent record have to
+     * be written here. Without that we would hold a recruiter's data with no
+     * record of them agreeing to anything, which is the exact case that hook
+     * was added to prevent.
+     */
+    Credentials({
+      id: "recruiter-otp",
+      name: "Recruiter email code",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        code: { label: "Code", type: "text" },
+      },
+      async authorize(credentials) {
+        const email = String(credentials?.email ?? "").trim().toLowerCase();
+        const code = String(credentials?.code ?? "").trim();
+        if (!email || !/^\d{6}$/.test(code)) return null;
+
+        const verified = await verifyRecruiterOtp(email, code);
+        if (!verified.ok) return null;
+
+        // Signing in requires a registration. Accounts are created by the
+        // registration flow, never here — a valid code for an unregistered
+        // address must not become an account, or the review step means nothing.
+        // Unapproved profiles are allowed through so they can reach the
+        // "we're reviewing you" page; every recruiter surface still checks
+        // `approved` for itself.
+        const existing = await prisma.user.findFirst({
+          where: { email },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            recruiterProfile: { select: { id: true } },
+          },
+        });
+        if (!existing?.recruiterProfile) return null;
+
+        return {
+          id: existing.id,
+          email: existing.email,
+          name: existing.name,
+          role: existing.role,
+        };
+      },
+    }),
     ...(process.env.ENABLE_DEV_AUTH === "true"
       ? [
           Credentials({
@@ -40,7 +91,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }),
         ]
       : []),
-    ...(authConfig.providers.filter((p) => p.id !== "credentials") ?? []),
+    ...(authConfig.providers.filter(
+      (p) => p.id !== "credentials" && p.id !== "recruiter-otp",
+    ) ?? []),
   ],
   events: {
     /**
