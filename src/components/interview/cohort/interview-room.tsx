@@ -4,6 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Mic, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
+  VoicePoweredOrb,
+  type OrbMode,
+} from "@/components/ui/voice-powered-orb";
+import {
   abandonInterviewAction,
   finishInterviewAction,
   submitInterviewAnswerAction,
@@ -108,6 +112,27 @@ export function InterviewRoom({
    * tell someone on question three that they were nearly done.
    */
   const [progress, setProgress] = useState({ answered: 0, total: 0, ratio: 0 });
+
+  /**
+   * The single audio-analysis chain for the interview.
+   *
+   * ONE microphone stream exists (`streamRef`, opened by `startRecording` for
+   * MediaRecorder). One AnalyserNode is attached to it, and its level feeds
+   * BOTH the silence detector and the orb. The orb never opens a microphone of
+   * its own: a second `getUserMedia` would mean a second permission prompt and
+   * a second capture running beside the one being transcribed.
+   *
+   * `levelRef` is a ref rather than state on purpose. It updates ~60 times a
+   * second; putting that in state would re-render the whole transcript on every
+   * animation frame.
+   */
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const analyserSrcRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const levelRef = useRef(0);
+  const levelRafRef = useRef<number | null>(null);
+  const hasSpokenRef = useRef(false);
+  const quietSinceRef = useRef<number | null>(null);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);

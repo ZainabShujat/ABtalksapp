@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireProgramMember } from "@/lib/program-auth";
 import { toProgramMemberId } from "@/features/interview/provider";
 import {
@@ -8,6 +8,7 @@ import {
 } from "@/features/interview/cohort/blueprint";
 import { getCohortInterviewReport } from "@/features/interview/service";
 import { InterviewReportView } from "@/components/interview/cohort/report-view";
+import { prisma } from "@/lib/db";
 import "@/components/interview/cohort/interview.css";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ export default async function CohortInterviewReportPage({
   params: Promise<{ blueprint: string }>;
 }) {
   // Authenticate BEFORE looking at the URL, as the interview page does.
-  const { member } = await requireProgramMember();
+  const { member, userId } = await requireProgramMember();
 
   const { blueprint: rawBlueprint } = await params;
   const blueprint = parseBlueprintParam(rawBlueprint);
@@ -43,6 +44,21 @@ export default async function CohortInterviewReportPage({
     blueprint,
   );
 
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+  const isIshaan = user?.email === "demo-day31@abtalks.dev";
+
+  async function reattemptAction() {
+    "use server";
+    if (!isIshaan) return;
+    await prisma.generalInterview.deleteMany({
+      where: {
+        memberId: toProgramMemberId(member.id),
+        blueprint: blueprint as any,
+      }
+    });
+    redirect(`/program/cohort-interview/${blueprint}`);
+  }
+
   if (!result.ok) {
     return (
       <div className="interview-room mx-auto max-w-2xl py-10 text-[var(--iv-text)]">
@@ -52,12 +68,24 @@ export default async function CohortInterviewReportPage({
         <p className="mt-3 text-[15px] text-[var(--iv-text-muted)]">
           {result.message}
         </p>
-        <Link
-          href="/program/dashboard"
-          className="mt-6 inline-flex h-10 items-center rounded-[10px] border border-[var(--iv-border)] px-4 text-[14px] text-[var(--iv-text-muted)] transition-colors hover:border-[#8F8F8F] hover:text-[var(--iv-text)]"
-        >
-          Back to dashboard
-        </Link>
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <Link
+            href="/program/dashboard"
+            className="inline-flex h-10 items-center rounded-[10px] border border-[var(--iv-border)] px-4 text-[14px] text-[var(--iv-text-muted)] transition-colors hover:border-[#8F8F8F] hover:text-[var(--iv-text)]"
+          >
+            Back to dashboard
+          </Link>
+          {isIshaan && (
+            <form action={reattemptAction}>
+              <button
+                type="submit"
+                className="inline-flex h-10 items-center rounded-[10px] border border-gray-300 bg-gray-100 px-4 text-[14px] font-semibold text-gray-800 transition-colors hover:bg-gray-200"
+              >
+                Reattempt (Demo)
+              </button>
+            </form>
+          )}
+        </div>
       </div>
     );
   }
@@ -69,12 +97,24 @@ export default async function CohortInterviewReportPage({
         generatedAt={result.data.generatedAt}
       />
       <div className="interview-room mx-auto max-w-4xl pb-10">
-        <Link
-          href="/program/dashboard"
-          className="inline-flex h-10 items-center rounded-[10px] border border-[var(--iv-border)] px-4 text-[14px] text-[var(--iv-text-muted)] transition-colors hover:border-[#8F8F8F] hover:text-[var(--iv-text)]"
-        >
-          Back to dashboard
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/program/dashboard"
+            className="inline-flex h-10 items-center rounded-[10px] border border-[var(--iv-border)] px-4 text-[14px] text-[var(--iv-text-muted)] transition-colors hover:border-[#8F8F8F] hover:text-[var(--iv-text)]"
+          >
+            Back to dashboard
+          </Link>
+          {isIshaan && (
+            <form action={reattemptAction}>
+              <button
+                type="submit"
+                className="inline-flex h-10 items-center rounded-[10px] border border-gray-300 bg-gray-100 px-4 text-[14px] font-semibold text-gray-800 transition-colors hover:bg-gray-200"
+              >
+                Reattempt (Demo)
+              </button>
+            </form>
+          )}
+        </div>
       </div>
     </>
   );

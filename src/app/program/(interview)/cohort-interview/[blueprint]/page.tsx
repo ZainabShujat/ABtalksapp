@@ -86,6 +86,7 @@ export default async function CohortInterviewPage({
       candidateName={member.fullName}
       questionCount={questionCount}
       durationSec={durationSec}
+      reattemptAction={isIshaan ? reattemptAction : undefined}
     />
   );
 }
