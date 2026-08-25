@@ -339,6 +339,13 @@ model User {
   notificationsCreated       Notification[]          @relation("NotificationAuthor")
   hackathonRemovalsPerformed HackathonRemoval[]      @relation("HackathonRemover")
 
+  // hire — Scout engagements, requests and availability
+  talentRequests        TalentRequest[]
+  engagementsAsRecruiter TalentEngagementRequest[] @relation("RecruiterEngagements")
+  engagementsAsCandidate TalentEngagementRequest[] @relation("CandidateEngagements")
+  candidateMatches       TalentRequestMatch[]      @relation("CandidateMatches")
+  engagementMessages     TalentEngagementMessage[]
+
   @@index([deletedAt, createdAt(sort: Desc)])
   @@index([createdAt(sort: Desc)])
   @@index([synergyPoints(sort: Desc)])
@@ -989,6 +996,123 @@ model RecruiterShortlistItem {
   member          ProgramMember @relation(fields: [memberId], references: [id], onDelete: Restrict)
 
   @@unique([recruiterUserId, memberId])
+}
+
+// ─── Hire / Scout (evidence-based matching) ─────────────────────────────────
+
+enum TalentRequestStatus {
+  DRAFT
+  ACTIVE
+  MATCHED
+  FULFILLED
+  CLOSED
+}
+
+enum TalentWorkMode {
+  ONSITE
+  HYBRID
+  REMOTE
+  FLEXIBLE
+}
+
+enum TalentEmploymentType {
+  FULL_TIME
+  CONTRACT
+  INTERNSHIP
+  PART_TIME
+}
+
+enum TalentSeniority {
+  INTERN
+  JUNIOR
+  MID
+  SENIOR
+  LEAD
+}
+
+enum TalentMatchTier {
+  STRONG
+  PARTIAL
+  NONE
+}
+
+/// Recruiter requirement gathered by Scout. Survives zero matches (demand signal).
+model TalentRequest {
+  id                 String               @id @default(cuid())
+  recruiterUserId    String
+  status             TalentRequestStatus  @default(DRAFT)
+  title              String
+  seniority          TalentSeniority?
+  openings           Int                  @default(1)
+  mustHaveStack      String[]             @default([])
+  niceToHaveStack    String[]             @default([])
+  /// Ordered evidence dimensions; reweights scoring (e.g. consistency, projects).
+  evidencePriority   String[]             @default([])
+  salaryMin          Int?
+  salaryMax          Int?
+  salaryCurrency     String               @default("INR")
+  salaryPeriod       String               @default("ANNUAL")
+  workMode           TalentWorkMode?
+  locationCity       String?
+  employmentType     TalentEmploymentType?
+  noticePeriodDays   Int?
+  minExperience      Int?
+  maxExperience      Int?
+  requiresDegree     Boolean              @default(false)
+  /// Free-form extras Scout captured; never used for matching.
+  extra              Json?
+  alertWhenAvailable Boolean              @default(false)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  recruiter          User                 @relation(fields: [recruiterUserId], references: [id], onDelete: Cascade)
+  messages           TalentRequestMessage[]
+  matches            TalentRequestMatch[]
+
+  @@index([recruiterUserId, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+  engagements TalentEngagementRequest[]
+}
+
+model TalentRequestMessage {
+  id        String        @id @default(cuid())
+  requestId String
+  role      String // "user" | "assistant"
+  content   String
+  options   Json?
+  createdAt DateTime      @default(now())
+  request   TalentRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, createdAt])
+}
+
+/// Scored candidate snapshot frozen at match time for auditability.
+///
+/// Keyed on `candidateUserId`, because a candidate is a person and not a cohort
+/// row. This carried `programMemberId` + `studentUserId` + `source` — three
+/// columns doing one column's job, which is what happens when the identity is a
+/// membership. `programMemberId` survives as PROVENANCE ONLY: it records which
+/// cohort row the evidence was read from, has no foreign key, and must never be
+/// used to identify or look up the candidate.
+model TalentRequestMatch {
+  id                  String          @id @default(cuid())
+  requestId           String
+  candidateUserId     String
+  /// Provenance only. No FK, never an identity. See the note above.
+  programMemberId     String?
+  score               Int
+  tier                TalentMatchTier
+  scoreBreakdown      Json
+  evidence            Json
+  rationale           String?
+  gaps                String[]        @default([])
+  availabilityUnknown Boolean         @default(true)
+  source              TalentCandidateSource @default(PROGRAM)
+  createdAt           DateTime        @default(now())
+  request             TalentRequest   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  candidate           User            @relation("CandidateMatches", fields: [candidateUserId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, score(sort: Desc)])
+  @@index([candidateUserId])
 }
 
 enum HackathonEntryType {
@@ -2507,4 +2631,122 @@ model MigrationQuarantine {
 
   @@index([sourceTable, sourceId])
   @@index([runId])
+}
+
+enum TalentEngagementStatus {
+  DRAFT          // sitting in the recruiter's shortlist, not sent
+  SUBMITTED      // request placed, waiting on the ABTalks team
+  IN_REVIEW      // team working it
+  CONTACT_SHARED // contact released to this recruiter for this candidate
+  DECLINED
+  CLOSED
+}
+
+/// Which track a candidate came from. Defaults to PROGRAM so existing rows
+/// describe themselves correctly without a backfill.
+enum TalentCandidateSource {
+  PROGRAM
+  CHALLENGE_60
+  CLAUDE
+  HACKATHON
+}
+
+/// One recruiter's ask about one candidate.
+///
+/// Carries the note the recruiter wrote, and once it reaches CONTACT_SHARED it
+/// is what releases that candidate's details to that recruiter. Access is
+/// derived from this status and never stored as a separate flag, so there is
+/// no second field a bug can leave switched on.
+model TalentEngagementRequest {
+  id               String                 @id @default(cuid())
+  recruiterUserId  String
+  requestId        String?
+  source           TalentCandidateSource  @default(PROGRAM)
+  /// Provenance only. No FK, never an identity — the candidate is `candidateUserId`.
+  programMemberId  String?
+  candidateUserId  String
+  /// Denormalised AB-#### as shown to the recruiter, so admin and the
+  /// recruiter are demonstrably talking about the same candidate.
+  candidatePublicId String
+  note             String?
+  status           TalentEngagementStatus @default(DRAFT)
+  submittedAt      DateTime?
+  decidedAt        DateTime?
+  decidedByAdminId String?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  recruiter     User                      @relation("RecruiterEngagements", fields: [recruiterUserId], references: [id], onDelete: Cascade)
+  /// Restrict, not SetNull: an engagement is the record of a recruiter having
+  /// been given access to a person. It must not quietly detach from them.
+  /// Matches the 078 Phase 1 posture on Certificate / SynergyEvent /
+  /// RecruiterShortlistItem.
+  candidate     User                      @relation("CandidateEngagements", fields: [candidateUserId], references: [id], onDelete: Restrict)
+  request       TalentRequest?            @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  messages      TalentEngagementMessage[]
+
+  @@index([recruiterUserId, status])
+  @@index([status, submittedAt])
+  @@index([candidateUserId])
+}
+
+/// The thread on an engagement request — the recruiter's ticket.
+model TalentEngagementMessage {
+  id           String   @id @default(cuid())
+  engagementId String
+  authorUserId String?
+  authorRole   String
+  body         String
+  createdAt    DateTime @default(now())
+
+  engagement TalentEngagementRequest @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  author     User?                   @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([engagementId, createdAt])
+}
+
+/// Companies and seats ABTalks has verified out of band.
+///
+/// A recruiter account is only created with recruiter access when its email
+/// matches a live seat here. Role is decided by this lookup, never by anything
+/// the person signing up submits — which is what stops a candidate from
+/// registering their way into the recruiter portal.
+model VerifiedRecruiterSeat {
+  id                String    @id @default(cuid())
+  /// Lowercased at write time; matching is exact.
+  email             String    @unique
+  company           String
+  contactName       String?
+  active            Boolean   @default(true)
+  notes             String?
+  verifiedAt        DateTime  @default(now())
+  verifiedByAdminId String?
+  revokedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([active])
+  @@index([company])
+}
+
+/// Short-lived email codes for recruiter sign-in.
+///
+/// The table already existed in the database when this model was written — it
+/// was created by migration 20260810100124_recruiter_email_otp, whose code was
+/// never merged to any branch. The fields below are the live DDL read back from
+/// information_schema, so Prisma describes what is actually there rather than
+/// something close to it.
+model RecruiterEmailOtp {
+  id        String   @id @default(cuid())
+  email     String
+  /// sha256(code + AUTH_SECRET). The plaintext code is never stored.
+  codeHash  String
+  /// "login" | "register" — kept as text to match the existing column.
+  purpose   String
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
 }

@@ -1,13 +1,15 @@
 /**
  * 078 Phase 2b — CandidateVisibility.
  *
- * Legacy users (present at the first successful 2b run, or created before that
- * run's finishedAt): searchable ONLY when ProgramMember.recruiterVisibilityConsentAt
- * is set. Do not silently open existing users who never opted in.
+ * Intended searchable population:
+ * - Every ProgramMember (AI Cohort), including members who never set
+ *   recruiterVisibilityConsentAt. Recruiter search is a platform default, not a
+ *   candidate preference.
+ * - Users created after the first successful 2b run (consentSource =
+ *   platform_default).
  *
- * Users created after that first successful 2b run: platform-default searchable
- * (consentSource = platform_default). The schema default is also true so app
- * creates without an explicit value are searchable.
+ * Other legacy users stay closed. Explicit recruiterVisibilityConsentAt is
+ * copied onto ProgramMembers as program_apply_migrated for audit only.
  *
  * openToWork / CandidatePreference is independent and is not written here.
  */
@@ -53,15 +55,22 @@ async function main() {
     });
     const have = new Set(existing.map((r) => r.userId));
 
-    const consented = await ctx.prisma.programMember.findMany({
-      where: {
-        recruiterVisibilityConsentAt: { not: null },
-        ...whereUserId(sample),
+    const members = await ctx.prisma.programMember.findMany({
+      where: whereUserId(sample),
+      select: {
+        userId: true,
+        recruiterVisibilityConsentAt: true,
+        createdAt: true,
+        enrolledAt: true,
       },
-      select: { userId: true, recruiterVisibilityConsentAt: true },
     });
+    const memberUserIds = new Set(members.map((m) => m.userId));
     const consentByUser = new Map<string, Date>();
-    for (const m of consented) {
+    const memberSince = new Map<string, Date>();
+    for (const m of members) {
+      const since = m.enrolledAt ?? m.createdAt;
+      const prevSince = memberSince.get(m.userId);
+      if (!prevSince || since < prevSince) memberSince.set(m.userId, since);
       const at = m.recruiterVisibilityConsentAt;
       if (!at) continue;
       const prev = consentByUser.get(m.userId);
@@ -78,6 +87,14 @@ async function main() {
             searchableByRecruiters: true,
             consentSource: LEGACY_CONSENT_SOURCE,
             consentedAt: consentByUser.get(u.id)!,
+          };
+        }
+        if (memberUserIds.has(u.id)) {
+          return {
+            userId: u.id,
+            searchableByRecruiters: true,
+            consentSource: PLATFORM_DEFAULT_SOURCE,
+            consentedAt: memberSince.get(u.id) ?? u.createdAt,
           };
         }
         if (legacy) {
@@ -124,8 +141,24 @@ async function main() {
       optedIn += chunk.length;
     });
 
+    let cohortOpened = 0;
+    const cohortWithoutConsent = [...memberUserIds].filter(
+      (id) => !consentByUser.has(id),
+    );
+    await chunked(cohortWithoutConsent, 50, async (chunk) => {
+      const result = await ctx.prisma.candidateVisibility.updateMany({
+        where: { userId: { in: chunk }, withdrawnAt: null },
+        data: {
+          searchableByRecruiters: true,
+          consentSource: PLATFORM_DEFAULT_SOURCE,
+        },
+      });
+      cohortOpened += result.count;
+    });
+
+    const protectedIds = new Set([...memberUserIds, ...consentByUser.keys()]);
     const closeIds = sample
-      ? sample.filter((id) => !consentByUser.has(id))
+      ? sample.filter((id) => !protectedIds.has(id))
       : null;
     const closed =
       closeIds && closeIds.length === 0
@@ -136,7 +169,7 @@ async function main() {
               consentSource: LEGACY_CONSENT_SOURCE,
               userId: closeIds
                 ? { in: closeIds }
-                : { notIn: [...consentByUser.keys()] },
+                : { notIn: [...protectedIds] },
             },
             data: {
               searchableByRecruiters: false,
@@ -153,6 +186,8 @@ async function main() {
       users: users.length,
       inserted,
       optedIn,
+      cohortOpened,
+      cohortMembers: memberUserIds.size,
       forcedClosed: closed.count,
     };
   });

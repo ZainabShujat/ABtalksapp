@@ -20,7 +20,13 @@ export type ConsentSource =
    * visitor reaches any form, so this is the earliest point at which we hold
    * their data — the login page carries the corresponding notice.
    */
-  | "oauth_signup";
+  | "oauth_signup"
+  /**
+   * First recruiter sign-in by emailed code. Credentials providers bypass the
+   * adapter, so no createUser event fires — the User row is created inside
+   * authorize(), and the consent is recorded there at the same moment.
+   */
+  | "recruiter_otp_signup";
 
 type RecordConsentArgs = {
   userId?: string | null;
