@@ -4065,19 +4065,35 @@ html.dark .hire-app.hire-menu {
      width they broke into ragged rows with orphans stranded mid-line. One
      height, a tighter rhythm, and a pill that would still be too long
      truncates rather than pushing everything after it onto its own line. */
+  /* Two to a row, and the odd one out sits centred rather than stranded.
+
+     Free wrapping gave rows of 2, then 4, then 3, then a single pill alone on
+     the last line — the widths are too unequal for wrapping to look deliberate.
+     A two-column grid makes every row the same shape, and an odd final pill
+     spans both columns and centres itself instead of hugging the left edge. */
   .desk-card__facts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 6px;
-    align-items: flex-start;
+    align-items: start;
+    justify-items: stretch;
   }
 
   .desk-card__facts .desk-pill {
     height: 24px;
-    max-width: 100%;
     min-width: 0;
+    max-width: 100%;
     padding: 0 8px;
+    justify-content: center;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+  }
+
+  .desk-card__facts .desk-pill:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    justify-self: center;
+    max-width: 70%;
   }
 
   .hire-app__wordmark {
