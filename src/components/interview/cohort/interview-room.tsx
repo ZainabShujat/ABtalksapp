@@ -48,6 +48,15 @@ const PHASE_COPY: Record<Phase, { label: string; hint: string }> = {
   speaking: { label: "Interviewer speaking", hint: "" },
 };
 
+/**
+ * How long the room waits for server speech before falling back.
+ *
+ * Generous enough for a long interviewer line (a real gpt-4o-mini-tts call
+ * measured ~1.9s for a two-sentence turn), short enough that a silent failure
+ * does not read as the interview having frozen.
+ */
+const TTS_TIMEOUT_MS = 12_000;
+
 function formatClock(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
@@ -167,10 +176,16 @@ export function InterviewRoom({
         });
 
       try {
+        // Client-side ceiling as well as the server's. The server aborts its
+        // upstream call at 30s, but a request that never returns at all would
+        // otherwise leave the room in "speaking" forever with no question
+        // audible and no way forward. Past this we stop waiting and let the
+        // browser voice read the line instead.
         const res = await fetch("/api/interview/tts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ interviewId }),
+          signal: AbortSignal.timeout(TTS_TIMEOUT_MS),
         });
 
         if (res.ok) {

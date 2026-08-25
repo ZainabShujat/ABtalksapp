@@ -25,7 +25,15 @@ const OPENAI_SPEECH_URL = "https://api.openai.com/v1/audio/speech";
 const GROQ_TRANSCRIBE_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
 const GROQ_SPEECH_URL = "https://api.groq.com/openai/v1/audio/speech";
 
-const SPEECH_VOICE = process.env.INTERVIEW_TTS_VOICE ?? "alloy";
+/**
+ * The interviewer's voice.
+ *
+ * `ash` over the `alloy` default: alloy reads evenly but flat, which lands as
+ * a narrator reading questions aloud. `ash` is steadier and warmer at the same
+ * pace — closer to a senior engineer asking, which is the register the whole
+ * interview is trying to hold. Overridable per environment without a deploy.
+ */
+const SPEECH_VOICE = process.env.INTERVIEW_TTS_VOICE ?? "ash";
 
 /**
  * Which vendor serves speech.
@@ -251,10 +259,11 @@ export async function synthesizeLine(
         voice: SPEECH_VOICE,
         input: text,
         response_format: "mp3",
-        // Delivery instruction, not content. The words are fixed by the bank;
-        // this only asks for the register a real interviewer uses.
+        // Delivery instruction, not content. The words are fixed upstream; this
+        // only asks for the register. Supported by gpt-4o-mini-tts and ignored
+        // by the older tts-1 models, so it is safe to send either way.
         instructions:
-          "Speak as a calm, professional technical interviewer. Even pace, neutral tone, no enthusiasm or judgement.",
+          "You are a technical interviewer talking with a candidate. Calm, warm and professional — a senior engineer who is genuinely curious, not a presenter or a narrator. Conversational pace, slightly unhurried, with brief natural pauses at commas and between sentences. Never sound enthusiastic, never sound flat, and do not emphasise words for effect.",
       }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       },

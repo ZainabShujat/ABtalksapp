@@ -26,7 +26,7 @@ function mask(v: string | undefined): string {
 }
 
 /** A tiny valid WAV: 0.4s of near-silence. Enough to prove auth and reachability. */
-function tinyWav(): Uint8Array {
+function tinyWav(): ArrayBuffer {
   const sampleRate = 16000;
   const samples = Math.floor(sampleRate * 0.4);
   const buf = Buffer.alloc(44 + samples * 2);
@@ -47,7 +47,9 @@ function tinyWav(): Uint8Array {
     // A faint tone, so the payload is not literally all zeroes.
     buf.writeInt16LE(Math.round(Math.sin(i / 12) * 60), 44 + i * 2);
   }
-  return new Uint8Array(buf);
+  // Copy out of Node's pooled Buffer into a standalone ArrayBuffer, which is
+  // what Blob accepts without complaint.
+  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
 }
 
 async function main() {

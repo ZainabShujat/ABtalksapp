@@ -8,7 +8,10 @@ import type {
   InterviewState,
   PlannedQuestion,
 } from "@/features/interview/types";
-import { decideLadderMove } from "@/features/interview/agent/depth";
+import {
+  decideLadderMove,
+  nextScaffoldProbe,
+} from "@/features/interview/agent/depth";
 import type {
   AgentAction,
   InterviewDecision,
@@ -37,7 +40,7 @@ import type {
 export const REDIRECT_LINE =
   "I'll keep us focused on the interview for now. Let's continue with the current question.";
 
-export const REPEAT_LINE = "Sure — here's the question again.";
+export const REPEAT_LINE = "Sure. Here's the question again.";
 
 /**
  * The interviewer's opening, spoken before the first question.
@@ -77,7 +80,7 @@ export function openingLine(params: {
       : "I'll ask you about what you built across the thirty-one days, and I'll dig deeper into some of your answers as we go.";
 
   const permission =
-    "If you'd like me to repeat or clarify anything, just ask — and if you don't know something, say so and we'll move on.";
+    "If you'd like me to repeat or clarify anything, just ask. And if you don't know something, say so and we'll move on.";
 
   const handover = "Let's start here.";
 
@@ -182,9 +185,29 @@ export function routeDecision(
   // interview", which accuses an honest person of dodging. Moving on records
   // the question as unanswered, which is the correct and sufficient penalty.
   if (stuck) {
+    // One nudge, then move on. Answering "I don't know" with silence and the
+    // next question is not what an interviewer does: they offer a smaller way
+    // in, and only move on if that lands nowhere either. `consecutiveStuckAnswers`
+    // is what distinguishes the two — zero means this is their first blank, so
+    // they have not been helped yet on this question.
+    const scaffold = nextScaffoldProbe(question, decision.evidence);
+    const nudge = speakable(scaffold?.text ?? question.followUpPrompt ?? "");
+    const alreadyNudged = (state.consecutiveStuckAnswers ?? 0) > 0;
+    const budget = followUpBudgetFor(question);
+
+    if (!alreadyNudged && nudge.length > 0 && counters.followUpsAsked < budget) {
+      return {
+        action: "FOLLOW_UP",
+        rationale: "Candidate is stuck; offering one scaffold before moving on.",
+        probeText: nudge,
+      };
+    }
+
     return {
       action: "NEXT_QUESTION",
-      rationale: "Candidate does not know; recorded unanswered and moving on.",
+      rationale: alreadyNudged
+        ? "Candidate still stuck after a scaffold; moving on."
+        : "Candidate does not know and no scaffold is available; moving on.",
     };
   }
 
@@ -283,7 +306,7 @@ export function routeDecision(
 const NEUTRAL_ACKNOWLEDGEMENTS = [
   "Thanks for walking me through that.",
   "Got it, thank you.",
-  "Understood — thanks.",
+  "Understood, thanks.",
   "Thanks, that's useful.",
 ];
 
@@ -298,7 +321,7 @@ const NEUTRAL_ACKNOWLEDGEMENTS = [
  * does not need to.
  */
 const STUCK_ACKNOWLEDGEMENTS = [
-  "That's alright — let's move on.",
+  "That's alright. Let's move on.",
   "No problem, we can leave that one.",
   "That's fine. Let's try a different one.",
   "Okay, no problem.",
@@ -327,7 +350,7 @@ export function resolveAcknowledgement(
   questionOrder: number,
 ): string {
   const stuck = decision.evidence.flaggedIssues.includes("stuck_or_evasive");
-  const drafted = (decision.acknowledgement ?? "").replace(/\s+/g, " ").trim();
+  const drafted = speakable((decision.acknowledgement ?? "").replace(/\s+/g, " "));
 
   const usable =
     drafted.length > 0 &&
@@ -347,6 +370,27 @@ export function resolveAcknowledgement(
 const MAX_CLARIFICATION_CHARS = 320;
 
 /**
+ * Removes the punctuation that makes generated text read as generated.
+ *
+ * Em dashes are the strongest tell, and they are worse than cosmetic here: the
+ * transcript is read by a recruiter, and speech synthesis renders a dash as an
+ * abrupt stop rather than the soft aside a writer intended. People speaking
+ * out loud use commas and full stops, so that is what the interviewer uses.
+ *
+ * Applied to every model-drafted line before it is spoken or stored. The
+ * authored bank text is written without them in the first place.
+ */
+export function speakable(text: string): string {
+  return text
+    .replace(/\s*—\s*/g, ", ")
+    .replace(/\s*–\s*/g, ", ")
+    .replace(/\s*;\s*/g, ". ")
+    .replace(/,\s*([.,!?])/g, "$1")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+/**
  * The sentence that carries an authored deep probe into the conversation.
  *
  * The probe itself is fixed; what varies is whether it lands as a follow-on
@@ -359,7 +403,7 @@ const MAX_CLARIFICATION_CHARS = 320;
  * question in front of the one the ladder chose.
  */
 export function resolveBridge(decision: InterviewDecision): string {
-  const drafted = (decision.bridge ?? "").replace(/\s+/g, " ").trim();
+  const drafted = speakable((decision.bridge ?? "").replace(/\s+/g, " "));
   if (drafted.length === 0 || drafted.length > MAX_ACKNOWLEDGEMENT_CHARS) return "";
   if (drafted.includes("?")) return "";
   return drafted;
@@ -378,7 +422,7 @@ export function resolveBridge(decision: InterviewDecision): string {
  * question instead of leaving the candidate with silence.
  */
 export function resolveClarification(decision: InterviewDecision): string {
-  const drafted = (decision.clarification ?? "").replace(/\s+/g, " ").trim();
+  const drafted = speakable((decision.clarification ?? "").replace(/\s+/g, " "));
   const usable =
     drafted.length > 0 &&
     drafted.length <= MAX_CLARIFICATION_CHARS &&
@@ -395,7 +439,7 @@ export function resolveFollowUpText(
   question: PlannedQuestion,
   decision: InterviewDecision,
 ): string | null {
-  const drafted = (decision.followUpQuestion ?? "").trim();
+  const drafted = speakable(decision.followUpQuestion ?? "");
   if (drafted.length > 0) return drafted;
   const banked = (question.followUpPrompt ?? "").trim();
   return banked.length > 0 ? banked : null;

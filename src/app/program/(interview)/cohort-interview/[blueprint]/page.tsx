@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireProgramMember } from "@/lib/program-auth";
 import { parseBlueprintParam, BLUEPRINT_LABEL } from "@/features/interview/cohort/blueprint";
 import { getCohortInterviewOverview } from "@/features/interview/service";
 import { toProgramMemberId } from "@/features/interview/provider";
 import { InterviewSession } from "@/components/interview/cohort/interview-session";
+import { prisma } from "@/lib/db";
 import "@/components/interview/cohort/interview.css";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +30,7 @@ export default async function CohortInterviewPage({
   // Authenticate BEFORE looking at the URL. Middleware already gates
   // /program/*, but ordering it this way means an unauthenticated request never
   // reaches request-parameter handling even if that matcher changes.
-  const { member } = await requireProgramMember();
+  const { member, userId } = await requireProgramMember();
 
   const { blueprint: rawBlueprint } = await params;
   const blueprint = parseBlueprintParam(rawBlueprint);
@@ -40,8 +41,23 @@ export default async function CohortInterviewPage({
     blueprint,
   );
 
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+  const isIshaan = user?.email === "demo-day31@abtalks.dev";
+
+  async function reattemptAction() {
+    "use server";
+    if (!isIshaan) return;
+    await prisma.generalInterview.deleteMany({
+      where: {
+        memberId: toProgramMemberId(member.id),
+        blueprint: blueprint as any,
+      }
+    });
+    redirect(`/program/cohort-interview/${blueprint}`);
+  }
+
   if (!overview.ok) {
-    return <Notice blueprint={blueprint} message={overview.message} />;
+    return <Notice blueprint={blueprint} message={overview.message} reattemptAction={isIshaan ? reattemptAction : undefined} />;
   }
 
   const { eligibility, questionCount, durationSec } = overview.data;
@@ -59,6 +75,7 @@ export default async function CohortInterviewPage({
         blueprint={blueprint}
         message="You have already completed this interview."
         reportHref={`/program/cohort-interview/${blueprint}/report`}
+        reattemptAction={isIshaan ? reattemptAction : undefined}
       />
     );
   }
@@ -82,10 +99,12 @@ function Notice({
   blueprint,
   message,
   reportHref,
+  reattemptAction,
 }: {
   blueprint: "DAY_15" | "DAY_31";
   message: string;
   reportHref?: string;
+  reattemptAction?: () => Promise<void>;
 }) {
   return (
     <div className="interview-room mx-auto w-full max-w-2xl py-10">
@@ -110,6 +129,16 @@ function Notice({
         >
           Back to dashboard
         </Link>
+        {reattemptAction && (
+          <form action={reattemptAction} className="inline-block ml-auto">
+            <button
+              type="submit"
+              className="inline-flex h-11 items-center rounded-[12px] border border-gray-300 bg-gray-100 px-5 text-[14px] font-semibold text-gray-800 transition-colors hover:bg-gray-200"
+            >
+              Reattempt (Demo)
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );
