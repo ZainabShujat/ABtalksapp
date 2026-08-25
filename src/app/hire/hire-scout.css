@@ -3995,4 +3995,46 @@ html.dark .hire-app.hire-menu {
     justify-content: center;
     min-height: 44px;
   }
+
+  /* The shortlist pill stays a pill, and stops sitting on the input.
+
+     Two faults at 390px. Its label wrapped to two lines, which turned a
+     999px-radius pill into a 58px lozenge with the text stacked inside it —
+     the count is one short line or it is nothing. And it floats at
+     bottom:22px, which put it straight over the composer: the bar spanned
+     764-822 while the composer ran 709-823, so it covered the field someone
+     was about to type into.
+
+     The label now truncates instead of wrapping — the tail it drops,
+     "saved for later", is the half that matters least — and the composer
+     reserves the pill's height underneath itself, but only while the pill is
+     actually on screen. */
+  .hire-podbar {
+    padding: 8px 8px 8px 14px;
+    gap: 10px;
+  }
+
+  .hire-podbar > span:not(.hire-podbar__icon) {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hire-app .hire-podbar button:not(.hire-podbar__close) {
+    flex: none;
+    white-space: nowrap;
+    padding: 0 14px;
+  }
+
+  .hire-podbar__close {
+    flex: none;
+    width: 28px;
+    height: 28px;
+  }
+
+  .hire-app--desk:has(.hire-podbar) .scout-composer {
+    padding-bottom: 74px;
+  }
 }
