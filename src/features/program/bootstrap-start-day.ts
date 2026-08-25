@@ -12,7 +12,7 @@ import {
 } from "./constants";
 
 const WAIVED_DAYS = Array.from(
-  { length: PROGRAM_MEMBER_START_DAY - 1 },
+  { length: Math.max(0, PROGRAM_MEMBER_START_DAY - 1) },
   (_, i) => i + 1,
 );
 
@@ -110,10 +110,20 @@ async function seedEarlyCommitDays(
   });
 }
 
+function isStartDayWaiver(payload: unknown): boolean {
+  return (
+    !!payload &&
+    typeof payload === "object" &&
+    (payload as { waived?: unknown }).waived === true &&
+    (payload as { reason?: unknown }).reason === "cohort_start_day"
+  );
+}
+
 /**
  * Idempotent: waive days 1..(START-1) as PASSED, unlock START day,
  * award mission points only for newly created waived rows,
- * and seed commit activity for the first three cohort calendar days.
+ * retract unused start-day waivers when START_DAY is 1,
+ * and seed commit activity for waived calendar days (none when START_DAY is 1).
  *
  * Uses batched queries (no per-day round-trips) so Neon pooler
  * interactive transactions do not hit P2028 timeouts.
@@ -127,24 +137,31 @@ export async function bootstrapMemberStartDay(
     select: {
       id: true,
       highestUnlockedDay: true,
+      missionPoints: true,
+      cleanPassCount: true,
       cohort: { select: { startsAt: true, endsAt: true } },
     },
   });
   if (!member) return;
 
-  const existingPassed = await tx.programMissionSubmission.findMany({
-    where: {
-      memberId,
-      dayNumber: { in: WAIVED_DAYS },
-      passed: true,
-    },
-    select: { dayNumber: true },
-  });
+  const existingPassed =
+    WAIVED_DAYS.length === 0
+      ? []
+      : await tx.programMissionSubmission.findMany({
+          where: {
+            memberId,
+            dayNumber: { in: WAIVED_DAYS },
+            passed: true,
+          },
+          select: { dayNumber: true },
+        });
   const passedSet = new Set(existingPassed.map((s) => s.dayNumber));
   const missingDays = WAIVED_DAYS.filter((d) => !passedSet.has(d));
 
   let pointsAdded = 0;
   let cleanPassesAdded = 0;
+  let pointsRemoved = 0;
+  let cleanPassesRemoved = 0;
 
   if (missingDays.length > 0) {
     const [days, existingAttempts] = await Promise.all([
@@ -197,30 +214,66 @@ export async function bootstrapMemberStartDay(
     await tx.programMissionSubmission.createMany({ data: rows });
   }
 
-  const nextUnlocked = Math.max(
-    member.highestUnlockedDay,
-    PROGRAM_MEMBER_START_DAY,
-  );
+  const passedRows = await tx.programMissionSubmission.findMany({
+    where: { memberId, passed: true },
+    select: {
+      id: true,
+      dayNumber: true,
+      payload: true,
+      pointsAwarded: true,
+    },
+  });
+  const hasEarnedPass = passedRows.some((row) => !isStartDayWaiver(row.payload));
+  const staleWaivers = passedRows.filter((row) => {
+    if (!isStartDayWaiver(row.payload)) return false;
+    if (hasEarnedPass) return false;
+    return !WAIVED_DAYS.includes(row.dayNumber);
+  });
+
+  if (staleWaivers.length > 0) {
+    pointsRemoved = staleWaivers.reduce((sum, row) => sum + row.pointsAwarded, 0);
+    cleanPassesRemoved = staleWaivers.length;
+    await tx.programMissionSubmission.deleteMany({
+      where: { id: { in: staleWaivers.map((row) => row.id) } },
+    });
+  }
+
+  const nextUnlocked =
+    hasEarnedPass || member.highestUnlockedDay > 4
+      ? Math.max(member.highestUnlockedDay, PROGRAM_MEMBER_START_DAY)
+      : PROGRAM_MEMBER_START_DAY;
 
   const needsUnlockUpdate = nextUnlocked !== member.highestUnlockedDay;
+  const nextMissionPoints = Math.max(
+    0,
+    member.missionPoints + pointsAdded - pointsRemoved,
+  );
+  const nextCleanPassCount = Math.max(
+    0,
+    member.cleanPassCount + cleanPassesAdded - cleanPassesRemoved,
+  );
+  const needsScoreUpdate =
+    nextMissionPoints !== member.missionPoints ||
+    nextCleanPassCount !== member.cleanPassCount;
 
-  if (pointsAdded > 0 || cleanPassesAdded > 0 || needsUnlockUpdate) {
+  if (needsUnlockUpdate || needsScoreUpdate) {
     await tx.programMember.update({
       where: { id: memberId },
       data: {
         highestUnlockedDay: nextUnlocked,
-        ...(pointsAdded > 0
-          ? { missionPoints: { increment: pointsAdded } }
-          : {}),
-        ...(cleanPassesAdded > 0
-          ? { cleanPassCount: { increment: cleanPassesAdded } }
+        ...(needsScoreUpdate
+          ? {
+              missionPoints: nextMissionPoints,
+              cleanPassCount: nextCleanPassCount,
+            }
           : {}),
       },
     });
   }
 
-  // Always seed early commit days (idempotent) so heatmap days 1–3 are green.
-  await seedEarlyCommitDays(tx, memberId, member.cohort);
+  if (EARLY_COMMIT_DAY_COUNT > 0) {
+    await seedEarlyCommitDays(tx, memberId, member.cohort);
+  }
 
   await recomputeTotalScore(tx, memberId);
 }
