@@ -4,6 +4,7 @@ import {
   activeQuestionView,
   classifyAnswer,
   questionAsAsked,
+  updateCalibration,
   updateCompetenceSignal,
 } from "@/features/interview/agent/depth";
 import {
@@ -117,6 +118,7 @@ export function createAnalyzeAnswer(llm: InterviewLLM) {
         state.maxFollowUps - state.interviewState.followUpsAsked,
       ),
       recentTranscript: state.interviewState.transcript,
+      calibratedLevel: state.interviewState.calibration?.level ?? null,
     });
 
     logger.info("[interview-agent] answer analyzed", {
@@ -322,6 +324,13 @@ export function updateState(state: InterviewAgentState): NodeUpdate {
       state.interviewState.competenceSignal,
       question.competency,
       strength,
+    ),
+    // Set once, from the opening core answers, then frozen. See
+    // `updateCalibration` for why it is separate from the rolling signal.
+    calibration: updateCalibration(
+      state.interviewState.calibration,
+      strength,
+      question.tier ?? "CORE",
     ),
   };
 

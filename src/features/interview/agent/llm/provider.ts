@@ -29,6 +29,12 @@ export type AnalyzeAnswerInput = {
   followUpsRemaining: number;
   /** Tail of the conversation, for pronoun/context resolution only. */
   recentTranscript: TranscriptTurn[];
+  /**
+   * The early read of the candidate's level, once three core answers have
+   * landed. Null before that. Shapes the interviewer's TONE only; every
+   * assessment decision is still made from the evidence it reports back.
+   */
+  calibratedLevel?: "FOUNDATIONS" | "WORKING" | "ADVANCED" | null;
 };
 
 export interface InterviewLLM {

@@ -109,6 +109,17 @@ export const MAX_REPEATS_PER_QUESTION = 2;
  */
 export const MAX_CLARIFICATIONS_PER_QUESTION = 2;
 
+/**
+ * Core answers used to read the candidate's level before the interview commits
+ * to a posture.
+ *
+ * Three, because one answer is noise and two is a coin flip: someone can open
+ * badly on a topic they happen not to own and be strong everywhere else. Three
+ * is also early enough that the remaining questions still benefit from the
+ * read.
+ */
+export const CALIBRATION_ANSWERS = 3;
+
 /* ------------------------- general interviewer (not V1 — see docs/plans/066) */
 
 /** Completed challenge days required to unlock a first attempt. */

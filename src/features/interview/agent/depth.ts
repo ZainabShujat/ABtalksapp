@@ -1,5 +1,6 @@
 import type { DeepProbe, ScaffoldProbe } from "@/features/interview/cohort/question-bank";
 import {
+  CALIBRATION_ANSWERS,
   DEEP_PROBE_MIN_EVIDENCE,
   MAX_ESCALATIONS_PER_QUESTION,
   STRONG_ANSWERS_TO_RAISE_CEILING,
@@ -179,6 +180,48 @@ export function updateCompetenceSignal(
   return { ...(signal ?? {}), [competency]: next };
 }
 
+export type Calibration = NonNullable<InterviewState["calibration"]>;
+
+/**
+ * Reads the candidate's level from their first few core answers, once.
+ *
+ * A human interviewer spends the opening minutes working out who they are
+ * talking to, then pitches the rest accordingly: they push a strong candidate
+ * toward their ceiling and stop pushing someone who is already struggling.
+ * Without this the interview treats question ten exactly like question one.
+ *
+ * Only CORE answers count, and only until `CALIBRATION_ANSWERS` of them have
+ * landed. After that the level is frozen: re-reading it every turn would make
+ * it a rolling average, which is what `competenceSignal` already is.
+ */
+export function updateCalibration(
+  calibration: Calibration | undefined,
+  strength: AnswerStrength,
+  tier: string,
+): Calibration {
+  const current = calibration ?? { answered: 0, strong: 0, weak: 0, level: null };
+
+  // Extension questions sit outside the comparable spine, so they must not
+  // decide how the rest of the assessed interview is pitched.
+  if (current.level !== null || tier !== "CORE") return current;
+
+  const answered = current.answered + 1;
+  const strong = current.strong + (strength === "STRONG" ? 1 : 0);
+  const weak = current.weak + (strength === "WEAK" ? 1 : 0);
+
+  if (answered < CALIBRATION_ANSWERS) {
+    return { answered, strong, weak, level: null };
+  }
+
+  // Majority decides. A candidate has to be mostly strong to earn the harder
+  // interview, and mostly weak before the interview eases off — a single bad
+  // answer in three does not relabel someone.
+  const level: Calibration["level"] =
+    strong > answered / 2 ? "ADVANCED" : weak > answered / 2 ? "FOUNDATIONS" : "WORKING";
+
+  return { answered, strong, weak, level };
+}
+
 /**
  * How many escalations this competency may spend on the current question.
  *
@@ -190,12 +233,21 @@ export function updateCompetenceSignal(
 export function escalationCeiling(
   signal: CompetenceSignal | undefined,
   competency: Competency,
+  level?: Calibration["level"],
 ): number {
   const current = signal?.[competency] ?? { strong: 0, weak: 0 };
   if (current.weak >= WEAK_ANSWERS_TO_SUPPRESS) return 0;
   if (current.strong >= STRONG_ANSWERS_TO_RAISE_CEILING) {
     return MAX_ESCALATIONS_PER_QUESTION;
   }
+
+  // The calibrated read shifts the STARTING posture, and is deliberately weaker
+  // than the live streak above: a candidate who opened badly but is answering
+  // well now still earns the full ceiling, and one who opened well but is
+  // struggling now is still suppressed. Recent evidence beats an early
+  // impression, which is also how a fair human interviewer behaves.
+  if (level === "ADVANCED") return MAX_ESCALATIONS_PER_QUESTION;
+  if (level === "FOUNDATIONS") return 0;
   return 1;
 }
 
@@ -286,7 +338,11 @@ export function decideLadderMove(
       question.competency,
       strength,
     );
-    const ceiling = escalationCeiling(projected, question.competency);
+    const ceiling = escalationCeiling(
+      projected,
+      question.competency,
+      state.calibration?.level ?? null,
+    );
     if (escalationsAsked >= ceiling) {
       return {
         move: "MOVE_ON",

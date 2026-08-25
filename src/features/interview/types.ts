@@ -333,6 +333,25 @@ export type InterviewState = {
    * not punish a candidate indefinitely for one weak answer" is expressed as a
    * counter that resets the moment they recover.
    */
+  /**
+   * The early read of how far this candidate can be pushed.
+   *
+   * Distinct from `competenceSignal`, which is a rolling per-competency streak
+   * that resets constantly. Calibration is set ONCE, from the first few core
+   * answers, and then holds — it is the difference between "how did that last
+   * answer go" and "who am I talking to".
+   *
+   * It changes DEPTH POSTURE only: how readily the interview escalates, and
+   * whether a struggling candidate gets a scaffold before a harder rung. It
+   * never changes which CORE questions are asked, because that is the basis on
+   * which two candidates are compared.
+   */
+  calibration?: {
+    answered: number;
+    strong: number;
+    weak: number;
+    level: "FOUNDATIONS" | "WORKING" | "ADVANCED" | null;
+  };
   competenceSignal?: Partial<
     Record<Competency, { strong: number; weak: number }>
   >;

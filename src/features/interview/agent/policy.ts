@@ -384,7 +384,7 @@ export function speakable(text: string): string {
   return text
     .replace(/\s*—\s*/g, ", ")
     .replace(/\s*–\s*/g, ", ")
-    .replace(/\s*;\s*/g, ". ")
+    .replace(/\s*;\s*(\w)/g, (_m, c: string) => `. ${c.toUpperCase()}`)
     .replace(/,\s*([.,!?])/g, "$1")
     .replace(/\s{2,}/g, " ")
     .trim();
