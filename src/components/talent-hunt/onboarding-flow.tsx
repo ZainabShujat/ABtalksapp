@@ -80,10 +80,10 @@ export function CohortRegisterOnboardingFlow({
   }
 
   return (
-    <div className="relative flex min-h-svh flex-col overflow-hidden bg-gradient-to-br from-background via-background to-primary/5">
+    <div className="theme-abtalks-orange relative flex min-h-svh flex-col overflow-hidden bg-gradient-to-br from-background via-background to-primary/5">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-32 top-20 h-72 w-72 rounded-full bg-primary/15 blur-3xl" />
-        <div className="absolute -right-32 top-60 h-80 w-80 rounded-full bg-violet-500/10 blur-3xl" />
+        <div className="absolute -right-32 top-60 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
       </div>
 
       <header className="relative z-10 shrink-0 px-6 py-4">
@@ -152,7 +152,7 @@ export function CohortRegisterOnboardingFlow({
               onClick={handleGetStarted}
               className={cn(
                 buttonVariants({ size: "lg" }),
-                "gap-2 bg-gradient-to-r from-primary to-violet-500 px-6 text-primary-foreground hover:from-primary/90 hover:to-violet-500/90",
+                "gap-2 bg-gradient-to-r from-primary to-[#C9411C] px-6 text-primary-foreground hover:from-primary/90 hover:to-[#C9411C]",
               )}
             >
               <Rocket className="size-4" aria-hidden />

@@ -24,10 +24,8 @@ import { ProfileForm } from "./profile-form";
 import type { ProfileFormValues } from "@/lib/validations/profile";
 import { userTypeLabel } from "@/lib/profile-display";
 import { UserType } from "@prisma/client";
-import { isClaudeEnabled, isOtpVerificationRequired } from "@/lib/feature-flags";
-import { shouldShowClaudeBanner } from "@/features/user/check-claude-enrollment";
+import { isOtpVerificationRequired } from "@/lib/feature-flags";
 import { getMyRedemptions } from "@/features/marketplace/get-my-redemptions";
-import { ClaudeEnrollmentBanner } from "@/components/shared/claude-enrollment-banner";
 
 function domainDisplayName(domain: Domain | null) {
   if (!domain) return "—";
@@ -67,12 +65,8 @@ export default async function ProfilePage() {
   }
 
   const userId = session.user.id;
-  const claudeEnabled = isClaudeEnabled();
-  const [bundle, claudeBanner, myRedemptions] = await Promise.all([
+  const [bundle, myRedemptions] = await Promise.all([
     getProfile(userId),
-    claudeEnabled
-      ? shouldShowClaudeBanner(userId)
-      : Promise.resolve({ show: false, startsAt: null as Date | null }),
     getMyRedemptions(userId),
   ]);
 
@@ -88,9 +82,6 @@ export default async function ProfilePage() {
     return (
       <div className="flex min-h-svh flex-col">
         <AppHeader user={headerUser} />
-        {claudeBanner.show && claudeBanner.startsAt ? (
-          <ClaudeEnrollmentBanner claudeStartsAt={claudeBanner.startsAt} />
-        ) : null}
         <main className="mx-auto flex max-w-lg flex-1 flex-col items-center justify-center px-4 py-12 text-center">
           <h1 className="font-display text-lg font-semibold">
             Complete your registration first
@@ -147,9 +138,6 @@ export default async function ProfilePage() {
   return (
     <div className="flex min-h-svh flex-col bg-muted/30">
       <AppHeader user={headerUser} domain={profile.domain} />
-      {claudeBanner.show && claudeBanner.startsAt ? (
-        <ClaudeEnrollmentBanner claudeStartsAt={claudeBanner.startsAt} />
-      ) : null}
       <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 space-y-5 px-4 py-5 sm:space-y-8 sm:py-8">
         <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">Profile</h1>
 
