@@ -4099,4 +4099,44 @@ html.dark .hire-app.hire-menu {
   .hire-app__wordmark {
     font-size: 17px;
   }
+
+  /* The card's actions: one centred above, two sharing the row below.
+
+     They were a wrap row of three buttons that agree on nothing — 38px, 40px
+     and 38px tall, each only as wide as its own label — so they broke into a
+     ragged left-aligned staircase. A two-column grid fixes the shape without
+     inflating them: the first action spans both columns and centres itself at
+     its own width, and the two that follow take one column each. Their own
+     heights are left alone. */
+  .desk-card__cta,
+  .hire-pod__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    justify-content: stretch;
+  }
+
+  .desk-card__cta > *,
+  .hire-app .desk-card__cta > *,
+  .hire-pod__actions > * {
+    width: 100%;
+    height: 38px;
+    justify-content: center;
+    padding: 0 8px;
+    /* One line each. Half a column is not much room, and a label that wraps
+       breaks out of a fixed-height button — "Remove from Shortlist" did. */
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .desk-card__cta > *:first-child,
+  .hire-app .desk-card__cta > *:first-child,
+  .hire-pod__actions > *:first-child {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: auto;
+    padding: 0 18px;
+  }
 }
