@@ -72,6 +72,18 @@ function ttsVendor(): SpeechVendor | null {
 /** Wall-clock ceiling on either upstream call. */
 const REQUEST_TIMEOUT_MS = 30_000;
 
+/**
+ * Transcription gets its own, much longer budget.
+ *
+ * Synthesis time depends on one short interviewer line, so 30s is generous.
+ * Transcription time scales with how long the CANDIDATE talked: a three-minute
+ * answer is a multi-megabyte upload followed by a proportionally longer
+ * transcription. Sharing the 30s ceiling meant that the better someone
+ * answered, the more likely their answer was thrown away — which is the exact
+ * opposite of what an assessment should do.
+ */
+const TRANSCRIBE_TIMEOUT_MS = 180_000;
+
 export {
   ALLOWED_AUDIO_TYPES,
   MAX_AUDIO_BYTES,
@@ -112,7 +124,7 @@ export async function transcribeAnswer(
   audio: Blob,
   filename: string,
   safetyIdentifier: string,
-): Promise<VoiceResult<{ text: string }>> {
+): Promise<VoiceResult<{ text: string; language: string | null }>> {
   const vendor = sttVendor();
   if (!vendor) {
     return { ok: false, status: 503, message: "Voice is not configured." };
@@ -125,10 +137,18 @@ export async function transcribeAnswer(
   const form = new FormData();
   form.append("file", audio, filename);
   form.append("model", model);
-  // A hint, not a restriction: candidates are Indian professionals speaking
-  // English, and naming the language cuts spurious language detection on short
-  // or noisy clips.
-  form.append("language", "en");
+
+  // `verbose_json` is what carries the DETECTED LANGUAGE, which the English-only
+  // gate prefers over any test run on the transcript text. Only the Whisper
+  // family supports it: OpenAI's gpt-4o-* transcribe models accept `json` and
+  // `text` only, and sending verbose_json to them is a 400. When it is not
+  // available the gate falls back to its script check.
+  const supportsVerbose = /whisper/i.test(model);
+  if (supportsVerbose) form.append("response_format", "verbose_json");
+  // Removed the hardcoded language hint. When 'language' is set to 'en', Whisper 
+  // forces non-English audio into English words, causing severe hallucinations. 
+  // Omitting this allows it to auto-detect the spoken language (e.g. Hindi) and 
+  // correctly transcribe or translate it.
 
   try {
     const res = await fetch(
@@ -140,7 +160,7 @@ export async function transcribeAnswer(
         "OpenAI-Safety-Identifier": safetyIdentifier,
       },
       body: form,
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: AbortSignal.timeout(TRANSCRIBE_TIMEOUT_MS),
       },
     );
 
@@ -158,8 +178,15 @@ export async function transcribeAnswer(
       };
     }
 
-    const data = (await res.json()) as { text?: unknown };
+    const data = (await res.json()) as {
+      text?: unknown;
+      language?: unknown;
+    };
     const text = typeof data.text === "string" ? data.text.trim() : "";
+    const language =
+      typeof data.language === "string" && data.language.trim().length > 0
+        ? data.language.trim()
+        : null;
 
     // An empty transcript is a real outcome — silence, a muted mic, a click.
     // It is reported as such rather than sent onward, because submitting an
@@ -172,7 +199,7 @@ export async function transcribeAnswer(
       };
     }
 
-    return { ok: true, data: { text } };
+    return { ok: true, data: { text, language } };
   } catch (error) {
     logger.error("[interview/stt] request errored", { error: String(error) });
     return {

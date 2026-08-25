@@ -157,7 +157,7 @@ const DAY_15_QUESTIONS: readonly CoreQuestion[] = [
     id: "d15-q03",
     competency: "CONCEPTUAL",
     difficulty: "easy",
-    text: "Why did the program have you run a model locally with Ollama before using any hosted API?",
+    text: "What did running the model locally with Ollama let you learn that a hosted API would have hidden from you?",
     sourceDays: [1, 2],
     sourceLabel: "Day 1 VS Code & Python Setup · Day 2 Ollama + AI Coding Assistant",
     expectedEvidence: [
@@ -248,7 +248,7 @@ const DAY_15_QUESTIONS: readonly CoreQuestion[] = [
     id: "d15-q01",
     competency: "CONCEPTUAL",
     difficulty: "medium",
-    text: "You split the policy documents into chunks of 500 characters with 50 characters of overlap before embedding them. Why does the overlap matter, and what would you expect to break if you set it to zero?",
+    text: "You embedded the policy documents in 500-character chunks with 50 characters of overlap. Why does that overlap matter?",
     sourceDays: [6, 7],
     sourceLabel: "Day 6 Building the Knowledge Base · Day 7 Embeddings Explained",
     expectedEvidence: [
@@ -260,7 +260,7 @@ const DAY_15_QUESTIONS: readonly CoreQuestion[] = [
     minEvidence: 2,
     maxFollowUps: 1,
     followUpPrompt:
-      "Think about a policy exclusion that spans two chunks — what does retrieval return?",
+      "What would you expect to break if you set the overlap to zero?",
     mode: "CONCEPTUAL",
     groundsOn: { day: 6, artifact: "submission" },
     deepProbes: [
@@ -295,7 +295,7 @@ const DAY_15_QUESTIONS: readonly CoreQuestion[] = [
     id: "d15-q10",
     competency: "PROBLEM_SOLVING",
     difficulty: "medium",
-    text: "Your local chatbot kept conversation history. Describe how you stored it, and what breaks in a long conversation.",
+    text: "Your local chatbot kept conversation history. How did you store it?",
     sourceDays: [3],
     sourceLabel: "Day 3 First Python Project, Local Chatbot & Git/GitHub",
     expectedEvidence: [
@@ -306,7 +306,8 @@ const DAY_15_QUESTIONS: readonly CoreQuestion[] = [
     ],
     minEvidence: 2,
     maxFollowUps: 1,
-    followUpPrompt: "What happens on turn fifty?",
+    followUpPrompt:
+      "What starts to break once that conversation gets long?",
     mode: "IMPLEMENTATION",
     groundsOn: { day: 3, artifact: "repo" },
     deepProbes: [
@@ -428,7 +429,7 @@ const DAY_15_QUESTIONS: readonly CoreQuestion[] = [
     id: "d15-q07",
     competency: "CONCEPTUAL",
     difficulty: "medium",
-    text: "You compared Chroma and Pinecone and chose Chroma. What was the reasoning, and what would make you switch?",
+    text: "You compared Chroma and Pinecone and chose Chroma. What decided it?",
     sourceDays: [7, 8],
     sourceLabel: "Day 7 Embeddings Explained · Day 8 Vector Databases Overview",
     expectedEvidence: [
@@ -439,7 +440,8 @@ const DAY_15_QUESTIONS: readonly CoreQuestion[] = [
     ],
     minEvidence: 2,
     maxFollowUps: 1,
-    followUpPrompt: "At what point does that choice stop working?",
+    followUpPrompt:
+      "What would make you switch to Pinecone?",
     mode: "DECISION",
     groundsOn: { day: 8, artifact: "submission" },
     deepProbes: [
@@ -474,7 +476,7 @@ const DAY_15_QUESTIONS: readonly CoreQuestion[] = [
     id: "d15-q02",
     competency: "PRACTICAL",
     difficulty: "hard",
-    text: "On Day 10 you classified questions as structured, unstructured, or both. Give me an actual question from your test harness that needed both paths, and tell me what each path returned.",
+    text: "On Day 10 you classified questions as structured, unstructured, or both. Give me a question from your test harness that needed both paths.",
     sourceDays: [4, 5, 10],
     sourceLabel:
       "Day 4 Structured Data · Day 5 Unstructured Data · Day 10 Retrieval / Matching Engine",
@@ -487,7 +489,7 @@ const DAY_15_QUESTIONS: readonly CoreQuestion[] = [
     minEvidence: 3,
     maxFollowUps: 1,
     followUpPrompt:
-      "Which part of that answer came from SQL and which from the vector store?",
+      "What did each path return for it?",
     mode: "EVIDENCE",
     groundsOn: { day: 10, artifact: "repo" },
     deepProbes: [
@@ -634,7 +636,7 @@ const DAY_31_QUESTIONS: readonly CoreQuestion[] = [
     id: "d31-q01",
     competency: "TECHNICAL_DEPTH",
     difficulty: "hard",
-    text: "Walk me through what happens between a member pressing send and the first token appearing on their screen, in your streamed /chat.",
+    text: "In your streamed /chat, what has to finish before the model can write the first token?",
     sourceDays: [18],
     sourceLabel: "Day 18 Full-Stack Integration & Streaming Responses",
     expectedEvidence: [
@@ -725,7 +727,7 @@ const DAY_31_QUESTIONS: readonly CoreQuestion[] = [
     id: "d31-q02",
     competency: "PROBLEM_SOLVING",
     difficulty: "hard",
-    text: "A member's conversation passes roughly 2000 tokens of history. What does your system do, and what is the risk of that strategy?",
+    text: "A member's conversation passes roughly 2000 tokens of history. What does your system do?",
     sourceDays: [20],
     sourceLabel: "Day 20 Conversation Memory & Context Management",
     expectedEvidence: [
@@ -737,7 +739,8 @@ const DAY_31_QUESTIONS: readonly CoreQuestion[] = [
     ],
     minEvidence: 3,
     maxFollowUps: 2,
-    followUpPrompt: "What is the one thing that must survive summarisation?",
+    followUpPrompt:
+      "What is the risk of handling it that way?",
     mode: "SCENARIO",
     groundsOn: { day: 20, artifact: "repo" },
     deepProbes: [
@@ -770,7 +773,7 @@ const DAY_31_QUESTIONS: readonly CoreQuestion[] = [
     id: "d31-q03",
     competency: "CONCEPTUAL",
     difficulty: "hard",
-    text: "Why does PII redaction sit on the logging path specifically, and what does putting it there not protect against?",
+    text: "Why does your PII redaction sit on the logging path specifically?",
     sourceDays: [25],
     sourceLabel: "Day 25 AI Governance, PHI Handling & Guardrails",
     expectedEvidence: [
@@ -782,7 +785,8 @@ const DAY_31_QUESTIONS: readonly CoreQuestion[] = [
     ],
     minEvidence: 3,
     maxFollowUps: 1,
-    followUpPrompt: "Does redacting the log stop PHI reaching the model?",
+    followUpPrompt:
+      "What does putting it there not protect against?",
     mode: "CONCEPTUAL",
     groundsOn: { day: 25, artifact: "submission" },
     deepProbes: [
@@ -815,7 +819,7 @@ const DAY_31_QUESTIONS: readonly CoreQuestion[] = [
     id: "d31-q08",
     competency: "PRACTICAL",
     difficulty: "hard",
-    text: "You containerised the app, then deployed it to Minikube with two backend replicas. What actually had to change between docker-compose and Kubernetes?",
+    text: "You containerised the app, then deployed it to Minikube with two backend replicas. What was the biggest thing you had to change between docker-compose and Kubernetes?",
     sourceDays: [28, 29],
     sourceLabel: "Day 28 Docker · Day 29 Kubernetes",
     expectedEvidence: [
@@ -950,7 +954,7 @@ const DAY_31_QUESTIONS: readonly CoreQuestion[] = [
     id: "d31-q06",
     competency: "PRACTICAL",
     difficulty: "hard",
-    text: "Which RAGAS metric came out weakest, what was your hypothesis, and did your fix actually move it?",
+    text: "Which RAGAS metric came out weakest for you?",
     sourceDays: [27],
     sourceLabel: "Day 27 Evaluation Frameworks",
     expectedEvidence: [
@@ -965,7 +969,8 @@ const DAY_31_QUESTIONS: readonly CoreQuestion[] = [
     ],
     minEvidence: 3,
     maxFollowUps: 2,
-    followUpPrompt: "Did the number move after your fix?",
+    followUpPrompt:
+      "What was your hypothesis for why it was weak?",
     mode: "EVIDENCE",
     groundsOn: { day: 27, artifact: "submission" },
     deepProbes: [
@@ -998,7 +1003,7 @@ const DAY_31_QUESTIONS: readonly CoreQuestion[] = [
     id: "d31-q10",
     competency: "PROBLEM_SOLVING",
     difficulty: "hard",
-    text: "A member says an answer is wrong, but the bot cited a policy source. How do you investigate?",
+    text: "A member says an answer is wrong, but the bot cited a policy source. What do you check first?",
     sourceDays: [10, 19, 27],
     sourceLabel:
       "Day 10 Retrieval Engine · Day 19 Response Formatting & Citations · Day 27 Evaluation Frameworks",

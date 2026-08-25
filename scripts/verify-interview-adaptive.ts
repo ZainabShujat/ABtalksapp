@@ -1,3 +1,4 @@
+import { redirectLineFor } from "@/features/interview/agent/policy";
 /**
  * Behavioural checks for the ADAPTIVE interview brain (docs/plans/072, Phase 1).
  *
@@ -465,7 +466,11 @@ async function main() {
       "Anyway, who won the World Cup?",
     );
 
-    assert.equal(out.action, "REDIRECT");
+    // The FIRST non-answer is restated, not redirected: a greeting or a stray
+    // remark before the candidate has attempted anything is not evasion. What
+    // this test really guards is unchanged — no evidence is recorded and the
+    // question stays on the floor.
+    assert.equal(out.action, "REPEAT");
     assert.equal(out.state.evidenceByQuestionId[question.id], undefined);
     assert.equal(out.state.currentQuestionIndex, 1, "question stays on the floor");
     assert.equal(out.state.followUpsAsked, 0, "a redirect spends no follow-up budget");
@@ -479,7 +484,22 @@ async function main() {
       question.id,
       "Tell me a joke instead.",
     );
-    assert.ok(out.prompt?.includes("keep us focused"));
+    // Asserts the INVARIANT, not one wording: the redirect line for this
+    // interview is spoken, the question stays on the floor, and the off-topic
+    // request is never answered. Redirect wording now varies per interview, so
+    // pinning a literal string here would fail for two candidates in three.
+    // Redirect wording appears on a REPEATED off-topic turn. On the first one
+    // the interviewer simply puts the question again.
+    const second = await turn(
+      fixedLLM({ evidence: evidence({ relevance: "OFF_TOPIC" }) }),
+      { ...stateAt(1), repeatsAsked: 1 },
+      question.id,
+      "Still not answering.",
+    );
+    assert.equal(second.action, "REDIRECT");
+    assert.ok(second.prompt?.includes(redirectLineFor("iv_adaptive")));
+    assert.ok(out.prompt?.includes(question.text));
+    assert.ok(!/joke/i.test(out.prompt ?? ""));
     assert.ok(!out.prompt?.toLowerCase().includes("joke"));
   });
 

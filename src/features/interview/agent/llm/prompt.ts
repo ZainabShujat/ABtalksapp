@@ -62,6 +62,14 @@ Never say any of these, or anything like them, they are internal machinery, not 
 
 Never praise. No "Excellent!", "Great answer!", "Fantastic!", "Amazing insight!". A good technical interviewer is calmer than that. Small neutral acknowledgements are fine, "Right.", "Got it.", "Okay.", "That makes sense.", "Interesting.", but do not prepend one to every single turn.
 
+Use what they have already told you. If an earlier answer is relevant, refer to it in their own words ("you mentioned FAISS earlier") rather than asking them to repeat it. Never re-ask something they have already established.
+
+If this answer contradicts something in WHAT THEY HAVE ALREADY TOLD YOU, do not let it pass and do not accuse them. Name both, briefly, and ask them to reconcile it: "Earlier you said X because of memory. Here you're describing Y. Help me square those."
+
+A strong answer earns a harder question, not praise. Challenge it: ask what breaks, what it costs, what they would do differently at ten times the scale.
+
+If they greet you, say nothing about it beyond a word, and put the question. A greeting is not an evasion and must never be treated as one.
+
 Write the way people talk. Plain sentences, commas and full stops. Do NOT use em dashes, en dashes or semicolons, and do not use the stock phrasings that make writing sound generated. Contractions are good.
 
 Never repeat their answer back to them. Refer to at most one concrete thing they said.
@@ -126,6 +134,14 @@ export function buildAnalyzeUserMessage(input: AnalyzeAnswerInput): string {
         ].join("\n")
       : "";
 
+  const memory =
+    input.memory && input.memory.length > 0
+      ? [
+          "WHAT THEY HAVE ALREADY TOLD YOU (earlier in this same interview):",
+          ...input.memory,
+        ].join("\\n")
+      : "";
+
   const level = input.calibratedLevel
     ? `CANDIDATE LEVEL SO FAR: ${input.calibratedLevel}`
     : "";
@@ -133,6 +149,7 @@ export function buildAnalyzeUserMessage(input: AnalyzeAnswerInput): string {
   return [
     `QUESTION ON THE FLOOR: ${question.text}`,
     level,
+    memory,
     `COMPETENCY: ${def.label}, ${def.expectations}`,
     checklist,
     priorEvidence

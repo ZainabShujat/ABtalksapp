@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { resolveInterviewMemberId } from "@/features/interview/provider";
+import { checkLanguage } from "@/features/interview/language-gate";
 import {
   isSttConfigured,
   transcribeAnswer,
@@ -13,6 +14,7 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 300; // 5 minutes max execution on Vercel
 
 /**
  * Speech → text for one interview answer.
@@ -95,5 +97,21 @@ export async function POST(request: Request) {
     chars: result.data.text.length,
   });
 
-  return NextResponse.json({ ok: true, data: { text: result.data.text } });
+  // The English-only gate sits HERE: after transcription, before the text is
+  // ever handed to the agent. Everything downstream — evidence, routing,
+  // scoring, the report — stays unaware that language checking exists.
+  const language = checkLanguage(result.data.text, result.data.language);
+  if (!language.ok) {
+    logger.info("[interview/stt] non-English answer", {
+      memberId,
+      reason: language.reason,
+      nonLatinRatio: Number(language.nonLatinRatio.toFixed(2)),
+      detected: result.data.language ?? "unknown",
+    });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    data: { text: result.data.text, english: language.ok },
+  });
 }

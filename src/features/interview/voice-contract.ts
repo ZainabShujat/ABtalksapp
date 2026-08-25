@@ -10,8 +10,15 @@ import { createHash } from "node:crypto";
  * being tested.
  */
 
-/** Upload ceiling. Roughly four minutes of Opus — far beyond any single answer. */
-export const MAX_AUDIO_BYTES = 8 * 1024 * 1024;
+/**
+ * Upload ceiling, just under the 25 MB both speech vendors accept.
+ *
+ * Was 8 MB. Opus at conversational bitrates is small, but a browser that falls
+ * back to a less efficient container can produce far more per minute, and a
+ * long, detailed answer is precisely the one worth keeping. The provider limit
+ * is the only ceiling with a real reason behind it, so that is the one used.
+ */
+export const MAX_AUDIO_BYTES = 24 * 1024 * 1024;
 
 export const ALLOWED_AUDIO_TYPES = [
   "audio/webm",

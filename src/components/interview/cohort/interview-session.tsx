@@ -34,12 +34,12 @@ import "./interview.css";
 type Stage =
   | { name: "brief" }
   | {
-      name: "live";
-      interviewId: string;
-      question: ClientQuestion;
-      /** Full opening line + first question, as the server composed it. */
-      openingPrompt?: string;
-    }
+    name: "live";
+    interviewId: string;
+    question: ClientQuestion;
+    /** Full opening line + first question, as the server composed it. */
+    openingPrompt?: string;
+  }
   | { name: "done"; result: FinishInterviewData };
 
 export function InterviewSession({
@@ -47,14 +47,12 @@ export function InterviewSession({
   candidateName,
   questionCount,
   durationSec,
-  reattemptAction,
 }: {
   blueprint: InterviewBlueprintKey;
   candidateName: string;
   /** Used only for the "about N questions" framing, never as a progress bar. */
   questionCount: number;
   durationSec: number;
-  reattemptAction?: () => Promise<void>;
 }) {
   const router = useRouter();
   const [stage, setStage] = useState<Stage>({ name: "brief" });
@@ -223,16 +221,6 @@ export function InterviewSession({
         >
           Back to dashboard
         </Link>
-        {reattemptAction && (
-          <form action={reattemptAction} className="inline-block ml-auto">
-            <button
-              type="submit"
-              className="inline-flex h-11 items-center rounded-[12px] border border-gray-300 bg-gray-100 px-5 text-[14px] font-semibold text-gray-800 transition-colors hover:bg-gray-200"
-            >
-              Reattempt (Demo)
-            </button>
-          </form>
-        )}
       </div>
     </div>
   );

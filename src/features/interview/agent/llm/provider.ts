@@ -35,6 +35,12 @@ export type AnalyzeAnswerInput = {
    * assessment decision is still made from the evidence it reports back.
    */
   calibratedLevel?: "FOUNDATIONS" | "WORKING" | "ADVANCED" | null;
+  /**
+   * Standing summary of what the candidate has already established, one line
+   * per answered question. Distinct from `recentTranscript`, which is a short
+   * window for resolving references.
+   */
+  memory?: string[];
 };
 
 export interface InterviewLLM {

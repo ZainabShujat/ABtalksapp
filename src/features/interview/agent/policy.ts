@@ -36,11 +36,68 @@ import type {
  * bounded here.
  */
 
-/** Said verbatim on every redirect. Standardized so no candidate gets a softer one. */
-export const REDIRECT_LINE =
-  "I'll keep us focused on the interview for now. Let's continue with the current question.";
+/**
+ * Fixed lines, varied per interview.
+ *
+ * Every candidate still gets a line of the same MEANING and the same firmness,
+ * which is what fairness requires: nobody receives a softer redirect than
+ * anybody else. What varies is the wording, chosen once per interview from an
+ * authored set. A single hard-coded sentence is the thing that makes a system
+ * sound like a system, and hearing the identical redirect three times in one
+ * conversation is the moment a candidate stops believing anyone is listening.
+ *
+ * Selection is by `pickFor`, which is deterministic: the same interview always
+ * hears the same variant, so a transcript can be reproduced and two runs of the
+ * same attempt never disagree.
+ */
+const REDIRECT_LINES = [
+  "I'll keep us focused on the interview for now. Let's stay with the current question.",
+  "Let's come back to the question at hand.",
+  "I'd like to keep us on this one for now.",
+] as const;
 
-export const REPEAT_LINE = "Sure. Here's the question again.";
+const REPEAT_LINES = [
+  "Sure. Here's the question again.",
+  "Of course, let me say that again.",
+  "No problem, here it is once more.",
+] as const;
+
+const CLOSING_LINES = [
+  "That's everything I wanted to cover. Thanks for walking me through your work.",
+  "That's all my questions. Thanks for talking me through it.",
+  "I think that covers it. Thanks for your time today.",
+] as const;
+
+/**
+ * Picks one variant from a set, stably, from an arbitrary key.
+ *
+ * A tiny string hash rather than `Math.random`: the interviewer must say the
+ * same thing if a turn is replayed, and a random line would make transcripts
+ * irreproducible for no benefit.
+ */
+export function pickFor<T>(items: readonly T[], key: string): T {
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = (hash * 31 + key.charCodeAt(i)) | 0;
+  }
+  return items[Math.abs(hash) % items.length]!;
+}
+
+/** Defaults, kept for callers that have no interview id to hand. */
+export const REDIRECT_LINE = REDIRECT_LINES[0];
+export const REPEAT_LINE = REPEAT_LINES[0];
+
+export function redirectLineFor(interviewId: string): string {
+  return pickFor(REDIRECT_LINES, `redirect:${interviewId}`);
+}
+
+export function repeatLineFor(interviewId: string): string {
+  return pickFor(REPEAT_LINES, `repeat:${interviewId}`);
+}
+
+export function closingLineFor(interviewId: string): string {
+  return pickFor(CLOSING_LINES, `closing:${interviewId}`);
+}
 
 /**
  * The interviewer's opening, spoken before the first question.
@@ -82,9 +139,11 @@ export function openingLine(params: {
   const permission =
     "If you'd like me to repeat or clarify anything, just ask. And if you don't know something, say so and we'll move on.";
 
-  const handover = "Let's start here.";
+  // No handover sentence. "Let's start here." is the kind of stock
+  // transition that makes an interview sound read rather than conducted;
+  // the first question follows the framing directly.
 
-  return `${greeting} ${framing}\n\n${shape} ${permission}\n\n${handover}`;
+  return `${greeting} ${framing}\n\n${shape} ${permission}`;
 }
 
 /** Said once, when the interview ends. */
@@ -217,6 +276,27 @@ export function routeDecision(
   const wantsRedirect = decision.action === "REDIRECT" || offTopic;
 
   if (wantsRedirect) {
+    // A greeting, or anything else said BEFORE the candidate has attempted the
+    // question, is not evasion. Answering "hello" with "I'd like to keep us on
+    // this one for now" accuses someone of dodging a question they have not had
+    // a turn at yet. The first such moment gets a plain restatement; only a
+    // candidate who keeps steering away earns the redirect.
+    //
+    // `repeatsAsked` MUST be part of this. The restatement below is a REPEAT,
+    // which increments `repeatsAsked` and not `redirectsAsked` — so without it
+    // a candidate who is off-topic every single turn stays "first contact"
+    // forever and the interview never terminates.
+    const firstContact =
+      counters.redirectsAsked === 0 &&
+      counters.repeatsAsked === 0 &&
+      counters.followUpsAsked === 0;
+    if (firstContact) {
+      return {
+        action: "REPEAT",
+        rationale: "Non-answer before any attempt; restating, not redirecting.",
+      };
+    }
+
     if (counters.redirectsAsked < MAX_REDIRECTS_PER_QUESTION) {
       return { action: "REDIRECT", rationale: "Off-topic; question stays open." };
     }

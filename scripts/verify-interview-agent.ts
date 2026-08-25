@@ -25,7 +25,8 @@ import {
   createJsonInterviewLLM,
   createMockInterviewLLM,
   REDIRECT_LINE,
-  REPEAT_LINE,
+  closingLineFor,
+  repeatLineFor,
   runInterviewTurn,
 } from "../src/features/interview/agent";
 import type {
@@ -176,20 +177,25 @@ async function main() {
       "Who is the PM of India?",
     );
 
-    assert.equal(out.action, "REDIRECT");
-    assert.ok(out.prompt?.startsWith(REDIRECT_LINE), "must use the standard redirect line");
+    // The FIRST off-topic turn restates the question rather than accusing the
+    // candidate of dodging it. The trivia is still never answered.
+    assert.equal(out.action, "REPEAT");
     assert.ok(out.prompt?.includes(PROBEABLE.text), "must restate the open question");
     assert.ok(!/modi|prime minister of india is/i.test(out.prompt ?? ""), "must not answer the trivia");
     // No evidence recorded, no budget spent, question unchanged.
     assert.equal(out.state.evidenceByQuestionId[PROBEABLE.id], undefined);
     assert.equal(out.state.followUpsAsked, 0);
     assert.equal(out.state.currentQuestionIndex, 1);
-    assert.equal(out.state.redirectsAsked, 1);
   });
 
   await check("4. a persistent off-topic candidate keeps getting redirected", async () => {
     const llm = createMockInterviewLLM();
     let state = stateAt(1);
+
+    // First off-topic turn: restated, not redirected.
+    const opening = await turn(llm, state, PROBEABLE.id, "Who is the PM of India?");
+    assert.equal(opening.action, "REPEAT");
+    state = opening.state;
 
     for (let i = 1; i <= MAX_REDIRECTS_PER_QUESTION; i++) {
       const out = await turn(llm, state, PROBEABLE.id, "Who is the PM of India?");
@@ -339,7 +345,10 @@ async function main() {
     const out = await turn(llm, stateAt(1), PROBEABLE.id, "Sorry, could you repeat the question?");
 
     assert.equal(out.action, "REPEAT");
-    assert.ok(out.prompt?.startsWith(REPEAT_LINE));
+    // Repeat wording varies per interview, so this checks the invariant: the
+    // repeat line for THIS interview opens the turn, and the banked question
+    // follows it verbatim.
+    assert.ok(out.prompt?.startsWith(repeatLineFor("iv_test")));
     assert.ok(out.prompt?.includes(PROBEABLE.text));
     assert.equal(out.state.followUpsAsked, 0);
     assert.equal(out.state.repeatsAsked, 1);
@@ -383,7 +392,9 @@ async function main() {
     assert.equal(out.action, "COMPLETE");
     assert.equal(out.state.status, "COMPLETED");
     assert.equal(out.questionId, null);
-    assert.ok(out.prompt?.includes("everything I wanted to cover"));
+    // Closing wording varies per interview; the invariant is that the closing
+    // line for THIS interview is what gets spoken.
+    assert.equal(out.prompt, closingLineFor("iv_test"));
   });
 
   await check("11. a stuck candidate is never probed", async () => {
@@ -423,11 +434,14 @@ async function main() {
       PROBEABLE.id,
       "Who is the PM of India?",
     );
+    // A first off-topic turn takes the REPEAT branch (restate), not the
+    // redirect one. Both are no-evidence branches, so the graph shape it is
+    // checking — route, then a prompt-only node, then updateState — is the same.
     assert.deepEqual(off.trace, [
       "receiveAnswer",
       "analyzeAnswer",
       "routeResponse",
-      "redirect",
+      "repeat",
       "updateState",
     ]);
   });

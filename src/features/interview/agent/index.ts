@@ -22,6 +22,9 @@ export {
   CLOSING_LINE,
   REDIRECT_LINE,
   REPEAT_LINE,
+  closingLineFor,
+  redirectLineFor,
+  repeatLineFor,
   routeDecision,
 } from "@/features/interview/agent/policy";
 export type {

@@ -120,6 +120,47 @@ export const MAX_CLARIFICATIONS_PER_QUESTION = 2;
  */
 export const CALIBRATION_ANSWERS = 3;
 
+/* ------------------------------------------------------ voice turn-taking */
+
+/**
+ * Continuous quiet, AFTER the candidate has started speaking, that ends their
+ * answer and submits it.
+ *
+ * A voice interview cannot wait forever for someone who has stopped talking,
+ * and it must not cut off someone who is still thinking mid-sentence. 4.5s is
+ * long enough to survive a normal pause between clauses and short enough that
+ * the end of an answer does not feel like a hang.
+ */
+export const INTERVIEW_SILENCE_MS = 4_500;
+
+/**
+ * Speech thresholds, as RMS of the analyser signal.
+ *
+ * Two values, not one: ON is what counts as "they have started", OFF is what
+ * counts as "they have stopped". The gap is hysteresis. With a single threshold
+ * a voice sitting near the line flickers many times a second and the silence
+ * timer never accumulates, so an answer would never end on its own.
+ */
+export const SPEECH_ON_RMS = 0.20;
+export const SPEECH_OFF_RMS = 0.15;
+
+/**
+ * How long the room waits when the candidate has said NOTHING at all before
+ * prompting them. Distinct from the silence timer, which ends an answer that
+ * has already happened.
+ */
+export const NO_ANSWER_MS = 10_000;
+
+/**
+ * Language corrections allowed per question before the interview stops asking.
+ *
+ * One. A candidate who answers in another language is asked once, in English,
+ * to answer in English. If the second attempt is also not English the question
+ * falls through to the ordinary stuck path — repeating the same sentence at
+ * someone indefinitely helps nobody and is not an assessment.
+ */
+export const MAX_LANGUAGE_RETRIES_PER_QUESTION = 1;
+
 /* ------------------------- general interviewer (not V1 — see docs/plans/066) */
 
 /** Completed challenge days required to unlock a first attempt. */

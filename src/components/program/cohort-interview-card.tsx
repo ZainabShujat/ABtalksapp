@@ -8,9 +8,11 @@ import type {
   BlueprintState,
   CohortInterviewState,
 } from "@/features/interview/cohort-eligibility";
+import { resetDemoInterviewAction } from "@/app/actions/interview-actions";
 
 type Props = {
   state: CohortInterviewState;
+  isIshaan?: boolean;
 };
 
 const figmaBtn =
@@ -37,11 +39,15 @@ function MilestoneRow({
   blurb,
   state,
   href,
+  blueprint,
+  isIshaan,
 }: {
   title: string;
   blurb: string;
   state: BlueprintState;
   href: string;
+  blueprint: string;
+  isIshaan?: boolean;
 }) {
   const remaining = state.missingDays.length;
 
@@ -62,10 +68,19 @@ function MilestoneRow({
             <div className="mt-3">
               <span className={completedBadge}>Completed</span>
             </div>
-            <div className="mt-3">
+            <div className="mt-3 flex items-center gap-3">
               <Link href={`${href}/report`} className={cn(figmaBtn)}>
                 View report →
               </Link>
+              {isIshaan && (
+                <button
+                  type="button"
+                  onClick={() => resetDemoInterviewAction(blueprint)}
+                  className="inline-flex h-11 items-center rounded-[12px] border border-gray-300 bg-gray-100 px-5 text-[14px] font-semibold text-gray-800 transition-colors hover:bg-gray-200"
+                >
+                  Reattempt (Demo)
+                </button>
+              )}
             </div>
           </>
         ) : state.unlocked ? (
@@ -117,7 +132,7 @@ function MilestoneRow({
  * computed on the server from actual PASSED mission days; nothing here derives
  * eligibility from a count the client could influence.
  */
-export function CohortInterviewCard({ state }: Props) {
+export function CohortInterviewCard({ state, isIshaan }: Props) {
   return (
     <section className={cn(cardClass, "group flex flex-1 flex-col")}>
       <div className="mb-2.5 flex items-center gap-2.5">
@@ -135,6 +150,8 @@ export function CohortInterviewCard({ state }: Props) {
           blurb="Test what you've learned across Days 1–15."
           state={state.day15}
           href="/program/cohort-interview/DAY_15"
+          blueprint="DAY_15"
+          isIshaan={isIshaan}
         />
         <div className="hidden w-px shrink-0 bg-[#E0E0E0] md:block" />
         <MilestoneRow
@@ -142,6 +159,8 @@ export function CohortInterviewCard({ state }: Props) {
           blurb="Assess what you've learned across the full cohort."
           state={state.day31}
           href="/program/cohort-interview/DAY_31"
+          blueprint="DAY_31"
+          isIshaan={isIshaan}
         />
       </div>
     </section>

@@ -1,5 +1,6 @@
 import { logger } from "@/lib/logger";
 import { mergeEvidence } from "@/features/interview/evidence";
+import { buildInterviewMemory } from "@/features/interview/memory";
 import {
   activeQuestionView,
   classifyAnswer,
@@ -15,11 +16,12 @@ import {
 } from "@/features/interview/state";
 import type { InterviewState, TurnAction } from "@/features/interview/types";
 import {
-  CLOSING_LINE,
-  REDIRECT_LINE,
+  redirectLineFor,
+  repeatLineFor,
+  closingLineFor,
   resolveClarification,
-  REPEAT_LINE,
   resolveAcknowledgement,
+  resolveBridge,
   resolveFollowUpText,
   routeDecision,
 } from "@/features/interview/agent/policy";
@@ -119,6 +121,7 @@ export function createAnalyzeAnswer(llm: InterviewLLM) {
       ),
       recentTranscript: state.interviewState.transcript,
       calibratedLevel: state.interviewState.calibration?.level ?? null,
+      memory: buildInterviewMemory(state.plan, state.interviewState),
     });
 
     logger.info("[interview-agent] answer analyzed", {
@@ -224,11 +227,11 @@ export function applyEscalate(state: InterviewAgentState): NodeUpdate {
 }
 
 export function applyRedirect(state: InterviewAgentState): NodeUpdate {
-  return { nextPrompt: `${REDIRECT_LINE}\n\n${state.currentQuestion}` };
+  return { nextPrompt: `${redirectLineFor(state.interviewId)}\n\n${state.currentQuestion}` };
 }
 
 export function applyRepeat(state: InterviewAgentState): NodeUpdate {
-  return { nextPrompt: `${REPEAT_LINE}\n\n${state.currentQuestion}` };
+  return { nextPrompt: `${repeatLineFor(state.interviewId)}\n\n${state.currentQuestion}` };
 }
 
 /**
@@ -240,7 +243,7 @@ export function applyRepeat(state: InterviewAgentState): NodeUpdate {
 export function applyClarify(state: InterviewAgentState): NodeUpdate {
   const answer = state.decision
     ? resolveClarification(state.decision)
-    : REPEAT_LINE;
+    : repeatLineFor(state.interviewId);
   return { nextPrompt: `${answer}\n\n${state.currentQuestion}` };
 }
 
@@ -414,8 +417,16 @@ export function updateState(state: InterviewAgentState): NodeUpdate {
   // sounds like a conversation instead of a questionnaire advancing. The
   // acknowledgement is attached to the NEW question's turn because that is what
   // is spoken as one breath.
+  // Acknowledgement, then a connective sentence, then the banked question.
+  // The bridge used to be reserved for escalations, which left the commonest
+  // transition in the interview — one core question to the next — as an
+  // acknowledgement followed by an unrelated question. That is what made it
+  // read as a list rather than a conversation. The question text itself is
+  // still spoken verbatim.
   const acknowledgement = resolveAcknowledgement(state.decision, question.order);
-  const spoken = `${acknowledgement}\n\n${next.text}`;
+  const bridge = resolveBridge(state.decision);
+  const lead = [acknowledgement, bridge].filter(Boolean).join(" ");
+  const spoken = `${lead}\n\n${next.text}`;
 
   nextState = appendLine(nextState, "interviewer", spoken, next.id);
   return {
@@ -445,7 +456,7 @@ export function completeInterview(state: InterviewAgentState): NodeUpdate {
   const closed = appendLine(
     { ...state.interviewState, status: "COMPLETED" },
     "interviewer",
-    CLOSING_LINE,
+    closingLineFor(state.interviewId),
     null,
   );
   logger.info("[interview-agent] interview reached completion", {
@@ -455,7 +466,7 @@ export function completeInterview(state: InterviewAgentState): NodeUpdate {
   return {
     interviewState: closed,
     transcript: closed.transcript,
-    nextPrompt: CLOSING_LINE,
+    nextPrompt: closingLineFor(state.interviewId),
     lastDecision: "COMPLETE",
     status: "COMPLETED",
     finished: true,

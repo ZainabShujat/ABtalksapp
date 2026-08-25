@@ -166,8 +166,8 @@ const frag = /* glsl */ `
     float a = iTime * -1.0;
     vec2 pos = vec2(cos(a), sin(a)) * r0;
     float d = distance(uv, pos);
-    float v1 = light2(1.05, 6.5, d);
-    v1 *= light1(0.85, 55.0, d0);
+    float v1 = light2(0.5, 5.0, d);
+    v1 *= light1(1.0, 50.0, d0);
 
     float v2 = smoothstep(1.0, mix(innerRadius, 1.0, n0 * 0.5), len);
     float v3 = smoothstep(innerRadius, mix(innerRadius, 1.0, 0.5), len);
@@ -199,7 +199,8 @@ const frag = /* glsl */ `
   void main() {
     vec2 fragCoord = vUv * iResolution.xy;
     vec4 col = mainImage(fragCoord);
-    gl_FragColor = vec4(col.rgb * col.a, col.a);
+    // Use un-premultiplied output since the WebGL context has premultipliedAlpha: false
+    gl_FragColor = col;
   }
 `;
 
@@ -228,16 +229,16 @@ type PaletteValues = {
 /** Dark: violet / pearl / near-black. Light: milk-glass apricot on cream. */
 const PALETTE: Record<OrbPalette, PaletteValues> = {
   dark: {
-    c1: [0.42, 0.365, 0.58],
-    c2: [0.91, 0.845, 0.79],
-    c3: [0.07, 0.06, 0.095],
+    c1: [0.05, 0.40, 1.00],
+    c2: [0.05, 0.90, 0.45],
+    c3: [0.00, 0.65, 0.90],
     innerRadius: 0.62,
     noiseScale: 0.48,
   },
   light: {
-    c1: [0.894, 0.706, 0.588],
-    c2: [0.984, 0.965, 0.945],
-    c3: [0.831, 0.537, 0.384],
+    c1: [0.05, 0.40, 1.00],
+    c2: [0.05, 0.90, 0.45],
+    c3: [0.00, 0.65, 0.90],
     innerRadius: 0.68,
     noiseScale: 0.35,
   },
@@ -427,7 +428,7 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
     } catch {
       // WebGL unavailable (blocked, software rendering disabled, headless).
       // The interview must still run, so the orb simply renders nothing.
-      return () => {};
+      return () => { };
     }
     // The renderer is built once. `mode` and the audio level are read through
     // refs inside the loop, so neither belongs in this dependency list.
