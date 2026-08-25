@@ -3899,4 +3899,48 @@ html.dark .hire-app.hire-menu {
   .hire-pod__request {
     overflow: visible;
   }
+
+  /* The composer keeps its shape on a phone.
+
+     Mobile stacked Search under the field and stretched it full width, which
+     cost a whole row of height on the screen with the least of it and put the
+     button where nothing else in the product puts it. Beside the field is
+     where it sits everywhere else, so it sits there here too — the field
+     flexes and the button takes only what it needs. */
+  .hire-app .scout-composer__row,
+  .scout-composer__row {
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 8px;
+  }
+
+  .hire-app .scout-send,
+  .scout-send {
+    width: auto;
+    min-width: 84px;
+    height: 44px;
+    padding: 0 16px;
+  }
+
+  /* The checklist is one horizontal strip that scrolls, not a block that wraps.
+
+     Wrapping turned nine criteria into four stacked rows directly above the
+     keyboard — the tallest thing on the screen, for the least important. As a
+     strip it costs one row, and scout-chat scrolls the newest tick into view
+     so the item that just changed is the one you see. */
+  .scout-criteria {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 14px;
+    margin: 0 0 8px;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding-inline-end: 12px;
+  }
+
+  .scout-criteria::-webkit-scrollbar {
+    display: none;
+  }
 }
