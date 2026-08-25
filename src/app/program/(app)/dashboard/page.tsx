@@ -9,7 +9,12 @@ import { toProgramMemberId } from "@/features/interview/provider";
 import { ProgramDashboardView } from "@/components/program/program-dashboard-view";
 
 export default async function ProgramDashboardPage() {
-  const { member, cohort } = await requireProgramMember();
+  const { member, cohort, userId } = await requireProgramMember();
+  
+  const { prisma } = await import("@/lib/db");
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+  const isIshaan = user?.email === "demo-day31@abtalks.dev";
+
   const [data, atRisk, projects, aiRec, interviewCard, cohortInterviewState] =
     await Promise.all([
       getMemberDashboard(member.id, cohort.id),
@@ -36,6 +41,7 @@ export default async function ProgramDashboardPage() {
       aiRec={aiRec}
       interviewCard={interviewCard}
       cohortInterviewState={cohortInterviewState}
+      isIshaan={isIshaan}
     />
   );
 }

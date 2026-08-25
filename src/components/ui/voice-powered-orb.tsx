@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type FC, type RefObject } from "react";
 import { Renderer, Program, Mesh, Triangle, Vec3 } from "ogl";
+import type { OGLRenderingContext } from "ogl";
 import { cn } from "@/lib/utils";
 
 /**
@@ -226,7 +227,9 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
   // Mode is mirrored into a ref so a mode change never restarts the WebGL
   // context — remounting the renderer on every phase transition would flash.
   const modeRef = useRef<OrbMode>(mode);
-  modeRef.current = mode;
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
 
   useEffect(() => {
     const container = ctnDom.current;
@@ -237,7 +240,7 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
       window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
     let renderer: Renderer | null = null;
-    let gl: WebGLRenderingContext | WebGL2RenderingContext | null = null;
+    let gl: OGLRenderingContext | null = null;
     let program: Program | null = null;
     let rafId = 0;
 
@@ -254,7 +257,7 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
       while (container.firstChild) container.removeChild(container.firstChild);
-      container.appendChild(gl.canvas);
+      container.appendChild(gl.canvas as HTMLCanvasElement);
 
       const geometry = new Triangle(gl);
       program = new Program(gl, {
@@ -357,9 +360,10 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
       return () => {
         cancelAnimationFrame(rafId);
         window.removeEventListener("resize", resize);
-        if (container && gl?.canvas && container.contains(gl.canvas)) {
+        const canvas = gl?.canvas as HTMLCanvasElement | undefined;
+        if (container && canvas && container.contains(canvas)) {
           try {
-            container.removeChild(gl.canvas);
+            container.removeChild(canvas);
           } catch {
             // The container may already be gone during unmount; nothing to do.
           }

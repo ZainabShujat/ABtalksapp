@@ -28,6 +28,7 @@ type Props = {
   aiRec: { recommendation: string | null; generatedAt: string | null };
   interviewCard: InterviewDashboardCard;
   cohortInterviewState: CohortInterviewState;
+  isIshaan?: boolean;
 };
 
 const MISSION_LABEL: Record<string, string> = {
@@ -49,6 +50,7 @@ export function ProgramDashboardView({
   // the disclosure now renders CohortInterviewCard, which reads live unlock
   // state. Kept in Props so the page contract is unchanged.
   cohortInterviewState,
+  isIshaan,
 }: Props) {
   const [statsOpen, setStatsOpen] = useState(false);
   const [interviewOpen, setInterviewOpen] = useState(false);
@@ -196,7 +198,7 @@ export function ProgramDashboardView({
                 leaderboard total.
               </p>
               <div className="mt-4">
-                <CohortInterviewCard state={cohortInterviewState} />
+                <CohortInterviewCard state={cohortInterviewState} isIshaan={isIshaan} />
               </div>
             </div>
           )}

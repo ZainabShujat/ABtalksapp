@@ -61,6 +61,22 @@ const PHASE_COPY: Record<Phase, { label: string; hint: string }> = {
  */
 const TTS_TIMEOUT_MS = 12_000;
 
+/**
+ * Silence detection, applied to the candidate's own recording.
+ *
+ * `SPEECH_ON` is the level at which we accept that someone has started talking;
+ * `SPEECH_OFF` is the lower level at which we accept they have stopped. The gap
+ * between them is hysteresis: with a single threshold, a voice hovering right
+ * at the line flickers between "speaking" and "silent" many times a second and
+ * the timer never accumulates. Two thresholds mean it takes a real drop to be
+ * counted as a pause and a real voice to cancel one.
+ */
+const SPEECH_ON = 0.055;
+const SPEECH_OFF = 0.03;
+
+/** Continuous quiet, after speech has started, that ends the answer. */
+const SILENCE_MS = 4_500;
+
 function formatClock(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
@@ -114,6 +130,26 @@ export function InterviewRoom({
   const [progress, setProgress] = useState({ answered: 0, total: 0, ratio: 0 });
 
   /**
+   * Progressive reveal of the interviewer's line, driven by TTS playback.
+   *
+   * `reveal.text` is the EXACT string that was sent to the speech endpoint, so
+   * the transcript and the audio can never diverge; there is no second,
+   * paraphrased copy anywhere. `reveal.chars` is how much of it is currently
+   * visible, advanced from `audio.currentTime / audio.duration` on every frame
+   * and written to state at ~15fps rather than 60 — the reader cannot perceive
+   * the difference, and the transcript is not re-rendered on every frame.
+   *
+   * OpenAI's speech endpoint returns no word-boundary timings, so the mapping
+   * is proportional to elapsed playback rather than word-accurate. It is tied
+   * to real playback time, not to a fixed typing speed, so it stays aligned
+   * when audio starts late or a long line takes longer to speak.
+   */
+  const [reveal, setReveal] = useState<{ text: string; chars: number } | null>(
+    null,
+  );
+  const revealRafRef = useRef<number | null>(null);
+
+  /**
    * The single audio-analysis chain for the interview.
    *
    * ONE microphone stream exists (`streamRef`, opened by `startRecording` for
@@ -154,11 +190,65 @@ export function InterviewRoom({
 
   useEffect(() => {
     return () => {
+      if (levelRafRef.current !== null) cancelAnimationFrame(levelRafRef.current);
+      if (revealRafRef.current !== null) cancelAnimationFrame(revealRafRef.current);
+      analyserSrcRef.current?.disconnect();
+      if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
+        void audioCtxRef.current.close();
+      }
       streamRef.current?.getTracks().forEach((t) => t.stop());
       audioRef.current?.pause();
       if (typeof window !== "undefined") window.speechSynthesis?.cancel();
     };
   }, []);
+
+  /* ----------------------------------------------------- transcript reveal */
+
+  const stopReveal = useCallback(() => {
+    if (revealRafRef.current !== null) {
+      cancelAnimationFrame(revealRafRef.current);
+      revealRafRef.current = null;
+    }
+  }, []);
+
+  /**
+   * Advances the visible portion of the interviewer's line in step with the
+   * audio actually playing.
+   *
+   * Progress comes from `audio.currentTime / audio.duration`, so it tracks real
+   * playback: pauses, buffering and a slow start all keep text and speech
+   * together, which a fixed typing animation would not. `duration` can be NaN
+   * for a moment after `play()`, so until it is known the reveal simply holds
+   * at zero rather than guessing.
+   */
+  const startReveal = useCallback(
+    (text: string, audio: HTMLAudioElement) => {
+      stopReveal();
+      setReveal({ text, chars: 0 });
+
+      let lastWritten = -1;
+      const tick = () => {
+        revealRafRef.current = requestAnimationFrame(tick);
+        const duration = audio.duration;
+        if (!Number.isFinite(duration) || duration <= 0) return;
+
+        const ratio = Math.min(audio.currentTime / duration, 1);
+        // Slightly ahead of the audio. A reader who is a few characters in
+        // front of the voice feels natural; text lagging behind feels broken.
+        const chars = Math.round(text.length * Math.min(ratio * 1.06, 1));
+
+        // ~15fps write cadence: enough to look continuous, few enough renders
+        // that the transcript is not rebuilt 60 times a second.
+        if (chars !== lastWritten && chars - lastWritten >= 2) {
+          lastWritten = chars;
+          setReveal({ text, chars });
+        }
+        if (ratio >= 1) stopReveal();
+      };
+      revealRafRef.current = requestAnimationFrame(tick);
+    },
+    [stopReveal],
+  );
 
   /* -------------------------------------------------------------- voice */
 
@@ -195,8 +285,21 @@ export function InterviewRoom({
           window.speechSynthesis.cancel();
           const utterance = new SpeechSynthesisUtterance(text);
           utterance.rate = 0.98;
-          utterance.onend = () => resolve();
-          utterance.onerror = () => resolve();
+          // The browser voice exposes real character boundaries, which is more
+          // accurate than the proportional estimate used for server audio.
+          utterance.onboundary = (ev) => {
+            if (typeof ev.charIndex === "number") {
+              setReveal({ text, chars: ev.charIndex + (ev.charLength ?? 0) });
+            }
+          };
+          utterance.onend = () => {
+            setReveal({ text, chars: text.length });
+            resolve();
+          };
+          utterance.onerror = () => {
+            setReveal({ text, chars: text.length });
+            resolve();
+          };
           window.speechSynthesis.speak(utterance);
         });
 
@@ -218,6 +321,7 @@ export function InterviewRoom({
           const audio = new Audio(url);
           audioRef.current = audio;
           await audio.play();
+          startReveal(text, audio);
           await new Promise<void>((resolve) => {
             audio.onended = () => resolve();
             audio.onerror = () => resolve();
@@ -231,10 +335,14 @@ export function InterviewRoom({
         setUsingBrowserVoice(true);
         await viaBrowser();
       } finally {
+        // Whatever happened, the full line ends up visible: a reader must never
+        // be left with a half-sentence because audio failed midway.
+        stopReveal();
+        setReveal({ text, chars: text.length });
         setPhase("idle");
       }
     },
-    [interviewId],
+    [interviewId, startReveal, stopReveal],
   );
 
   // Speak the opening question once the room mounts.
@@ -326,6 +434,7 @@ export function InterviewRoom({
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
       recorder.onstop = async () => {
+        detachAnalyser();
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(chunksRef.current, {
           type: recorder.mimeType || "audio/webm",
@@ -386,6 +495,9 @@ export function InterviewRoom({
 
       recorder.start();
       recorderRef.current = recorder;
+      // Same stream, one analyser. Auto-stop runs the normal stop path, so the
+      // captured audio goes through the existing STT pipeline unchanged.
+      attachAnalyser(stream, () => stopRecording());
       setPhase("listening");
     } catch {
       setMicUnavailable(true);
@@ -394,7 +506,104 @@ export function InterviewRoom({
     }
   }
 
+  /**
+   * Attaches the ONE analyser to the microphone stream MediaRecorder is already
+   * using, and runs the loop that feeds both the orb and silence detection.
+   *
+   * Deliberately no `getUserMedia` here: the stream is passed in. Deliberately
+   * no audio constraints either — `startRecording` opens the microphone with
+   * the browser's defaults (echo cancellation, noise suppression and gain
+   * control ON) because transcription accuracy matters more than a livelier
+   * waveform. Visualisation reads whatever speech-to-text is hearing.
+   */
+  function attachAnalyser(stream: MediaStream, onSilence: () => void) {
+    try {
+      const Ctor =
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
+      if (!Ctor) return;
+
+      const ctx = new Ctor();
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.3;
+      const src = ctx.createMediaStreamSource(stream);
+      src.connect(analyser);
+
+      audioCtxRef.current = ctx;
+      analyserRef.current = analyser;
+      analyserSrcRef.current = src;
+
+      const bins = new Uint8Array(analyser.frequencyBinCount);
+      hasSpokenRef.current = false;
+      quietSinceRef.current = null;
+
+      const tick = () => {
+        levelRafRef.current = requestAnimationFrame(tick);
+        const node = analyserRef.current;
+        if (!node) return;
+
+        node.getByteFrequencyData(bins);
+        let sum = 0;
+        for (let i = 0; i < bins.length; i++) {
+          const v = bins[i]! / 255;
+          sum += v * v;
+        }
+        const rms = Math.sqrt(sum / bins.length);
+        levelRef.current = rms;
+
+        // The timer only ever runs AFTER the candidate has actually spoken.
+        // Without this gate, someone thinking for six seconds before their
+        // first word would have an empty answer submitted for them.
+        if (!hasSpokenRef.current) {
+          if (rms >= SPEECH_ON) hasSpokenRef.current = true;
+          return;
+        }
+
+        if (rms >= SPEECH_OFF) {
+          quietSinceRef.current = null;
+          return;
+        }
+
+        const now = performance.now();
+        quietSinceRef.current ??= now;
+        if (now - quietSinceRef.current >= SILENCE_MS) {
+          quietSinceRef.current = null;
+          onSilence();
+        }
+      };
+      levelRafRef.current = requestAnimationFrame(tick);
+    } catch {
+      // No analyser is a cosmetic loss, not a functional one: the orb rests and
+      // the candidate stops recording by hand, exactly as before.
+    }
+  }
+
+  function detachAnalyser() {
+    if (levelRafRef.current !== null) {
+      cancelAnimationFrame(levelRafRef.current);
+      levelRafRef.current = null;
+    }
+    try {
+      analyserSrcRef.current?.disconnect();
+      analyserRef.current?.disconnect();
+      if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
+        void audioCtxRef.current.close();
+      }
+    } catch {
+      // Already torn down.
+    }
+    analyserSrcRef.current = null;
+    analyserRef.current = null;
+    audioCtxRef.current = null;
+    levelRef.current = 0;
+    hasSpokenRef.current = false;
+    quietSinceRef.current = null;
+  }
+
   function stopRecording() {
+    detachAnalyser();
     recorderRef.current?.stop();
     recorderRef.current = null;
   }
@@ -426,6 +635,17 @@ export function InterviewRoom({
   // the spine is giving up something substantial and deserves to be told so
   // plainly rather than nudged through a generic confirm.
   const pastHalfway = progress.total > 0 && progress.ratio >= 0.5;
+
+  // The orb has no state machine of its own: it mirrors the phase the room
+  // already tracks. "listening" is the only mode that reads the microphone.
+  const orbMode: OrbMode =
+    phase === "speaking"
+      ? "speaking"
+      : phase === "listening"
+        ? "listening"
+        : phase === "processing"
+          ? "processing"
+          : "idle";
 
   const busy = phase === "processing" || phase === "speaking" || closing;
   const copy = PHASE_COPY[phase];
@@ -520,6 +740,21 @@ export function InterviewRoom({
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
           {turns.map((turn, i) => {
             const isLatest = i >= turns.length - 2;
+            const isLast = i === turns.length - 1;
+
+            // While this exact line is being spoken, show only the portion the
+            // audio has reached. `reveal.text` is the same string that was sent
+            // to the speech endpoint, so matching on it guarantees we never
+            // truncate a different turn, and never show a paraphrase.
+            const revealing =
+              isLast &&
+              turn.role === "interviewer" &&
+              reveal !== null &&
+              reveal.text === turn.text;
+            const shown = revealing
+              ? turn.text.slice(0, reveal.chars)
+              : turn.text;
+
             return (
               <div key={i} className={cn("iv-enter", !isLatest && "iv-turn-past")}>
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--iv-text-faint)]">
@@ -527,8 +762,14 @@ export function InterviewRoom({
                 </p>
 
                 {turn.role === "interviewer" ? (
-                  <p className="whitespace-pre-line text-[17px] leading-[1.65] text-[var(--iv-text)] md:text-[19px]">
-                    {turn.text}
+                  <p
+                    className="whitespace-pre-line text-[17px] leading-[1.65] text-[var(--iv-text)] md:text-[19px]"
+                    // The full line is always available to assistive tech even
+                    // mid-reveal; a screen reader must not have to wait for an
+                    // animation to learn what was asked.
+                    aria-label={turn.text}
+                  >
+                    {shown}
                   </p>
                 ) : (
                   <div className="rounded-[12px] border border-[var(--iv-border-soft)] bg-[var(--iv-surface-raised)] px-4 py-3">
@@ -561,6 +802,12 @@ export function InterviewRoom({
           ) : null}
 
           <div className="flex flex-col items-center gap-3">
+            {/* The interviewer's visual presence. No card, no label of its own:
+                the state text below already names what is happening. */}
+            <div className="pointer-events-none size-[124px] shrink-0 sm:size-[148px]">
+              <VoicePoweredOrb mode={orbMode} levelRef={levelRef} />
+            </div>
+
             <div className="text-center">
               <p className="text-[13px] font-semibold text-[var(--iv-text)]">
                 {copy.label}

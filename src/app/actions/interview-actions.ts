@@ -129,3 +129,28 @@ export async function abandonInterviewAction(
   revalidatePath("/program/dashboard");
   return result;
 }
+
+export async function resetDemoInterviewAction(
+  blueprint: string,
+): Promise<ActionResult<null>> {
+  const { auth } = await import("@/auth");
+  const session = await auth();
+  
+  if (session?.user?.email !== "demo-day31@abtalks.dev") {
+    return { ok: false, message: "Unauthorized" };
+  }
+  
+  const authMember = await requireMemberId();
+  if (!authMember.ok) return authMember;
+
+  const { prisma } = await import("@/lib/db");
+  await prisma.generalInterview.deleteMany({
+    where: {
+      memberId: authMember.memberId,
+      blueprint: blueprint as any,
+    },
+  });
+
+  revalidatePath("/program/dashboard");
+  return { ok: true, data: null };
+}
