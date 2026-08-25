@@ -17,7 +17,7 @@ export function ChatLauncher({ open, onToggle }: ChatLauncherProps) {
       onClick={onToggle}
       aria-label={open ? "Close chat" : "Open chat"}
       aria-expanded={open}
-      className="fixed bottom-4 right-4 z-50 size-12 rounded-full shadow-lg"
+      className="theme-abtalks-orange fixed bottom-4 right-4 z-50 size-12 rounded-full shadow-lg"
     >
       {open ? <X className="size-5" /> : <MessageCircle className="size-5" />}
     </Button>
