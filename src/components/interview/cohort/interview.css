@@ -36,6 +36,66 @@
   color: var(--iv-text);
 }
 
+/*
+ * Live room only. The brief, done, and report screens stay on cream.
+ * Near-black ground, a soft violet wash from below, and a barely-there
+ * warm highlight so the orb's palette is the page's palette — not a
+ * sticker on orange-grey.
+ */
+.interview-room--live {
+  --iv-page: #0a0a0c;
+  --iv-surface: #141418;
+  --iv-surface-raised: #1c1b22;
+  --iv-border: #2c2a33;
+  --iv-border-soft: #24232b;
+  --iv-text: #f3f1f6;
+  --iv-text-muted: #b7b3c0;
+  --iv-text-faint: #7d7988;
+  --iv-accent: #9b8ec4;
+  --iv-accent-hover: #b4a8d4;
+  --iv-accent-soft: #1f1c28;
+  --iv-live: #5ecf7c;
+  --iv-danger: #f07174;
+  --iv-warning: #e0b15a;
+
+  background-color: var(--iv-page);
+  background-image:
+    radial-gradient(
+      ellipse 90% 55% at 50% 108%,
+      rgba(122, 108, 168, 0.22) 0%,
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse 45% 35% at 88% -8%,
+      rgba(196, 148, 112, 0.07) 0%,
+      transparent 52%
+    ),
+    radial-gradient(
+      ellipse 40% 30% at 8% 12%,
+      rgba(90, 78, 130, 0.1) 0%,
+      transparent 48%
+    );
+  color: var(--iv-text);
+}
+
+.interview-room--live .iv-orb-glow {
+  background: radial-gradient(
+    circle,
+    rgba(155, 142, 196, 0.28) 0%,
+    rgba(196, 148, 112, 0.06) 42%,
+    transparent 70%
+  );
+}
+
+.interview-room--light .iv-orb-glow {
+  background: radial-gradient(
+    circle,
+    rgba(224, 82, 38, 0.11) 0%,
+    rgba(224, 82, 38, 0.04) 38%,
+    transparent 70%
+  );
+}
+
 /* Older exchanges stay legible but recede, so the current one reads first. */
 .interview-room .iv-turn-past {
   opacity: 0.5;

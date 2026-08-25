@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Mic, Square } from "lucide-react";
+import { Mic, Moon, Square, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   VoicePoweredOrb,
   type OrbMode,
+  type OrbPalette,
 } from "@/components/ui/voice-powered-orb";
 import {
   abandonInterviewAction,
@@ -44,6 +45,18 @@ type Turn = {
 };
 
 type Phase = "idle" | "listening" | "processing" | "speaking";
+
+const ROOM_THEME_KEY = "abtalks.interviewRoomTheme";
+
+function readStoredRoomTheme(): OrbPalette {
+  try {
+    const value = localStorage.getItem(ROOM_THEME_KEY);
+    if (value === "dark" || value === "light") return value;
+  } catch {
+    // Private mode / blocked storage — stay on the default.
+  }
+  return "light";
+}
 
 const PHASE_COPY: Record<Phase, { label: string; hint: string }> = {
   idle: { label: "Your turn", hint: "Tap the microphone and answer out loud." },
@@ -120,6 +133,23 @@ export function InterviewRoom({
   const [closing, setClosing] = useState(false);
   const [usingBrowserVoice, setUsingBrowserVoice] = useState(false);
   const [confirmExit, setConfirmExit] = useState(false);
+  const [theme, setTheme] = useState<OrbPalette>("light");
+
+  useEffect(() => {
+    setTheme(readStoredRoomTheme());
+  }, []);
+
+  function toggleRoomTheme() {
+    setTheme((current) => {
+      const next: OrbPalette = current === "light" ? "dark" : "light";
+      try {
+        localStorage.setItem(ROOM_THEME_KEY, next);
+      } catch {
+        // Persistence is a convenience, not a requirement.
+      }
+      return next;
+    });
+  }
   /**
    * Progress through the CORE spine, straight from the server.
    *
@@ -653,7 +683,12 @@ export function InterviewRoom({
   /* --------------------------------------------------------------- view */
 
   return (
-    <div className="interview-room flex min-h-[calc(100svh-9rem)] flex-col">
+    <div
+      className={cn(
+        "interview-room fixed inset-0 z-10 flex flex-col overflow-hidden px-4 py-6 sm:px-6",
+        theme === "dark" ? "interview-room--live" : "interview-room--light",
+      )}
+    >
       {confirmExit ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
@@ -661,7 +696,7 @@ export function InterviewRoom({
           aria-modal="true"
           aria-labelledby="iv-exit-title"
         >
-          <div className="w-full max-w-md rounded-[16px] border border-[var(--iv-border)] bg-[#FFFFFF] p-6">
+          <div className="w-full max-w-md rounded-[16px] border border-[var(--iv-border)] bg-[var(--iv-surface)] p-6">
             <h2
               id="iv-exit-title"
               className="font-display text-lg font-bold text-[var(--iv-text)]"
@@ -715,10 +750,24 @@ export function InterviewRoom({
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-[#1A7F37]/40 bg-[#1A7F37]/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#1A7F37]">
-            <span className="iv-dot size-1.5 rounded-full bg-[#1A7F37]" />
+          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--iv-live)]/40 bg-[var(--iv-live)]/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--iv-live)]">
+            <span className="iv-dot size-1.5 rounded-full bg-[var(--iv-live)]" />
             Live
           </span>
+          <button
+            type="button"
+            onClick={toggleRoomTheme}
+            aria-label={
+              theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
+            }
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-[6px] border border-[var(--iv-border)] text-[var(--iv-text-muted)] transition-colors hover:border-[var(--iv-text-faint)] hover:text-[var(--iv-text)]"
+          >
+            {theme === "dark" ? (
+              <Sun className="size-4" strokeWidth={1.75} />
+            ) : (
+              <Moon className="size-4" strokeWidth={1.75} />
+            )}
+          </button>
           <span
             className="font-mono text-[13px] tabular-nums text-[var(--iv-text-faint)]"
             aria-label="Elapsed time"
@@ -728,7 +777,7 @@ export function InterviewRoom({
           <button
             type="button"
             onClick={() => setConfirmExit(true)}
-            className="rounded-[8px] border border-[var(--iv-border)] px-3 py-1.5 text-[13px] text-[var(--iv-text-muted)] transition-colors hover:border-[#E0E0E0] hover:text-[var(--iv-text)]"
+            className="rounded-[8px] border border-[var(--iv-border)] px-3 py-1.5 text-[13px] text-[var(--iv-text-muted)] transition-colors hover:border-[var(--iv-text-faint)] hover:text-[var(--iv-text)]"
           >
             End interview
           </button>
@@ -793,7 +842,7 @@ export function InterviewRoom({
       </div>
 
       {/* ----------------------------------------------------- controls */}
-      <div className="sticky bottom-0 border-t border-[var(--iv-border)] bg-[#FBF9F7]/95 pt-5 pb-6 backdrop-blur">
+      <div className="sticky bottom-0 border-t border-[var(--iv-border)] bg-[var(--iv-page)]/80 pt-5 pb-6 backdrop-blur-md">
         <div className="mx-auto w-full max-w-2xl">
           {error ? (
             <p className="mb-4 text-[13px] text-[#C9282B]" role="status">
@@ -804,8 +853,16 @@ export function InterviewRoom({
           <div className="flex flex-col items-center gap-3">
             {/* The interviewer's visual presence. No card, no label of its own:
                 the state text below already names what is happening. */}
-            <div className="pointer-events-none size-[124px] shrink-0 sm:size-[148px]">
-              <VoicePoweredOrb mode={orbMode} levelRef={levelRef} />
+            <div className="relative pointer-events-none size-[124px] shrink-0 sm:size-[148px]">
+              <div
+                className="iv-orb-glow pointer-events-none absolute inset-[-38%] rounded-full"
+                aria-hidden
+              />
+              <VoicePoweredOrb
+                mode={orbMode}
+                palette={theme}
+                levelRef={levelRef}
+              />
             </div>
 
             <div className="text-center">
@@ -833,7 +890,7 @@ export function InterviewRoom({
             {!micUnavailable ? (
               <div className="relative">
                 {phase === "listening" ? (
-                  <span className="iv-listening-ring pointer-events-none absolute inset-0 rounded-full border border-[#1A7F37]/50" />
+                  <span className="iv-listening-ring pointer-events-none absolute inset-0 rounded-full border border-[var(--iv-live)]/50" />
                 ) : null}
                 <button
                   type="button"
@@ -845,7 +902,7 @@ export function InterviewRoom({
                   className={cn(
                     "relative flex size-14 items-center justify-center rounded-full border transition-all duration-200",
                     phase === "listening"
-                      ? "border-[#1A7F37]/60 bg-[#1A7F37]/15 text-[#1A7F37]"
+                      ? "border-[var(--iv-live)]/60 bg-[var(--iv-live)]/15 text-[var(--iv-live)]"
                       : "border-[var(--iv-border)] bg-[var(--iv-surface-raised)] text-[var(--iv-text)] hover:border-[var(--iv-accent)]/60",
                     (busy || !question) && "cursor-not-allowed opacity-40",
                   )}

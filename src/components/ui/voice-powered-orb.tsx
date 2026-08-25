@@ -8,8 +8,9 @@ import { cn } from "@/lib/utils";
 /**
  * A WebGL orb that visualises an audio level supplied by its parent.
  *
- * Adapted from the shared VoicePoweredOrb. The shader is unchanged; the audio
- * lifecycle is not.
+ * Adapted from the shared VoicePoweredOrb. Palette colors are uniforms so a
+ * theme toggle never remounts WebGL; the audio lifecycle is owned by the
+ * parent, not this component.
  *
  * The original opened its OWN microphone via `getUserMedia` and built its own
  * AudioContext and AnalyserNode. That is wrong inside the interview for three
@@ -25,6 +26,7 @@ import { cn } from "@/lib/utils";
  */
 
 export type OrbMode = "idle" | "speaking" | "listening" | "processing";
+export type OrbPalette = "light" | "dark";
 
 interface VoicePoweredOrbProps {
   className?: string;
@@ -36,6 +38,8 @@ interface VoicePoweredOrbProps {
    */
   levelRef?: RefObject<number>;
   mode?: OrbMode;
+  /** Live-room theme. Read through a ref so a toggle does not remount WebGL. */
+  palette?: OrbPalette;
   voiceSensitivity?: number;
   maxRotationSpeed?: number;
   maxHoverIntensity?: number;
@@ -61,6 +65,11 @@ const frag = /* glsl */ `
   uniform float hover;
   uniform float rot;
   uniform float hoverIntensity;
+  uniform vec3 c1;
+  uniform vec3 c2;
+  uniform vec3 c3;
+  uniform float innerRadius;
+  uniform float noiseScale;
   varying vec2 vUv;
 
   vec3 rgb2yiq(vec3 c) {
@@ -130,12 +139,6 @@ const frag = /* glsl */ `
     return vec4(colorIn.rgb / (a + 1e-5), a);
   }
 
-  const vec3 baseColor1 = vec3(0.878431, 0.321569, 0.149020);
-  const vec3 baseColor2 = vec3(1.000000, 0.686275, 0.513725);
-  const vec3 baseColor3 = vec3(0.788235, 0.254902, 0.109804);
-  const float innerRadius = 0.6;
-  const float noiseScale = 0.65;
-
   float light1(float intensity, float attenuation, float dist) {
     return intensity / (1.0 + dist * attenuation);
   }
@@ -145,9 +148,9 @@ const frag = /* glsl */ `
   }
 
   vec4 draw(vec2 uv) {
-    vec3 color1 = adjustHue(baseColor1, hue);
-    vec3 color2 = adjustHue(baseColor2, hue);
-    vec3 color3 = adjustHue(baseColor3, hue);
+    vec3 color1 = adjustHue(c1, hue);
+    vec3 color2 = adjustHue(c2, hue);
+    vec3 color3 = adjustHue(c3, hue);
 
     float ang = atan(uv.y, uv.x);
     float len = length(uv);
@@ -156,15 +159,15 @@ const frag = /* glsl */ `
     float n0 = snoise3(vec3(uv * noiseScale, iTime * 0.5)) * 0.5 + 0.5;
     float r0 = mix(mix(innerRadius, 1.0, 0.4), mix(innerRadius, 1.0, 0.6), n0);
     float d0 = distance(uv, (r0 * invLen) * uv);
-    float v0 = light1(1.0, 10.0, d0);
+    float v0 = light1(0.85, 12.0, d0);
     v0 *= smoothstep(r0 * 1.05, r0, len);
     float cl = cos(ang + iTime * 2.0) * 0.5 + 0.5;
 
     float a = iTime * -1.0;
     vec2 pos = vec2(cos(a), sin(a)) * r0;
     float d = distance(uv, pos);
-    float v1 = light2(1.5, 5.0, d);
-    v1 *= light1(1.0, 50.0, d0);
+    float v1 = light2(1.05, 6.5, d);
+    v1 *= light1(0.85, 55.0, d0);
 
     float v2 = smoothstep(1.0, mix(innerRadius, 1.0, n0 * 0.5), len);
     float v3 = smoothstep(innerRadius, mix(innerRadius, 1.0, 0.5), len);
@@ -214,11 +217,50 @@ const MODE_BASE: Record<OrbMode, { rotation: number; hover: number }> = {
   processing: { rotation: 0.05, hover: 0.16 },
 };
 
+type PaletteValues = {
+  c1: [number, number, number];
+  c2: [number, number, number];
+  c3: [number, number, number];
+  innerRadius: number;
+  noiseScale: number;
+};
+
+/** Dark: violet / pearl / near-black. Light: milk-glass apricot on cream. */
+const PALETTE: Record<OrbPalette, PaletteValues> = {
+  dark: {
+    c1: [0.42, 0.365, 0.58],
+    c2: [0.91, 0.845, 0.79],
+    c3: [0.07, 0.06, 0.095],
+    innerRadius: 0.62,
+    noiseScale: 0.48,
+  },
+  light: {
+    c1: [0.894, 0.706, 0.588],
+    c2: [0.984, 0.965, 0.945],
+    c3: [0.831, 0.537, 0.384],
+    innerRadius: 0.68,
+    noiseScale: 0.35,
+  },
+};
+
+function applyPalette(
+  program: Program,
+  palette: OrbPalette,
+): void {
+  const p = PALETTE[palette];
+  program.uniforms.c1.value.set(...p.c1);
+  program.uniforms.c2.value.set(...p.c2);
+  program.uniforms.c3.value.set(...p.c3);
+  program.uniforms.innerRadius.value = p.innerRadius;
+  program.uniforms.noiseScale.value = p.noiseScale;
+}
+
 export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
   className,
   hue = 0,
   levelRef,
   mode = "idle",
+  palette = "light",
   voiceSensitivity = 1.4,
   maxRotationSpeed = 1.1,
   maxHoverIntensity = 0.7,
@@ -230,6 +272,11 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
   useEffect(() => {
     modeRef.current = mode;
   }, [mode]);
+
+  const paletteRef = useRef<OrbPalette>(palette);
+  useEffect(() => {
+    paletteRef.current = palette;
+  }, [palette]);
 
   useEffect(() => {
     const container = ctnDom.current;
@@ -276,6 +323,11 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
           hover: { value: 0 },
           rot: { value: 0 },
           hoverIntensity: { value: 0 },
+          c1: { value: new Vec3(...PALETTE[paletteRef.current].c1) },
+          c2: { value: new Vec3(...PALETTE[paletteRef.current].c2) },
+          c3: { value: new Vec3(...PALETTE[paletteRef.current].c3) },
+          innerRadius: { value: PALETTE[paletteRef.current].innerRadius },
+          noiseScale: { value: PALETTE[paletteRef.current].noiseScale },
         },
       });
 
@@ -302,6 +354,7 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
       // Reduced motion: draw one frame and stop. The orb stays on screen as a
       // static presence; state is conveyed by the room's text label instead.
       if (reduceMotion) {
+        applyPalette(program, paletteRef.current);
         program.uniforms.hover.value = 0.1;
         program.uniforms.hoverIntensity.value = 0.05;
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -328,6 +381,7 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
         lastTime = t;
         program.uniforms.iTime.value = t * 0.001;
         program.uniforms.hue.value = hue;
+        applyPalette(program, paletteRef.current);
 
         const currentMode = modeRef.current;
         const base = MODE_BASE[currentMode];
