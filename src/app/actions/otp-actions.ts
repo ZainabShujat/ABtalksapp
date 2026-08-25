@@ -1,12 +1,13 @@
 "use server";
 
 import { auth } from "@/auth";
-import { prisma } from "@/lib/db";
+import { writeClient } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { verifyAccessToken } from "@/lib/msg91";
 import { isOtpDevBypassEnabled, otpDevCode } from "@/lib/feature-flags";
 import { otpVerifySchema } from "@/lib/validations/otp";
 import { toE164, toWidgetMobile } from "@/lib/validations/phone";
+import { dualWriteCandidateIdentity } from "@/repositories/dual-write";
 
 type ActionResult = { ok: true } | { ok: false; message: string };
 
@@ -65,7 +66,7 @@ export async function verifyOtpAction(input: {
   }
 
   try {
-    await prisma.$transaction(async (tx) => {
+    await writeClient().$transaction(async (tx) => {
       await tx.phoneVerification.upsert({
         where: { userId },
         create: {
@@ -88,8 +89,9 @@ export async function verifyOtpAction(input: {
       if (existingProfile) {
         await tx.studentProfile.update({
           where: { userId },
-          data: { phone: e164, phoneVerified: true },
+          data: { phone: e164, phoneVerified: true, phoneVerifiedAt: new Date() },
         });
+        await dualWriteCandidateIdentity(tx, userId);
       }
     });
   } catch (e) {

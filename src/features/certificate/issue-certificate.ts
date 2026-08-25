@@ -4,9 +4,10 @@ import {
   Domain,
   Prisma,
 } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { generateCertificateId } from "./generate-certificate-id";
+import { dualWriteCredential } from "@/repositories/dual-write";
 
 const CERTIFICATE_ELIGIBLE_DAYS = 50;
 const CERTIFICATE_REQUIRED_DAY = 60;
@@ -58,6 +59,12 @@ export async function ensureClaudeCertificate(userId: string): Promise<IssueResu
     select: { certificateId: true },
   });
   if (existing) {
+    await writeClient().$transaction(
+      async (tx) => {
+        await dualWriteCredential(tx, existing.certificateId);
+      },
+      { maxWait: 10000, timeout: 20000 },
+    );
     return {
       ok: true,
       data: { certificateId: existing.certificateId, alreadyIssued: true },
@@ -79,25 +86,32 @@ export async function ensureClaudeCertificate(userId: string): Promise<IssueResu
     const certificateId = await generateCertificateId(
       CertificateType.CLAUDE_CHALLENGE,
     );
-    const created = await prisma.certificate.create({
-      data: {
-        certificateId,
-        userId,
-        type: CertificateType.CLAUDE_CHALLENGE,
-        recipientName: fullName,
-        domain: Domain.CLAUDE,
-        enrollmentId: enrollment.id,
-        issuedAt: enrollment.completedAt ?? new Date(),
-        metadata: {
-          daysCompleted: enrollment.daysCompleted,
-          longestStreak: enrollment.longestStreak,
-          completedAt: enrollment.completedAt?.toISOString() ?? null,
-          college,
-          organization,
-        },
+    const created = await writeClient().$transaction(
+      async (tx) => {
+        const row = await tx.certificate.create({
+          data: {
+            certificateId,
+            userId,
+            type: CertificateType.CLAUDE_CHALLENGE,
+            recipientName: fullName,
+            domain: Domain.CLAUDE,
+            enrollmentId: enrollment.id,
+            issuedAt: enrollment.completedAt ?? new Date(),
+            metadata: {
+              daysCompleted: enrollment.daysCompleted,
+              longestStreak: enrollment.longestStreak,
+              completedAt: enrollment.completedAt?.toISOString() ?? null,
+              college,
+              organization,
+            },
+          },
+          select: { certificateId: true },
+        });
+        await dualWriteCredential(tx, row.certificateId);
+        return row;
       },
-      select: { certificateId: true },
-    });
+      { maxWait: 10000, timeout: 20000 },
+    );
 
     return {
       ok: true,
@@ -113,6 +127,12 @@ export async function ensureClaudeCertificate(userId: string): Promise<IssueResu
         select: { certificateId: true },
       });
       if (raced) {
+        await writeClient().$transaction(
+          async (tx) => {
+            await dualWriteCredential(tx, raced.certificateId);
+          },
+          { maxWait: 10000, timeout: 20000 },
+        );
         return {
           ok: true,
           data: { certificateId: raced.certificateId, alreadyIssued: true },

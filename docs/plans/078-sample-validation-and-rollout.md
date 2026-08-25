@@ -52,8 +52,9 @@ Do this on production only after the fresh-child rehearsal passes twice:
 6. Zero-drift verification (V1–V10 unscoped, points, visibility count+leak,
    200-user shadow)
 7. Reopen
-8. Gradually enable `ENABLE_NEW_*` repositories (credentials → points →
-   progress+learning → candidate → talent last)
+8. Gradually enable `ENABLE_NEW_*` repositories one flag at a time
+   (CREDENTIAL → POINTS → CANDIDATE → LEARNING → PROGRESS → TALENT last).
+   Keep `ENABLE_DUAL_WRITE=true`. Do not start Phase 7 until every switch is stable. See plan 095.
 9. Phase 7 — new-only writes (stop writing legacy)
 10. Observation period
 11. Phase 8 — legacy cleanup
