@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { auth } from "@/auth";
+import { isRecruiterAuthEnabled } from "@/lib/feature-flags";
 import { getRecruiterState } from "@/features/talent-pool/recruiter-registration";
 import { getRecruiterAccountSnapshot } from "@/features/hire/recruiter-account";
 import { existingEngagements } from "@/features/hire/contact-access";
@@ -49,6 +50,7 @@ export default async function HireLayout({ children }: { children: ReactNode }) 
       approved={approved}
       signedIn={Boolean(userId)}
       pending={pending}
+      authEnabled={isRecruiterAuthEnabled()}
     >
       {/* Also for a recruiter still awaiting approval: they registered
           *because* they wanted specific candidates, and that ask lives in

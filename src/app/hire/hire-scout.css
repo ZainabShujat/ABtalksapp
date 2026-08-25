@@ -3730,3 +3730,132 @@ html.dark .hire-app.hire-menu {
     padding: 16px 14px 32px;
   }
 }
+
+/* ── Locked preview cards ──────────────────────────────────────────────────
+ *
+ * Blurred, fabricated profile fields with an upgrade prompt behind them. See
+ * features/hire/locked-preview.ts — none of these values is a real person, so
+ * the blur is presentation, not access control.
+ */
+
+.hire-app .desk-card.desk-card--locked {
+  border-style: dashed;
+  border-color: var(--h-card-line);
+  position: relative;
+}
+
+.hire-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  max-width: 100%;
+  border-radius: 4px;
+}
+
+.hire-locked__value {
+  filter: blur(4.5px);
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+  /* The blur bleeds past the glyphs; the padding keeps it off the neighbours. */
+  padding: 0 3px;
+  opacity: 0.85;
+}
+
+.hire-locked__icon {
+  flex: none;
+  opacity: 0.55;
+}
+
+.hire-locked:hover .hire-locked__icon,
+.hire-locked:focus-visible .hire-locked__icon {
+  opacity: 1;
+  color: var(--h-primary);
+}
+
+.hire-locked:focus-visible {
+  outline: 2px solid var(--h-primary);
+  outline-offset: 2px;
+}
+
+/* Someone who has asked not to see motion or effects should not be shown a
+   smear of unreadable text with no explanation — give them the lock alone. */
+@media (prefers-reduced-transparency: reduce) {
+  .hire-locked__value {
+    filter: none;
+    background: currentColor;
+    opacity: 0.18;
+    border-radius: 3px;
+    color: transparent;
+  }
+}
+
+.hire-upgrade {
+  margin-top: 12px;
+  border: 1px solid var(--h-card-line);
+  border-radius: 12px;
+  background: var(--h-peach);
+  padding: 12px 14px;
+}
+
+.hire-upgrade__body {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  color: var(--h-gray-700);
+}
+
+.hire-upgrade__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--h-ink, inherit);
+}
+
+.hire-upgrade__text {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.hire-upgrade__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.hire-upgrade__cta {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--h-primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.hire-upgrade__cta:hover {
+  filter: brightness(1.05);
+}
+
+.hire-upgrade__close {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--h-card-line);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--h-gray-700);
+}

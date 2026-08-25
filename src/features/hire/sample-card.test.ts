@@ -6,6 +6,7 @@
  * (`scout-tools`) the way an RSC build does. No network, no database.
  */
 import { buildSampleCards } from "@/features/hire/sample-card";
+import { buildLockedPreviewCards } from "@/features/hire/locked-preview";
 import { decodeCandidateRef } from "@/features/hire/candidate-ref";
 import { isKnownTrack } from "@/features/hire/track-registry";
 import { suggestChips } from "@/features/hire/scout-chips";
@@ -434,4 +435,74 @@ async function replayUserChat() {
 replayUserChat().then(() => {
   console.log(`\n${passed} passed, ${failed} failed`);
   if (failed > 0) process.exit(1);
+});
+
+/* ══ Locked "Pro" preview cards ═══════════════════════════════════════════ */
+
+console.log("\nlocked preview cards");
+
+suite("an empty spec produces no preview", () => {
+  assert(buildLockedPreviewCards({}).length === 0, "empty object");
+  assert(buildLockedPreviewCards({ salaryMin: 500000 }).length === 0, "money only");
+});
+
+suite("a spec produces ranked preview cards", () => {
+  const cards = buildLockedPreviewCards(pythonSpec);
+  assert(cards.length === 3, `3 cards, got ${cards.length}`);
+  assert(
+    cards.every((c) => c.locked === true),
+    "every preview card must be marked locked",
+  );
+  assert(
+    cards[0]!.score > cards[1]!.score && cards[1]!.score > cards[2]!.score,
+    "scores must descend so the list reads as a ranking",
+  );
+});
+
+suite("previews are deterministic for the same spec", () => {
+  const a = buildLockedPreviewCards(pythonSpec);
+  const b = buildLockedPreviewCards({ ...pythonSpec });
+  assert(
+    a.map((c) => c.preview.displayName).join("|") ===
+      b.map((c) => c.preview.displayName).join("|"),
+    "the same search must show the same people every render",
+  );
+  const other = buildLockedPreviewCards({ title: "Data analyst", mustHaveStack: ["sql"] });
+  assert(
+    other[0]!.preview.displayName !== a[0]!.preview.displayName ||
+      other[0]!.jobRole !== a[0]!.jobRole,
+    "a different spec should not produce an identical card",
+  );
+});
+
+suite("a preview can never become a shortlist entry or an introduction", () => {
+  // The guarantee is the ref prefix: resolveEligibleCandidates decodes refs and
+  // the whitelist has no SAMPLE track, so these are dropped server-side rather
+  // than relying on the UI to keep them out.
+  for (const c of buildLockedPreviewCards(pythonSpec)) {
+    assert(c.candidateRef.startsWith("SAMPLE:"), "ref must stay in the SAMPLE namespace");
+    assert(decodeCandidateRef(c.candidateRef) === null, "ref must not decode to a candidate");
+    assert(!isKnownTrack("SAMPLE"), "SAMPLE must never be a known track");
+    assert(c.programMemberId === null, "a preview has no cohort row");
+  }
+});
+
+suite("previewed identity is fabricated, never a real candidate field", () => {
+  // MatchCardData carries `displayName` for real candidates. A preview must not
+  // populate it — if it did, a blurred name would flow into every other surface
+  // that renders a card and would be indistinguishable from a real one.
+  for (const c of buildLockedPreviewCards(pythonSpec)) {
+    assert(c.displayName == null, "displayName must stay empty on a preview");
+    assert(
+      c.preview.email.endsWith("@example.com"),
+      "preview email must be in the reserved example.com domain",
+    );
+    // "+91 ••••• •••••" is the shape of a phone number, which is the point —
+    // but it must never contain anything that could be read as one. A country
+    // code is not a number; three consecutive digits would be.
+    assert(
+      !/\d{3}/.test(c.preview.phone),
+      "preview phone must contain no digit run that could pass for a number",
+    );
+  }
 });

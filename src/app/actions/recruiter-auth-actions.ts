@@ -2,6 +2,7 @@
 
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/db";
+import { isRecruiterAuthEnabled } from "@/lib/feature-flags";
 import { provisionRecruiterIdentity } from "@/features/hire/provision-recruiter";
 import { sendEmail } from "@/lib/email";
 import { recordLegalConsents } from "@/features/legal/record-consent";
@@ -60,6 +61,12 @@ export async function requestRecruiterOtpAction(
   if (!parsed.success) {
     return { ok: false, message: "Enter a valid work email address." };
   }
+  if (!isRecruiterAuthEnabled()) {
+    return {
+      ok: false,
+      message: "Recruiter sign-in and registration aren't open yet.",
+    };
+  }
   const intent: OtpIntent = parsed.data.intent;
 
   try {
@@ -112,6 +119,12 @@ export async function registerRecruiterWithOtpAction(
     return {
       ok: false,
       message: parsed.error.issues[0]?.message ?? "Check the form.",
+    };
+  }
+  if (!isRecruiterAuthEnabled()) {
+    return {
+      ok: false,
+      message: "Recruiter sign-in and registration aren't open yet.",
     };
   }
   const { fullName, company, phone, email, code, newsletterOptIn } =

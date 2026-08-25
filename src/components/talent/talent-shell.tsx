@@ -30,7 +30,7 @@ export function TalentShell({
 }) {
   const pathname = usePathname();
   const showNav = !HIDE_NAV.some((p) => pathname === p);
-  const { openAuth, signedIn, pending } = useHireAuth();
+  const { openAuth, signedIn, pending, authEnabled } = useHireAuth();
 
   return (
     <div className="min-h-svh bg-background">
@@ -80,7 +80,7 @@ export function TalentShell({
                     {pending ? "Pending · Sign out" : "Sign out"}
                   </button>
                 </form>
-              ) : (
+              ) : authEnabled ? (
                 <button
                   type="button"
                   onClick={() => openAuth("nav")}
@@ -88,7 +88,7 @@ export function TalentShell({
                 >
                   Sign in
                 </button>
-              )}
+              ) : null}
             </nav>
           )}
         </div>

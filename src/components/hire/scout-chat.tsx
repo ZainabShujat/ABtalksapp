@@ -32,6 +32,7 @@ import { GapReport } from "@/components/hire/gap-report";
 import { useHireDesk } from "@/components/hire/hire-desk-context";
 import { readGuestCart } from "@/components/hire/guest-cart";
 import { buildSampleCards } from "@/features/hire/sample-card";
+import { buildLockedPreviewCards } from "@/features/hire/locked-preview";
 import type { MatchCardData } from "@/components/hire/match-card";
 import { SearchTabs } from "@/components/hire/search-tabs";
 import {
@@ -79,6 +80,8 @@ type Props = {
   alertWhenAvailable?: boolean;
   /** True when this TalentRequest has already been searched. */
   initialSearched?: boolean;
+  /** Server flag: fill an empty desk with blurred example profiles. */
+  proPreview?: boolean;
 };
 
 const OPENING: Msg = {
@@ -276,6 +279,7 @@ export function ScoutChat({
   recent = [],
   alertWhenAvailable = false,
   initialSearched = false,
+  proPreview = false,
 }: Props) {
   const router = useRouter();
   const [requestId, setRequestId] = useState<string | null>(initialRequestId);
@@ -327,8 +331,16 @@ export function ScoutChat({
   const deskMatches =
     persist && (results?.length ?? 0) > 0 ? (results ?? []) : guestMatches;
   const deskGap = persist && (results?.length ?? 0) > 0 ? null : guestGap;
-  const deskSamples =
-    searched && deskMatches.length === 0 ? buildSampleCards(spec) : [];
+  // An empty desk gets one of two things. With the Pro preview on, blurred
+  // example profiles showing the format Pro fills in; otherwise the original
+  // spec-shaped sample card. Both carry `SampleCardNotice`, which is what keeps
+  // the page honest that the pool has nobody matching — neither card is
+  // inventory, and only the notice says so in words.
+  const deskSamples = !searched || deskMatches.length > 0
+    ? []
+    : proPreview
+      ? buildLockedPreviewCards(spec)
+      : buildSampleCards(spec);
 
   useEffect(() => {
     if (persist && (results?.length ?? 0) > 0) {

@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
+import { isRecruiterAuthEnabled } from "@/lib/feature-flags";
 import authConfig from "@/auth.config";
 import { cookies } from "next/headers";
 import { recordLegalConsents } from "@/features/legal/record-consent";
@@ -30,6 +31,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         code: { label: "Code", type: "text" },
       },
       async authorize(credentials) {
+        if (!isRecruiterAuthEnabled()) return null;
+
         const email = String(credentials?.email ?? "").trim().toLowerCase();
         const code = String(credentials?.code ?? "").trim();
         if (!email || !/^\d{6}$/.test(code)) return null;

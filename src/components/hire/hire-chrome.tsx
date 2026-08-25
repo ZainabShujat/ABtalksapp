@@ -37,7 +37,7 @@ export function HireChrome({
   podRows: CartRow[];
   children: React.ReactNode;
 }) {
-  const { approved, openAuth } = useHireAuth();
+  const { approved, openAuth, authEnabled } = useHireAuth();
   const { view, openPod, closePod, openSaved } = useHireDesk();
   const [guestCount, setGuestCount] = useState(0);
   const [overlayCount, setOverlayCount] = useState(0);
@@ -139,7 +139,7 @@ export function HireChrome({
                 <span className="text-muted-foreground">Pending · Sign out</span>
               </button>
             </form>
-          ) : (
+          ) : authEnabled ? (
             <>
               <button
                 type="button"
@@ -156,7 +156,7 @@ export function HireChrome({
                 Sign in
               </button>
             </>
-          )}
+          ) : null}
           <div className="hire-theme">
             <ThemeToggle />
           </div>

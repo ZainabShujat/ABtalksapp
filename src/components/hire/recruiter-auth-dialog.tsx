@@ -10,15 +10,18 @@ import {
 } from "@/components/ui/dialog";
 import { RecruiterRegisterForm } from "@/components/talent/recruiter-register-form";
 import { RecruiterLoginForm } from "@/components/talent/recruiter-login-form";
+import { RecruiterAuthClosed } from "@/components/talent/recruiter-auth-closed";
 import type { HireAuthPanel, HireAuthReason } from "@/components/hire/hire-auth-types";
 
 export function RecruiterAuthDialog({
   open,
   reason,
+  authEnabled,
   onOpenChange,
 }: {
   open: boolean;
   reason: HireAuthReason;
+  authEnabled: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   const stayHere =
@@ -46,16 +49,24 @@ export function RecruiterAuthDialog({
         <DialogHeader>
           <p className="hire-auth__kicker">ABTalks Hire</p>
           <DialogTitle>
-            {isRegister ? "Register to send the request" : "Sign in to hire"}
+            {!authEnabled
+              ? "Not open yet"
+              : isRegister
+                ? "Register to send the request"
+                : "Sign in to hire"}
           </DialogTitle>
           <DialogDescription>
-            {isRegister
-              ? "Your cart stays on this page. Create an account to send it to our team."
-              : "We'll email a code to your work address. No password."}
+            {!authEnabled
+              ? "Recruiter accounts are not taking new sign-ins or registrations yet."
+              : isRegister
+                ? "Your cart stays on this page. Create an account to send it to our team."
+                : "We'll email a code to your work address. No password."}
           </DialogDescription>
         </DialogHeader>
 
-        {isRegister ? (
+        {!authEnabled ? (
+          <RecruiterAuthClosed compact />
+        ) : isRegister ? (
           <>
             <RecruiterRegisterForm />
             <p className="hire-auth__switch">

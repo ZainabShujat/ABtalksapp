@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getRecruiterState } from "@/features/talent-pool/recruiter-registration";
 import { RecruiterRegisterForm } from "@/components/talent/recruiter-register-form";
+import { RecruiterAuthClosed } from "@/components/talent/recruiter-auth-closed";
+import { isRecruiterAuthEnabled } from "@/lib/feature-flags";
 
 export const metadata: Metadata = {
   title: "Register as a recruiter | ABTalks",
@@ -34,6 +36,10 @@ export default async function TalentRegisterPage({ searchParams }: Props) {
     const state = await getRecruiterState(session.user.id);
     if (state.status === "approved") redirect(redirectTo);
     if (state.status === "pending") redirect("/talent/pending");
+  }
+
+  if (!isRecruiterAuthEnabled()) {
+    return <RecruiterAuthClosed />;
   }
 
   const loginHref = `/talent/login?from=${encodeURIComponent(redirectTo)}`;

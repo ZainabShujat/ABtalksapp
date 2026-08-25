@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
-import { isProgramEnabled } from "@/lib/feature-flags";
+import { isProgramEnabled, isRecruiterAuthEnabled } from "@/lib/feature-flags";
 import { getRecruiterState } from "@/features/talent-pool/recruiter-registration";
 import { getRecruiterAccountSnapshot } from "@/features/hire/recruiter-account";
 import { HireAuthProvider } from "@/components/hire/hire-auth-provider";
@@ -26,6 +26,7 @@ export default async function TalentLayout({
       approved={approved}
       signedIn={Boolean(userId)}
       pending={pending}
+      authEnabled={isRecruiterAuthEnabled()}
     >
       {/* Same reason as the /hire layout: a pending recruiter's ask has to be
           recorded before the browser session that holds it goes away. */}

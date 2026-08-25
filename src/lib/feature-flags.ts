@@ -61,6 +61,17 @@ export function isChatbotEnabled(): boolean {
   return process.env.ENABLE_CHATBOT === "true";
 }
 
+/**
+ * Recruiter email OTP sign-in and registration.
+ *
+ * Off unless `ENABLE_RECRUITER_AUTH=true`. The hire desk stays public; this
+ * only closes /talent/login, /talent/register, the hire auth dialog, and the
+ * recruiter-otp authorize path.
+ */
+export function isRecruiterAuthEnabled(): boolean {
+  return process.env.ENABLE_RECRUITER_AUTH === "true";
+}
+
 /** Plan 078 Phase 6 switches. Phase 3 keeps all of these false (legacy reads). */
 export function isNewCandidateRepoEnabled(): boolean {
   return process.env.ENABLE_NEW_CANDIDATE === "true";
@@ -139,4 +150,22 @@ export function hireChallengePool(): { enabled: boolean; minDays: number } {
     return { enabled: true, minDays: parsed };
   }
   return { enabled: raw.toLowerCase() === "true", minDays: 10 };
+}
+
+/**
+ * Blurred, fabricated "Pro" preview cards on an empty `/hire` search.
+ *
+ * Presentational only. There is no plan column, no entitlement and no billing —
+ * every locked field is locked for everybody, and the values behind the blur are
+ * generated, not real candidates (see features/hire/locked-preview.ts).
+ *
+ * Off by default: with the searchable pool still small, a desk that fills with
+ * example profiles on every empty search is a claim about inventory, and that
+ * claim should be switched on deliberately rather than by shipping.
+ *
+ * Read on the server and passed to the client as a prop — the desk is a client
+ * component and cannot read process.env.
+ */
+export function isHireProPreviewEnabled(): boolean {
+  return process.env.HIRE_PRO_PREVIEW === "true";
 }

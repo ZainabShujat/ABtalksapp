@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { GLOBE_LATS } from "./landing-content";
 
-export function CtaBand() {
+export function CtaBand({ showRecruiterCta = false }: { showRecruiterCta?: boolean }) {
   return (
     <section className="cta-band">
       <div className="cta-band__rings" aria-hidden="true">
@@ -28,9 +28,11 @@ export function CtaBand() {
           Hire what you have already seen.
         </h2>
         <div className="cta-band__actions">
-          <Link href="/hire" className="btn btn--outline-light">
-            Post a requirement
-          </Link>
+          {showRecruiterCta ? (
+            <Link href="/hire" className="btn btn--outline-light">
+              Post a requirement
+            </Link>
+          ) : null}
           <a href="#cohorts" className="btn btn--white">
             Join the next cohort
           </a>

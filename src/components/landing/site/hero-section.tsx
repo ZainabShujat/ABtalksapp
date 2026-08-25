@@ -26,9 +26,11 @@ function getPhoneServerSnapshot() {
 export function HeroSection({
   getStartedHref,
   isSignedIn,
+  showRecruiterCta = false,
 }: {
   getStartedHref: string;
   isSignedIn: boolean;
+  showRecruiterCta?: boolean;
 }) {
   const reduce = useSafeReducedMotion();
   const isMobile = useSyncExternalStore(
@@ -208,9 +210,11 @@ export function HeroSection({
             <Link href={getStartedHref} className="btn btn--primary btn--lg">
               {isSignedIn ? "Open Dashboard" : "Get Started"}
             </Link>
-            <Link href="/hire" className="btn btn--ghost-light btn--lg">
-              Post a requirement
-            </Link>
+            {showRecruiterCta ? (
+              <Link href="/hire" className="btn btn--ghost-light btn--lg">
+                Post a requirement
+              </Link>
+            ) : null}
           </div>
         </div>
       </div>

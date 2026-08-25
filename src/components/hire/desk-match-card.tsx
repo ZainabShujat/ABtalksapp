@@ -10,6 +10,12 @@ import {
   type SampleDemand,
 } from "@/components/hire/sample-card-notice";
 import type { MatchCardData } from "@/components/hire/match-card";
+import { isLockedPreview } from "@/features/hire/locked-preview";
+import {
+  LockedField,
+  UpgradeNotice,
+  useUpgradePrompt,
+} from "@/components/hire/locked-field";
 import { cn } from "@/lib/utils";
 
 function trackLabel(source?: CandidateSource): string | null {
@@ -58,6 +64,8 @@ export function DeskMatchCard({
   sampleDemand?: SampleDemand;
 }) {
   const sample = match.candidateRef.startsWith("SAMPLE:");
+  const preview = isLockedPreview(match) ? match.preview : null;
+  const { upgradeOpen, openUpgrade, dismissUpgrade } = useUpgradePrompt();
   const e = match.evidence ?? {};
   const publicId = refPublicId(match.candidateRef);
   const skills = e.skills ?? [];
@@ -66,6 +74,85 @@ export function DeskMatchCard({
   const isChallenge = match.source === "CLAUDE" || match.source === "CHALLENGE_60";
   const workLabel = isChallenge ? "days shipped" : "missions passed";
   const totalDays = e.totalTrackDays;
+
+  if (preview) {
+    const p = preview;
+    return (
+      <article className="desk-card desk-card--locked">
+        {sampleDemand && <SampleCardNotice {...sampleDemand} />}
+        <div className="desk-card__head" style={{ marginTop: 12 }}>
+          <div className="desk-card__who">
+            <span className="desk-card__avatar" aria-hidden="true">
+              <UserRound className="size-5" />
+            </span>
+            <div className="min-w-0">
+              <h3 className="desk-card__role">
+                <LockedField
+                  value={p.displayName}
+                  label="Candidate name"
+                  onReveal={openUpgrade}
+                />
+              </h3>
+              <p className="desk-card__ref">
+                {match.jobRole}
+                {typeof e.yearsExperience === "number" && e.yearsExperience > 0
+                  ? ` · ${e.yearsExperience}+ yrs`
+                  : ""}
+              </p>
+              <p className="desk-card__stack">
+                <LockedField
+                  value={p.locationLabel}
+                  label="Location"
+                  onReveal={openUpgrade}
+                />
+                {" · "}
+                <LockedField
+                  value={p.educationLine}
+                  label="Education"
+                  onReveal={openUpgrade}
+                />
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {(e.skills ?? []).length > 0 && (
+          <div className="desk-card__facts">
+            {(e.skills ?? []).map((sk) => (
+              <span key={sk} className={`desk-pill ${skillTint(sk)}`}>
+                {sk}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <p className="desk-card__stack" style={{ marginTop: 10 }}>
+          Expected{" "}
+          <LockedField
+            value={p.compensationBand}
+            label="Expected compensation"
+            onReveal={openUpgrade}
+          />
+        </p>
+
+        {upgradeOpen && <UpgradeNotice onDismiss={dismissUpgrade} />}
+
+        <p className="desk-card__why">
+          An example of what a full profile looks like — not a person in the
+          pool. Blurred fields are what Pro fills in.
+        </p>
+
+        {onOpen && (
+          <div className="desk-card__cta">
+            <button type="button" className="desk-ghost" onClick={onOpen}>
+              View more details
+              <ChevronRight className="size-3.5" aria-hidden="true" />
+            </button>
+          </div>
+        )}
+      </article>
+    );
+  }
 
   if (sample) {
     return (

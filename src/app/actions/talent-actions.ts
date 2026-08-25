@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { isRecruiterAuthEnabled } from "@/lib/feature-flags";
 import {
   registerRecruiter,
 } from "@/features/talent-pool/recruiter-registration";
@@ -27,6 +28,13 @@ type ActionResult<T = undefined> =
 export async function registerRecruiterAction(
   input: unknown,
 ): Promise<ActionResult> {
+  if (!isRecruiterAuthEnabled()) {
+    return {
+      ok: false,
+      message: "Recruiter sign-in and registration aren't open yet.",
+    };
+  }
+
   const session = await auth();
   if (!session?.user?.id) {
     return { ok: false, message: "Please sign in to continue." };

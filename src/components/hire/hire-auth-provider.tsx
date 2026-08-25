@@ -17,6 +17,7 @@ type HireAuthContextValue = {
   approved: boolean;
   signedIn: boolean;
   pending: boolean;
+  authEnabled: boolean;
   openAuth: (reason: HireAuthReason) => void;
 };
 
@@ -29,6 +30,7 @@ export function useHireAuth(): HireAuthContextValue {
       approved: false,
       signedIn: false,
       pending: false,
+      authEnabled: false,
       openAuth: () => {
         window.location.href = "/hire";
       },
@@ -41,11 +43,13 @@ export function HireAuthProvider({
   approved,
   signedIn,
   pending,
+  authEnabled,
   children,
 }: {
   approved: boolean;
   signedIn: boolean;
   pending: boolean;
+  authEnabled: boolean;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -57,8 +61,8 @@ export function HireAuthProvider({
   }, []);
 
   const value = useMemo(
-    () => ({ approved, signedIn, pending, openAuth }),
-    [approved, signedIn, pending, openAuth],
+    () => ({ approved, signedIn, pending, authEnabled, openAuth }),
+    [approved, signedIn, pending, authEnabled, openAuth],
   );
 
   return (
@@ -67,6 +71,7 @@ export function HireAuthProvider({
       <RecruiterAuthDialog
         open={open}
         reason={reason}
+        authEnabled={authEnabled}
         onOpenChange={setOpen}
       />
     </HireAuthContext.Provider>

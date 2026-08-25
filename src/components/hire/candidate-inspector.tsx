@@ -4,6 +4,12 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { ChevronLeft, Download, ExternalLink } from "lucide-react";
 import { refPublicId, type CandidateSource } from "@/features/hire/candidate-ref";
+import { isLockedPreview } from "@/features/hire/locked-preview";
+import {
+  LockedField,
+  UpgradeNotice,
+  useUpgradePrompt,
+} from "@/components/hire/locked-field";
 import { COMPENSATION_DISCLAIMER } from "@/features/hire/compensation";
 import { RequestIntroButton } from "@/components/hire/request-intro-button";
 import { DeskShortlistButton } from "@/components/hire/desk-shortlist-button";
@@ -78,6 +84,8 @@ export function CandidateInspector({
   const e = match.evidence ?? {};
   const publicId = refPublicId(match.candidateRef);
   const sample = match.candidateRef.startsWith("SAMPLE:");
+  const preview = isLockedPreview(match) ? match.preview : null;
+  const { upgradeOpen, openUpgrade, dismissUpgrade } = useUpgradePrompt();
   const track = trackLongLabel(match.source);
   const isChallenge = match.source === "CLAUDE" || match.source === "CHALLENGE_60";
   const workLabel = isChallenge ? "Days shipped" : "Missions";
@@ -119,15 +127,74 @@ export function CandidateInspector({
         <div className="hire-detail__top">
           <div>
             <h3 className="hire-detail__name">
-              {match.displayName || match.jobRole}
+              {preview ? (
+                <LockedField
+                  value={preview.displayName}
+                  label="Candidate name"
+                  onReveal={openUpgrade}
+                />
+              ) : (
+                match.displayName || match.jobRole
+              )}
             </h3>
             <p className="hire-detail__ref">
-              {sample
-                ? "Sample profile — not a person in the pool"
-                : [match.jobRole, e.workMode, match.locationLabel, publicId]
-                    .filter(Boolean)
-                    .join(" · ")}
+              {preview ? (
+                <>
+                  {match.jobRole}
+                  {" · "}
+                  <LockedField
+                    value={preview.locationLabel}
+                    label="Location"
+                    onReveal={openUpgrade}
+                  />
+                  {" · "}
+                  <LockedField
+                    value={preview.educationLine}
+                    label="Education"
+                    onReveal={openUpgrade}
+                  />
+                </>
+              ) : sample ? (
+                "Sample profile — not a person in the pool"
+              ) : (
+                [match.jobRole, e.workMode, match.locationLabel, publicId]
+                  .filter(Boolean)
+                  .join(" · ")
+              )}
             </p>
+            {preview && (
+              <div className="hire-detail__locked">
+                <p className="hire-detail__ref">
+                  Email{" "}
+                  <LockedField
+                    value={preview.email}
+                    label="Email address"
+                    onReveal={openUpgrade}
+                  />
+                </p>
+                <p className="hire-detail__ref">
+                  Phone{" "}
+                  <LockedField
+                    value={preview.phone}
+                    label="Phone number"
+                    onReveal={openUpgrade}
+                  />
+                </p>
+                <p className="hire-detail__ref">
+                  Expected{" "}
+                  <LockedField
+                    value={preview.compensationBand}
+                    label="Expected compensation"
+                    onReveal={openUpgrade}
+                  />
+                </p>
+                {upgradeOpen && <UpgradeNotice onDismiss={dismissUpgrade} />}
+                <p className="hire-detail__ref" style={{ marginTop: 10 }}>
+                  This is an example of the full profile format — the details
+                  behind the blur are generated, not a candidate.
+                </p>
+              </div>
+            )}
           </div>
           {!sample && (
             <div className="hire-detail__score">
