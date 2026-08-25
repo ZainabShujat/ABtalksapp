@@ -82,8 +82,8 @@ export function HireChrome({
     <div className={cn("hire-app", desk && "hire-app--desk")}>
       <header className="hire-app__header">
         <Link href="/" className="hire-app__brand" aria-label="ABTalks home">
-          <span className="hire-app__logo">
-            <img src="/hire/logo.png" alt="ABTalks" width={127} height={28} />
+          <span className="hire-app__wordmark">
+            AB<i className="hire-app__wordmark-gap" aria-hidden="true" />talks
           </span>
           <span className="hire-app__badge">Hire</span>
         </Link>
@@ -141,13 +141,6 @@ export function HireChrome({
             </form>
           ) : authEnabled ? (
             <>
-              <button
-                type="button"
-                onClick={() => openAuth("checkout")}
-                className="hire-register"
-              >
-                Register
-              </button>
               <button
                 type="button"
                 onClick={() => openAuth("nav")}

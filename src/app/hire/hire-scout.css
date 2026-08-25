@@ -111,6 +111,26 @@ html.dark .hire-hbtn__icon img {
   text-decoration: none;
 }
 
+/* The wordmark is text, not the cropped logo sprite, because the brand sets
+   "AB" and "talks" apart and an image cannot be asked for a gap. The rest of
+   the site already writes it as text (site-footer, keep-three-dashboard). */
+.hire-app__wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  flex: none;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  color: var(--h-ink);
+  white-space: nowrap;
+}
+
+.hire-app__wordmark-gap {
+  display: inline-block;
+  width: 0.16em;
+}
+
 .hire-app__logo {
   position: relative;
   width: 108px;
@@ -4036,5 +4056,31 @@ html.dark .hire-app.hire-menu {
 
   .hire-app--desk:has(.hire-podbar) .scout-composer {
     padding-bottom: 74px;
+  }
+
+  /* Card pills line up instead of drifting.
+
+     They are a wrap row of wildly different widths — "US cohort" next to
+     "4 of 31 missions passed" next to a comma-joined skill list — so at this
+     width they broke into ragged rows with orphans stranded mid-line. One
+     height, a tighter rhythm, and a pill that would still be too long
+     truncates rather than pushing everything after it onto its own line. */
+  .desk-card__facts {
+    gap: 6px;
+    align-items: flex-start;
+  }
+
+  .desk-card__facts .desk-pill {
+    height: 24px;
+    max-width: 100%;
+    min-width: 0;
+    padding: 0 8px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .hire-app__wordmark {
+    font-size: 17px;
   }
 }
