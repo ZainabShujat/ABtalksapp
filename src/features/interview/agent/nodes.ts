@@ -16,6 +16,7 @@ import type { InterviewState, TurnAction } from "@/features/interview/types";
 import {
   CLOSING_LINE,
   REDIRECT_LINE,
+  resolveClarification,
   REPEAT_LINE,
   resolveAcknowledgement,
   resolveFollowUpText,
@@ -150,6 +151,7 @@ export function routeResponse(state: InterviewAgentState): NodeUpdate {
       followUpsAsked: state.interviewState.followUpsAsked,
       redirectsAsked: state.interviewState.redirectsAsked ?? 0,
       repeatsAsked: state.interviewState.repeatsAsked ?? 0,
+      clarificationsAsked: state.interviewState.clarificationsAsked ?? 0,
     },
     state.interviewState,
   );
@@ -167,9 +169,17 @@ export function routeResponse(state: InterviewAgentState): NodeUpdate {
 
   // The probe text is resolved by the policy (an escalation rung must come from
   // the bank, never from the model), so it is staged here for the branch node.
+  // An escalation speaks the bridge first, then the authored rung. Joining
+  // them here keeps `applyEscalate` a pass-through and leaves the bank text
+  // the only thing the ladder actually chose.
+  const staged =
+    outcome.action === "ESCALATE" && outcome.probeText
+      ? [outcome.bridgeText, outcome.probeText].filter(Boolean).join("\n\n")
+      : (outcome.probeText ?? null);
+
   return {
     lastDecision: outcome.action,
-    nextPrompt: outcome.probeText ?? null,
+    nextPrompt: staged,
   };
 }
 
@@ -219,6 +229,19 @@ export function applyRepeat(state: InterviewAgentState): NodeUpdate {
   return { nextPrompt: `${REPEAT_LINE}\n\n${state.currentQuestion}` };
 }
 
+/**
+ * Answers what the candidate asked about the question, then restates it.
+ *
+ * The restatement is `state.currentQuestion` — the banked text, verbatim. The
+ * model explains a term; it never gets to reword the thing being assessed.
+ */
+export function applyClarify(state: InterviewAgentState): NodeUpdate {
+  const answer = state.decision
+    ? resolveClarification(state.decision)
+    : REPEAT_LINE;
+  return { nextPrompt: `${answer}\n\n${state.currentQuestion}` };
+}
+
 /** Next question text is only known after the state advances, so this is a no-op. */
 export function applyNextQuestion(): NodeUpdate {
   return { nextPrompt: null };
@@ -244,14 +267,22 @@ export function updateState(state: InterviewAgentState): NodeUpdate {
     return { finished: true, status: state.interviewState.status };
   }
 
-  if (state.lastDecision === "REDIRECT" || state.lastDecision === "REPEAT") {
-    const isRedirect = state.lastDecision === "REDIRECT";
+  if (
+    state.lastDecision === "REDIRECT" ||
+    state.lastDecision === "REPEAT" ||
+    state.lastDecision === "CLARIFY"
+  ) {
     const bumped: InterviewState = {
       ...state.interviewState,
       redirectsAsked:
-        (state.interviewState.redirectsAsked ?? 0) + (isRedirect ? 1 : 0),
+        (state.interviewState.redirectsAsked ?? 0) +
+        (state.lastDecision === "REDIRECT" ? 1 : 0),
       repeatsAsked:
-        (state.interviewState.repeatsAsked ?? 0) + (isRedirect ? 0 : 1),
+        (state.interviewState.repeatsAsked ?? 0) +
+        (state.lastDecision === "REPEAT" ? 1 : 0),
+      clarificationsAsked:
+        (state.interviewState.clarificationsAsked ?? 0) +
+        (state.lastDecision === "CLARIFY" ? 1 : 0),
     };
     const next = appendLine(
       bumped,

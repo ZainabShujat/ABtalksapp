@@ -99,6 +99,16 @@ export const MAX_EXTENSION_QUESTIONS = 2;
  */
 export const MAX_REPEATS_PER_QUESTION = 2;
 
+/**
+ * Clarifications ("what do you mean by X?") allowed per question.
+ *
+ * Separate from REPEAT, which restates. A clarification is answered, and a
+ * candidate who genuinely misunderstands a term deserves one — but an unbounded
+ * budget is a way to have the interviewer explain the whole topic, so it is
+ * capped like every other non-answer move.
+ */
+export const MAX_CLARIFICATIONS_PER_QUESTION = 2;
+
 /* ------------------------- general interviewer (not V1 — see docs/plans/066) */
 
 /** Completed challenge days required to unlock a first attempt. */

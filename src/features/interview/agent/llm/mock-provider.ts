@@ -1,4 +1,5 @@
 import {
+  looksLikeClarifyRequest,
   heuristicEvidence,
   isBlankAnswer,
   looksLikeRepeatRequest,
@@ -124,13 +125,15 @@ export function createMockInterviewLLM(
       // scoring would call it off-topic. It is neither an answer nor a
       // digression — it is a request to hear the question again.
       const repeatRequest = looksLikeRepeatRequest(answerText);
+      const clarifyRequest =
+        !repeatRequest && looksLikeClarifyRequest(answerText);
 
       const matchedEvidence =
-        stuck || repeatRequest
+        stuck || repeatRequest || clarifyRequest
           ? []
           : matchExpectedEvidence(answerText, question.expectedEvidence);
       const relevance: Relevance =
-        stuck || repeatRequest
+        stuck || repeatRequest || clarifyRequest
           ? "ON_TOPIC"
           : judgeRelevance(answerText, input, matchedEvidence);
 
@@ -146,9 +149,14 @@ export function createMockInterviewLLM(
 
       let action: LlmAction = "NEXT_QUESTION";
       let followUpQuestion: string | null = null;
+      let clarification: string | null = null;
 
       if (repeatRequest) {
         action = "REPEAT";
+      } else if (clarifyRequest) {
+        action = "CLARIFY";
+        clarification =
+          "That refers to the specific approach named in the question, as opposed to the alternative it is being compared with.";
       } else if (relevance === "OFF_TOPIC") {
         action = "REDIRECT";
       } else if (stuck) {
@@ -179,6 +187,7 @@ export function createMockInterviewLLM(
         evidence,
         followUpQuestion,
         acknowledgement,
+        clarification,
         confidence: 0.5,
         degraded: false,
       };

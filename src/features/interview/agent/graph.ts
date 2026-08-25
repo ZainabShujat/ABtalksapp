@@ -12,6 +12,7 @@ import {
   applyEscalate,
   applyFollowUp,
   applyNextQuestion,
+  applyClarify,
   applyRedirect,
   applyRepeat,
   completeInterview,
@@ -96,7 +97,7 @@ function guardBranch(state: InterviewAgentState): "analyze" | "abort" {
 /** Names the branch node for the routed action. */
 function actionBranch(
   state: InterviewAgentState,
-): "followUp" | "escalate" | "nextQuestion" | "redirect" | "repeat" {
+): "followUp" | "escalate" | "nextQuestion" | "redirect" | "repeat" | "clarify" {
   switch (state.lastDecision) {
     case "FOLLOW_UP":
       return "followUp";
@@ -104,6 +105,8 @@ function actionBranch(
       return "escalate";
     case "REDIRECT":
       return "redirect";
+    case "CLARIFY":
+      return "clarify";
     case "REPEAT":
       return "repeat";
     default:
@@ -121,6 +124,7 @@ export function buildInterviewGraph(llm: InterviewLLM) {
     .addNode("nextQuestion", applyNextQuestion)
     .addNode("redirect", applyRedirect)
     .addNode("repeat", applyRepeat)
+    .addNode("clarify", applyClarify)
     .addNode("updateState", updateState)
     .addNode("complete", completeInterview)
     .addEdge(START, "receiveAnswer")
@@ -135,12 +139,14 @@ export function buildInterviewGraph(llm: InterviewLLM) {
       nextQuestion: "nextQuestion",
       redirect: "redirect",
       repeat: "repeat",
+      clarify: "clarify",
     })
     .addEdge("followUp", "updateState")
     .addEdge("escalate", "updateState")
     .addEdge("nextQuestion", "updateState")
     .addEdge("redirect", "updateState")
     .addEdge("repeat", "updateState")
+    .addEdge("clarify", "updateState")
     .addConditionalEdges("updateState", shouldContinue, {
       complete: "complete",
       continue: END,

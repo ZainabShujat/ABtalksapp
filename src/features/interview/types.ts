@@ -315,6 +315,8 @@ export type InterviewState = {
   redirectsAsked?: number;
   /** Repeat requests served on the question currently open. See above. */
   repeatsAsked?: number;
+  /** Clarifications answered on the question currently on the floor. */
+  clarificationsAsked?: number;
   /**
    * How deep the conversation has gone on the question currently open.
    * 1 = the core question as banked; 2 and 3 are escalation rungs. Resets with

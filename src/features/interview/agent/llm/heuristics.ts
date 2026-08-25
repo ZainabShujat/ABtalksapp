@@ -75,6 +75,30 @@ export function looksStuck(text: string): boolean {
   return STUCK_PATTERNS.some((p) => p.test(t));
 }
 
+/**
+ * "What do you mean by X?" — a request to define a term IN the question.
+ *
+ * Distinct from a repeat request, which asks for the same words again. This
+ * asks what the words mean, and the honest answer is to explain them. Without
+ * this the phrasing shares no vocabulary with the question and gets scored
+ * OFF_TOPIC, so a candidate is redirected for asking a fair question.
+ *
+ * Deliberately narrow. It matches askING about the question, not any sentence
+ * containing "mean" — "the mean pooling step" must never land here.
+ */
+const CLARIFY_PATTERNS = [
+  /\bwhat do you mean\b/i,
+  /\bwhat does .{1,40} mean\b/i,
+  /\bcould you clarify\b/i,
+  /\bcan you clarify\b/i,
+  /\bnot sure what you('?re| are) asking\b/i,
+  /\bwhat exactly (do|are) you\b/i,
+];
+
+export function looksLikeClarifyRequest(text: string): boolean {
+  return CLARIFY_PATTERNS.some((p) => p.test(text));
+}
+
 export function looksLikeRepeatRequest(text: string): boolean {
   return REPEAT_PATTERNS.some((p) => p.test(text));
 }
@@ -128,6 +152,7 @@ export function fallbackDecision(input: AnalyzeAnswerInput): InterviewDecision {
 
   let action: LlmAction = "NEXT_QUESTION";
   if (looksLikeRepeatRequest(answerText)) action = "REPEAT";
+  else if (looksLikeClarifyRequest(answerText)) action = "CLARIFY";
   else if (
     !looksStuck(answerText) &&
     followUpsRemaining > 0 &&

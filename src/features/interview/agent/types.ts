@@ -37,6 +37,7 @@ export const AGENT_ACTIONS = [
   "NEXT_QUESTION",
   "REDIRECT",
   "REPEAT",
+  "CLARIFY",
   "COMPLETE",
 ] as const;
 export type AgentAction = (typeof AGENT_ACTIONS)[number];
@@ -56,6 +57,7 @@ export const LLM_ACTIONS = [
   "NEXT_QUESTION",
   "REDIRECT",
   "REPEAT",
+  "CLARIFY",
 ] as const;
 export type LlmAction = (typeof LLM_ACTIONS)[number];
 
@@ -107,6 +109,8 @@ export const interviewDecisionSchema = z.object({
     }),
   followUpQuestion: z.string().max(600).nullish(),
   acknowledgement: z.string().max(300).nullish(),
+  clarification: z.string().max(400).nullish(),
+  bridge: z.string().max(300).nullish(),
   confidence: z.number().min(0).max(1).nullish(),
 });
 
@@ -121,6 +125,19 @@ export type InterviewDecision = {
    * than a form. Never evaluative — see `resolveAcknowledgement`.
    */
   acknowledgement?: string | null;
+  /**
+   * A direct answer to a clarification the candidate asked about the QUESTION
+   * ("what do you mean by locally?"). Spoken before the question is restated
+   * verbatim. Records no evidence and spends no budget — see `routeDecision`.
+   */
+  clarification?: string | null;
+  /**
+   * One short sentence linking what the candidate just said to the authored
+   * deep probe that follows it. The probe text itself is never model-written:
+   * an escalation everyone receives differently is not comparable. The bridge
+   * is what stops that probe arriving as a non-sequitur.
+   */
+  bridge?: string | null;
   confidence?: number | null;
   /**
    * True when this decision came from the deterministic fallback rather than a

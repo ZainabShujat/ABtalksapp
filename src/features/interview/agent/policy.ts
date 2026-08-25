@@ -1,4 +1,5 @@
 import {
+  MAX_CLARIFICATIONS_PER_QUESTION,
   MAX_REDIRECTS_PER_QUESTION,
   MAX_REPEATS_PER_QUESTION,
 } from "@/features/interview/constants";
@@ -67,13 +68,16 @@ export function openingLine(params: {
 
   const framing =
     params.blueprint === "DAY_15"
-      ? "This is your Day 15 checkpoint — a short conversation about the work you've submitted so far."
-      : "This is your final interview for the cohort — a conversation about the work you've built across all thirty-one days.";
+      ? "This is your Day 15 checkpoint."
+      : "This is your final interview for the cohort.";
 
-  const shape = `I'll ask you around ${params.questionCount} questions over about fifteen minutes, and I'll follow up on your answers as we go.`;
+  const shape =
+    params.blueprint === "DAY_15"
+      ? "I'll ask you about the work you've submitted so far, and I'll dig deeper into some of your answers as we go."
+      : "I'll ask you about what you built across the thirty-one days, and I'll dig deeper into some of your answers as we go.";
 
   const permission =
-    "Talk me through your thinking rather than giving me the short version — and if you don't know something, just say so and we'll move on.";
+    "If you'd like me to repeat or clarify anything, just ask — and if you don't know something, say so and we'll move on.";
 
   const handover = "Let's start here.";
 
@@ -88,6 +92,7 @@ export type PolicyCounters = {
   followUpsAsked: number;
   redirectsAsked: number;
   repeatsAsked: number;
+  clarificationsAsked: number;
 };
 
 export type PolicyOutcome = {
@@ -102,6 +107,8 @@ export type PolicyOutcome = {
   probeText?: string;
   /** Depth being moved to, for logging and the demo view. */
   probeLevel?: number;
+  /** One sentence spoken before `probeText`, linking it to the last answer. */
+  bridgeText?: string;
 };
 
 /**
@@ -142,6 +149,28 @@ export function routeDecision(
     return {
       action: "NEXT_QUESTION",
       rationale: `Repeat cap (${MAX_REPEATS_PER_QUESTION}) reached; moving on.`,
+    };
+  }
+
+  // A clarification is a meta-request about the QUESTION, like REPEAT, and is
+  // checked in the same place and for the same reason: relevance scoring reads
+  // "what do you mean by locally?" as OFF_TOPIC, because it shares no
+  // vocabulary with the question it is asking about. Redirecting someone for
+  // asking what a term means punishes the honest candidate and teaches the rest
+  // to guess silently. It records no evidence and spends no follow-up budget,
+  // so answering costs the assessment nothing.
+  if (decision.action === "CLARIFY") {
+    if (counters.clarificationsAsked < MAX_CLARIFICATIONS_PER_QUESTION) {
+      return {
+        action: "CLARIFY",
+        rationale: "Candidate asked what the question means.",
+      };
+    }
+    // Out of clarifications: restate rather than explain again. Repeated
+    // "explain it differently" is a way to have the question answered for you.
+    return {
+      action: "REPEAT",
+      rationale: `Clarification cap (${MAX_CLARIFICATIONS_PER_QUESTION}) reached; restating.`,
     };
   }
 
@@ -187,8 +216,14 @@ export function routeDecision(
     return {
       action: "ESCALATE",
       rationale: ladder.rationale,
+      // The probe text stays the AUTHORED rung, verbatim — an escalation that
+      // varied per candidate would stop meaning the same thing on two
+      // transcripts. The bridge is the one sentence in front of it that makes
+      // it land as a follow-on from what they just said rather than as the next
+      // item on a list.
       probeText: ladder.probe.text,
       probeLevel: ladder.probe.level,
+      bridgeText: resolveBridge(decision),
     };
   }
 
@@ -306,6 +341,49 @@ export function resolveAcknowledgement(
 
   const pool = stuck ? STUCK_ACKNOWLEDGEMENTS : NEUTRAL_ACKNOWLEDGEMENTS;
   return pool[Math.max(0, questionOrder - 1) % pool.length]!;
+}
+
+/** Clarifications may run a little longer than an acknowledgement, not much. */
+const MAX_CLARIFICATION_CHARS = 320;
+
+/**
+ * The sentence that carries an authored deep probe into the conversation.
+ *
+ * The probe itself is fixed; what varies is whether it lands as a follow-on
+ * from what the candidate just said, or as the next item read off a list. That
+ * difference is the whole gap between an interview and a questionnaire, and it
+ * costs the assessment nothing because the graded text is unchanged.
+ *
+ * Rejected if it asks a question: a bridge that asks something is an
+ * unbudgeted follow-up in disguise, and would let the model put a second
+ * question in front of the one the ladder chose.
+ */
+export function resolveBridge(decision: InterviewDecision): string {
+  const drafted = (decision.bridge ?? "").replace(/\s+/g, " ").trim();
+  if (drafted.length === 0 || drafted.length > MAX_ACKNOWLEDGEMENT_CHARS) return "";
+  if (drafted.includes("?")) return "";
+  return drafted;
+}
+
+/**
+ * The answer to "what do you mean by X?", spoken before the question is
+ * restated verbatim.
+ *
+ * The model writes this, because a canned gloss cannot answer an arbitrary
+ * question about an arbitrary term. Two guards keep it honest: it may not ask
+ * anything back, and it is length-capped so the interviewer defines a term
+ * rather than delivering a lecture that contains the answer.
+ *
+ * Falls back to the standard repeat line, so a drafting failure restates the
+ * question instead of leaving the candidate with silence.
+ */
+export function resolveClarification(decision: InterviewDecision): string {
+  const drafted = (decision.clarification ?? "").replace(/\s+/g, " ").trim();
+  const usable =
+    drafted.length > 0 &&
+    drafted.length <= MAX_CLARIFICATION_CHARS &&
+    !drafted.includes("?");
+  return usable ? drafted : REPEAT_LINE;
 }
 
 /**
