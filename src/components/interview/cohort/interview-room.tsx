@@ -349,6 +349,9 @@ export function InterviewRoom({
       }
       spokenRef.current = text;
       setPhase("speaking");
+      // Hide the line until audio actually starts. Otherwise the full prompt
+      // sits in the transcript for the whole TTS round-trip.
+      setReveal({ text, chars: 0 });
 
       const viaBrowser = () =>
         new Promise<void>((resolve) => {
@@ -512,8 +515,10 @@ export function InterviewRoom({
         return;
       }
 
-      if (turn.data.prompt) void speak(turn.data.prompt);
-      else setPhase("idle");
+      if (turn.data.prompt) {
+        setReveal({ text: turn.data.prompt, chars: 0 });
+        void speak(turn.data.prompt);
+      } else setPhase("idle");
     },
     [interviewId, question, onFinishedAction, speak],
   );
@@ -592,6 +597,7 @@ export function InterviewRoom({
               ...prev,
               { role: "interviewer", text: LANGUAGE_RETRY_LINE },
             ]);
+            setReveal({ text: LANGUAGE_RETRY_LINE, chars: 0 });
             await speak(LANGUAGE_RETRY_LINE);
             return;
           }
@@ -814,6 +820,7 @@ export function InterviewRoom({
           ? `Sorry, you might not have caught that. ${question.text}`
           : "Sorry, you might not have caught that.";
         setTurns((prev) => [...prev, { role: "interviewer", text: line }]);
+        setReveal({ text: line, chars: 0 });
         void speak(line);
         return;
       }
@@ -998,6 +1005,10 @@ export function InterviewRoom({
             // audio has reached. `reveal.text` is the same string that was sent
             // to the speech endpoint, so matching on it guarantees we never
             // truncate a different turn, and never show a paraphrase.
+            //
+            // If we are already in "speaking" but reveal has not caught up
+            // (TTS still fetching), keep the line blank rather than dumping
+            // the full question before the voice starts.
             const revealing =
               isLast &&
               turn.role === "interviewer" &&
@@ -1005,7 +1016,9 @@ export function InterviewRoom({
               reveal.text === turn.text;
             const shown = revealing
               ? turn.text.slice(0, reveal.chars)
-              : turn.text;
+              : isLast && turn.role === "interviewer" && phase === "speaking"
+                ? ""
+                : turn.text;
 
             return (
               <div key={i} className={cn("iv-enter", !isLatest && "iv-turn-past")}>

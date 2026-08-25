@@ -229,9 +229,9 @@ type PaletteValues = {
 /** Dark: violet / pearl / near-black. Light: milk-glass apricot on cream. */
 const PALETTE: Record<OrbPalette, PaletteValues> = {
   dark: {
-    c1: [0.05, 0.40, 1.00],
-    c2: [0.05, 0.90, 0.45],
-    c3: [0.00, 0.65, 0.90],
+    c1: [0.42, 0.365, 0.58],
+    c2: [0.91, 0.845, 0.79],
+    c3: [0.07, 0.06, 0.095],
     innerRadius: 0.62,
     noiseScale: 0.48,
   },
