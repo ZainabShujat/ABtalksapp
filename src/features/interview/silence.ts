@@ -39,22 +39,44 @@ export type SilenceStep = {
 };
 
 /**
+ * The two thresholds in force for one recording.
+ *
+ * Passed in rather than read from the constants directly so the room can raise
+ * them against the noise floor it actually measured. A headset in a quiet room
+ * and a laptop microphone beside a fan cannot share one fixed number: too high
+ * and speech never registers (the answer never ends), too low and the room
+ * itself counts as talking (the answer never ends either).
+ */
+export type SilenceThresholds = {
+  /** Level that counts as "they have started". */
+  on: number;
+  /** Level that counts as "they are still going". */
+  off: number;
+};
+
+export const defaultThresholds: SilenceThresholds = {
+  on: SPEECH_ON_RMS,
+  off: SPEECH_OFF_RMS,
+};
+
+/**
  * Advances the turn-taking state by one audio frame.
  *
- * `rms` is the analyser's root-mean-square level, 0..1. `now` is a monotonic
- * millisecond clock — `performance.now()` in the browser, an injected value in
- * tests.
+ * `rms` is the microphone's root-mean-square amplitude, 0..1. `now` is a
+ * monotonic millisecond clock — `performance.now()` in the browser, an injected
+ * value in tests.
  */
 export function stepSilence(
   state: SilenceState,
   rms: number,
   now: number,
   silenceMs: number = INTERVIEW_SILENCE_MS,
+  thresholds: SilenceThresholds = defaultThresholds,
 ): SilenceStep {
   // Before the first real speech, quiet means "not started yet", never "done".
-  // Background noise sits below SPEECH_ON, so it cannot open the turn either.
+  // Background noise sits below the ON threshold, so it cannot open the turn.
   if (!state.hasSpoken) {
-    if (rms >= SPEECH_ON_RMS) {
+    if (rms >= thresholds.on) {
       return { state: { hasSpoken: true, quietSince: null }, shouldStop: false };
     }
     return { state, shouldStop: false };
@@ -62,7 +84,7 @@ export function stepSilence(
 
   // Anything at or above the LOWER threshold counts as still talking, so a
   // quiet syllable between two loud ones does not restart the clock.
-  if (rms >= SPEECH_OFF_RMS) {
+  if (rms >= thresholds.off) {
     return { state: { hasSpoken: true, quietSince: null }, shouldStop: false };
   }
 

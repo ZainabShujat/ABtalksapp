@@ -17,6 +17,25 @@ export const COHORT_INTERVIEW_DURATION_SEC = 900;
 export const COHORT_INTERVIEW_MIN_DURATION_SEC = 180;
 
 /**
+ * Answered CORE questions that make an interview scorable regardless of the
+ * clock.
+ *
+ * The duration floor above exists to reject stubs — a tab closed after thirty
+ * seconds has nothing to assess. It is a proxy for evidence, and it was the only
+ * test, which produced a dead end: when the interviewer itself ended a session
+ * early (three consecutive stuck answers, or a candidate who simply answered
+ * fast) the attempt was over, had real evidence behind it, and was still refused
+ * for being under three minutes. There was no question left to answer and no way
+ * to reach the report.
+ *
+ * Evidence is the thing that actually matters, so measure it directly: an
+ * interview with this many answered core questions is scorable no matter how
+ * long it took. Three, matching CALIBRATION_ANSWERS — the point at which the
+ * interview considers itself to have read the candidate at all.
+ */
+export const COHORT_INTERVIEW_MIN_ANSWERED_CORE = 3;
+
+/**
  * An IN_PROGRESS attempt older than this is swept to ABANDONED. Without this a
  * closed tab would leave a row that blocks the member from ever starting again.
  * Abandoned attempts consume nothing, so sweeping is always safe.
@@ -134,15 +153,35 @@ export const CALIBRATION_ANSWERS = 3;
 export const INTERVIEW_SILENCE_MS = 4_500;
 
 /**
- * Speech thresholds, as RMS of the analyser signal.
+ * Speech thresholds, as RMS of the microphone WAVEFORM (0..1 amplitude).
  *
  * Two values, not one: ON is what counts as "they have started", OFF is what
  * counts as "they have stopped". The gap is hysteresis. With a single threshold
  * a voice sitting near the line flickers many times a second and the silence
  * timer never accumulates, so an answer would never end on its own.
+ *
+ * These are TIME-DOMAIN amplitudes and they are deliberately low. They used to
+ * be 0.20/0.15 against the analyser's FREQUENCY data, which is a dB-mapped
+ * curve, not an amplitude — on a laptop microphone normal speech rarely reaches
+ * 0.20 there, so `hasSpoken` never became true, the answer never auto-submitted
+ * and the room appeared to wait forever. Ordinary speech sits around 0.05–0.15
+ * of full scale; a quiet room with the browser's noise suppression on sits below
+ * 0.01. The room additionally raises these against a measured noise floor, so
+ * these values are the FLOOR of the thresholds, not the whole rule.
  */
-export const SPEECH_ON_RMS = 0.20;
-export const SPEECH_OFF_RMS = 0.15;
+export const SPEECH_ON_RMS = 0.045;
+export const SPEECH_OFF_RMS = 0.022;
+
+/**
+ * Multipliers applied to the measured room noise floor.
+ *
+ * A fixed threshold cannot serve both a headset in a quiet room and a laptop
+ * microphone next to a fan. The room samples the first moments of the recording
+ * for a floor and takes `max(constant, floor * multiplier)`, so a noisy input
+ * raises the bar instead of registering the room itself as speech.
+ */
+export const SPEECH_ON_FLOOR_MULTIPLIER = 3.5;
+export const SPEECH_OFF_FLOOR_MULTIPLIER = 2.0;
 
 /**
  * How long the room waits when the candidate has said NOTHING at all before
@@ -150,6 +189,29 @@ export const SPEECH_OFF_RMS = 0.15;
  * has already happened.
  */
 export const NO_ANSWER_MS = 10_000;
+
+/**
+ * Hard ceiling on a single recorded answer.
+ *
+ * The silence detector normally ends an answer, but it depends on an analyser
+ * that can fail to attach (no AudioContext, a blocked autoplay policy) and on a
+ * microphone that actually produces a signal. When either is untrue nothing ever
+ * stops the recorder, and the interview hangs with the candidate talking into a
+ * capture that will never be submitted. Two minutes is far longer than any real
+ * answer to a question of this kind, so reaching it means something is wrong —
+ * and submitting what was captured is strictly better than waiting forever.
+ */
+export const MAX_ANSWER_MS = 120_000;
+
+/**
+ * How long the room will sit in "processing" before it hands the turn back.
+ *
+ * Covers a Server Action that never resolves — a dropped connection mid-request
+ * leaves the promise pending with no rejection, and the room has no other way to
+ * learn that. Longer than the provider's own 30s ceiling plus its one retry, so
+ * this only fires when the request is genuinely lost.
+ */
+export const PROCESSING_WATCHDOG_MS = 90_000;
 
 /**
  * Language corrections allowed per question before the interview stops asking.

@@ -12,10 +12,14 @@ import type { AskJson } from "@/features/interview/agent/llm/json-provider";
  *
  * Provider order is availability-driven, learned the hard way on this project:
  * the Anthropic key reports a zero credit balance, so a Claude-only binding
- * silently produced a deterministic stub narrative on every report. Groq is
- * tried first when its key is present, Claude second.
+ * silently produced a deterministic stub narrative on every report. OpenAI is
+ * tried first when its key is present — it is the same model that read the
+ * answers, so the narrative and the evidence come from one reader — then Groq,
+ * then Claude.
  */
 
+const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+const DEFAULT_OPENAI_REPORT_MODEL = "gpt-4o";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const DEFAULT_GROQ_REPORT_MODEL = "openai/gpt-oss-120b";
 
@@ -41,6 +45,71 @@ function retryAfterMs(body: string): number {
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const askOpenAi: AskJson = async ({ system, user, maxTokens }) => {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return { ok: false, message: "no OPENAI_API_KEY" };
+
+  const call = () =>
+    fetch(OPENAI_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model:
+          process.env.OPENAI_INTERVIEW_REPORT_MODEL ??
+          process.env.OPENAI_INTERVIEW_MODEL ??
+          DEFAULT_OPENAI_REPORT_MODEL,
+        max_tokens: maxTokens,
+        // Same reasoning as the Groq path: a little warmth in the only prose a
+        // candidate reads, not enough for two runs to describe one interview
+        // differently.
+        temperature: 0.3,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+      }),
+      signal: AbortSignal.timeout(60_000),
+    });
+
+  try {
+    let res = await call();
+
+    if (res.status === 429) {
+      const waitMs = Math.min(
+        (Number(res.headers.get("retry-after")) || 20) * 1000 + 500,
+        65_000,
+      );
+      logger.info("[interview-report] openai narrative rate-limited, waiting", {
+        waitMs,
+      });
+      await sleep(waitMs);
+      res = await call();
+    }
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      return {
+        ok: false,
+        message: `OpenAI HTTP ${res.status}: ${body.slice(0, 200)}`,
+      };
+    }
+
+    const json = (await res.json()) as {
+      choices?: { message?: { content?: string } }[];
+    };
+    const slice = extractJson(json.choices?.[0]?.message?.content ?? "");
+    if (!slice) return { ok: false, message: "OpenAI returned no JSON object." };
+
+    return { ok: true, data: JSON.parse(slice) };
+  } catch (error) {
+    return { ok: false, message: String(error) };
+  }
+};
 
 const askGroq: AskJson = async ({ system, user, maxTokens }) => {
   const apiKey = process.env.GROQ_API_KEY;
@@ -122,6 +191,14 @@ const askClaude: AskJson = async ({ system, user, maxTokens }) => {
  * than the first outcome.
  */
 export const askForReport: AskJson = async (params) => {
+  if (process.env.OPENAI_API_KEY) {
+    const viaOpenAi = await askOpenAi(params);
+    if (viaOpenAi.ok) return viaOpenAi;
+    logger.warn("[interview-report] openai narrative failed", {
+      message: viaOpenAi.message,
+    });
+  }
+
   if (process.env.GROQ_API_KEY) {
     const viaGroq = await askGroq(params);
     if (viaGroq.ok) return viaGroq;

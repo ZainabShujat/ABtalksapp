@@ -14,7 +14,17 @@ import {
   stepSilence,
   type SilenceState,
 } from "@/features/interview/silence";
-import { checkLanguage, nonLatinRatio } from "@/features/interview/language-gate";
+import {
+  checkLanguage,
+  nonLatinRatio,
+  LANGUAGE_RETRY_LINE,
+} from "@/features/interview/language-gate";
+import {
+  MOVING_ON_LINE,
+  REPEAT_PREFIX,
+  ROOM_LINE_KINDS,
+  repeatLine,
+} from "@/features/interview/room-lines";
 import {
   INTERVIEW_SILENCE_MS,
   MAX_LANGUAGE_RETRIES_PER_QUESTION,
@@ -38,10 +48,20 @@ function check(name: string, fn: () => void) {
 }
 
 /** Runs a level sequence at 50ms per frame and reports when it would stop. */
-function run(levels: number[], msPerFrame = 50) {
+function run(
+  levels: number[],
+  msPerFrame = 50,
+  thresholds?: { on: number; off: number },
+) {
   let state: SilenceState = initialSilenceState();
   for (let i = 0; i < levels.length; i++) {
-    const step = stepSilence(state, levels[i]!, i * msPerFrame);
+    const step = stepSilence(
+      state,
+      levels[i]!,
+      i * msPerFrame,
+      undefined,
+      thresholds,
+    );
     state = step.state;
     if (step.shouldStop) return { stoppedAtMs: i * msPerFrame, state };
   }
@@ -102,6 +122,77 @@ check("4b. a quiet syllable mid-answer does not end the turn", () => {
     ...Array(40).fill(QUIET), // 2s, under the window
   ];
   assert.equal(run(levels).stoppedAtMs, null);
+});
+
+check("4c. thresholds are calibratable per recording", () => {
+  // A noisy room: the floor sits where the DEFAULT would have called it speech.
+  // Raised thresholds must treat it as room tone, not as an answer in progress.
+  const noisyRoom = SPEECH_ON_RMS + 0.01;
+  const raised = { on: noisyRoom * 2, off: noisyRoom * 1.5 };
+
+  assert.equal(
+    run(Array(600).fill(noisyRoom)).state.hasSpoken,
+    true,
+    "sanity: at the default thresholds this level does read as speech",
+  );
+  assert.equal(
+    run(Array(600).fill(noisyRoom), 50, raised).state.hasSpoken,
+    false,
+    "raised against the measured floor, the same level is room tone",
+  );
+});
+
+check("4d. the thresholds are amplitudes a real voice actually reaches", () => {
+  // The regression this guards: these were 0.20/0.15 read off the analyser's
+  // FREQUENCY data, which is a dB curve rather than an amplitude. A normal
+  // speaking voice on a laptop microphone peaks around 0.10 of full scale, so
+  // `hasSpoken` never became true, no answer ever auto-submitted, and the room
+  // appeared to wait forever.
+  const typicalSpeech = 0.1;
+  assert.ok(
+    SPEECH_ON_RMS < typicalSpeech,
+    `SPEECH_ON_RMS (${SPEECH_ON_RMS}) must sit below ordinary speech (~${typicalSpeech})`,
+  );
+  assert.ok(
+    SPEECH_OFF_RMS < SPEECH_ON_RMS,
+    "the OFF threshold must be the lower of the two, or hysteresis is inverted",
+  );
+  const quietRoom = 0.01;
+  assert.ok(
+    SPEECH_OFF_RMS > quietRoom,
+    "the OFF threshold must sit above a quiet room, or an answer never ends",
+  );
+});
+
+console.log("\nRoom-composed lines");
+
+check("the three room lines are distinct and none is the opening", () => {
+  // Each of these is spoken by the ROOM, not by the agent, so none of them is in
+  // the server transcript. The speech route must therefore be asked for them by
+  // KIND. When it was only ever asked for "the latest line", a candidate who
+  // fell silent heard the opening greeting read out again instead of the nudge.
+  const lines = [repeatLine("What did you build?"), MOVING_ON_LINE, LANGUAGE_RETRY_LINE];
+  assert.equal(new Set(lines).size, 3, "the three lines must not collide");
+  assert.ok(
+    ROOM_LINE_KINDS.includes("repeat") &&
+      ROOM_LINE_KINDS.includes("moving_on") &&
+      ROOM_LINE_KINDS.includes("language"),
+    "every room-composed line needs a kind the speech route understands",
+  );
+});
+
+check("the nudge restates the question in full", () => {
+  const question = "Walk me through how you chose your retrieval strategy.";
+  const line = repeatLine(question);
+  assert.ok(line.startsWith(REPEAT_PREFIX));
+  assert.ok(
+    line.includes(question),
+    "silence usually means the question was missed, so it must be repeated whole",
+  );
+});
+
+check("the nudge degrades to the prefix when no question is open", () => {
+  assert.equal(repeatLine("   "), REPEAT_PREFIX);
 });
 
 console.log("\nEnglish-only gate");

@@ -1,7 +1,17 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import type { InterviewState } from "@/features/interview/types";
+import { LANGUAGE_RETRY_LINE } from "@/features/interview/language-gate";
+import {
+  MOVING_ON_LINE,
+  repeatLine,
+  type RoomLineKind,
+} from "@/features/interview/room-lines";
+import { getCurrentQuestion } from "@/features/interview/state";
+import type {
+  InterviewPlan,
+  InterviewState,
+} from "@/features/interview/types";
 
 /**
  * Speech in and speech out. Transport only.
@@ -84,6 +94,25 @@ const REQUEST_TIMEOUT_MS = 30_000;
  */
 const TRANSCRIBE_TIMEOUT_MS = 180_000;
 
+/**
+ * Spelling bias for the transcriber.
+ *
+ * Both OpenAI and Groq accept a `prompt` that seeds the decoder's context. It
+ * does NOT tell the model what was said — it tells it how these words are
+ * spelled when it hears them, which is the difference between an evidence
+ * checklist matching "RAG" and matching "rag". Kept to names and terms that
+ * actually appear in this cohort's curriculum; padding it with generic English
+ * would dilute the bias rather than strengthen it.
+ */
+const TRANSCRIPTION_VOCABULARY_HINT =
+  "A technical interview about AI engineering. Likely terms: LLM, RAG, " +
+  "retrieval-augmented generation, embeddings, vector database, Pinecone, " +
+  "Chroma, FAISS, LangChain, LlamaIndex, Ollama, Hugging Face, OpenAI, " +
+  "Anthropic, Claude, GPT-4o, Gemini, fine-tuning, LoRA, quantization, " +
+  "prompt engineering, few-shot, chain of thought, tokens, temperature, " +
+  "context window, hallucination, agent, tool calling, MCP, API key, " +
+  "Streamlit, FastAPI, Next.js, Python, Postgres, Prisma, Docker, Vercel.";
+
 export {
   ALLOWED_AUDIO_TYPES,
   MAX_AUDIO_BYTES,
@@ -132,7 +161,7 @@ export async function transcribeAnswer(
 
   const model =
     process.env.INTERVIEW_STT_MODEL ??
-    (vendor.name === "groq" ? "whisper-large-v3-turbo" : "gpt-4o-mini-transcribe");
+    (vendor.name === "groq" ? "whisper-large-v3" : "gpt-4o-transcribe");
 
   const form = new FormData();
   form.append("file", audio, filename);
@@ -145,10 +174,23 @@ export async function transcribeAnswer(
   // available the gate falls back to its script check.
   const supportsVerbose = /whisper/i.test(model);
   if (supportsVerbose) form.append("response_format", "verbose_json");
-  // Removed the hardcoded language hint. When 'language' is set to 'en', Whisper 
-  // forces non-English audio into English words, causing severe hallucinations. 
-  // Omitting this allows it to auto-detect the spoken language (e.g. Hindi) and 
+  // Removed the hardcoded language hint. When 'language' is set to 'en', Whisper
+  // forces non-English audio into English words, causing severe hallucinations.
+  // Omitting this allows it to auto-detect the spoken language (e.g. Hindi) and
   // correctly transcribe or translate it.
+
+  // Greedy decoding. Transcription is not a place for sampling: the default
+  // temperature lets the model "improve" an indistinct phrase into a fluent one,
+  // which is how a hesitant answer comes back as words the candidate never said.
+  form.append("temperature", "0");
+
+  // A vocabulary hint, not a language hint — this is the one lever that reliably
+  // improves accuracy on this audio. These answers are Indian-accented English
+  // full of tool and model names that a general transcriber mangles into
+  // ordinary words ("Ollama" → "a llama", "LangChain" → "language"), and a
+  // mangled tool name is exactly the token the evidence checklist is looking
+  // for. The prompt biases spelling only; it never adds content.
+  form.append("prompt", TRANSCRIPTION_VOCABULARY_HINT);
 
   try {
     const res = await fetch(
@@ -213,22 +255,36 @@ export async function transcribeAnswer(
 /* ------------------------------------------------------------------ TTS */
 
 /**
- * The line the interviewer most recently said, read from the SERVER's own
- * transcript.
+ * The line to speak, composed from the SERVER's own view of the interview.
  *
- * This is why the TTS route takes an interview id and not text. If a client
- * could post arbitrary text to be synthesized, the endpoint would be a free
- * text-to-speech service attached to a paid API key, reachable by any signed-in
- * member. Reading the line from the database means the only thing anyone can
- * ever make it say is something it already said to them.
+ * This is why the TTS route takes an interview id and a KIND rather than text.
+ * If a client could post arbitrary text to be synthesized, the endpoint would be
+ * a free text-to-speech service attached to a paid API key, reachable by any
+ * signed-in member. Every branch below reads from the database or from a fixed
+ * constant, so the only thing anyone can make it say is something this interview
+ * would have said to them.
+ *
+ * `latest` is the agent's most recent line. The other three are the lines the
+ * ROOM composes in reaction to the microphone (see `room-lines.ts`) and which
+ * therefore never enter the persisted transcript — asking for `latest` while one
+ * of those is on screen is exactly the bug that made a silent candidate hear the
+ * interview restart from the greeting.
  */
 export async function resolveSpeakableLine(
   interviewId: string,
   memberId: string,
+  kind: RoomLineKind = "latest",
 ): Promise<VoiceResult<{ text: string }>> {
+  if (kind === "language") {
+    return { ok: true, data: { text: LANGUAGE_RETRY_LINE } };
+  }
+  if (kind === "moving_on") {
+    return { ok: true, data: { text: MOVING_ON_LINE } };
+  }
+
   const row = await prisma.generalInterview.findFirst({
     where: { id: interviewId, memberId, status: "IN_PROGRESS" },
-    select: { state: true },
+    select: { plan: true, state: true },
   });
 
   if (!row?.state) {
@@ -236,6 +292,20 @@ export async function resolveSpeakableLine(
   }
 
   const state = row.state as unknown as InterviewState;
+
+  if (kind === "repeat") {
+    // The question the SERVER has on the floor — not one the client named. A
+    // stale client therefore hears the current question restated rather than an
+    // old one, which is the correct outcome either way.
+    const plan = row.plan as unknown as InterviewPlan;
+    const question = getCurrentQuestion(plan, state);
+    if (!question) {
+      return { ok: false, status: 404, message: "No question is open." };
+    }
+    const text = repeatLine(question.spokenText ?? question.text);
+    return { ok: true, data: { text: text.slice(0, 4000) } };
+  }
+
   const line = [...(state.transcript ?? [])]
     .reverse()
     .find((l) => l.role === "interviewer");

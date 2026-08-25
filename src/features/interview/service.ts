@@ -2,6 +2,7 @@ import "server-only";
 import { logger } from "@/lib/logger";
 import {
   COHORT_INTERVIEW_DURATION_SEC,
+  COHORT_INTERVIEW_MIN_ANSWERED_CORE,
   COHORT_INTERVIEW_MIN_DURATION_SEC,
   COHORT_INTERVIEW_STALE_MS,
 } from "@/features/interview/constants";
@@ -349,6 +350,7 @@ export async function finishCohortInterview(
     attempt.state,
     durationSec,
     COHORT_INTERVIEW_MIN_DURATION_SEC,
+    COHORT_INTERVIEW_MIN_ANSWERED_CORE,
   );
 
   if (!finalized.ok) {

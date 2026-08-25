@@ -8,11 +8,25 @@ import {
   initialSilenceState,
   stepSilence,
   type SilenceState,
+  type SilenceThresholds,
 } from "@/features/interview/silence";
 import {
+  MAX_ANSWER_MS,
   MAX_LANGUAGE_RETRIES_PER_QUESTION,
   NO_ANSWER_MS,
+  PROCESSING_WATCHDOG_MS,
+  SPEECH_OFF_FLOOR_MULTIPLIER,
+  SPEECH_OFF_RMS,
+  SPEECH_ON_FLOOR_MULTIPLIER,
+  SPEECH_ON_RMS,
 } from "@/features/interview/constants";
+import {
+  MOVING_ON_LINE,
+  NO_RESPONSE_ANSWER,
+  REPEAT_PREFIX,
+  repeatLine,
+  type RoomLineKind,
+} from "@/features/interview/room-lines";
 import {
   VoicePoweredOrb,
   type OrbMode,
@@ -84,6 +98,25 @@ const PHASE_COPY: Record<Phase, { label: string; hint: string }> = {
  */
 const TTS_TIMEOUT_MS = 12_000;
 
+/**
+ * Decodes the exact spoken line out of the speech response header.
+ *
+ * The route base64s it because header values are ASCII-only and a question may
+ * contain anything. Returns null rather than throwing: a header we cannot read
+ * means we fall back to the text we composed locally, which is what happened
+ * before this header existed.
+ */
+function decodeSpokenLine(header: string | null): string | null {
+  if (!header) return null;
+  try {
+    const bytes = Uint8Array.from(atob(header), (c) => c.charCodeAt(0));
+    const text = new TextDecoder().decode(bytes).trim();
+    return text.length > 0 ? text : null;
+  } catch {
+    return null;
+  }
+}
+
 // Turn-taking thresholds live in features/interview/constants.ts so the
 // analyser, the tests and any future transport all read the same numbers.
 
@@ -129,6 +162,17 @@ export function InterviewRoom({
   const [closing, setClosing] = useState(false);
   const [confirmExit, setConfirmExit] = useState(false);
   const [theme, setTheme] = useState<OrbPalette>("light");
+  /**
+   * Set when the interview is OVER but could not be completed — scoring
+   * refused, or the finish request failed.
+   *
+   * It needs its own state because the room in that moment is not idle and not
+   * recoverable by answering: there is no question left on the floor, so the
+   * ordinary error banner sat above a disabled microphone and the candidate was
+   * stuck watching "Evaluating your answer" forever. This turns that dead end
+   * into an explicit exit.
+   */
+  const [fatal, setFatal] = useState<string | null>(null);
 
   useEffect(() => {
     setTheme(readStoredRoomTheme());
@@ -219,6 +263,16 @@ export function InterviewRoom({
   const levelRafRef = useRef<number | null>(null);
   const hasSpokenRef = useRef(false);
   const silenceRef = useRef<SilenceState>(initialSilenceState());
+  /**
+   * Thresholds in force for the CURRENT recording, raised against the noise
+   * floor measured in its opening moments. Recomputed per recording because the
+   * candidate may move, change device, or have a fan switch on mid-interview.
+   */
+  const thresholdsRef = useRef<SilenceThresholds>({
+    on: SPEECH_ON_RMS,
+    off: SPEECH_OFF_RMS,
+  });
+  const noiseFloorRef = useRef<number | null>(null);
 
   const phaseRef = useRef<Phase>("idle");
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -227,7 +281,45 @@ export function InterviewRoom({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const spokenRef = useRef<string | null>(null);
+  /**
+   * The line currently BEING spoken, cleared the moment playback ends.
+   *
+   * It used to hold the last line spoken, forever, as a guard against speaking
+   * the same string twice. That guard was too strong: an interviewer legitimately
+   * repeats itself (the same question restated, the same nudge on a later
+   * question), and every repeat was silently swallowed — the room jumped to
+   * "your turn" with nothing audible, which reads as the interview freezing.
+   * Scoped to the in-flight call, it still absorbs a double-invoked render
+   * without muting a genuine repeat.
+   */
+  const speakingRef = useRef<string | null>(null);
+  /** The opening is spoken exactly once, whatever React does on mount. */
+  const openingSpokenRef = useRef(false);
+  /**
+   * Set before stopping a recorder whose audio must NOT be submitted.
+   *
+   * The no-answer nudge stops the recorder to take the floor back. Without this
+   * flag `onstop` then uploaded that (silent) capture, which set the phase to
+   * "processing" underneath the line being spoken and raced the speech to decide
+   * what state the room ended in — sometimes opening the microphone while the
+   * interviewer was still talking, so it recorded the interviewer and answered
+   * itself. Nothing was ever going to be transcribed from silence anyway.
+   */
+  const discardRecordingRef = useRef(false);
+  const answerCapRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /**
+   * Whether anything is currently able to tell us the candidate has started
+   * talking — the analyser, or the browser's own recognition.
+   *
+   * The no-answer nudge interrupts a recording, so it must only fire when we
+   * genuinely know nobody has spoken. With neither signal available (no
+   * AudioContext, and a browser with no SpeechRecognition) silence and a long
+   * answer look identical, and nudging on that guess cuts people off mid-
+   * sentence. In that case the room waits for the hard cap or for them to press
+   * stop, which is the honest behaviour.
+   */
+  const analyserActiveRef = useRef(false);
+  const recognitionActiveRef = useRef(false);
 
   /* ------------------------------------------------------------- timing */
 
@@ -261,6 +353,8 @@ export function InterviewRoom({
     return () => {
       if (levelRafRef.current !== null) cancelAnimationFrame(levelRafRef.current);
       if (revealRafRef.current !== null) cancelAnimationFrame(revealRafRef.current);
+      if (nudgeTimerRef.current !== null) clearTimeout(nudgeTimerRef.current);
+      if (answerCapRef.current !== null) clearTimeout(answerCapRef.current);
       analyserSrcRef.current?.disconnect();
       if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
         void audioCtxRef.current.close();
@@ -336,22 +430,22 @@ export function InterviewRoom({
    * not the interview this is meant to be.
    */
   const speak = useCallback(
-    async (text: string) => {
-      // Guard against speaking the same line twice in a row (React strict-mode
-      // double-invoke, or a re-render). It must still release the phase: the
-      // caller has already set "processing", and the `finally` below is what
-      // normally clears it. Returning bare left the room stuck mid-turn with
-      // the question appearing to repeat — which is exactly what it looked
-      // like from the outside.
-      if (spokenRef.current === text) {
-        setPhase("idle");
-        return;
-      }
-      spokenRef.current = text;
+    async (text: string, kind: RoomLineKind = "latest") => {
+      // Re-entrancy guard: the same line already has audio in flight (a
+      // double-invoked effect, a re-render). Return without touching the phase —
+      // the call that is already running owns it, and stamping "idle" here would
+      // hand the floor back underneath a line still being spoken.
+      if (speakingRef.current === text) return;
+      speakingRef.current = text;
       setPhase("speaking");
       // Hide the line until audio actually starts. Otherwise the full prompt
       // sits in the transcript for the whole TTS round-trip.
       setReveal({ text, chars: 0 });
+
+      // What ends up visible. Normally identical to `text`; the speech route
+      // reports back the words it actually synthesized, and that wins — the
+      // transcript must never show something other than what was said.
+      let spoken = text;
 
       const viaBrowser = () =>
         new Promise<void>((resolve) => {
@@ -389,16 +483,24 @@ export function InterviewRoom({
         const res = await fetch("/api/interview/tts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ interviewId }),
+          // The KIND of line, never its text. Lines the room composes itself —
+          // the nudge, the language correction, the move-on — are not in the
+          // server's transcript, so asking for "the latest line" while one of
+          // them was on screen synthesized the agent's last line instead. That
+          // is why a candidate who went quiet heard the greeting again.
+          body: JSON.stringify({ interviewId, line: kind }),
           signal: AbortSignal.timeout(TTS_TIMEOUT_MS),
         });
 
         if (res.ok) {
+          const reported = decodeSpokenLine(res.headers.get("X-Interview-Line"));
+          if (reported) spoken = reported;
+
           const url = URL.createObjectURL(await res.blob());
           const audio = new Audio(url);
           audioRef.current = audio;
           await audio.play();
-          startReveal(text, audio);
+          startReveal(spoken, audio);
           await new Promise<void>((resolve) => {
             audio.onended = () => resolve();
             audio.onerror = () => resolve();
@@ -415,7 +517,20 @@ export function InterviewRoom({
         // Whatever happened, the full line ends up visible: a reader must never
         // be left with a half-sentence because audio failed midway.
         stopReveal();
-        setReveal({ text, chars: text.length });
+        setReveal({ text: spoken, chars: spoken.length });
+        // If the server spoke different words — a stale question on the client,
+        // say — the transcript is corrected to match the audio rather than left
+        // showing a line nobody heard.
+        if (spoken !== text) {
+          setTurns((prev) => {
+            const last = prev[prev.length - 1];
+            if (!last || last.role !== "interviewer" || last.text !== text) {
+              return prev;
+            }
+            return [...prev.slice(0, -1), { role: "interviewer", text: spoken }];
+          });
+        }
+        speakingRef.current = null;
         setPhase("idle");
       }
     },
@@ -435,12 +550,19 @@ export function InterviewRoom({
    * loop.
    */
   useEffect(() => {
-    if (phase !== "idle" || !question || micUnavailable || closing) return;
+    if (phase !== "idle" || !question || micUnavailable || closing || fatal) {
+      return;
+    }
     if (recorderRef.current) return;
+    // Never open the microphone while the interviewer's audio is still playing.
+    // The phase is set to "idle" in `speak`'s finally block, but a browser-voice
+    // fallback or a stalled element can leave sound in the room; recording it
+    // would feed the interviewer's own question back through transcription.
+    if (speakingRef.current !== null) return;
     const id = setTimeout(() => void startRecording(), 350);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, question, micUnavailable, closing]);
+  }, [phase, question, micUnavailable, closing, fatal]);
 
   // Speak the opening question once the room mounts.
   //
@@ -450,10 +572,38 @@ export function InterviewRoom({
   // within the user gesture that opened the room, which is what browsers
   // require before they will play anything.
   useEffect(() => {
-    const id = setTimeout(() => void speak(opening), 0);
+    // The guard lives INSIDE the timeout, not before it. Checked in the effect
+    // body, a strict-mode double-mount marks the opening as spoken, the cleanup
+    // cancels the timer that would have spoken it, and the second mount then
+    // declines to try — an interview that opens in silence.
+    const id = setTimeout(() => {
+      if (openingSpokenRef.current) return;
+      openingSpokenRef.current = true;
+      void speak(opening);
+    }, 0);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /**
+   * Releases a turn that has been "processing" for too long.
+   *
+   * A Server Action whose connection drops leaves a promise that neither
+   * resolves nor rejects, and the room has no other way to learn that. Without
+   * this the interview simply stops: "Evaluating your answer" with a disabled
+   * microphone, no error, and nothing that will ever change it.
+   */
+  useEffect(() => {
+    if (phase !== "processing" || closing) return;
+    const id = setTimeout(() => {
+      if (phaseRef.current !== "processing") return;
+      setError(
+        "That is taking longer than it should. Tap the microphone and answer again.",
+      );
+      setPhase("idle");
+    }, PROCESSING_WATCHDOG_MS);
+    return () => clearTimeout(id);
+  }, [phase, closing]);
 
   /* ---------------------------------------------------------- answering */
 
@@ -510,8 +660,16 @@ export function InterviewRoom({
         setClosing(true);
         const finished = await finishInterviewAction({ interviewId });
         setClosing(false);
-        if (finished.ok) onFinishedAction(finished.data);
-        else setError(finished.message);
+        if (finished.ok) {
+          onFinishedAction(finished.data);
+          return;
+        }
+        // The interview is over and there is no question left to answer, so an
+        // error banner here is a dead end — the room used to sit on "Completing
+        // your interview" with the microphone disabled and no way out. Say what
+        // happened and give them the exit.
+        setFatal(finished.message);
+        setPhase("idle");
         return;
       }
 
@@ -525,18 +683,52 @@ export function InterviewRoom({
 
   async function startRecording() {
     setError(null);
+    discardRecordingRef.current = false;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Explicit constraints rather than `audio: true`. These are the browser
+      // defaults on paper, but "default" is per-device and per-browser, and a
+      // stream captured without gain control or noise suppression transcribes
+      // noticeably worse on the laptop microphones these interviews actually
+      // run on. Mono because every speech model downmixes anyway, and a stereo
+      // capture only doubles the upload.
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+        },
+      });
       streamRef.current = stream;
       chunksRef.current = [];
 
-      const recorder = new MediaRecorder(stream);
+      // Opus at 64kbps. The browser default varies and can drop low enough to
+      // smear consonants, which is exactly the part a transcriber needs; 64k is
+      // transparent for speech and still a small upload.
+      const recorder = new MediaRecorder(stream, {
+        ...(MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+          ? { mimeType: "audio/webm;codecs=opus" }
+          : {}),
+        audioBitsPerSecond: 64_000,
+      });
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
       recorder.onstop = async () => {
+        clearAnswerCap();
         detachAnalyser();
         stream.getTracks().forEach((t) => t.stop());
+
+        // Deliberately thrown away: the nudge took the floor back and this
+        // capture is the silence that triggered it. Submitting it would set the
+        // phase underneath the line being spoken and race the speech for who
+        // owns the room.
+        if (discardRecordingRef.current) {
+          discardRecordingRef.current = false;
+          chunksRef.current = [];
+          return;
+        }
+
         const blob = new Blob(chunksRef.current, {
           type: recorder.mimeType || "audio/webm",
         });
@@ -598,7 +790,7 @@ export function InterviewRoom({
               { role: "interviewer", text: LANGUAGE_RETRY_LINE },
             ]);
             setReveal({ text: LANGUAGE_RETRY_LINE, chars: 0 });
-            await speak(LANGUAGE_RETRY_LINE);
+            await speak(LANGUAGE_RETRY_LINE, "language");
             return;
           }
 
@@ -623,6 +815,14 @@ export function InterviewRoom({
       attachAnalyser(stream, () => stopRecording());
       startLivePreview();
       scheduleNoAnswerNudge();
+      // The backstop for every way the analyser can fail to end a turn: no
+      // AudioContext, a microphone producing a flat signal, a threshold the
+      // room never reaches. Submits what was captured rather than recording
+      // into a void indefinitely.
+      answerCapRef.current = setTimeout(() => {
+        if (phaseRef.current !== "listening") return;
+        stopRecording();
+      }, MAX_ANSWER_MS);
       setPhase("listening");
     } catch {
       setMicUnavailable(true);
@@ -650,8 +850,14 @@ export function InterviewRoom({
       if (!Ctor) return;
 
       const ctx = new Ctor();
+      // Chrome starts an AudioContext suspended when it was not created inside a
+      // gesture. A suspended context's analyser reports a flat zero forever,
+      // which reads as "the candidate never spoke" — the turn then never ends on
+      // its own and the room waits until the nudge fires, every single time.
+      if (ctx.state === "suspended") void ctx.resume();
+
       const analyser = ctx.createAnalyser();
-      analyser.fftSize = 512;
+      analyser.fftSize = 1024;
       analyser.smoothingTimeConstant = 0.3;
       const src = ctx.createMediaStreamSource(stream);
       src.connect(analyser);
@@ -660,40 +866,91 @@ export function InterviewRoom({
       analyserRef.current = analyser;
       analyserSrcRef.current = src;
 
-      const bins = new Uint8Array(analyser.frequencyBinCount);
+      // TIME-DOMAIN samples, not frequency bins. `getByteFrequencyData` returns
+      // a dB-mapped curve whose scale depends on the analyser's min/max decibel
+      // range, so the RMS taken over it is not an amplitude and does not compare
+      // to any fixed threshold — on a normal laptop microphone it rarely reached
+      // the 0.20 the room was testing against, so speech never registered and no
+      // answer ever ended by itself. The waveform is an actual amplitude.
+      const samples = new Uint8Array(analyser.fftSize);
       hasSpokenRef.current = false;
       silenceRef.current = initialSilenceState();
+      noiseFloorRef.current = null;
+      thresholdsRef.current = { on: SPEECH_ON_RMS, off: SPEECH_OFF_RMS };
+
+      const startedAt = performance.now();
+      /** How long the opening of a recording is sampled for room tone. */
+      const CALIBRATION_MS = 700;
 
       const tick = () => {
         levelRafRef.current = requestAnimationFrame(tick);
         const node = analyserRef.current;
         if (!node) return;
 
-        node.getByteFrequencyData(bins);
+        node.getByteTimeDomainData(samples);
         let sum = 0;
-        for (let i = 0; i < bins.length; i++) {
-          const v = bins[i]! / 255;
+        for (let i = 0; i < samples.length; i++) {
+          // Bytes are centred on 128; shift to -1..1 before squaring.
+          const v = (samples[i]! - 128) / 128;
           sum += v * v;
         }
-        const rms = Math.sqrt(sum / bins.length);
+        const rms = Math.sqrt(sum / samples.length);
         levelRef.current = rms;
+
+        const now = performance.now();
+
+        // Calibrate against the room the candidate is actually sitting in. The
+        // quietest frame of the opening moments is the noise floor; thresholds
+        // are raised above it so a fan or an air conditioner cannot register as
+        // speech, and left at the constants in a quiet room so a soft speaker is
+        // still heard. Nothing is decided during calibration except, if they
+        // start talking immediately, that they have started.
+        if (now - startedAt < CALIBRATION_MS) {
+          noiseFloorRef.current =
+            noiseFloorRef.current === null
+              ? rms
+              : Math.min(noiseFloorRef.current, rms);
+          if (rms >= thresholdsRef.current.on) {
+            silenceRef.current = { hasSpoken: true, quietSince: null };
+            hasSpokenRef.current = true;
+          }
+          return;
+        }
+
+        if (noiseFloorRef.current !== null) {
+          const floor = noiseFloorRef.current;
+          thresholdsRef.current = {
+            on: Math.max(SPEECH_ON_RMS, floor * SPEECH_ON_FLOOR_MULTIPLIER),
+            off: Math.max(SPEECH_OFF_RMS, floor * SPEECH_OFF_FLOOR_MULTIPLIER),
+          };
+          noiseFloorRef.current = null;
+        }
 
         // The rule itself lives in features/interview/silence.ts as a pure
         // function, so turn-taking can be tested without a microphone. This
         // loop owns the audio; that owns the decision.
-        const step = stepSilence(silenceRef.current, rms, performance.now());
+        const step = stepSilence(
+          silenceRef.current,
+          rms,
+          now,
+          undefined,
+          thresholdsRef.current,
+        );
         silenceRef.current = step.state;
         hasSpokenRef.current = step.state.hasSpoken;
         if (step.shouldStop) onSilence();
       };
       levelRafRef.current = requestAnimationFrame(tick);
+      analyserActiveRef.current = true;
     } catch {
       // No analyser is a cosmetic loss, not a functional one: the orb rests and
       // the candidate stops recording by hand, exactly as before.
+      analyserActiveRef.current = false;
     }
   }
 
   function detachAnalyser() {
+    analyserActiveRef.current = false;
     if (levelRafRef.current !== null) {
       cancelAnimationFrame(levelRafRef.current);
       levelRafRef.current = null;
@@ -763,7 +1020,13 @@ export function InterviewRoom({
           if (result.isFinal) settled += text;
           else interim += text;
         }
-        setLivePreview((settled + interim).trim());
+        const preview = (settled + interim).trim();
+        // Recognised words are proof of speech, independent of the analyser.
+        // With one signal only, a microphone whose level never crossed the
+        // threshold looked exactly like silence and the nudge cut the candidate
+        // off while they were talking.
+        if (preview.length > 0) hasSpokenRef.current = true;
+        setLivePreview(preview);
       };
       rec.onerror = () => {
         // No-speech, network, aborted: all harmless for a preview.
@@ -771,8 +1034,10 @@ export function InterviewRoom({
 
       rec.start();
       recognitionRef.current = rec;
+      recognitionActiveRef.current = true;
     } catch {
       // Unsupported or blocked. The interview is unaffected.
+      recognitionActiveRef.current = false;
     }
   }
 
@@ -783,15 +1048,38 @@ export function InterviewRoom({
       // Already stopped.
     }
     recognitionRef.current = null;
+    recognitionActiveRef.current = false;
     setLivePreview("");
   }
 
+  function clearAnswerCap() {
+    if (answerCapRef.current !== null) {
+      clearTimeout(answerCapRef.current);
+      answerCapRef.current = null;
+    }
+  }
+
+  /** Ends the turn and SUBMITS what was captured. */
   function stopRecording() {
     clearNoAnswerNudge();
+    clearAnswerCap();
     stopLivePreview();
     detachAnalyser();
     recorderRef.current?.stop();
     recorderRef.current = null;
+  }
+
+  /**
+   * Ends the turn and THROWS AWAY what was captured.
+   *
+   * Used when the room takes the floor back rather than the candidate handing it
+   * over — the no-answer nudge. The recording in that case is the silence that
+   * caused the nudge; uploading it produced an "I didn't catch that" error and a
+   * phase change fighting the line being spoken.
+   */
+  function cancelRecording() {
+    discardRecordingRef.current = true;
+    stopRecording();
   }
 
   /**
@@ -809,27 +1097,37 @@ export function InterviewRoom({
     clearNoAnswerNudge();
     nudgeTimerRef.current = setTimeout(() => {
       // Only fires if they genuinely have not spoken. `hasSpokenRef` is set by
-      // the analyser the moment their level crosses the speech threshold.
+      // the analyser the moment their level crosses the speech threshold, and
+      // by the live preview the moment it recognises a word.
       if (hasSpokenRef.current || phaseRef.current !== "listening") return;
+      // With no signal at all, silence and a long answer are indistinguishable.
+      // Interrupting on that guess is worse than waiting.
+      if (!analyserActiveRef.current && !recognitionActiveRef.current) return;
 
       nudgeCountRef.current += 1;
 
       if (nudgeCountRef.current === 1) {
-        stopRecording();
-        const line = question
-          ? `Sorry, you might not have caught that. ${question.text}`
-          : "Sorry, you might not have caught that.";
+        // CANCEL, not stop: the capture is the silence that got us here.
+        cancelRecording();
+        const line = question ? repeatLine(question.text) : REPEAT_PREFIX;
         setTurns((prev) => [...prev, { role: "interviewer", text: line }]);
         setReveal({ text: line, chars: 0 });
-        void speak(line);
+        // "repeat", so the speech route restates the question the server has on
+        // the floor. Asking for the latest transcript line here is what made the
+        // interviewer read the opening greeting again instead.
+        void speak(line, "repeat");
         return;
       }
 
-      stopRecording();
-      const line =
-        "That's completely fine. If you can't answer this one we'll move on.";
-      setTurns((prev) => [...prev, { role: "interviewer", text: line }]);
-      void send("(no response)");
+      cancelRecording();
+      setTurns((prev) => [...prev, { role: "interviewer", text: MOVING_ON_LINE }]);
+      setReveal({ text: MOVING_ON_LINE, chars: MOVING_ON_LINE.length });
+      // Spoken and submitted together: the candidate hears why the interview is
+      // moving on while the turn is recorded as unanswered. `send` owns the
+      // phase from here, so the speech is not awaited.
+      void speak(MOVING_ON_LINE, "moving_on").then(() => {
+        void send(NO_RESPONSE_ANSWER);
+      });
     }, NO_ANSWER_MS);
   }
 
@@ -841,24 +1139,31 @@ export function InterviewRoom({
   }
 
   async function endInterview() {
-    stopRecording();
+    // CANCEL: whatever is in the recorder is a half-answer nobody asked for, and
+    // submitting it would start a turn while the interview is being closed.
+    cancelRecording();
+    setConfirmExit(false);
+    setClosing(true);
+    audioRef.current?.pause();
     if (typeof window !== "undefined") window.speechSynthesis?.cancel();
 
     // Past halfway the answers already given are enough to assess, so ending
     // early SCORES the attempt instead of discarding it. Throwing away a
     // substantially complete interview served nobody: the evidence existed and
-    // the candidate had earned a report. `finalizeInterview` gates on the
-    // 3-minute minimum, so a session too short to be meaningful still cannot
+    // the candidate had earned a report. `finalizeInterview` still gates on
+    // having enough evidence, so a session too thin to be meaningful cannot
     // produce one — in that case we fall back to abandoning.
     if (progress.total > 0 && progress.ratio >= 0.5) {
       const finished = await finishInterviewAction({ interviewId });
       if (finished.ok) {
+        setClosing(false);
         onFinishedAction(finished.data);
         return;
       }
     }
 
     await abandonInterviewAction({ interviewId });
+    setClosing(false);
     onAbandonedAction();
   }
 
@@ -899,6 +1204,45 @@ export function InterviewRoom({
         theme === "dark" ? "interview-room--live" : "interview-room--light",
       )}
     >
+      {fatal ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="iv-fatal-title"
+        >
+          <div className="w-full max-w-md rounded-[16px] border border-[var(--iv-border)] bg-[var(--iv-surface)] p-6">
+            <h2
+              id="iv-fatal-title"
+              className="font-display text-lg font-bold text-[var(--iv-text)]"
+            >
+              Interview ended
+            </h2>
+            <p className="mt-3 text-[14px] leading-relaxed text-[var(--iv-text-muted)]">
+              {fatal}
+            </p>
+            <p className="mt-3 text-[13px] leading-relaxed text-[var(--iv-text-faint)]">
+              This attempt was not scored, so it has not been counted. You can
+              start a fresh interview from the dashboard.
+            </p>
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  cancelRecording();
+                  void abandonInterviewAction({ interviewId }).finally(
+                    onAbandonedAction,
+                  );
+                }}
+                className="inline-flex h-10 items-center rounded-[10px] border border-[var(--iv-accent)]/50 bg-[var(--iv-accent)]/15 px-4 text-[14px] font-semibold text-[var(--iv-text)] transition-colors hover:bg-[var(--iv-accent)]/25"
+              >
+                Back to dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {confirmExit ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
@@ -1079,99 +1423,122 @@ export function InterviewRoom({
             </p>
           ) : null}
 
-          <div className="flex flex-col items-center gap-1.5">
-            {/*
-              One slot, three states, so nothing below it ever shifts:
+          {/*
+            The orb is the room's centre of attention and the microphone is a
+            CONTROL, so they no longer occupy the same pixels. The button used to
+            sit inside the orb: it covered the part of the animation that
+            actually responds to the voice, gave the one interactive element in
+            the room no edge of its own, and left "is that a picture or a button?"
+            genuinely ambiguous — a bad thing to wonder about mid-answer. The orb
+            keeps the centre; the control sits at the right-hand edge where the
+            other controls in this room already live.
+          */}
+          <div className="relative flex items-center justify-center">
+            <div className="flex flex-col items-center gap-1.5">
+              {/*
+                One slot, two states, so nothing below it ever shifts:
 
-                interviewer speaking -> empty. The orb belongs to the CANDIDATE's
-                  turn; showing it while the interviewer talks made it look like
-                  the room was listening when it was not. The bars beside the
-                  "Interviewer speaking" label already carry that state.
-                your turn / listening -> the orb, reacting to their voice.
-                transcribing + evaluating -> three wiggling dots.
+                  interviewer speaking -> empty. The orb belongs to the
+                    CANDIDATE's turn; showing it while the interviewer talks made
+                    it look like the room was listening when it was not. The bars
+                    beside the "Interviewer speaking" label carry that state.
+                  your turn / listening -> the orb, reacting to their voice.
+                  transcribing + evaluating -> three wiggling dots.
 
-              The orb stays MOUNTED and fades, rather than unmounting: tearing
-              down and rebuilding a WebGL context on every turn costs a visible
-              flash and a context churn for no benefit.
-            */}
-            {/* The mic sits INSIDE the orb: one object to look at and one place
-                to click, rather than a decorative shape with a separate button
-                underneath it. The wrapper stays pointer-events-none so only the
-                button itself is clickable. */}
-            <div className="pointer-events-none relative size-[104px] shrink-0 sm:size-[116px]">
-              <div
-                className={cn(
-                  "absolute inset-0 transition-opacity duration-500",
-                  orbVisible ? "opacity-100" : "opacity-0",
-                )}
-                aria-hidden={!orbVisible}
-              >
-                <VoicePoweredOrb mode={orbMode} palette={theme} levelRef={levelRef} />
-              </div>
-
-              {thinking ? (
-                <div className="absolute inset-0 flex items-center justify-center gap-2">
-                  {[0, 1, 2].map((i) => (
-                    <span
-                      key={i}
-                      className="iv-think-dot size-2.5 rounded-full bg-[var(--iv-accent)]"
-                      style={{ animationDelay: `${i * 0.16}s` }}
-                    />
-                  ))}
+                The orb stays MOUNTED and fades, rather than unmounting: tearing
+                down and rebuilding a WebGL context on every turn costs a visible
+                flash and a context churn for no benefit.
+              */}
+              <div className="pointer-events-none relative size-[104px] shrink-0 sm:size-[116px]">
+                <div
+                  className={cn(
+                    "absolute inset-0 transition-opacity duration-500",
+                    orbVisible ? "opacity-100" : "opacity-0",
+                  )}
+                  aria-hidden={!orbVisible}
+                >
+                  {/*
+                    Sensitivity is set here rather than left at the component
+                    default because the level this room feeds it is now a
+                    waveform amplitude (~0.05–0.15 while speaking) rather than
+                    the old frequency-curve value. Without the higher multiplier
+                    the orb would barely move for a normal speaking voice.
+                  */}
+                  <VoicePoweredOrb
+                    mode={orbMode}
+                    palette={theme}
+                    levelRef={levelRef}
+                    voiceSensitivity={7}
+                  />
                 </div>
-              ) : null}
 
-              {!micUnavailable ? (
-                <div className="pointer-events-auto absolute inset-0 flex items-center justify-center">
-                  <button
-                    type="button"
-                    disabled={busy || !question}
-                    onClick={
-                      phase === "listening" ? stopRecording : startRecording
-                    }
-                    aria-label={
-                      phase === "listening" ? "Stop recording" : "Record answer"
-                    }
-                    className={cn(
-                      "relative flex size-12 items-center justify-center rounded-full border backdrop-blur transition-all duration-200",
-                      phase === "listening"
-                        ? "border-[#1A7F37]/60 bg-[var(--iv-surface)]/85 text-[#1A7F37]"
-                        : "border-[var(--iv-border)] bg-[var(--iv-surface)]/85 text-[var(--iv-text)] hover:border-[var(--iv-accent)]/60",
-                      (busy || !question) && "cursor-not-allowed opacity-40",
-                    )}
-                  >
-                    {phase === "listening" ? (
-                      <Square className="size-4 fill-current" />
-                    ) : (
-                      <Mic className="size-4" strokeWidth={1.75} />
-                    )}
-                  </button>
-                </div>
-              ) : null}
-            </div>
-
-            <div className="text-center">
-              <p className="text-[13px] font-semibold text-[var(--iv-text)]">
-                {copy.label}
-                {phase === "speaking" ? (
-                  <span className="ml-2 inline-flex items-end gap-[2px] align-middle">
-                    {[0, 1, 2, 3].map((i) => (
+                {thinking ? (
+                  <div className="absolute inset-0 flex items-center justify-center gap-2">
+                    {[0, 1, 2].map((i) => (
                       <span
                         key={i}
-                        className="iv-bar block w-[2px] origin-bottom rounded-full bg-[var(--iv-accent)]"
-                        style={{ height: 12, animationDelay: `${i * 110}ms` }}
+                        className="iv-think-dot size-2.5 rounded-full bg-[var(--iv-accent)]"
+                        style={{ animationDelay: `${i * 0.16}s` }}
                       />
                     ))}
-                  </span>
+                  </div>
                 ) : null}
-              </p>
-              {copy.hint ? (
-                <p className="text-[12px] text-[var(--iv-text-faint)]">
-                  {copy.hint}
+              </div>
+
+              <div className="text-center">
+                <p className="text-[13px] font-semibold text-[var(--iv-text)]">
+                  {copy.label}
+                  {phase === "speaking" ? (
+                    <span className="ml-2 inline-flex items-end gap-[2px] align-middle">
+                      {[0, 1, 2, 3].map((i) => (
+                        <span
+                          key={i}
+                          className="iv-bar block w-[2px] origin-bottom rounded-full bg-[var(--iv-accent)]"
+                          style={{ height: 12, animationDelay: `${i * 110}ms` }}
+                        />
+                      ))}
+                    </span>
+                  ) : null}
                 </p>
-              ) : null}
+                {copy.hint ? (
+                  <p className="text-[12px] text-[var(--iv-text-faint)]">
+                    {copy.hint}
+                  </p>
+                ) : null}
+              </div>
             </div>
 
+            {!micUnavailable ? (
+              <div className="absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={busy || !question || Boolean(fatal)}
+                  onClick={phase === "listening" ? stopRecording : startRecording}
+                  aria-label={
+                    phase === "listening"
+                      ? "Stop recording and submit answer"
+                      : "Record answer"
+                  }
+                  className={cn(
+                    "flex size-14 items-center justify-center rounded-full border-2 transition-all duration-200",
+                    phase === "listening"
+                      ? "border-[#1A7F37]/70 bg-[#1A7F37]/12 text-[#1A7F37] hover:bg-[#1A7F37]/20"
+                      : "border-[var(--iv-border)] bg-[var(--iv-surface)] text-[var(--iv-text)] hover:border-[var(--iv-accent)]/60 hover:bg-[var(--iv-accent)]/10",
+                    (busy || !question || fatal) &&
+                      "cursor-not-allowed opacity-40 hover:bg-transparent",
+                  )}
+                >
+                  {phase === "listening" ? (
+                    <Square className="size-5 fill-current" />
+                  ) : (
+                    <Mic className="size-5" strokeWidth={1.75} />
+                  )}
+                </button>
+                <span className="text-[11px] font-medium text-[var(--iv-text-faint)]">
+                  {phase === "listening" ? "Done" : "Mic"}
+                </span>
+              </div>
+            ) : null}
           </div>
 
         </div>

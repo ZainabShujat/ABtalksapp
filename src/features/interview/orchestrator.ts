@@ -1,6 +1,9 @@
 import "server-only";
 import type { InterviewBlueprintKey } from "@/features/interview/cohort/blueprint";
-import { COHORT_INTERVIEW_MIN_DURATION_SEC } from "@/features/interview/constants";
+import {
+  COHORT_INTERVIEW_MIN_ANSWERED_CORE,
+  COHORT_INTERVIEW_MIN_DURATION_SEC,
+} from "@/features/interview/constants";
 import { scoreQuestion } from "@/features/interview/module-scoring";
 import {
   assessCompetencies,
@@ -170,37 +173,48 @@ export type FinalizeResult =
  * Only CORE questions count. Extension questions about work beyond the
  * milestone are reported separately and never move this number.
  *
- * A session shorter than the floor is rejected rather than scored — too little
- * evidence to be comparable. The caller marks such attempts INVALID so they do
- * not consume a retake.
+ * A session with too little evidence is rejected rather than scored — nothing to
+ * compare against candidates who sat a full one. The caller marks such attempts
+ * INVALID so they do not consume a retake.
+ *
+ * "Too little evidence" is measured two ways, and either is enough to pass. The
+ * clock is the cheap proxy; the count of ANSWERED CORE QUESTIONS is the real
+ * thing. Time alone used to be the only test, which created a dead end: when the
+ * interviewer ended a session early — three consecutive stuck answers, or simply
+ * a candidate who answered quickly — the interview was over, had real evidence
+ * behind it, and was still refused for being under three minutes. No question
+ * remained to answer and no report could be reached. An interview that produced
+ * answers is scorable on those answers.
  */
 export async function finalizeInterview(
   plan: InterviewPlan,
   state: InterviewState,
   durationSec: number,
   minDurationSec: number = COHORT_INTERVIEW_MIN_DURATION_SEC,
+  minAnsweredCore: number = COHORT_INTERVIEW_MIN_ANSWERED_CORE,
 ): Promise<FinalizeResult> {
   if (state.status === "NOT_STARTED") {
     return { ok: false, message: "This interview never started." };
-  }
-
-  if (durationSec < minDurationSec) {
-    return {
-      ok: false,
-      message: `An interview must run at least ${Math.round(
-        minDurationSec / 60,
-      )} minutes to be scored.`,
-    };
   }
 
   const coreScores = plan.questions
     .filter((q) => (q.tier ?? "CORE") === "CORE")
     .map((q) => scoreQuestion(q, state));
 
+  const answered = coreScores.filter((s) => s.answered);
+
+  if (durationSec < minDurationSec && answered.length < minAnsweredCore) {
+    return {
+      ok: false,
+      message: `An interview needs at least ${Math.round(
+        minDurationSec / 60,
+      )} minutes or ${minAnsweredCore} answered questions to be scored.`,
+    };
+  }
+
   const competencies = assessCompetencies(coreScores, state, plan);
   const overallScore = overallFromCompetencies(competencies);
 
-  const answered = coreScores.filter((s) => s.answered);
   const cleared = answered.filter((s) => s.cleared).length;
 
   return {

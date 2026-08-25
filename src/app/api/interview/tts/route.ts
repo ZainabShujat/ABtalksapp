@@ -12,16 +12,24 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Speaks the interviewer's most recent line.
+ * Speaks one interviewer line.
  *
- * Note the request shape: an interview id, and NO text. The line is read from
- * the interview's own server-held transcript, so this endpoint can only ever
- * voice something the interviewer has already said to this member. Accepting
- * text would turn a paid speech API into an open text-to-speech service for
- * anyone with an account.
+ * Note the request shape: an interview id, an optional line KIND, and NO text.
+ * Every line is composed server-side — from the interview's own transcript, from
+ * the question the server has on the floor, or from a fixed constant — so this
+ * endpoint can only ever voice something this interview would have said to this
+ * member. Accepting text would turn a paid speech API into an open
+ * text-to-speech service for anyone with an account.
+ *
+ * The kind exists because three of the interviewer's lines are composed by the
+ * ROOM in reaction to the microphone and never enter the persisted transcript.
+ * Without it, asking to speak while one of those was on screen synthesized the
+ * agent's last line instead — which is why a candidate who fell silent heard the
+ * interview restart from the greeting.
  */
 const bodySchema = z.object({
   interviewId: z.string().min(1).max(64),
+  line: z.enum(["latest", "repeat", "language", "moving_on"]).default("latest"),
 });
 
 export async function POST(request: Request) {
@@ -48,7 +56,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const line = await resolveSpeakableLine(parsed.data.interviewId, memberId);
+  const line = await resolveSpeakableLine(
+    parsed.data.interviewId,
+    memberId,
+    parsed.data.line,
+  );
   if (!line.ok) {
     return NextResponse.json(
       { ok: false, message: line.message },
@@ -72,6 +84,11 @@ export async function POST(request: Request) {
     headers: {
       "Content-Type": audio.data.contentType,
       "Content-Length": String(audio.data.audio.byteLength),
+      // The exact words in the audio, so the room can show the line it is
+      // actually hearing rather than the one it guessed. Base64 because header
+      // values are ASCII-only and a question may contain anything.
+      "X-Interview-Line": Buffer.from(line.data.text, "utf8").toString("base64"),
+      "Access-Control-Expose-Headers": "X-Interview-Line",
       // Interview audio is per-attempt and per-member. It must never be
       // cached by a CDN or a shared proxy.
       "Cache-Control": "no-store, private",
