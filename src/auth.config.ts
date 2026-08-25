@@ -20,6 +20,18 @@ export default {
           }),
         ]
       : []),
+    // Recruiter email OTP. Edge-safe stub, exactly like the dev provider below:
+    // middleware imports this file, so the real authorize — which needs Prisma —
+    // lives in auth.ts. Registering it here is what makes the id routable.
+    Credentials({
+      id: "recruiter-otp",
+      name: "Recruiter email code",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        code: { label: "Code", type: "text" },
+      },
+      authorize: async () => null,
+    }),
     ...(process.env.ENABLE_DEV_AUTH === "true"
       ? [
           Credentials({

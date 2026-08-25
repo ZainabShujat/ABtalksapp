@@ -10,7 +10,7 @@ export const NAV_LINKS = [
 
 export const GET_STARTED_ITEMS = [
   { href: "/register", label: "Candidates" },
-  { href: "/talent", label: "Recruiter" },
+  { href: "/hire", label: "Recruiter" },
 ] as const;
 
 export const STATS = [
@@ -451,7 +451,7 @@ export const FOOTER_COLUMNS = [
     title: "Company",
     links: [
       { href: "/mission", label: "About Us" },
-      { href: "/talent", label: "Talent" },
+      { href: "/hire", label: "Talent" },
       { href: "/jobs", label: "Jobs" },
     ],
   },

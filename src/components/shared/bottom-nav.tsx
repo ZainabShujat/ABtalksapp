@@ -80,7 +80,10 @@ export function BottomNav() {
     pathname.startsWith("/ai-workshop/") ||
     pathname === "/hackathon" ||
     pathname.startsWith("/hackathon/") ||
-    /^\/(login|register|claude-signup|students|r|program|talent|verify)(\/|$)/.test(
+    // `hire` belongs here for the same reason `talent` does: the recruiter
+    // portal is not the student app, and Home / Jobs / Rewards / Explore /
+    // Profile are not its tabs. It was also covering the page on mobile.
+    /^\/(login|register|claude-signup|students|r|program|talent|hire|verify)(\/|$)/.test(
       pathname,
     )
   ) {

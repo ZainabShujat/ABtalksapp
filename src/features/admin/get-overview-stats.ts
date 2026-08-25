@@ -74,6 +74,7 @@ export async function getOverviewStats() {
     registrationDates,
     liveSubmissionsRaw,
     recentAdminActionsRaw,
+    pendingRecruitersRaw,
   ] = await Promise.all([
     countRegisteredUsers(),
     prisma.submission.findMany({
@@ -125,6 +126,18 @@ export async function getOverviewStats() {
             studentProfile: { select: { fullName: true } },
           },
         },
+      },
+    }),
+    prisma.recruiterProfile.findMany({
+      where: { approved: false },
+      orderBy: { createdAt: "asc" },
+      take: 5,
+      select: {
+        id: true,
+        fullName: true,
+        company: true,
+        createdAt: true,
+        user: { select: { email: true } },
       },
     }),
   ]);
@@ -183,6 +196,13 @@ export async function getOverviewStats() {
         row.target.email ||
         "Unknown",
       createdAt: row.createdAt,
+      createdAtRelative: formatDistanceToNow(row.createdAt, { addSuffix: true }),
+    })),
+    pendingRecruiters: pendingRecruitersRaw.map((row) => ({
+      id: row.id,
+      fullName: row.fullName,
+      company: row.company,
+      email: row.user.email ?? "",
       createdAtRelative: formatDistanceToNow(row.createdAt, { addSuffix: true }),
     })),
   };

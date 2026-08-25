@@ -9,10 +9,50 @@ import type {
 } from "@/repositories/types";
 
 /**
- * THE ONLY visibility fragment for recruiter candidate search (§8.3).
- * Legacy live reads: ProgramMember.recruiterVisibilityConsentAt must be set.
- * New: CandidateVisibility.searchableByRecruiters (enforcement flag, not a
- * candidate preference). openToWork is a separate availability filter.
+ * THE recruiter-discovery gate, and the only one.
+ *
+ * `CandidateVisibility` hangs off `User`, so this one fragment applies
+ * identically to every track — AI cohort, 60-day challenge, Claude, hackathon,
+ * and whatever ships next. That is the whole point of it living here: the
+ * previous arrangement gated program members on
+ * `ProgramMember.recruiterVisibilityConsentAt` and gated the other three tracks
+ * on nothing at all, which is not a gate, it is a gap.
+ *
+ * Deliberately NOT behind `ENABLE_NEW_TALENT`. That flag decides where
+ * candidate *data* is read from; this decides who may be shown at all, and the
+ * answer to that must not depend on a rollout switch. `CandidateVisibility` is
+ * a production table today, populated by 078 Phase 2b.
+ *
+ * `openToWork` (`CandidatePreference`) is a DIFFERENT question — whether the
+ * candidate is actively looking. Never substitute one for the other.
+ */
+export function searchableUserWhere(): Prisma.UserWhereInput {
+  return {
+    deletedAt: null,
+    visibility: { is: { searchableByRecruiters: true, withdrawnAt: null } },
+  };
+}
+
+/**
+ * Set-membership form of {@link searchableUserWhere}, for the paths that hold
+ * candidate ids already and need to drop the ones that must not be shown.
+ */
+export async function filterSearchableUserIds(
+  userIds: string[],
+): Promise<Set<string>> {
+  const ids = [...new Set(userIds.filter(Boolean))];
+  if (ids.length === 0) return new Set();
+  const rows = await prisma.user.findMany({
+    where: { id: { in: ids }, ...searchableUserWhere() },
+    select: { id: true },
+  });
+  return new Set(rows.map((r) => r.id));
+}
+
+/**
+ * Legacy `/talent` fragment. Retiring with the `/talent` pool — new surfaces use
+ * {@link searchableUserWhere}. Left in place only because the legacy branch of
+ * `searchCandidates` below still ranks `ProgramMember` rows.
  */
 export function visibleProgramMemberWhere(): Prisma.ProgramMemberWhereInput {
   return { recruiterVisibilityConsentAt: { not: null } };

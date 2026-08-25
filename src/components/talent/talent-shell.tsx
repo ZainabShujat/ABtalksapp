@@ -3,18 +3,34 @@
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { signOutAction } from "@/app/actions/auth-actions";
+import { RecruiterAccountMenu } from "@/components/hire/recruiter-account-menu";
+import { useHireAuth } from "@/components/hire/hire-auth-provider";
+import type { RecruiterAccountSnapshot } from "@/features/hire/recruiter-account-types";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { href: "/talent", label: "Talent pool" },
-  { href: "/talent/shortlist", label: "Shortlist" },
+  // The pool browser is not linked anywhere while it has nothing useful to
+  // show. The route stays — the cart and the member profiles live under it.
+  { href: "/hire", label: "Scout" },
+  // One name for one thing: "Shortlist" here and "cart" everywhere else
+  // read as two features, which is why the cart was never found.
+  { href: "/talent/shortlist", label: "Cart" },
 ];
 
-const HIDE_NAV = ["/talent/register", "/talent/pending"];
+const HIDE_NAV = ["/talent/login", "/talent/register", "/talent/pending"];
 
-export function TalentShell({ children }: { children: React.ReactNode }) {
+export function TalentShell({
+  children,
+  account = null,
+}: {
+  children: React.ReactNode;
+  account?: RecruiterAccountSnapshot | null;
+}) {
   const pathname = usePathname();
   const showNav = !HIDE_NAV.some((p) => pathname === p);
+  const { openAuth, signedIn, pending, authEnabled } = useHireAuth();
 
   return (
     <div className="min-h-svh bg-background">
@@ -33,7 +49,9 @@ export function TalentShell({ children }: { children: React.ReactNode }) {
               />
             </span>
             </Link>
-            <Link href={showNav ? "/talent" : "/program"} className="text-primary">
+            {/* /talent is gone — the pool browser was removed. Scout is the
+                portal now. */}
+            <Link href={showNav ? "/hire" : "/talent/register"} className="text-primary">
               Talent
             </Link>
           </div>
@@ -51,6 +69,26 @@ export function TalentShell({ children }: { children: React.ReactNode }) {
                   {item.label}
                 </Link>
               ))}
+              {account ? (
+                <RecruiterAccountMenu account={account} />
+              ) : signedIn ? (
+                <form action={signOutAction}>
+                  <button
+                    type="submit"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    {pending ? "Pending · Sign out" : "Sign out"}
+                  </button>
+                </form>
+              ) : authEnabled ? (
+                <button
+                  type="button"
+                  onClick={() => openAuth("nav")}
+                  className={cn(buttonVariants({ size: "sm" }))}
+                >
+                  Sign in
+                </button>
+              ) : null}
             </nav>
           )}
         </div>

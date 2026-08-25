@@ -1,4 +1,5 @@
 import type { LandingState, TrackCta } from "@/features/landing/get-landing-state";
+import { isRecruiterAuthEnabled } from "@/lib/feature-flags";
 import { LandingNav } from "./landing-nav";
 import { HeroSection } from "./hero-section";
 import { StatsStrip } from "./stats-strip";
@@ -55,6 +56,8 @@ export function LandingPage({
     claude: state.claudeCta,
   };
 
+  const showRecruiterCta = isRecruiterAuthEnabled();
+
   const cards: CohortCard[] = COHORT_DEFAULTS.filter(
     (card) => card.key !== "claude" || claudeEnabled,
   ).map((card) => {
@@ -75,11 +78,16 @@ export function LandingPage({
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <LandingNav user={state.user} getStartedHref={state.getStartedHref} />
+      <LandingNav
+        user={state.user}
+        getStartedHref={state.getStartedHref}
+        showRecruiterCta={showRecruiterCta}
+      />
       <main id="main">
         <HeroSection
           getStartedHref={state.getStartedHref}
           isSignedIn={!!state.user}
+          showRecruiterCta={showRecruiterCta}
         />
         <StatsStrip />
         <BridgeSection />
@@ -91,9 +99,9 @@ export function LandingPage({
         <FaqSection />
         <CommunitySection />
         {/* <ContactSection /> */}
-        <CtaBand />
+        <CtaBand showRecruiterCta={showRecruiterCta} />
       </main>
-      <SiteFooter />
+      <SiteFooter showRecruiterCta={showRecruiterCta} />
     </div>
   );
 }
