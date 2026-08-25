@@ -2169,10 +2169,6 @@ body:has(.hire-app--desk) button.fixed.bottom-4.right-4 {
   }
 
   .hire-scout-region,
-  .hire-pod-region {
-    padding: 6px 12px 12px;
-  }
-
   .scout {
     border-radius: 16px;
   }
@@ -2289,22 +2285,6 @@ body:has(.hire-app--desk) button.fixed.bottom-4.right-4 {
 
   .hire-detail__scroll {
     padding: 16px 14px 24px;
-  }
-
-  .hire-pod__title {
-    font-size: 22px;
-    line-height: 28px;
-  }
-
-  .hire-pod__main {
-    grid-template-columns: 1fr;
-    gap: 16px;
-    overflow-y: auto;
-  }
-
-  .hire-pod__card {
-    grid-template-columns: minmax(0, 1fr);
-    padding: 14px;
   }
 
   .hire-pod__card .desk-card__score {
@@ -3858,4 +3838,65 @@ html.dark .hire-app.hire-menu {
   font-weight: 500;
   cursor: pointer;
   color: var(--h-gray-700);
+}
+
+/* ---------------------------------------------------------------------------
+   Pod (Shortlist / Saved for later) — mobile.
+
+   These four rules live here, at the end, and not in the @media block near
+   line 2100 with the rest of the mobile styles. They were there, and they did
+   nothing: the pod's base rules are declared *after* that block, carry the same
+   specificity, and so won every time. The media query matched at 390px and the
+   grid stayed two-column with the list column computing to 0px, which is why
+   the Shortlist and Saved-for-later views rendered as an empty strip under the
+   request panel. Anything added for the pod at a breakpoint has to sit below
+   the base rules it is overriding.
+   --------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .hire-pod-region {
+    padding: 6px 12px 12px;
+  }
+
+  .hire-pod__title {
+    font-size: 22px;
+    line-height: 28px;
+  }
+
+  /* One column: the list, then the request panel under it. */
+  .hire-pod__main {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    overflow-y: auto;
+  }
+
+  .hire-pod__card {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 14px;
+  }
+
+  /* The desk is a desktop app shell: it fills the viewport and each column
+     scrolls inside its own pane. On a phone that leaves the candidate list
+     whatever height is left over — measured at 77px holding 1822px of cards,
+     so one card showed, cut in half. Let the content size itself here and let
+     the page scroll instead, which is what a phone reader expects anyway. */
+  .hire-pod,
+  .hire-pod-region,
+  .hire-pod__col {
+    min-height: auto;
+  }
+
+  .hire-pod__main {
+    overflow-y: visible;
+  }
+
+  .hire-pod__list {
+    flex: none;
+    min-height: auto;
+    overflow-y: visible;
+  }
+
+  /* Same cut, on the request panel: 273px of box around 433px of content. */
+  .hire-pod__request {
+    overflow: visible;
+  }
 }
