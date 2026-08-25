@@ -3879,20 +3879,36 @@ html.dark .hire-app.hire-menu {
      whatever height is left over — measured at 77px holding 1822px of cards,
      so one card showed, cut in half. Let the content size itself here and let
      the page scroll instead, which is what a phone reader expects anyway. */
+  /* One scroller for the whole pod, and it is the region.
+
+     The desk shell is deliberately locked to the viewport — html, body and
+     .hire-app--desk are all height:100dvh, overflow:hidden — because Scout is a
+     chat: the thread scrolls and the composer stays pinned. That is right, and
+     it stays. But it means the pod's content cannot escape, so letting the
+     inner boxes grow to their natural height just buried 2479px of cards in an
+     844px box with no way to reach them.
+
+     So the region scrolls instead of the page, and everything inside it sizes
+     to content and hands its overflow upward. Scout is untouched. */
+  .hire-pod-region {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
   .hire-pod,
-  .hire-pod-region,
   .hire-pod__col {
     min-height: auto;
   }
 
   .hire-pod__main {
-    overflow-y: visible;
+    overflow: visible;
   }
 
   .hire-pod__list {
     flex: none;
     min-height: auto;
-    overflow-y: visible;
+    overflow: visible;
   }
 
   /* Same cut, on the request panel: 273px of box around 433px of content. */
@@ -3942,5 +3958,41 @@ html.dark .hire-app.hire-menu {
 
   .scout-criteria::-webkit-scrollbar {
     display: none;
+  }
+
+  /* "View more details" becomes a sheet, not a slot in the chat.
+
+     The inspector is a side panel, and on a phone the grid handed it the whole
+     column — which put a 1729px profile inside a 442px window wedged under the
+     Scout toolbar, with the composer, the checklist and the shortlist bar all
+     still fighting it for the screen. Nothing about that reads as "details".
+
+     Full screen, its own scroll, above everything including the shortlist bar
+     at z-index 90. It already carries its own Back button, so there is a way
+     out. The desk underneath keeps its state; this only covers it. */
+  .scout__body.is-open .hire-detail {
+    position: fixed;
+    inset: 0;
+    z-index: 95;
+    border-left: 0;
+    background: var(--h-surface);
+  }
+
+  .scout__body.is-open .hire-detail__scroll {
+    padding: 16px 16px calc(28px + env(safe-area-inset-bottom));
+    overscroll-behavior: contain;
+  }
+
+  /* Stacked, full width and thumb-height — they were a right-aligned row that
+     wrapped into an awkward staircase at this width. */
+  .scout__body.is-open .hire-detail__actions {
+    justify-content: stretch;
+    gap: 8px;
+  }
+
+  .scout__body.is-open .hire-detail__actions > * {
+    flex: 1 1 100%;
+    justify-content: center;
+    min-height: 44px;
   }
 }
