@@ -65,13 +65,21 @@ function displaySkill(raw: string): string {
 
 function roleTitle(spec: JobSpec, skills: string[]): string {
   const stated = spec.title?.trim();
+  const display = skills.map(displaySkill);
+
   if (stated) {
-    // "Full Stack Developer" alone says little; lead with the stack that makes
-    // it findable, the way the recruiter would describe the search out loud.
-    const lead = skills.slice(0, 3).map(displaySkill);
+    // Lead with the stack, because "Full Stack Developer" alone says little.
+    // But only with the part the title does not already carry: a recruiter who
+    // typed "COBOL mainframe engineer" should not be handed back
+    // "COBOL + IBM z/OS COBOL mainframe engineer".
+    const lower = stated.toLowerCase();
+    const lead = display
+      .filter((s) => !lower.includes(s.toLowerCase()))
+      .slice(0, 3);
     return lead.length > 0 ? `${lead.join(" + ")} ${stated}` : stated;
   }
-  const lead = skills.slice(0, 3).map(displaySkill);
+
+  const lead = display.slice(0, 3);
   if (lead.length === 0) return "Requirement-based profile";
   return `${lead.join(" + ")} developer`;
 }

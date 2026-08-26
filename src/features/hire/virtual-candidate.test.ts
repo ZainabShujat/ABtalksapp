@@ -144,6 +144,24 @@ suite("the title is the requirement, never a person", () => {
   assert(/python/i.test(p.title), `title should lead with the stack, got ${p.title}`);
 });
 
+suite("the title does not repeat a word the recruiter already typed", () => {
+  const p = generateVirtualCandidate({
+    title: "COBOL mainframe engineer",
+    mustHaveStack: ["COBOL", "IBM z/OS"],
+  })!;
+  const cobols = (p.title.match(/cobol/gi) ?? []).length;
+  assert(cobols === 1, `COBOL should appear once, got ${cobols} in "${p.title}"`);
+  assert(/IBM z\/OS/i.test(p.title), `the stack the title lacks should lead: ${p.title}`);
+});
+
+suite("a title that carries the whole stack is left alone", () => {
+  const p = generateVirtualCandidate({
+    title: "Python Django developer",
+    mustHaveStack: ["Python", "Django"],
+  })!;
+  assert(p.title === "Python Django developer", `got "${p.title}"`);
+});
+
 suite("no identity is fabricated anywhere in the profile", () => {
   const p = generateVirtualCandidate(mern)!;
   const blob = JSON.stringify(p);
