@@ -8,7 +8,8 @@ import {
   type LegalConsentValues,
 } from "@/components/legal/legal-consent-fields";
 
-const CONFETTI_COLORS = ["#6366f1", "#8b5cf6", "#a855f7", "#c084fc", "#818cf8", "#4f46e5"];
+/** Palette oranges + the cream tints, so the burst stays in-system. */
+const CONFETTI_COLORS = ["#e05226", "#c9411c", "#a93617", "#ffece3", "#fff1e9", "#353535"];
 
 function buildConfetti() {
   return Array.from({ length: 44 }, (_, i) => ({
@@ -70,6 +71,15 @@ interface RegistrationFormProps {
 const FALLBACK_WHATSAPP =
   "https://chat.whatsapp.com/LDUvHRIlb5dGHpDJLueR9i?s=cl&p=a&mlu=0&amv=0";
 
+/**
+ * National-number length for dial codes where it is fixed. India is always 10
+ * digits, so the field caps input there and rejects anything shorter — other
+ * countries vary, and fall back to a 7-15 range rather than a wrong hard rule.
+ */
+const PHONE_EXACT_LEN: Record<string, number> = {
+  "+91": 10,
+};
+
 export default function RegistrationForm({
   whatsappLink,
   isSignedIn,
@@ -114,9 +124,14 @@ export default function RegistrationForm({
   const validate = (): boolean => {
     const e: Errors = {};
     if (!form.name.trim()) e.name = "Full name is required";
-    if (!form.phone.trim()) e.phone = "Phone number is required";
-    else if (!/^\d{7,15}$/.test(form.phone.replace(/\s/g, "")))
-      e.phone = "Please enter a valid phone number";
+
+    const digits = form.phone.replace(/\D/g, "");
+    const exact = PHONE_EXACT_LEN[form.countryCode];
+    if (!digits) e.phone = "Phone number is required";
+    else if (exact ? digits.length !== exact : !/^\d{7,15}$/.test(digits))
+      e.phone = exact
+        ? `Enter your ${exact}-digit number`
+        : "Please enter a valid phone number";
     if (!form.role) e.role = "Please select an option";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -198,19 +213,19 @@ export default function RegistrationForm({
           width: 100%;
           padding: 13px 16px;
           border-radius: 12px;
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.09);
+          background: var(--wk-surface);
+          border: 1px solid var(--wk-card-border);
           color: var(--wk-text);
           font-size: 15px;
           font-weight: 500;
           outline: none;
           transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
         }
-        .wk-input::placeholder { color: rgba(255,255,255,0.32); font-weight: 400; }
+        .wk-input::placeholder { color: var(--wk-placeholder); font-weight: 400; }
         .wk-input:focus {
           border-color: rgba(var(--wk-a1-rgb),0.55);
-          background: rgba(255,255,255,0.05);
-          box-shadow: 0 0 0 3px rgba(var(--wk-a1-rgb),0.12), 0 0 20px -6px rgba(var(--wk-a2-rgb),0.4);
+          background: var(--wk-surface);
+          box-shadow: 0 0 0 3px rgba(var(--wk-a1-rgb),0.18);
         }
         .wk-input.err { border-color: rgba(248,113,113,0.6); }
         .wk-input.err:focus { box-shadow: 0 0 0 3px rgba(248,113,113,0.14); }
@@ -218,13 +233,13 @@ export default function RegistrationForm({
 
         .register-btn {
           background: var(--wk-grad);
-          box-shadow: 0 8px 28px -8px rgba(var(--wk-a2-rgb),0.6), inset 0 1px 0 rgba(255,255,255,0.25);
+          box-shadow: 0 8px 28px -8px rgba(var(--wk-a1-rgb),0.42), inset 0 1px 0 rgba(255,255,255,0.25);
           transition: transform 0.18s ease, filter 0.18s ease, box-shadow 0.18s ease;
         }
         .register-btn:hover:not(:disabled) {
           transform: translateY(-2px);
           filter: brightness(1.07);
-          box-shadow: 0 14px 36px -8px rgba(var(--wk-a2-rgb),0.7), inset 0 1px 0 rgba(255,255,255,0.3);
+          box-shadow: 0 14px 36px -8px rgba(var(--wk-a1-rgb),0.52), inset 0 1px 0 rgba(255,255,255,0.3);
         }
         .register-btn:active:not(:disabled) { transform: translateY(0); }
         .register-btn:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -234,12 +249,11 @@ export default function RegistrationForm({
         <div
           className="relative overflow-hidden rounded-3xl p-6 sm:p-9"
           style={{
-            background: "rgba(255,255,255,0.025)",
-            border: "1px solid rgba(255,255,255,0.09)",
+            background: "var(--wk-surface)",
+            border: "1px solid var(--wk-card-border)",
             backdropFilter: "blur(20px)",
             WebkitBackdropFilter: "blur(20px)",
-            boxShadow:
-              "0 30px 80px -30px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.06)",
+            boxShadow: "var(--wk-shadow-lg), inset 0 1px 0 var(--wk-inset-hi)",
           }}
         >
           {/* top accent line */}
@@ -247,15 +261,15 @@ export default function RegistrationForm({
             className="absolute inset-x-0 top-0 h-px"
             style={{
               background:
-                "linear-gradient(to right, transparent, rgba(var(--wk-a1-rgb),0.7), rgba(var(--wk-a2-rgb),0.7), transparent)",
+                "linear-gradient(to right, transparent, rgba(var(--wk-a1-rgb),0.7), rgba(var(--wk-a1-rgb),0.52), transparent)",
             }}
           />
 
           <div className="mb-6 text-center">
-            <h2 className="mt-3 text-2xl font-bold tracking-tight text-white sm:text-[26px]">
+            <h2 className="wk-t mt-3 text-2xl font-bold tracking-tight sm:text-[26px]">
               {heading}
             </h2>
-            <p className="mt-1.5 text-sm text-white/45">{subheading}</p>
+            <p className="wk-dim mt-1.5 text-sm">{subheading}</p>
           </div>
 
           {state === "registered" && (
@@ -268,7 +282,7 @@ export default function RegistrationForm({
               >
                 Join the WhatsApp group
               </a>
-              <p className="mt-3.5 text-xs text-white/35">
+              <p className="wk-faint mt-3.5 text-xs">
                 Your webinar details are in your inbox — check Spam or Promotions if
                 you don&apos;t see them.
               </p>
@@ -276,7 +290,7 @@ export default function RegistrationForm({
           )}
 
           {state === "closed" && (
-            <p className="text-center text-sm leading-relaxed text-white/45">
+            <p className="wk-dim text-center text-sm leading-relaxed">
               There&apos;s no workshop open for registration at the moment. The next
               one will be announced here and on our WhatsApp community.
             </p>
@@ -290,7 +304,7 @@ export default function RegistrationForm({
               >
                 Continue with Google to reserve your seat
               </a>
-              <p className="mt-3.5 text-xs text-white/35">
+              <p className="wk-faint mt-3.5 text-xs">
                 Takes a few seconds — we use it to confirm your seat.
               </p>
             </div>
@@ -316,7 +330,7 @@ export default function RegistrationForm({
                 disabled
                 className="wk-input cursor-not-allowed opacity-60"
               />
-              <p className="mt-1.5 text-xs text-white/35">
+              <p className="wk-faint mt-1.5 text-xs">
                 Signed in as {sessionEmail} — your seat is confirmed to this address.
               </p>
             </Field>
@@ -325,7 +339,18 @@ export default function RegistrationForm({
               <div className="flex gap-2">
                 <select
                   value={form.countryCode}
-                  onChange={(e) => set("countryCode", e.target.value)}
+                  onChange={(e) => {
+                    // Trim on switch: +1 allows 15 digits, +91 only 10, so a
+                    // number typed under the looser code would otherwise stay
+                    // over-long and fail validation with no visible cause.
+                    const code = e.target.value;
+                    const cap = PHONE_EXACT_LEN[code] ?? 15;
+                    setForm((prev) => ({
+                      ...prev,
+                      countryCode: code,
+                      phone: prev.phone.slice(0, cap),
+                    }));
+                  }}
                   className="wk-input wk-select shrink-0 cursor-pointer"
                   style={{ width: "104px", paddingRight: "8px" }}
                 >
@@ -361,7 +386,13 @@ export default function RegistrationForm({
                   type="tel"
                   placeholder="Enter your phone number"
                   value={form.phone}
-                  onChange={(e) => set("phone", e.target.value.replace(/[^0-9]/g, ""))}
+                  inputMode="numeric"
+                  autoComplete="tel-national"
+                  maxLength={PHONE_EXACT_LEN[form.countryCode] ?? 15}
+                  onChange={(e) => {
+                    const cap = PHONE_EXACT_LEN[form.countryCode] ?? 15;
+                    set("phone", e.target.value.replace(/[^0-9]/g, "").slice(0, cap));
+                  }}
                   className={`wk-input ${errors.phone ? "err" : ""}`}
                 />
               </div>
@@ -372,7 +403,7 @@ export default function RegistrationForm({
                 value={form.role}
                 onChange={(e) => set("role", e.target.value)}
                 className={`wk-input wk-select cursor-pointer ${errors.role ? "err" : ""}`}
-                style={{ color: form.role ? "var(--wk-text)" : "rgba(255,255,255,0.32)" }}
+                style={{ color: form.role ? "var(--wk-text)" : "var(--wk-placeholder)" }}
               >
                 <option value="" disabled>Select an option</option>
                 <option value="Student">Student</option>
@@ -406,7 +437,7 @@ export default function RegistrationForm({
                   style={{
                     color: form.graduationYear
                       ? "var(--wk-text)"
-                      : "rgba(255,255,255,0.32)",
+                      : "var(--wk-placeholder)",
                   }}
                 >
                   <option value="">Select year (optional)</option>
@@ -420,7 +451,7 @@ export default function RegistrationForm({
             )}
 
             {isExistingMember && (
-              <p className="text-xs text-white/35">
+              <p className="wk-faint text-xs">
                 Prefilled from your ABTalks profile — any changes here update it.
               </p>
             )}
@@ -431,7 +462,11 @@ export default function RegistrationForm({
             <LegalConsentFields
               values={legalConsent}
               onChange={setLegalConsent}
-              className="border-white/15 bg-white/5 text-white/90 [&_a]:text-indigo-300"
+              // LegalConsentFields is shared app-wide and takes no `style`,
+              // so the workshop palette is applied through className — cn()
+              // runs tailwind-merge, which drops the component's own
+              // border/bg/text defaults in favour of these.
+              className="border-[var(--wk-card-border)] bg-[var(--wk-a5)] text-[var(--wk-text-faint)] [&_a]:font-semibold [&_a]:text-[var(--wk-a1)]"
             />
           </div>
 
@@ -453,7 +488,7 @@ export default function RegistrationForm({
                 {isPending ? "Registering..." : "Register Now"}
               </button>
 
-              <p className="mt-3.5 text-center text-xs text-white/35">
+              <p className="mt-3.5 text-center text-xs" style={{ color: "var(--wk-muted)" }}>
                 No spam. We&apos;ll only send your webinar details.
               </p>
             </>
@@ -517,18 +552,18 @@ export default function RegistrationForm({
           <div
             className="animate-pop relative z-[102] w-full max-w-md overflow-hidden rounded-3xl p-8 text-center sm:p-10"
             style={{
-              background: "rgba(11,17,32,0.92)",
+              background: "rgba(17,17,17,0.94)",
               border: "1px solid rgba(255,255,255,0.1)",
               backdropFilter: "blur(20px)",
               WebkitBackdropFilter: "blur(20px)",
-              boxShadow: "0 40px 100px -20px rgba(0,0,0,0.9)",
+              boxShadow: "0 40px 100px -20px rgba(var(--wk-ink-a),0.35)",
             }}
           >
             <div
               className="absolute inset-x-0 top-0 h-px"
               style={{
                 background:
-                  "linear-gradient(to right, transparent, rgba(74,222,128,0.7), transparent)",
+                  "linear-gradient(to right, transparent, rgba(var(--wk-a1-rgb),0.8), transparent)",
               }}
             />
 
@@ -537,15 +572,15 @@ export default function RegistrationForm({
               <span
                 className="absolute inset-0 rounded-full"
                 style={{
-                  border: "2px solid rgba(74,222,128,0.5)",
+                  border: "2px solid rgba(var(--wk-a1-rgb),0.5)",
                   animation: "ring-pulse 1.4s ease-out 0.4s infinite",
                 }}
               />
               <div
                 className="check-wrap absolute inset-0 flex items-center justify-center rounded-full"
                 style={{
-                  background: "rgba(74,222,128,0.12)",
-                  border: "1px solid rgba(74,222,128,0.35)",
+                  background: "rgba(var(--wk-a1-rgb),0.14)",
+                  border: "1px solid rgba(var(--wk-a1-rgb),0.4)",
                 }}
               >
                 <svg width="46" height="46" viewBox="0 0 52 52" fill="none">
@@ -554,13 +589,13 @@ export default function RegistrationForm({
                     cx="26"
                     cy="26"
                     r="24"
-                    stroke="#4ade80"
+                    stroke="#e05226"
                     strokeWidth="2.5"
                   />
                   <path
                     className="check-mark-path"
                     d="M15 27 L23 34 L38 18"
-                    stroke="#4ade80"
+                    stroke="#e05226"
                     strokeWidth="3.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -602,13 +637,16 @@ interface FieldProps {
 function Field({ label, required, error, children }: FieldProps) {
   return (
     <div className="w-full">
-      <label className="mb-1.5 block text-[13px] font-semibold text-white/70">
+      <label
+        className="mb-1.5 block text-[13px] font-semibold"
+        style={{ color: "var(--wk-text-dim)" }}
+      >
         {label}
         {required && <span className="ml-1 text-(--wk-a2)">*</span>}
       </label>
       {children}
       {error && (
-        <p className="mt-1.5 text-xs font-medium tracking-wide text-red-400">{error}</p>
+        <p className="mt-1.5 text-xs font-medium tracking-wide text-red-600">{error}</p>
       )}
     </div>
   );

@@ -32,6 +32,15 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  images: {
+    remotePatterns: [
+      // Pre-play stills for past-workshop replays, derived from each event's
+      // youtubeId. i.ytimg.com is Google's cookieless static asset host — it
+      // sets no cookies, unlike the youtube.com player iframe, which stays
+      // click-to-load behind the consent gate.
+      { protocol: "https", hostname: "i.ytimg.com", pathname: "/vi/**" },
+    ],
+  },
   // Next 16 blocks /_next/* from non-localhost origins unless listed here.
   // Without this, LAN/phone pages never hydrate → login form does a dead GET.
   allowedDevOrigins: localNetworkHosts(),

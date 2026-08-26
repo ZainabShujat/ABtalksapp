@@ -1,14 +1,30 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useCanvasScale } from "@/components/workshop/use-canvas-scale";
 
+/**
+ * Community section — Figma node 1:311, an absolutely-positioned composition
+ * on a 1920×818 frame, rendered on that canvas and scaled to fit.
+ *
+ * Below `lg` the canvas would be illegibly small, so the same content reflows
+ * into a stacked layout.
+ */
+
+const FRAME_W = 1920;
+const FRAME_H = 818;
+
+/** Nodes 1:319-1:324. `x` is the number's left edge, `cx` the label's centre. */
 const STATS = [
-  { value: 11000, suffix: "+", label: "AI Learners", sub: "From 25+ Countries", accent: "#6366f1" },
-  { value: 550, suffix: "+", label: "Institutions", sub: "Students enrolled", accent: "#a855f7" },
-  { value: 300, suffix: "+", label: "Organisations", sub: "Working professionals", accent: "#818cf8" },
-];
+  { value: 11000, suffix: "+", label: "AI Learners", sub: "From 25+ Countries", x: 123, cx: 227 },
+  { value: 550, suffix: "+", label: "Institutions", sub: "Students enrolled", x: 453, cx: 519.5 },
+  { value: 300, suffix: "+", label: "Organizations", sub: "Working professionals", x: 747, cx: 810.5 },
+] as const;
 
-const CLAUDE_SIGNUP = "https://www.abtalks.in/?ref=N2VD2X";
+/** Gemunu Libre is what the design specifies for the figures (nodes 1:319-1:321). */
+const NUM_FONT = "var(--font-gemunu), var(--font-hub-instrument-sans), sans-serif";
 
 function useInView(threshold = 0.3) {
   const ref = useRef<HTMLDivElement>(null);
@@ -49,104 +65,285 @@ function CountUp({ target, run, duration = 1800 }: { target: number; run: boolea
   return <>{val.toLocaleString()}</>;
 }
 
+function BodyCopy() {
+  return (
+    <>
+      <p style={{ margin: 0 }}>
+        ABTalks is where ambitious learners master AI together — through live
+        workshops, hands-on challenges, and a community that ships.
+      </p>
+      <p style={{ margin: 0 }}>&nbsp;</p>
+      <p style={{ margin: 0 }}>
+        Take on the{" "}
+        <Link
+          href="/"
+          style={{ color: "var(--wk-a1)", fontWeight: 700, textDecoration: "underline" }}
+        >
+          60-Day Claude AI Challenge
+        </Link>
+        , build in public, and get discovered by recruiters.
+      </p>
+    </>
+  );
+}
+
 export default function CommunityStats() {
-  const { ref, visible } = useInView(0.35);
+  const { ref: canvasRef, scale } = useCanvasScale(FRAME_W);
+  const { ref: countersRef, visible: countersVisible } = useInView(0.35);
 
   return (
-    <section className="mx-auto w-full max-w-5xl px-4 pb-16 sm:pb-24">
+    <>
+      {/* ================= exact canvas (lg and up) ================= */}
       <div
-        className="relative overflow-hidden rounded-3xl p-7 sm:p-10"
-        style={{
-          background: "rgba(255,255,255,0.025)",
-          border: "1px solid rgba(255,255,255,0.09)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-        }}
+        ref={canvasRef}
+        className="relative mx-auto hidden w-full overflow-hidden lg:block"
+        style={
+          {
+            maxWidth: FRAME_W,
+            aspectRatio: `${FRAME_W} / ${FRAME_H}`,
+            "--wk-scale": scale,
+          } as React.CSSProperties
+        }
       >
         <div
-          className="absolute inset-x-0 top-0 h-px"
           style={{
-            background:
-              "linear-gradient(to right, transparent, rgba(var(--wk-a1-rgb),0.6), rgba(var(--wk-a2-rgb),0.6), transparent)",
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: FRAME_W,
+            height: FRAME_H,
+            transformOrigin: "top left",
+            transform: "scale(var(--wk-scale, 1))",
           }}
-        />
+        >
+          {/* Blurred glow (node 1:312) — the wash across the top of this
+              section, and what separates it from the section above. The SVG is
+              2519×746 and sits 300px outside its 1919×146 box on every side:
+              that overhang IS the blur, so it must not be squashed to the box.
+              Recoloured from the Figma blue to the palette's #E05226 and held
+              at ~1/3 opacity — orange is far denser than the pale blue was, and
+              at full strength it reads as a solid band rather than a wash. */}
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              left: -296,
+              top: -289,
+              width: 2519,
+              height: 746,
+              opacity: 0.34,
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/workshop/community/band.svg"
+              alt=""
+              style={{ display: "block", width: "100%", height: "100%" }}
+            />
+          </div>
 
-        {/* Heading */}
-        <div className="text-center">
-          
-          <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-white sm:text-[38px]">
+          {/* heading — node 1:317 */}
+          <h2
+            style={{
+              position: "absolute",
+              left: 123,
+              top: 111,
+              width: 682,
+              margin: 0,
+              fontSize: 64,
+              fontWeight: 700,
+              lineHeight: 1.1,
+              letterSpacing: "-0.01em",
+              color: "var(--wk-text)",
+            }}
+          >
             The ABTalks AI Learners Community
           </h2>
-          <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-white/45 md:text-[15px]">
-            You&apos;re joining a fast-growing movement of builders learning AI together.
-          </p>
-        </div>
 
-        {/* Stats */}
-        <div ref={ref} className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {STATS.map((s, i) => (
-            <div
-              key={s.label}
-              className="relative overflow-hidden rounded-2xl p-6 text-center"
-              style={{
-                background: "rgba(255,255,255,0.02)",
-                border: "1px solid rgba(255,255,255,0.07)",
-                transform: visible ? "translateY(0)" : "translateY(16px)",
-                opacity: visible ? 1 : 0,
-                transition: `transform 0.6s cubic-bezier(0.22,1,0.36,1) ${i * 0.12}s, opacity 0.6s ease ${i * 0.12}s`,
-              }}
-            >
-              <div className="flex items-baseline justify-center">
-                <span
-                  className="font-mono text-4xl font-extrabold tracking-tight tabular-nums sm:text-5xl"
+          {/* subhead — node 1:314 */}
+          <p
+            style={{
+              position: "absolute",
+              left: 130,
+              top: 276,
+              width: 681,
+              margin: 0,
+              fontSize: 36,
+              fontWeight: 600,
+              lineHeight: 1.1,
+              color: "var(--wk-text-dim)",
+            }}
+          >
+            You&apos;re joining a fast-growing movement of builders learning AI
+            together.
+          </p>
+
+          {/* body — node 1:318 */}
+          <div
+            style={{
+              position: "absolute",
+              left: 123,
+              top: 405,
+              width: 693,
+              fontSize: 20,
+              fontWeight: 500,
+              lineHeight: 1.1,
+              color: "var(--wk-text-faint)",
+            }}
+          >
+            <BodyCopy />
+          </div>
+
+          {/* stats — nodes 1:319-1:324 */}
+          <div ref={countersRef} style={{ position: "absolute", inset: 0 }}>
+            {STATS.map((s, i) => (
+              <div key={s.label}>
+                <div
                   style={{
-                    background: `linear-gradient(135deg, #ffffff, ${s.accent})`,
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    backgroundClip: "text",
+                    position: "absolute",
+                    left: s.x,
+                    top: 596,
+                    fontFamily: NUM_FONT,
+                    fontSize: 64,
+                    fontWeight: 700,
+                    lineHeight: 1.1,
+                    whiteSpace: "nowrap",
+                    color: "var(--wk-text)",
+                    opacity: countersVisible ? 1 : 0,
+                    transition: `opacity 0.6s ease ${i * 0.12}s`,
                   }}
                 >
-                  <CountUp target={s.value} run={visible} />
-                </span>
-                <span
-                  className="ml-0.5 text-2xl font-extrabold sm:text-3xl"
-                  style={{ color: s.accent }}
-                >
+                  <CountUp target={s.value} run={countersVisible} />
                   {s.suffix}
-                </span>
+                </div>
+
+                <div
+                  style={{
+                    position: "absolute",
+                    left: s.cx,
+                    top: 677,
+                    transform: "translateX(-50%)",
+                    textAlign: "center",
+                    whiteSpace: "nowrap",
+                    color: "var(--wk-a1-deep)",
+                    lineHeight: 1.3,
+                    opacity: countersVisible ? 1 : 0,
+                    transition: `opacity 0.6s ease ${i * 0.12}s`,
+                  }}
+                >
+                  <span style={{ fontSize: 28, fontWeight: 700 }}>{s.label}</span>
+                  <br />
+                  <span style={{ fontSize: 24, fontWeight: 500 }}>{s.sub}</span>
+                </div>
               </div>
-              <div className="mt-2 text-sm font-bold text-white/85">{s.label}</div>
-              <div className="mt-0.5 text-[12px] font-medium text-white/40">{s.sub}</div>
+            ))}
+          </div>
+
+          {/* images — nodes 1:315 / 1:316 / 1:313 */}
+          <CanvasImage src="/workshop/community/2.jpg" x={1065} y={111} w={395} h={242} />
+          <CanvasImage src="/workshop/community/3.jpg" x={1065} y={367} w={395} h={394} />
+          <CanvasImage src="/workshop/community/1.jpg" x={1479} y={111} w={373} h={650} />
+        </div>
+      </div>
+
+      {/* ================= stacked fallback (below lg) ================= */}
+      <section
+        className="relative w-full overflow-hidden px-4 py-14 lg:hidden"
+      >
+        <h2
+          className="text-[34px] font-bold leading-[1.1] tracking-tight sm:text-[48px]"
+          style={{ color: "var(--wk-text)" }}
+        >
+          The ABTalks AI Learners Community
+        </h2>
+
+        <p
+          className="mt-6 text-[22px] font-semibold leading-[1.1] sm:text-[30px]"
+          style={{ color: "var(--wk-text-dim)" }}
+        >
+          You&apos;re joining a fast-growing movement of builders learning AI
+          together.
+        </p>
+
+        <div
+          className="mt-6 space-y-3 text-[16px] font-medium leading-[1.25] sm:text-[20px]"
+          style={{ color: "var(--wk-text-faint)" }}
+        >
+          <BodyCopy />
+        </div>
+
+        <div className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-3">
+          {STATS.map((s) => (
+            <div key={s.label} className="min-w-0">
+              <div
+                className="font-bold leading-[1.1]"
+                style={{
+                  fontFamily: NUM_FONT,
+                  fontSize: "clamp(34px, 8vw, 64px)",
+                  color: "var(--wk-text)",
+                }}
+              >
+                <CountUp target={s.value} run />
+                {s.suffix}
+              </div>
+              <div
+                className="mt-1 text-[20px] font-bold leading-[1.3]"
+                style={{ color: "var(--wk-a1-deep)" }}
+              >
+                {s.label}
+              </div>
+              <div
+                className="text-[17px] font-medium leading-[1.3]"
+                style={{ color: "var(--wk-a1-deep)" }}
+              >
+                {s.sub}
+              </div>
             </div>
           ))}
         </div>
 
-        {/* ABTalks + Claude challenge blurb */}
-        <div className="mx-auto mt-10 max-w-2xl text-center">
-          <p className="text-[14.5px] leading-relaxed text-white/55">
-            ABTalks is where ambitious learners master AI together — through live
-            workshops, hands-on challenges, and a community that ships.
-          </p>
-          <p className="mt-2 text-[14.5px] leading-relaxed text-white/55">
-            Take on the <span className="font-semibold text-white/80">60-Day Claude AI Challenge</span>,
-            build in public, and get discovered by recruiters.
-          </p>
-
-          <a
-            href={CLAUDE_SIGNUP}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-7 inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-semibold text-white transition-transform hover:-translate-y-0.5"
-            style={{
-              background: "var(--wk-grad)",
-              boxShadow:
-                "0 12px 30px -10px rgba(var(--wk-a2-rgb),0.6), inset 0 1px 0 rgba(255,255,255,0.25)",
-            }}
-          >
-            Join the Claude Challenge →
-          </a>
+        <div className="mt-10 grid grid-cols-2 gap-4">
+          <div className="relative aspect-[395/242] overflow-hidden rounded-[25px]">
+            <Image src="/workshop/community/2.jpg" alt="" fill sizes="45vw" className="object-cover" />
+          </div>
+          <div className="relative row-span-2 aspect-[373/650] overflow-hidden rounded-[25px]">
+            <Image src="/workshop/community/1.jpg" alt="" fill sizes="45vw" className="object-cover" />
+          </div>
+          <div className="relative aspect-[395/394] overflow-hidden rounded-[25px]">
+            <Image src="/workshop/community/3.jpg" alt="" fill sizes="45vw" className="object-cover" />
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </>
+  );
+}
+
+function CanvasImage({
+  src,
+  x,
+  y,
+  w,
+  h,
+}: {
+  src: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: x,
+        top: y,
+        width: w,
+        height: h,
+        borderRadius: 25,
+        overflow: "hidden",
+      }}
+    >
+      <Image src={src} alt="" fill sizes={`${w}px`} className="object-cover" />
+    </div>
   );
 }
