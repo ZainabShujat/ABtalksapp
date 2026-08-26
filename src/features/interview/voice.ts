@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { LANGUAGE_RETRY_LINE } from "@/features/interview/language-gate";
 import {
   MOVING_ON_LINE,
+  RETRY_LINE,
   WAITING_LINE,
   repeatLine,
   type RoomLineKind,
@@ -80,8 +81,15 @@ function ttsVendor(): SpeechVendor | null {
   return null;
 }
 
-/** Wall-clock ceiling on either upstream call. */
-const REQUEST_TIMEOUT_MS = 30_000;
+/**
+ * Wall-clock ceiling on either upstream call.
+ *
+ * Two minutes, not thirty seconds. A candidate may answer for two or three
+ * minutes, and transcribing that much audio takes materially longer than
+ * transcribing the five-second microphone check the old value was sized for.
+ * A timeout here surfaces as a 500 and loses a real answer.
+ */
+const REQUEST_TIMEOUT_MS = 120_000;
 
 /**
  * Transcription gets its own, much longer budget.
@@ -285,6 +293,9 @@ export async function resolveSpeakableLine(
   // A short prompt, not a restatement: the question was asked seconds ago and
   // is still on screen. Composed here like the others, so the client still
   // cannot choose what the interviewer says.
+  if (kind === "retry") {
+    return { ok: true, data: { text: RETRY_LINE } };
+  }
   if (kind === "waiting") {
     return { ok: true, data: { text: WAITING_LINE } };
   }

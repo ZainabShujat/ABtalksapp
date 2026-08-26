@@ -112,6 +112,20 @@ export function questionOverlap(authored: string, generated: string): number {
   return shared / target.size;
 }
 
+/**
+ * Overlap required of a SIMPLIFIED question.
+ *
+ * Much lower than the rephrasing bar, and deliberately so: simplifying means
+ * replacing the vocabulary the candidate did not follow, so a good
+ * simplification shares few words with the original by construction. Holding it
+ * to the rephrasing bar rejected every genuine attempt and read the same
+ * sentence back at someone who had just said they did not understand it.
+ *
+ * The other guards do the real protecting here — one ask, no evidence named,
+ * length capped — and they are unchanged.
+ */
+export const MIN_SIMPLIFIED_OVERLAP = 0.08;
+
 export type PhrasingRejection =
   | "EMPTY"
   | "TOO_LONG"
@@ -139,10 +153,12 @@ export function rejectPhrasing(
   generated: string,
   authored: string,
   expectedEvidence: readonly string[],
+  minOverlap: number = MIN_QUESTION_OVERLAP,
+  maxChars: number = MAX_GENERATED_QUESTION_CHARS,
 ): PhrasingRejection {
   const text = generated.trim();
   if (text.length === 0) return "EMPTY";
-  if (text.length > MAX_GENERATED_QUESTION_CHARS) return "TOO_LONG";
+  if (text.length > maxChars) return "TOO_LONG";
 
   // An ask is either a question mark or an interviewer imperative. Requiring a
   // "?" was wrong: "Walk me through what happens when the filter is removed."
@@ -166,7 +182,7 @@ export function rejectPhrasing(
     if (hits / itemWords.length >= 0.8) return "LEAKS_EVIDENCE";
   }
 
-  if (questionOverlap(authored, text) < MIN_QUESTION_OVERLAP) return "OFF_TARGET";
+  if (questionOverlap(authored, text) < minOverlap) return "OFF_TARGET";
   return null;
 }
 
@@ -180,9 +196,17 @@ export function choosePhrasing(
   generated: string | null | undefined,
   authored: string,
   expectedEvidence: readonly string[],
+  minOverlap: number = MIN_QUESTION_OVERLAP,
+  maxChars: number = MAX_GENERATED_QUESTION_CHARS,
 ): { text: string; generated: boolean; rejection: PhrasingRejection } {
   if (!generated) return { text: authored, generated: false, rejection: "EMPTY" };
-  const rejection = rejectPhrasing(generated, authored, expectedEvidence);
+  const rejection = rejectPhrasing(
+    generated,
+    authored,
+    expectedEvidence,
+    minOverlap,
+    maxChars,
+  );
   return rejection === null
     ? { text: generated.trim(), generated: true, rejection: null }
     : { text: authored, generated: false, rejection };

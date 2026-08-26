@@ -73,6 +73,8 @@ export type CohortCandidateContext = {
 
   /** Highest consecutive day passed — the member's LIVE progress right now. */
   progressDay: number;
+  /** Highest day unlocked by the cohort timeline (or admin override). */
+  highestUnlockedDay: number;
   /** Every day with a passing submission. */
   passedDays: number[];
   /** Module the member is currently working in. */
@@ -130,6 +132,7 @@ export async function buildCohortCandidateContext(
         company: true,
         yearsExperience: true,
         githubRepoUrl: true,
+        highestUnlockedDay: true,
         cohort: { select: { name: true } },
       },
     }),
@@ -217,6 +220,7 @@ export async function buildCohortCandidateContext(
     githubRepoUrl: member.githubRepoUrl,
 
     progressDay,
+    highestUnlockedDay: member.highestUnlockedDay,
     passedDays: [...passedDays].sort((a, b) => a - b),
     currentModule:
       dayStates.days.find((d) => d.dayNumber === Math.max(1, progressDay))

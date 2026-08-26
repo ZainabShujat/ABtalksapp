@@ -125,10 +125,6 @@ export function InterviewSession({
           </li>
           <li className="flex gap-3">
             <span className="text-[var(--iv-text-faint)]">•</span>
-            You can type instead at any point.
-          </li>
-          <li className="flex gap-3">
-            <span className="text-[var(--iv-text-faint)]">•</span>
             This milestone can be taken once.
           </li>
         </ul>

@@ -142,6 +142,7 @@ function validate(
     followUpQuestion: followUp.length > 0 ? followUp : null,
     acknowledgement: (parsed.data.acknowledgement ?? "").trim() || null,
     clarification: (parsed.data.clarification ?? "").trim() || null,
+    simplified: (parsed.data.simplified ?? "").trim() || null,
     bridge: (parsed.data.bridge ?? "").trim() || null,
     confidence: parsed.data.confidence ?? null,
     degraded: false,

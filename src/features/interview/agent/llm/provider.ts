@@ -42,6 +42,19 @@ export type AnalyzeAnswerInput = {
    */
   memory?: string[];
   /**
+   * What was TAUGHT on the days this question draws on, from the authored
+   * curriculum knowledge base. Context for conducting the conversation —
+   * concepts, misconceptions, useful follow-ups — never a source of questions
+   * or evidence.
+   */
+  curriculum?: string;
+  /**
+   * True facts about the session itself, so questions ABOUT the interview can
+   * be answered instead of deflected. A candidate asking "how much longer is
+   * this?" is asking something reasonable, and a real interviewer answers it.
+   */
+  sessionFacts?: { answered: number; total: number; remaining: number };
+  /**
    * The authored question that will be asked next if this turn moves on.
    *
    * Given to the model ONLY so the connecting sentence can lead into it. The
@@ -49,6 +62,13 @@ export type AnalyzeAnswerInput = {
    * chooses it, rewords it, or decides whether it is reached.
    */
   nextQuestionText?: string | null;
+  /**
+   * Compact, deterministic summary of the candidate's progress through the
+   * cohort, precomputed at plan build. Context for the conversation only —
+   * the model may reference it occasionally, but it must never change the
+   * technical evidence read or score.
+   */
+  progressContext?: string | null;
 };
 
 export interface InterviewLLM {

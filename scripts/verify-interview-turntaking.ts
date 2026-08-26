@@ -31,6 +31,7 @@ import {
   MAX_LANGUAGE_RETRIES_PER_QUESTION,
   SPEECH_OFF_MAX_RMS,
   SPEECH_OFF_RMS,
+  SPEECH_OFF_FLOOR_MULTIPLIER,
   SPEECH_ON_FLOOR_MULTIPLIER,
   SPEECH_ON_MAX_RMS,
   SPEECH_ON_RMS,
@@ -161,10 +162,20 @@ check("4d. the thresholds are amplitudes a real voice actually reaches", () => {
     SPEECH_OFF_RMS < SPEECH_ON_RMS,
     "the OFF threshold must be the lower of the two, or hysteresis is inverted",
   );
-  const quietRoom = 0.01;
+  // No absolute "quiet room" constant here any more. These static values are a
+  // FLOOR, not the operative threshold: the room measures the actual noise
+  // floor at the start of each recording and raises both thresholds against it
+  // (SPEECH_ON_FLOOR_MULTIPLIER). Asserting a fixed number was what forced them
+  // too high, and a voice that never crossed the bar was the "it cannot hear
+  // me" bug. What must hold is the RELATIONSHIP and a real ceiling.
+  assert.ok(SPEECH_OFF_RMS > 0, "the OFF threshold must be a positive amplitude");
   assert.ok(
-    SPEECH_OFF_RMS > quietRoom,
-    "the OFF threshold must sit above a quiet room, or an answer never ends",
+    SPEECH_ON_FLOOR_MULTIPLIER > 1,
+    "calibration must raise the bar against the measured floor, not lower it",
+  );
+  assert.ok(
+    SPEECH_ON_MAX_RMS > SPEECH_ON_RMS && SPEECH_OFF_MAX_RMS > SPEECH_OFF_RMS,
+    "the calibrated ceiling must sit above the static floor",
   );
 });
 
@@ -219,12 +230,20 @@ check("4h. genuinely resuming DOES reset the window", () => {
   );
 });
 
-check("two silence windows pass before anything is recorded unanswered", () => {
-  // The room prompts after one window and only moves on after a second, so a
-  // muted or quiet candidate gets ~9s and one spoken prompt before any
-  // "(no response)" is submitted.
-  assert.equal(NO_ANSWER_MS, INTERVIEW_SILENCE_MS);
-  assert.ok(NO_ANSWER_MS * 2 >= 9_000, "two chances, not one");
+check("the wait to START speaking is far longer than the wait to STOP", () => {
+  // These were the same constant, and tying them together was a real defect:
+  // the microphone opens the moment the interviewer stops talking, so a
+  // candidate still thinking about the question was prompted after 4.5s and
+  // had the question abandoned after 9s. Ending an answer has a clear signal —
+  // they were talking and stopped. Waiting for one to begin is
+  // indistinguishable from thinking, so it must be much more generous.
+  assert.ok(
+    NO_ANSWER_MS >= INTERVIEW_SILENCE_MS * 2,
+    `NO_ANSWER_MS (${NO_ANSWER_MS}) must be well clear of the silence window (${INTERVIEW_SILENCE_MS})`,
+  );
+  assert.ok(NO_ANSWER_MS >= 10_000, "a candidate needs time to begin");
+  // Still two chances before anything is recorded unanswered.
+  assert.ok(NO_ANSWER_MS * 2 >= 20_000, "two chances, not one");
 });
 
 check("4i. calibration can never raise the threshold out of voice range", () => {
@@ -242,6 +261,35 @@ check("4i. calibration can never raise the threshold out of voice range", () => 
     "the ceiling must stay under a normal speaking level",
   );
   assert.ok(SPEECH_OFF_MAX_RMS < SPEECH_ON_MAX_RMS);
+});
+
+check("4l. a REAL measured microphone can both start and end a turn", () => {
+  // Real readings off the dev readout on a tester's laptop:
+  //   silence floor 0.0066 (quiet) and 0.0092 (a little noisier)
+  //   speech peak   0.0253  — well under the 0.035 case 4j assumes
+  //
+  // Both failure modes shipped. ON calibrated to 0.028, ABOVE that speech peak,
+  // so the turn never started. Then OFF sat at 0.004, BELOW the silence floor,
+  // so `rms >= off` was true forever: the turn never ended and nothing was ever
+  // uploaded to transcription. The bar is two-sided and this pins both against
+  // measurements rather than guesses.
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+  const SPEECH_PEAK = 0.0253;
+
+  for (const floor of [0.0066, 0.0092]) {
+    const on = clamp(floor * SPEECH_ON_FLOOR_MULTIPLIER, SPEECH_ON_RMS, SPEECH_ON_MAX_RMS);
+    const off = clamp(floor * SPEECH_OFF_FLOOR_MULTIPLIER, SPEECH_OFF_RMS, SPEECH_OFF_MAX_RMS);
+
+    assert.ok(
+      SPEECH_PEAK >= on,
+      `floor ${floor}: ON calibrated to ${on.toFixed(4)}, above a real voice (${SPEECH_PEAK}) — the turn could never start`,
+    );
+    assert.ok(
+      floor < off,
+      `floor ${floor}: OFF calibrated to ${off.toFixed(4)}, at or below the room's own noise — the turn could never end`,
+    );
+    assert.ok(off < on, "hysteresis must survive calibration");
+  }
 });
 
 check("4j. a soft speaker still registers", () => {

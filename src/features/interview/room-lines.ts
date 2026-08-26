@@ -26,15 +26,19 @@
 export type RoomLineKind =
   | "latest"
   | "waiting"
+  | "retry"
   | "repeat"
   | "language"
+  | "noisy_room"
   | "moving_on";
 
 export const ROOM_LINE_KINDS: readonly RoomLineKind[] = [
   "latest",
   "waiting",
+  "retry",
   "repeat",
   "language",
+  "noisy_room",
   "moving_on",
 ];
 
@@ -50,7 +54,10 @@ export const ROOM_LINE_KINDS: readonly RoomLineKind[] = [
  * agent's own REPEAT action — where it is what was actually requested.
  */
 export const WAITING_LINE =
-  "I can't hear you at the moment. Take your time, and check your microphone isn't muted.";
+  "I couldn't hear you, can you speak again?";
+
+export const NOISY_ROOM_LINE =
+  "There is too much background noise, can you sit in a quieter room?";
 
 /**
  * Said once when the candidate has not spoken at all since the microphone
@@ -69,6 +76,17 @@ export function repeatLine(questionText: string): string {
  * than an unanswered question, and a candidate who cannot answer deserves to be
  * let off it rather than waited at.
  */
+/**
+ * Said when the answer was captured but could not be transcribed.
+ *
+ * A transcription failure is OUR problem, not the candidate's, so the line
+ * neither blames them nor explains the machinery. What matters is that the
+ * question stays open: moving on would score an unanswered question against
+ * someone who did answer it.
+ */
+export const RETRY_LINE =
+  "Sorry, I didn't catch that clearly. Could you say it once more?";
+
 export const MOVING_ON_LINE =
   "That's completely fine. If you can't answer this one we'll move on.";
 

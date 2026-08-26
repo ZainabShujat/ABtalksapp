@@ -207,6 +207,15 @@ export type CohortPlanContext = {
   /** First name, for the spoken opening. Optional: a missing profile must not
    *  cost someone their interview, so the greeting degrades instead. */
   candidateFirstName?: string | null;
+  /**
+   * Compact, deterministic summary of the candidate's progress through the
+   * cohort, rendered as labelled text for the live agent. Frozen at plan build
+   * — the live agent reads it from the plan, never from the database.
+   *
+   * Context for the CONVERSATION only. Must never be imported or referenced by
+   * scoring, evidence, rubric, or report code.
+   */
+  progressContext?: string | null;
 };
 
 export type GeneralPlanContext = {

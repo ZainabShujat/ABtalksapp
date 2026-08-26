@@ -29,7 +29,7 @@ export const dynamic = "force-dynamic";
  */
 const bodySchema = z.object({
   interviewId: z.string().min(1).max(64),
-  line: z.enum(["latest", "waiting", "repeat", "language", "moving_on"]).default("latest"),
+  line: z.enum(["latest", "waiting", "retry", "repeat", "language", "moving_on"]).default("latest"),
 });
 
 export async function POST(request: Request) {

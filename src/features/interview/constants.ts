@@ -151,6 +151,20 @@ export const CALIBRATION_ANSWERS = 3;
 export const MAX_GENERATED_QUESTION_CHARS = 200;
 
 /**
+ * Longest a SIMPLIFIED question may be.
+ *
+ * Deliberately longer than a normal one. Simplifying does not mean shortening:
+ * a candidate who did not follow the question usually needs MORE words, not
+ * fewer — everyday phrasing, a sentence of setup, the jargon unpacked. Holding
+ * a simplification to the compact bar above forced it to drop the very framing
+ * that would have made it land.
+ *
+ * The guard that matters is unchanged: it must still ask exactly ONE thing, so
+ * the extra length is explanation and never a second question.
+ */
+export const MAX_SIMPLIFIED_QUESTION_CHARS = 420;
+
+/**
  * Minimum share of the authored question's content words a generated one must
  * reuse before it is accepted as the same question.
  *
@@ -171,7 +185,7 @@ export const MIN_QUESTION_OVERLAP = 0.25;
  * long enough to survive a normal pause between clauses and short enough that
  * the end of an answer does not feel like a hang.
  */
-export const INTERVIEW_SILENCE_MS = 4_500;
+export const INTERVIEW_SILENCE_MS = 5_000;
 
 /**
  * Speech thresholds, as RMS of the microphone WAVEFORM (0..1 amplitude).
@@ -190,8 +204,27 @@ export const INTERVIEW_SILENCE_MS = 4_500;
  * 0.01. The room additionally raises these against a measured noise floor, so
  * these values are the FLOOR of the thresholds, not the whole rule.
  */
-export const SPEECH_ON_RMS = 0.028;
-export const SPEECH_OFF_RMS = 0.014;
+/**
+ * Fixed speech thresholds, as RMS of the microphone waveform (0..1 amplitude).
+ *
+ * DELIBERATELY NOT ADAPTIVE. These were derived from the room's measured noise
+ * floor, and every variant of that produced a new failure: calibrate too high
+ * and a real voice never opens the turn, calibrate too low and the room's own
+ * hum keeps the turn open forever. Both shipped, and both present to the
+ * candidate as "it cannot hear me".
+ *
+ * Set instead from real measurements on a laptop microphone:
+ *   silence  0.0066 - 0.0092
+ *   speech   ~0.025
+ *
+ * ON sits above the loudest measured silence, OFF above the quietest, and the
+ * gap between them is the hysteresis that stops a voice near the line
+ * flickering. A speaker quieter than ON simply never trips voice detection —
+ * and that is now harmless, because detection no longer decides whether the
+ * recording is uploaded. It only decides when to stop.
+ */
+export const SPEECH_ON_RMS = 0.018;
+export const SPEECH_OFF_RMS = 0.012;
 
 /**
  * How long a level must STAY above the speech threshold before it counts as a
@@ -213,7 +246,7 @@ export const SPEECH_SUSTAIN_MS = 180;
  * raises the bar instead of registering the room itself as speech.
  */
 export const SPEECH_ON_FLOOR_MULTIPLIER = 2.2;
-export const SPEECH_OFF_FLOOR_MULTIPLIER = 1.5;
+export const SPEECH_OFF_FLOOR_MULTIPLIER = 1.6;
 
 /**
  * Hard ceiling on the calibrated speech threshold.
@@ -226,19 +259,29 @@ export const SPEECH_OFF_FLOOR_MULTIPLIER = 1.5;
  * candidate: past this point, being slightly too sensitive is the correct
  * failure.
  */
-export const SPEECH_ON_MAX_RMS = 0.055;
-export const SPEECH_OFF_MAX_RMS = 0.03;
+export const SPEECH_ON_MAX_RMS = 0.045;
+export const SPEECH_OFF_MAX_RMS = 0.025;
 
 /**
- * How long the room waits when the candidate has said NOTHING at all before
- * prompting them. Distinct from the silence timer, which ends an answer that
- * has already happened.
+ * How long the room waits for the candidate to START speaking.
  *
- * Deliberately the same interval, applied twice: quiet for this long earns one
- * prompt, quiet for this long again is what finally moves the interview on. Two
- * chances before anything is recorded as unanswered.
+ * DELIBERATELY NOT the silence window. Tying the two together made this 4.5s,
+ * and in a real interview that is brutal: the microphone opens the instant the
+ * interviewer stops talking, the candidate is still thinking about the
+ * question, and 4.5s later they are prompted, then 4.5s after that the question
+ * is abandoned. A whole question could be lost in nine seconds while somebody
+ * was drawing breath.
+ *
+ * Ending an answer and waiting for one to begin are different problems: the
+ * first has a clear signal (they were talking and stopped), the second is
+ * indistinguishable from thinking. So this is generous.
  */
-export const NO_ANSWER_MS = INTERVIEW_SILENCE_MS;
+export const NO_ANSWER_MS = 12_000;
+
+/**
+ * How long the candidate must be muted before the response window stops automatically.
+ */
+export const INTERVIEW_MUTED_MS = 7_000;
 
 /**
  * Hard ceiling on a single recorded answer.
@@ -251,7 +294,7 @@ export const NO_ANSWER_MS = INTERVIEW_SILENCE_MS;
  * answer to a question of this kind, so reaching it means something is wrong —
  * and submitting what was captured is strictly better than waiting forever.
  */
-export const MAX_ANSWER_MS = 120_000;
+export const MAX_ANSWER_MS = 180_000;
 
 /**
  * How long the room will sit in "processing" before it hands the turn back.

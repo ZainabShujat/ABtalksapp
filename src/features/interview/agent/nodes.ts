@@ -1,6 +1,7 @@
 import { logger } from "@/lib/logger";
 import { mergeEvidence } from "@/features/interview/evidence";
 import { buildInterviewMemory } from "@/features/interview/memory";
+import { curriculumFor } from "@/features/interview/cohort/curriculum-kb";
 import { NO_RESPONSE_ANSWER } from "@/features/interview/room-lines";
 import {
   activeQuestionView,
@@ -147,12 +148,39 @@ export function createAnalyzeAnswer(llm: InterviewLLM) {
       recentTranscript: state.interviewState.transcript,
       calibratedLevel: state.interviewState.calibration?.level ?? null,
       memory: buildInterviewMemory(state.plan, state.interviewState),
+      // What was actually taught on the days this question draws on. Lets the
+      // interviewer recognise a misconception, simplify without losing the
+      // point, and follow up on something real instead of only what the bank
+      // pre-wrote. Context only — it never becomes a question or evidence.
+      curriculum: await curriculumFor(question.sourceRef.sourceDays ?? []),
+      // So "how much longer is this?" can be answered truthfully rather than
+      // deflected. Counts CORE questions only — extensions are not part of what
+      // the candidate was told to expect.
+      sessionFacts: (() => {
+        const core = state.plan.questions.filter(
+          (q) => (q.tier ?? "CORE") === "CORE",
+        );
+        const answered = Object.keys(
+          state.interviewState.evidenceByQuestionId,
+        ).length;
+        return {
+          answered,
+          total: core.length,
+          remaining: Math.max(0, core.length - answered),
+        };
+      })(),
       // Peek at the next authored question so the connecting sentence can lead
       // into it. Read-only: the plan decides what is asked, not the model.
       nextQuestionText:
         state.plan.questions[
           (state.interviewState.currentQuestionIndex ?? 0) + 1
         ]?.text ?? null,
+      // The precomputed progress summary, if this is a cohort interview.
+      // Context for the conversation only — see progress-summary.ts.
+      progressContext:
+        state.plan.contextSummary.kind === "COHORT"
+          ? (state.plan.contextSummary.progressContext ?? null)
+          : null,
     });
 
     logger.info("[interview-agent] answer analyzed", {

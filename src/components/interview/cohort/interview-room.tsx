@@ -5,26 +5,24 @@ import { Mic, MicOff, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LANGUAGE_RETRY_LINE } from "@/features/interview/language-gate";
 import {
-  initialSilenceState,
-  stepSilence,
-  type SilenceState,
-  type SilenceThresholds,
-} from "@/features/interview/silence";
+  initialTurnContext,
+  openTurn,
+  stepTurn,
+  type TurnContext,
+  type TurnEffect,
+  type TurnState,
+} from "@/features/interview/turn-state";
 import { MIN_AUDIO_BYTES } from "@/features/interview/voice-contract";
 import {
   MAX_ANSWER_MS,
   MAX_LANGUAGE_RETRIES_PER_QUESTION,
-  NO_ANSWER_MS,
   PROCESSING_WATCHDOG_MS,
-  SPEECH_OFF_FLOOR_MULTIPLIER,
-  SPEECH_OFF_MAX_RMS,
   SPEECH_OFF_RMS,
-  SPEECH_ON_FLOOR_MULTIPLIER,
-  SPEECH_ON_MAX_RMS,
   SPEECH_ON_RMS,
 } from "@/features/interview/constants";
 import {
   MOVING_ON_LINE,
+  RETRY_LINE,
   NO_RESPONSE_ANSWER,
   WAITING_LINE,
   type RoomLineKind,
@@ -87,7 +85,7 @@ function readStoredRoomTheme(): OrbPalette {
 const PHASE_COPY: Record<Phase, { label: string; hint: string }> = {
   idle: { label: "Your turn", hint: "" },
   listening: { label: "Interviewer is listening", hint: "" },
-  processing: { label: "Evaluating your answer", hint: "One moment." },
+  processing: { label: "Evaluating your answer", hint: "" },
   speaking: { label: "Interviewer speaking", hint: "" },
 };
 
@@ -99,6 +97,42 @@ const PHASE_COPY: Record<Phase, { label: string; hint: string }> = {
  * does not read as the interview having frozen.
  */
 const TTS_TIMEOUT_MS = 12_000;
+
+/**
+ * How long a recognised word keeps counting as "still speaking".
+ *
+ * Long enough to bridge the gap between words and short enough that it lapses
+ * during a real pause, so the silence window can still close a turn.
+ */
+const WORD_RECENCY_MS = 1_500;
+
+/**
+ * A build marker, shown in the dev readout.
+ *
+ * Diagnosing the audio pipeline repeatedly stalled on "is the browser actually
+ * running this code?" — a stale bundle presents as live RMS with frozen
+ * thresholds, which looks like a microphone fault rather than a caching one.
+ * Bump this whenever the audio path changes; if the screen does not show it,
+ * the fix under discussion is not the code being run.
+ */
+const AUDIO_BUILD = "vad-7-per-recorder-chunks";
+
+/**
+ * Whether to show the audio diagnostics strip.
+ *
+ * Opt-in via `?debug=audio` rather than on by default in development: the strip
+ * earned its keep while the capture pipeline was being fixed, but it sits in the
+ * middle of the interview and reads as broken chrome to anyone who is not
+ * debugging it. Append the flag to the interview URL to bring it back.
+ */
+function audioDebugEnabled(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return new URLSearchParams(window.location.search).get("debug") === "audio";
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Interviewer lines kept on screen, including the current one.
@@ -230,7 +264,48 @@ export function InterviewRoom({
    * probes add turns without advancing the assessment — a turn-based bar would
    * tell someone on question three that they were nearly done.
    */
+  /** What became of the last recording. Development diagnostics only. */
+  const [sttDebug, setSttDebug] = useState<string | null>(null);
+
+  /** Ungated RMS, for diagnostics. `levelRef` is gated for the orb. */
+  const rawLevelRef = useRef(0);
+
   const [progress, setProgress] = useState({ answered: 0, total: 0, ratio: 0 });
+
+  /**
+   * Live audio diagnostics, development only.
+   *
+   * Threshold problems are indistinguishable from a dead audio path by looking
+   * at the room: both present as "it cannot hear me". This shows the numbers —
+   * whether the analyser is producing any signal at all, what it is being
+   * compared against, and whether the context is actually running. Sampled at
+   * 5Hz so it costs nothing.
+   */
+  const [audioDebug, setAudioDebug] = useState<{
+    rms: number;
+    on: number;
+    off: number;
+    spoke: boolean;
+    ctx: string;
+    word: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!audioDebugEnabled()) return;
+    const id = setInterval(() => {
+      setAudioDebug({
+        rms: rawLevelRef.current,
+        word:
+          lastWordAtRef.current !== null &&
+          performance.now() - lastWordAtRef.current < WORD_RECENCY_MS,
+        on: SPEECH_ON_RMS,
+        off: SPEECH_OFF_RMS,
+        spoke: hasSpokenRef.current,
+        ctx: audioCtxRef.current?.state ?? "none",
+      });
+    }, 200);
+    return () => clearInterval(id);
+  }, []);
 
   /**
    * Progressive reveal of the interviewer's line, driven by TTS playback.
@@ -271,7 +346,6 @@ export function InterviewRoom({
   /** Language corrections used on the question currently on the floor. */
   const languageRetriesRef = useRef(0);
   const nudgeCountRef = useRef(0);
-  const nudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const recognitionRef = useRef<{ stop: () => void; abort: () => void } | null>(
     null,
   );
@@ -294,18 +368,21 @@ export function InterviewRoom({
   const analyserSrcRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const levelRef = useRef(0);
   const levelRafRef = useRef<number | null>(null);
+  /**
+   * The turn state machine. The ref is the source of truth (the audio loop
+   * reads and writes it every frame); the React state exists only so the UI can
+   * label what is happening.
+   */
+  const turnCtxRef = useRef<TurnContext>(initialTurnContext());
+  const turnStateRef = useRef<TurnState>("idle");
+  const [turnState, setTurnState] = useState<TurnState>("idle");
   const hasSpokenRef = useRef(false);
-  const silenceRef = useRef<SilenceState>(initialSilenceState());
+  const lastWordAtRef = useRef<number | null>(null);
   /**
    * Thresholds in force for the CURRENT recording, raised against the noise
    * floor measured in its opening moments. Recomputed per recording because the
    * candidate may move, change device, or have a fan switch on mid-interview.
    */
-  const thresholdsRef = useRef<SilenceThresholds>({
-    on: SPEECH_ON_RMS,
-    off: SPEECH_OFF_RMS,
-  });
-  const noiseFloorRef = useRef<number | null>(null);
 
   const phaseRef = useRef<Phase>("idle");
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -386,7 +463,6 @@ export function InterviewRoom({
     return () => {
       if (levelRafRef.current !== null) cancelAnimationFrame(levelRafRef.current);
       if (revealRafRef.current !== null) cancelAnimationFrame(revealRafRef.current);
-      if (nudgeTimerRef.current !== null) clearTimeout(nudgeTimerRef.current);
       if (answerCapRef.current !== null) clearTimeout(answerCapRef.current);
       analyserSrcRef.current?.disconnect();
       if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
@@ -709,7 +785,15 @@ export function InterviewRoom({
         },
       });
       streamRef.current = stream;
-      chunksRef.current = [];
+      // PER-RECORDER, not shared. `chunksRef` was one array reused by every
+      // turn, and `MediaRecorder.stop()` is asynchronous: the next turn's
+      // `startRecording` cleared it and began pushing new chunks BEFORE the
+      // previous `onstop` had built its blob. The blob was then spliced from
+      // two different streams, which is not a decodable WebM file — the
+      // provider rejected it and the route reported 502. `chunksRef` is kept
+      // pointing at the live array only so the no-response path can size it.
+      const chunks: Blob[] = [];
+      chunksRef.current = chunks;
 
       // Opus at 64kbps. The browser default varies and can drop low enough to
       // smear consonants, which is exactly the part a transcriber needs; 64k is
@@ -721,7 +805,7 @@ export function InterviewRoom({
         audioBitsPerSecond: 64_000,
       });
       recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
+        if (e.data.size > 0) chunks.push(e.data);
       };
       recorder.onstop = async () => {
         clearAnswerCap();
@@ -734,11 +818,20 @@ export function InterviewRoom({
         // owns the room.
         if (discardRecordingRef.current) {
           discardRecordingRef.current = false;
-          chunksRef.current = [];
+          if (process.env.NODE_ENV !== "production") {
+            console.warn("[turn] recording DISCARDED", {
+              chunks: chunks.length,
+              hasSpoken: hasSpokenRef.current,
+              // Reachable only from ending/abandoning the interview now.
+              reason: "interview ended or abandoned",
+            });
+          }
+          setSttDebug(`discarded ${chunks.length} chunk(s)`);
+          chunks.length = 0;
           return;
         }
 
-        const blob = new Blob(chunksRef.current, {
+        const blob = new Blob(chunks, {
           type: recorder.mimeType || "audio/webm",
         });
 
@@ -747,7 +840,35 @@ export function InterviewRoom({
         // earns a 400 ("Audio file might be corrupted or unsupported") and
         // burns a request, so hand the turn back instead. Nothing is spent:
         // no answer was submitted and the question stays on the floor.
-        if (!hasSpokenRef.current || blob.size < MIN_AUDIO_BYTES) {
+        if (process.env.NODE_ENV !== "production") {
+          console.info("[turn] recorder stopped", {
+            chunks: chunks.length,
+            blobBytes: blob.size,
+            mimeType: recorder.mimeType,
+            hasSpoken: hasSpokenRef.current,
+            discarded: false,
+          });
+        }
+        setSttDebug(
+          `captured ${(blob.size / 1024).toFixed(1)}KB in ${chunks.length} chunk(s)`,
+        );
+        // RECORDING IS NOT SILENCE DETECTION.
+        //
+        // This used to read `!hasSpokenRef.current || blob.size < MIN_AUDIO_BYTES`,
+        // which let a VAD output decide whether a recording was uploaded at all.
+        // When the thresholds did not fire on a given microphone — a quiet voice,
+        // a high room floor — a complete recording containing the candidate's
+        // entire answer was thrown away without ever reaching transcription, and
+        // the room reported that it could not hear them.
+        //
+        // The only question now is whether there is audio to send. Voice
+        // detection decides WHEN to stop, never WHETHER the speech was captured.
+        // The one deliberate exception is the explicit "(no response)" path,
+        // which cancels its recording outright rather than relying on a gate.
+        if (blob.size < MIN_AUDIO_BYTES) {
+          setSttDebug(
+            `SKIPPED upload: ${(blob.size / 1024).toFixed(1)}KB — below the ${MIN_AUDIO_BYTES}B floor (container headers only)`,
+          );
           setError(
             "I didn't catch anything there. Tap the microphone and try again.",
           );
@@ -782,19 +903,43 @@ export function InterviewRoom({
             json = null;
           }
 
+          if (process.env.NODE_ENV !== "production") {
+            console.info("[turn] STT responded", {
+              status: res.status,
+              ok: json?.ok ?? false,
+              chars: json?.ok ? json.data.text.length : 0,
+              words: json?.ok
+                ? json.data.text.split(/\s+/).filter(Boolean).length
+                : 0,
+              english: json?.ok ? json.data.english !== false : null,
+              transcript: json?.ok ? json.data.text : (json?.message ?? "unparseable"),
+            });
+          }
+          setSttDebug(
+            `HTTP ${res.status} · ${json ? (json.ok ? `"${json.data.text.slice(0, 40)}"` : `err: ${json.message}`) : "unparseable body"}`,
+          );
+
           if (!json) {
-            setError(
-              `Transcription failed (HTTP ${res.status}). The server did not return a readable response — check the dev server log for /api/interview/stt. You can type your answer instead.`,
-            );
-            setPhase("idle");
+            setTurns((prev) => [
+              ...prev,
+              { role: "interviewer", text: RETRY_LINE },
+            ]);
+            setReveal({ text: RETRY_LINE, chars: RETRY_LINE.length });
+            void speak(RETRY_LINE, "retry");
             return;
           }
 
           if (!json.ok) {
-            // The recording is lost but the turn is not spent — the candidate
-            // simply answers again, by voice or by typing.
-            setError(`${json.message} (HTTP ${res.status})`);
-            setPhase("idle");
+            // The candidate DID answer; transcription is what failed. Moving on
+            // would record an unanswered question against someone who spoke, so
+            // the interviewer asks for it again and the question stays open. No
+            // evidence, no budget, no question advance.
+            setTurns((prev) => [
+              ...prev,
+              { role: "interviewer", text: RETRY_LINE },
+            ]);
+            setReveal({ text: RETRY_LINE, chars: RETRY_LINE.length });
+            void speak(RETRY_LINE, "retry");
             return;
           }
           // Not English: ask once, keep the SAME question open, and submit
@@ -819,10 +964,21 @@ export function InterviewRoom({
           await send(json.data.text);
         } catch (err) {
           setError(
-            `Could not reach the transcription service (${err instanceof Error ? err.message : "network error"
-            }). You can type your answer instead.`,
+            `Your answer couldn't be sent (${
+              err instanceof Error ? err.message : "network error"
+            }). Nothing was lost from the interview — the question is still open.`,
           );
-          setPhase("idle");
+          // The connection dropped mid-upload, most likely on a long answer.
+          // The audio for THIS turn is gone, but the interview is not: the
+          // question stays on the floor, no evidence is recorded and no budget
+          // is spent, so the candidate simply answers again. Saying so out loud
+          // matters — silence here reads as the interview having frozen.
+          setTurns((prev) => [
+            ...prev,
+            { role: "interviewer", text: RETRY_LINE },
+          ]);
+          setReveal({ text: RETRY_LINE, chars: RETRY_LINE.length });
+          void speak(RETRY_LINE, "retry");
         }
       };
 
@@ -834,17 +990,41 @@ export function InterviewRoom({
       recorderRef.current = recorder;
       // Same stream, one analyser. Auto-stop runs the normal stop path, so the
       // captured audio goes through the existing STT pipeline unchanged.
-      attachAnalyser(stream, () => stopRecording());
+
+      attachAnalyser(stream, handleTurnEffect);
       startLivePreview();
-      scheduleNoAnswerNudge();
-      // The backstop for every way the analyser can fail to end a turn: no
+      // A FAILSAFE, not a duration limit.
+      //
+      // It exists for the ways the analyser can fail to end a turn at all: no
       // AudioContext, a microphone producing a flat signal, a threshold the
-      // room never reaches. Submits what was captured rather than recording
-      // into a void indefinitely.
-      answerCapRef.current = setTimeout(() => {
-        if (phaseRef.current !== "listening") return;
-        stopRecording();
-      }, MAX_ANSWER_MS);
+      // room never reaches. It must never truncate someone who is simply
+      // giving a long answer — at 120s it cut a two-minute answer off
+      // mid-sentence, which is the opposite of the problem it was added for.
+      //
+      // So it fires only when the state machine is NOT running the turn. If the
+      // candidate is mid-answer the machine owns the turn and the cap re-arms
+      // instead of stopping, which means a long answer can only ever be ended
+      // by silence.
+      const armAnswerCap = () => {
+        answerCapRef.current = setTimeout(() => {
+          if (phaseRef.current !== "listening") return;
+          const turn = turnCtxRef.current;
+          const machineRunning =
+            turn.state === "CANDIDATE_SPEAKING" || turn.state === "CANDIDATE_PAUSED";
+          if (machineRunning) {
+            // A healthy turn re-arms forever: only silence ends an answer, so a
+            // three-minute one is never truncated.
+            armAnswerCap();
+            return;
+          }
+          // Detection never fired at all — the thresholds did not suit this
+          // microphone. STOP, which now UPLOADS whatever was captured rather
+          // than discarding it. A candidate whose voice the VAD could not see
+          // still gets their answer transcribed; they just wait longer for it.
+          stopRecording();
+        }, MAX_ANSWER_MS);
+      };
+      armAnswerCap();
       setPhase("listening");
     } catch {
       setMicUnavailable(true);
@@ -863,7 +1043,10 @@ export function InterviewRoom({
    * control ON) because transcription accuracy matters more than a livelier
    * waveform. Visualisation reads whatever speech-to-text is hearing.
    */
-  function attachAnalyser(stream: MediaStream, onSilence: () => void) {
+  function attachAnalyser(
+    stream: MediaStream,
+    onEffect: (effect: TurnEffect) => void,
+  ) {
     try {
       const Ctor =
         window.AudioContext ??
@@ -896,13 +1079,11 @@ export function InterviewRoom({
       // answer ever ended by itself. The waveform is an actual amplitude.
       const samples = new Uint8Array(analyser.fftSize);
       hasSpokenRef.current = false;
-      silenceRef.current = initialSilenceState();
-      noiseFloorRef.current = null;
-      thresholdsRef.current = { on: SPEECH_ON_RMS, off: SPEECH_OFF_RMS };
+      lastWordAtRef.current = null;
+      turnCtxRef.current = openTurn(performance.now());
+      turnStateRef.current = "WAITING_FOR_SPEECH";
+      setTurnState("WAITING_FOR_SPEECH");
 
-      const startedAt = performance.now();
-      /** How long the opening of a recording is sampled for room tone. */
-      const CALIBRATION_MS = 700;
 
       const tick = () => {
         levelRafRef.current = requestAnimationFrame(tick);
@@ -921,76 +1102,53 @@ export function InterviewRoom({
         // actually audible. Publishing raw RMS made it twitch at room tone,
         // which reads as "it can hear me" when it cannot. Below the speech
         // threshold the orb is told silence.
-        levelRef.current = rms >= thresholdsRef.current.off ? rms : 0;
+        rawLevelRef.current = rms;
+        levelRef.current = rms >= SPEECH_OFF_RMS ? rms : 0;
 
         const now = performance.now();
 
-        // Calibrate against the room the candidate is actually sitting in. The
-        // quietest frame of the opening moments is the noise floor; thresholds
-        // are raised above it so a fan or an air conditioner cannot register as
-        // speech, and left at the constants in a quiet room so a soft speaker is
-        // still heard. Nothing is decided during calibration except, if they
-        // start talking immediately, that they have started.
-        if (now - startedAt < CALIBRATION_MS) {
-          noiseFloorRef.current =
-            noiseFloorRef.current === null
-              ? rms
-              : Math.min(noiseFloorRef.current, rms);
-          // Through the reducer, not a bare threshold test: a single loud
-          // frame is a cough or a knock, and marking that as "they have
-          // started" armed the silence clock against a candidate who had not
-          // said anything yet. `shouldStop` is ignored here — calibration
-          // decides only whether they have begun, never that they have
-          // finished.
-          const opening = stepSilence(
-            silenceRef.current,
-            rms,
-            now,
-            undefined,
-            thresholdsRef.current,
-          );
-          silenceRef.current = opening.state;
-          hasSpokenRef.current = opening.state.hasSpoken;
-          return;
-        }
-
-        if (noiseFloorRef.current !== null) {
-          const floor = noiseFloorRef.current;
-          // Clamped at BOTH ends. Raising against the measured floor stops a
-          // noisy room registering as speech; the ceiling stops a noisy room
-          // making the candidate inaudible, which is the worse failure of the
-          // two — an interview that cannot hear you is not an interview.
-          thresholdsRef.current = {
-            on: Math.min(
-              SPEECH_ON_MAX_RMS,
-              Math.max(SPEECH_ON_RMS, floor * SPEECH_ON_FLOOR_MULTIPLIER),
-            ),
-            off: Math.min(
-              SPEECH_OFF_MAX_RMS,
-              Math.max(SPEECH_OFF_RMS, floor * SPEECH_OFF_FLOOR_MULTIPLIER),
-            ),
-          };
-          noiseFloorRef.current = null;
-        }
-
-        // The rule itself lives in features/interview/silence.ts as a pure
-        // function, so turn-taking can be tested without a microphone. This
-        // loop owns the audio; that owns the decision.
-        // Muted is not a pause. Advancing the timer here would submit the
-        // answer 4.5s after the candidate muted, which is the one thing the
-        // mute control must never cause.
-        if (mutedRef.current) return;
-
-        const step = stepSilence(
-          silenceRef.current,
+        // One input: the microphone level, against FIXED thresholds. No noise
+        // calibration, no floor tracking, no speech-recognition second opinion
+        // — each of those was a way for the turn to get stuck, and none of them
+        // can any longer stop a recording being uploaded.
+        const step = stepTurn(turnCtxRef.current, {
           rms,
           now,
-          undefined,
-          thresholdsRef.current,
-        );
-        silenceRef.current = step.state;
-        hasSpokenRef.current = step.state.hasSpoken;
-        if (step.shouldStop) onSilence();
+          muted: mutedRef.current,
+        });
+        turnCtxRef.current = step.context;
+        hasSpokenRef.current = step.context.hasSpoken;
+        if (step.context.state !== turnStateRef.current) {
+          if (process.env.NODE_ENV !== "production") {
+            console.info(
+              `[turn] ${turnStateRef.current} -> ${step.context.state}`,
+              {
+                hasSpoken: step.context.hasSpoken,
+                rms: Number(rms.toFixed(4)),
+                on: SPEECH_ON_RMS,
+                off: SPEECH_OFF_RMS,
+                nudges: step.context.nudges,
+                atMs: Math.round(now),
+              },
+            );
+          }
+          turnStateRef.current = step.context.state;
+          setTurnState(step.context.state);
+        }
+        if (step.effect !== "none" && process.env.NODE_ENV !== "production") {
+          console.info(`[turn] effect=${step.effect}`, {
+            reason:
+              step.effect === "finalize"
+                ? "silence window elapsed after speech"
+                : step.effect === "moveOn"
+                  ? "no speech after the second prompt"
+                  : step.effect === "nudge"
+                    ? "no speech since the mic opened"
+                    : "microphone muted",
+            hasSpoken: step.context.hasSpoken,
+          });
+        }
+        if (step.effect !== "none") onEffect(step.effect);
       };
       levelRafRef.current = requestAnimationFrame(tick);
       analyserActiveRef.current = true;
@@ -1021,6 +1179,7 @@ export function InterviewRoom({
     audioCtxRef.current = null;
     levelRef.current = 0;
     hasSpokenRef.current = false;
+    lastWordAtRef.current = null;
   }
 
   /**
@@ -1058,6 +1217,9 @@ export function InterviewRoom({
       rec.lang = "en-IN";
 
       let settled = "";
+      // Initialize the timer so the 5-second rule applies immediately.
+      lastWordAtRef.current = performance.now();
+      
       rec.onresult = (event: unknown) => {
         const e = event as {
           resultIndex: number;
@@ -1081,7 +1243,10 @@ export function InterviewRoom({
         // is deliberately absent from the room. Recognition is kept purely as a
         // second signal that speech has started, alongside the analyser, so a
         // very quiet speaker still ends their own turn.
-        if (preview.length > 0) hasSpokenRef.current = true;
+        if (preview.length > 0) {
+          hasSpokenRef.current = true;
+          lastWordAtRef.current = performance.now();
+        }
       };
       rec.onerror = () => {
         // No-speech, network, aborted: all harmless for a preview.
@@ -1163,18 +1328,16 @@ export function InterviewRoom({
       streamRef.current?.getAudioTracks().forEach((t) => {
         t.enabled = !next;
       });
-      // Coming back from mute, the quiet period must not count toward the
-      // silence window: they were not pausing, they were muted.
-      if (!next) {
-        silenceRef.current = { ...silenceRef.current, quietSince: null };
-      }
+      // No clock surgery here. `stepTurn` re-bases its own anchors by exactly
+      // the muted interval on the first unmuted frame, so muted time counts
+      // toward neither the silence window nor the no-answer wait — and the
+      // captured audio is never touched either way.
       return next;
     });
   }
 
   /** Ends the turn and SUBMITS what was captured. */
   function stopRecording() {
-    clearNoAnswerNudge();
     clearAnswerCap();
     stopLivePreview();
     detachAnalyser();
@@ -1186,91 +1349,81 @@ export function InterviewRoom({
    * Ends the turn and THROWS AWAY what was captured.
    *
    * Used when the room takes the floor back rather than the candidate handing it
-   * over — the no-answer nudge. The recording in that case is the silence that
-   * caused the nudge; uploading it produced an "I didn't catch that" error and a
-   * phase change fighting the line being spoken.
+   * over: ending or abandoning the interview. It is deliberately NOT used by
+   * any turn-taking path any more — the nudge used to call it, which is exactly
+   * how a candidate who started speaking mid-nudge lost their answer.
    */
   function cancelRecording() {
     discardRecordingRef.current = true;
     stopRecording();
   }
 
+  // NOTE ON THE ONE REMAINING DISCARD PATH.
+  //
+  // `cancelRecording` is now reachable ONLY from ending or abandoning the
+  // interview, where there is no next turn for an answer to belong to. Every
+  // turn-taking path — nudge, move-on, noisy room, silence — goes through
+  // `stopRecording`, so no decision the interviewer makes mid-interview can
+  // throw away captured speech. That is the invariant the old nudge broke.
+
   /**
-   * Prompts a candidate who has not said anything since the microphone opened.
+   * Acts on what the audio loop decided this frame.
    *
-   * First time: re-ask. Silence usually means the question was missed, not
-   * refused, and repeating costs nothing.
-   *
-   * Second time: say it is fine and move on. Sitting in silence is worse than
-   * an unanswered question, and the transcript records "(no response)" rather
-   * than words the candidate never said — an assessment must never attribute
-   * speech to someone.
+   * Every branch is reached from ONE place, synchronously, after the state has
+   * already moved. That is the whole point of the refactor: there is no second
+   * owner of the turn that could disagree about whether the candidate has
+   * spoken, and no path here can discard a recording that contains an answer.
    */
-  function scheduleNoAnswerNudge() {
-    clearNoAnswerNudge();
-    nudgeTimerRef.current = setTimeout(() => {
-      // Only fires if they genuinely have not spoken. `hasSpokenRef` is set by
-      // the analyser the moment their level crosses the speech threshold, and
-      // by the live preview the moment it recognises a word.
-      if (hasSpokenRef.current) return;
+  function handleTurnEffect(effect: TurnEffect) {
+    if (effect === "finalize") {
+      // The machine only emits this from CANDIDATE_PAUSED, which is only
+      // reachable once `hasSpoken` is true. Submitting here can therefore never
+      // be a non-answer, and the state is already ANSWER_FINALIZING so a second
+      // frame cannot emit it again.
+      stopRecording();
+      return;
+    }
 
-      // After the first nudge the room is mid-cycle: it cancelled the recording
-      // to speak, so the microphone may be closed and the analyser detached,
-      // and the phase may be "idle" rather than "listening". The escalation
-      // must not depend on either. Requiring them is why a muted candidate sat
-      // at "Take your time" indefinitely: nudge one fired, tore down the audio
-      // it was gated on, and nothing could ever fire nudge two.
-      const escalating = nudgeCountRef.current >= 1;
+    if (effect === "mutedWarning") {
+      setError(
+        "Your microphone has been muted for a few seconds. Resume when you're ready, or end this response.",
+      );
+      return;
+    }
 
-      if (!escalating) {
-        if (phaseRef.current !== "listening") return;
-        // With no signal at all, silence and a long answer are
-        // indistinguishable. Interrupting on that guess is worse than waiting.
-        if (!analyserActiveRef.current && !recognitionActiveRef.current) return;
-      } else if (phaseRef.current === "processing" || phaseRef.current === "speaking") {
-        // Something else already took the turn; let it finish.
-        return;
-      }
+    if (effect === "nudge") {
+      // The recording KEEPS RUNNING. Nothing is cancelled and nothing is
+      // discarded — this is a prompt over the top of an open microphone, which
+      // is what makes "the nudge ate my answer" structurally impossible.
+      setTurns((prev) => [...prev, { role: "interviewer", text: WAITING_LINE }]);
+      setReveal({ text: WAITING_LINE, chars: WAITING_LINE.length });
+      void speak(WAITING_LINE, "waiting");
+      return;
+    }
 
-      nudgeCountRef.current += 1;
-
-      if (nudgeCountRef.current === 1) {
-        // CANCEL, not stop: the capture is the silence that got us here.
-        cancelRecording();
-        // A short prompt, NOT the question again. It was asked seconds ago and
-        // is still on screen — restating it made the interviewer look like it
-        // had spoken twice and forgotten the first time.
-        setTurns((prev) => [
-          ...prev,
-          { role: "interviewer", text: WAITING_LINE },
-        ]);
-        setReveal({ text: WAITING_LINE, chars: WAITING_LINE.length });
-        // Reschedule from HERE rather than relying on the microphone being
-        // reopened. Muting, a denied permission or a failed reopen must not be
-        // able to strand the interview on this line — the escalation to
-        // "moving on" is what makes repeated silence bounded.
-        void speak(WAITING_LINE, "waiting").finally(() => {
-          if (!hasSpokenRef.current) scheduleNoAnswerNudge();
-        });
+    if (effect === "moveOn") {
+      // Reached only from WAITING_FOR_SPEECH, so `hasSpoken` is false by
+      // construction and "(no response)" is the truth rather than a guess.
+      setTurns((prev) => [...prev, { role: "interviewer", text: MOVING_ON_LINE }]);
+      setReveal({ text: MOVING_ON_LINE, chars: MOVING_ON_LINE.length });
+      // "moveOn" means VOICE DETECTION never saw speech — which is not the same
+      // as nothing having been said. It was discarding thirteen seconds of
+      // captured audio on the strength of that guess, which is exactly the
+      // failure mode this pipeline is supposed to have stopped having.
+      //
+      // So the RECORDING decides, not the detector. If real audio was captured
+      // it is uploaded through the ordinary path and treated as the answer it
+      // probably is. Only a genuinely empty capture submits the marker.
+      const captured = chunksRef.current.reduce((n, c) => n + c.size, 0);
+      if (captured >= MIN_AUDIO_BYTES) {
+        stopRecording();
         return;
       }
 
       cancelRecording();
-      setTurns((prev) => [...prev, { role: "interviewer", text: MOVING_ON_LINE }]);
-      setReveal({ text: MOVING_ON_LINE, chars: MOVING_ON_LINE.length });
-      // Spoken and submitted together: the candidate hears why the interview is
-      // moving on while the turn is recorded as unanswered. `send` owns the
-      // phase from here, so the speech is not awaited.
       void speak(MOVING_ON_LINE, "moving_on").then(() => {
         void send(NO_RESPONSE_ANSWER);
       });
-    }, NO_ANSWER_MS);
-  }
-
-  function clearNoAnswerNudge() {
-    if (nudgeTimerRef.current !== null) {
-      clearTimeout(nudgeTimerRef.current);
-      nudgeTimerRef.current = null;
     }
   }
 
@@ -1338,6 +1491,14 @@ export function InterviewRoom({
 
   const busy = phase === "processing" || phase === "speaking" || closing;
   const copy = PHASE_COPY[phase];
+  // The machine's own view, so the status the candidate reads comes from the
+  // same place the turn decisions do rather than from a parallel phase flag.
+  const statusLabel =
+    turnState === "CANDIDATE_SPEAKING" || turnState === "CANDIDATE_PAUSED"
+      ? "Listening"
+      : turnState === "ANSWER_FINALIZING"
+        ? "One moment"
+        : copy.label;
 
   /* --------------------------------------------------------------- view */
 
@@ -1662,7 +1823,7 @@ export function InterviewRoom({
 
               <div className="text-center">
                 <p className="text-[13px] font-semibold text-[var(--iv-text)]">
-                  {copy.label}
+                  {statusLabel}
                   {phase === "speaking" ? (
                     <span className="ml-2 inline-flex items-end gap-[2px] align-middle">
                       {[0, 1, 2, 3].map((i) => (
@@ -1682,6 +1843,17 @@ export function InterviewRoom({
                 ) : null}
               </div>
             </div>
+
+            {audioDebug ? (
+              <div className="pointer-events-none absolute inset-x-0 -top-6 text-center font-mono text-[10px] text-[var(--iv-text-faint)]">
+                rms {audioDebug.rms.toFixed(4)} · on {audioDebug.on.toFixed(3)} ·
+                off {audioDebug.off.toFixed(3)} ·{" "}
+                {audioDebug.spoke ? "SPOKE" : "waiting"} ·{" "}
+                {audioDebug.word ? "WORD" : "no-word"} · {turnState} · ctx{" "}
+                {audioDebug.ctx} · build {AUDIO_BUILD}
+                {sttDebug ? <> · {sttDebug}</> : null}
+              </div>
+            ) : null}
 
             {!micUnavailable ? (
               <div className="absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-1.5">

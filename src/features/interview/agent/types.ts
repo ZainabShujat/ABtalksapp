@@ -110,6 +110,7 @@ export const interviewDecisionSchema = z.object({
   followUpQuestion: z.string().max(600).nullish(),
   acknowledgement: z.string().max(300).nullish(),
   clarification: z.string().max(400).nullish(),
+  simplified: z.string().max(500).nullish(),
   bridge: z.string().max(300).nullish(),
   confidence: z.number().min(0).max(1).nullish(),
 });
@@ -131,6 +132,17 @@ export type InterviewDecision = {
    * verbatim. Records no evidence and spends no budget — see `routeDecision`.
    */
   clarification?: string | null;
+  /**
+   * An EASIER route to the same target, for a candidate who asked what the
+   * question means or said they did not follow it.
+   *
+   * EASIER, not shorter. Simplifying usually takes MORE words: plain language
+   * instead of jargon, a sentence of setup, the term unpacked. It is validated
+   * against the authored question before it is spoken (`resolveSimplified`), so
+   * it can neither drift to another topic nor hand over the answer, but it is
+   * allowed to be considerably longer than the question it replaces.
+   */
+  simplified?: string | null;
   /**
    * One short sentence linking what the candidate just said to the authored
    * deep probe that follows it. The probe text itself is never model-written:

@@ -85,7 +85,14 @@ export function MicCheck({
     chunksRef.current = [];
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+        },
+      });
       streamRef.current = stream;
 
       // The meter. Purely informational — it tells the candidate the microphone
@@ -106,7 +113,12 @@ export function MicCheck({
       };
       rafRef.current = requestAnimationFrame(tick);
 
-      const recorder = new MediaRecorder(stream);
+      const recorder = new MediaRecorder(stream, {
+        ...(MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+          ? { mimeType: "audio/webm;codecs=opus" }
+          : {}),
+        audioBitsPerSecond: 64_000,
+      });
       recorderRef.current = recorder;
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
@@ -135,7 +147,11 @@ export function MicCheck({
         try {
           const form = new FormData();
           form.append("audio", blob, "check.webm");
-          const res = await fetch("/api/interview/stt", { method: "POST", body: form });
+          const res = await fetch("/api/interview/stt", { 
+            method: "POST", 
+            body: form,
+            signal: AbortSignal.timeout(10_000),
+          });
           const raw = await res.text();
 
           let json:
@@ -218,6 +234,12 @@ export function MicCheck({
       stop();
     }
   }, [onResultAction, stop]);
+
+  useEffect(() => {
+    if (state === "idle") {
+      void start();
+    }
+  }, [start, state]);
 
   const bars = 14;
   const active = Math.round(Math.min(1, level / 0.25) * bars);

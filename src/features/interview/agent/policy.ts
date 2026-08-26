@@ -1,5 +1,6 @@
 import {
   MAX_CLARIFICATIONS_PER_QUESTION,
+  MAX_SIMPLIFIED_QUESTION_CHARS,
   MAX_REDIRECTS_PER_QUESTION,
   MAX_REPEATS_PER_QUESTION,
 } from "@/features/interview/constants";
@@ -13,6 +14,10 @@ import {
   decideLadderMove,
   nextScaffoldProbe,
 } from "@/features/interview/agent/depth";
+import {
+  choosePhrasing,
+  MIN_SIMPLIFIED_OVERLAP,
+} from "@/features/interview/cohort/question-phrasing";
 import type {
   AgentAction,
   InterviewDecision,
@@ -489,6 +494,28 @@ const MAX_ACKNOWLEDGEMENT_CHARS = 200;
  * Anything rejected falls back to a neutral line, so the interview always sounds
  * continuous even when the model is unavailable.
  */
+/**
+ * Bare interjections that acknowledge nothing.
+ *
+ * "Right." before every question is worse than saying nothing: it is audibly a
+ * tic, and it tells the candidate the interviewer registered that they stopped
+ * talking rather than what they said. Silence reads as a professional moving
+ * on; a stock interjection reads as a machine filling a slot.
+ */
+const HOLLOW_ACK =
+  /^(right|okay|ok|got it|understood|i see|sure|alright|mm|mhm|noted|thanks|thank you|makes sense|that makes sense|interesting|good|fair enough)[.!,]*$/i;
+
+/**
+ * True when an acknowledgement actually refers to something.
+ *
+ * The test is content, not length: a short acknowledgement that names the thing
+ * they said ("Right, the RAM ceiling.") is exactly what a real interviewer
+ * says, while a long one that names nothing is just a longer tic.
+ */
+function acknowledgesSomething(text: string): boolean {
+  return !HOLLOW_ACK.test(text.trim());
+}
+
 export function resolveAcknowledgement(
   decision: InterviewDecision,
   questionOrder: number,
@@ -499,15 +526,32 @@ export function resolveAcknowledgement(
   const usable =
     drafted.length > 0 &&
     drafted.length <= MAX_ACKNOWLEDGEMENT_CHARS &&
-    !drafted.includes("?");
+    !drafted.includes("?") &&
+    // A bare "Right." is dropped rather than spoken. The interviewer then just
+    // asks the next thing, which is what a person does when the previous answer
+    // needed no comment.
+    acknowledgesSomething(drafted);
 
   // A drafted line is only trusted when there was something to react to. On a
   // stuck answer the model has nothing to work from and tends to thank the
   // candidate anyway, so the deterministic pool wins.
   if (usable && !stuck) return drafted;
 
-  const pool = stuck ? STUCK_ACKNOWLEDGEMENTS : NEUTRAL_ACKNOWLEDGEMENTS;
-  return pool[Math.max(0, questionOrder - 1) % pool.length]!;
+  // A stuck answer still gets a line: the candidate has just said they cannot
+  // answer, and moving on in silence reads as disapproval. That pool exists
+  // precisely so the interviewer says something kind rather than nothing.
+  if (stuck) {
+    return STUCK_ACKNOWLEDGEMENTS[
+      Math.max(0, questionOrder - 1) % STUCK_ACKNOWLEDGEMENTS.length
+    ]!;
+  }
+
+  // Otherwise: SILENCE. The alternative is a canned line before every question,
+  // and "Thanks for walking me through that." on repeat is exactly as robotic
+  // as the "Right." it replaced — a fixed pool cannot acknowledge anything,
+  // because it cannot know what was said. A real interviewer who has nothing to
+  // add just asks the next question, so that is what this does.
+  return "";
 }
 
 /** Clarifications may run a little longer than an acknowledgement, not much. */
@@ -551,6 +595,36 @@ export function resolveBridge(decision: InterviewDecision): string {
   if (drafted.length === 0 || drafted.length > MAX_ACKNOWLEDGEMENT_CHARS) return "";
   if (drafted.includes("?")) return "";
   return drafted;
+}
+
+/**
+ * A genuinely simpler version of the question on the floor.
+ *
+ * The point of having a model in the loop at all. A candidate who says "can you
+ * simplify that" used to get the identical sentence read back, which is the
+ * behaviour of a form, not an interviewer — the person has told you they did
+ * not follow it, and repeating it verbatim ignores them.
+ *
+ * Safety comes from the SAME validators that guard generated question wording,
+ * so a simplified question is bound by exactly the rules the authored one is:
+ * one ask, on-target, and no expected-evidence item named inside it. Anything
+ * that fails falls back to the authored text, so the worst case is the old
+ * behaviour rather than a question nobody can score.
+ */
+export function resolveSimplified(
+  decision: InterviewDecision,
+  authored: string,
+  expectedEvidence: readonly string[],
+): string {
+  const drafted = speakable(decision.simplified ?? "");
+  const chosen = choosePhrasing(
+    drafted,
+    authored,
+    expectedEvidence,
+    MIN_SIMPLIFIED_OVERLAP,
+    MAX_SIMPLIFIED_QUESTION_CHARS,
+  );
+  return chosen.text;
 }
 
 /**

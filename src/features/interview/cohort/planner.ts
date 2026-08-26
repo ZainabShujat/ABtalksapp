@@ -11,6 +11,10 @@ import {
   groundQuestion,
   type GroundingFacts,
 } from "@/features/interview/cohort/grounding";
+import {
+  buildProgressSummary,
+  formatProgressContext,
+} from "@/features/interview/cohort/progress-summary";
 import { MAX_EXTENSION_QUESTIONS } from "@/features/interview/constants";
 import { buildRubricSnapshot } from "@/features/interview/rubric";
 import { choosePhrasing } from "@/features/interview/cohort/question-phrasing";
@@ -227,6 +231,17 @@ export function planCohortInterview(
       progressDay: context?.progressDay ?? null,
       groundedCount: questions.filter((q) => q.grounded).length,
       candidateFirstName: context?.fullName?.trim().split(/\s+/)[0] ?? null,
+      progressContext: context
+        ? formatProgressContext(
+            buildProgressSummary(
+              blueprint,
+              context.progressDay,
+              context.highestUnlockedDay,
+              context.passedDays,
+              context.submissions,
+            ),
+          )
+        : null,
     },
   };
 }
