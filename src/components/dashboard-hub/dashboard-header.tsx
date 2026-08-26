@@ -17,7 +17,7 @@ type DashboardHeaderProps = {
   onMenuClick: () => void;
   /** Hub page section anchors. Default true. Ignored when sectionNavItems is set. */
   showSectionNav?: boolean;
-  /** Custom header links (Claude). Shown on all breakpoints and wraps. */
+  /** Custom header links (Claude). Desktop only (`md+`), same as hub section nav. */
   sectionNavItems?: HeaderSectionNavItem[];
 };
 
@@ -60,7 +60,7 @@ export function DashboardHeader({
 
           {customNav ? (
             <nav
-              className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 md:gap-x-8"
+              className="hidden min-w-0 items-center gap-x-8 md:flex"
               aria-label="Page sections"
             >
               {sectionNavItems.map((item) => (
