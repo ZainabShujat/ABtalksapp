@@ -86,6 +86,28 @@ export function looksStuck(text: string): boolean {
  * Deliberately narrow. It matches askING about the question, not any sentence
  * containing "mean" — "the mean pooling step" must never land here.
  */
+/**
+ * "Can you hear me?" — a question about the CONNECTION, not the content.
+ *
+ * It is neither an answer nor a request to repeat, and routing it to REPEAT
+ * produced the worst possible reply: "Of course, let me say that again", which
+ * answers a question nobody asked and leaves the candidate still not knowing
+ * whether they are audible. The honest reply is yes or no, because by the time
+ * we are reading their words we demonstrably heard them.
+ */
+const AUDIO_CHECK_PATTERNS = [
+  /\bcan you hear me\b/i,
+  /\bare you (able to hear|hearing) me\b/i,
+  /\bdid you (hear|get) (that|me|it)\b/i,
+  /\b(is|are) (my|the) (mic|microphone) (on|working)\b/i,
+  /\bam i audible\b/i,
+  /\b(hello|hi)[?, ]*can you hear\b/i,
+];
+
+export function looksLikeAudioCheck(text: string): boolean {
+  return AUDIO_CHECK_PATTERNS.some((p) => p.test(text));
+}
+
 const CLARIFY_PATTERNS = [
   /\bwhat do you mean\b/i,
   /\bwhat does .{1,40} mean\b/i,
@@ -151,7 +173,8 @@ export function fallbackDecision(input: AnalyzeAnswerInput): InterviewDecision {
   const evidence = heuristicEvidence(answerText);
 
   let action: LlmAction = "NEXT_QUESTION";
-  if (looksLikeRepeatRequest(answerText)) action = "REPEAT";
+  if (looksLikeAudioCheck(answerText)) action = "CLARIFY";
+  else if (looksLikeRepeatRequest(answerText)) action = "REPEAT";
   else if (looksLikeClarifyRequest(answerText)) action = "CLARIFY";
   else if (
     !looksStuck(answerText) &&

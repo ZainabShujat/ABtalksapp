@@ -213,9 +213,12 @@ export async function buildCohortCandidateContext(
   return {
     memberId,
     fullName: member.fullName,
-    jobRole: member.jobRole,
-    company: member.company,
-    yearsExperience: member.yearsExperience,
+    // Optional on ProgramMember since the 2.0 merge. Defaulted here rather
+    // than widened to `| null`, because every consumer templates these straight
+    // into spoken text — a null would surface as "your role at null".
+    jobRole: member.jobRole ?? "",
+    company: member.company ?? "",
+    yearsExperience: member.yearsExperience ?? 0,
     cohortName: member.cohort.name,
     githubRepoUrl: member.githubRepoUrl,
 

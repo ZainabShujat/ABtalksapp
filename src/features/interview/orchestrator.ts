@@ -119,7 +119,11 @@ export async function submitAnswer(
   state: InterviewState,
   questionId: string,
   answerText: string,
-  context?: { interviewId: string; blueprint: InterviewBlueprintKey },
+  context?: {
+    interviewId: string;
+    blueprint: InterviewBlueprintKey;
+    minutesLeft?: number | null;
+  },
 ): Promise<TurnOutcome> {
   const blueprint =
     context?.blueprint ??
@@ -129,6 +133,7 @@ export async function submitAnswer(
 
   const turn = await runInterviewTurn(resolveInterviewLLM(), {
     interviewId: context?.interviewId ?? "unknown",
+    minutesLeft: context?.minutesLeft ?? null,
     blueprint,
     plan,
     state,

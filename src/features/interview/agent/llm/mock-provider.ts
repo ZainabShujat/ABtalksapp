@@ -1,4 +1,5 @@
 import {
+  looksLikeAudioCheck,
   looksLikeClarifyRequest,
   heuristicEvidence,
   isBlankAnswer,
@@ -125,6 +126,7 @@ export function createMockInterviewLLM(
       // scoring would call it off-topic. It is neither an answer nor a
       // digression — it is a request to hear the question again.
       const repeatRequest = looksLikeRepeatRequest(answerText);
+      const audioCheck = looksLikeAudioCheck(answerText);
       const clarifyRequest =
         !repeatRequest && looksLikeClarifyRequest(answerText);
 
@@ -151,7 +153,10 @@ export function createMockInterviewLLM(
       let followUpQuestion: string | null = null;
       let clarification: string | null = null;
 
-      if (repeatRequest) {
+      if (audioCheck) {
+        action = "CLARIFY";
+        clarification = "Yes, I can hear you clearly.";
+      } else if (repeatRequest) {
         action = "REPEAT";
       } else if (clarifyRequest) {
         action = "CLARIFY";

@@ -78,9 +78,43 @@ export async function POST(request: Request) {
     );
   }
 
+  // What the provider will actually see. Logged because "Invalid file format"
+  // is reported against the FILENAME and the BYTES, neither of which is visible
+  // from the browser error.
+  const filename = audioFilenameFor(file.type);
+  const head = Buffer.from(await file.slice(0, 8).arrayBuffer()).toString("hex");
+  // A WebM that does not begin with EBML magic is headless: the provider will
+  // reject it as "Invalid file format" after we have paid for the round trip,
+  // and the candidate sees an opaque 502. Catch it here and say what it is.
+  if (filename.endsWith(".webm") && !head.startsWith("1a45dfa3")) {
+    logger.error("[interview/stt] headless container", {
+      filename,
+      bytes: file.size,
+      head8: head,
+    });
+    return NextResponse.json(
+      {
+        ok: false,
+        message:
+          "That recording was incomplete. Please record your answer again.",
+      },
+      { status: 422 },
+    );
+  }
+
+  logger.info("[interview/stt] upload", {
+    reportedType: file.type || "(none)",
+    filename,
+    bytes: file.size,
+    // 1a45dfa3 is the EBML magic every valid WebM starts with. Anything else
+    // means the container is not what the filename claims.
+    head8: head,
+    looksWebm: head.startsWith("1a45dfa3"),
+  });
+
   const result = await transcribeAnswer(
     file,
-    audioFilenameFor(file.type),
+    filename,
     safetyIdentifierFor(memberId),
   );
 

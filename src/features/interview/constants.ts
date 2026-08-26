@@ -151,6 +151,20 @@ export const CALIBRATION_ANSWERS = 3;
 export const MAX_GENERATED_QUESTION_CHARS = 200;
 
 /**
+ * Longest a SIMPLIFIED question may be.
+ *
+ * Deliberately longer than a normal one. Simplifying does not mean shortening:
+ * a candidate who did not follow the question usually needs MORE words, not
+ * fewer — plainer phrasing, a sentence of setup, the jargon unpacked. Holding a
+ * simplification to the compact bar above forced it to drop the very framing
+ * that would have made it land.
+ *
+ * The guard that matters is unchanged: it must still ask exactly ONE thing, so
+ * the extra length is explanation and never a second question.
+ */
+export const MAX_SIMPLIFIED_QUESTION_CHARS = 420;
+
+/**
  * Minimum share of the authored question's content words a generated one must
  * reuse before it is accepted as the same question.
  *
@@ -171,7 +185,11 @@ export const MIN_QUESTION_OVERLAP = 0.25;
  * long enough to survive a normal pause between clauses and short enough that
  * the end of an answer does not feel like a hang.
  */
-export const INTERVIEW_SILENCE_MS = 5_000;
+// 10s, raised from 4.5s after real use: the shorter window was cutting people
+// off mid-thought. A candidate reaching for the right word, or pausing before
+// the second half of an answer, routinely goes quiet for five or six seconds,
+// and being interrupted there is far worse than waiting a beat too long.
+export const INTERVIEW_SILENCE_MS = 10_000;
 
 /**
  * Speech thresholds, as RMS of the microphone WAVEFORM (0..1 amplitude).
@@ -190,8 +208,20 @@ export const INTERVIEW_SILENCE_MS = 5_000;
  * 0.01. The room additionally raises these against a measured noise floor, so
  * these values are the FLOOR of the thresholds, not the whole rule.
  */
-export const SPEECH_ON_RMS = 0.007;
-export const SPEECH_OFF_RMS = 0.004;
+// MEASURED, not guessed. From this project's own logs on a laptop microphone:
+//   room tone   0.0066 - 0.0092
+//   speech      0.025 - 0.10
+//
+// The regression these keep suffering: dropping them to catch a quiet voice
+// puts OFF *below* the room's own noise floor, so `rms >= off` is true forever,
+// the turn never leaves CANDIDATE_SPEAKING, and the answer never submits. The
+// 0.007/0.004 pair did exactly that and shipped twice.
+//
+// ON sits above the loudest measured silence; OFF above the quietest. A speaker
+// quieter than ON simply never trips detection, which is harmless now: the
+// MAX_ANSWER_MS backstop still uploads the recording, so nothing is lost.
+export const SPEECH_ON_RMS = 0.018;
+export const SPEECH_OFF_RMS = 0.012;
 /**
  * How long a level must STAY above the speech threshold before it counts as a
  * voice rather than a noise.
@@ -237,7 +267,15 @@ export const SPEECH_OFF_MAX_RMS = 0.025;
  * prompt, quiet for this long again is what finally moves the interview on. Two
  * chances before anything is recorded as unanswered.
  */
-export const NO_ANSWER_MS = INTERVIEW_SILENCE_MS;
+// DELIBERATELY SHORTER than the silence window, and no longer derived from it.
+//
+// The two waits look similar and are opposites. This one runs when the
+// candidate has said NOTHING yet: quiet here usually means they missed the
+// question or their microphone is dead, so a prompt after a few seconds is
+// reassuring. The silence window runs AFTER they have spoken, where the same
+// prompt would be an interruption. Tying them together forced one compromise
+// value that was wrong for both.
+export const NO_ANSWER_MS = 4_500;
 
 /**
  * How long the candidate must be muted before the response window stops automatically.

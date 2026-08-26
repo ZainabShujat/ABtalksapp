@@ -35,7 +35,9 @@ export async function buildCandidateContext(
   return {
     userId,
     fullName: profile.fullName,
-    domain: profile.domain,
+    // Nullable on StudentProfile since the 2.0 merge; the interviewer templates
+    // it into spoken text, so an empty string is the safe default.
+    domain: profile.domain ?? "",
     role: profile.role,
     organization: profile.organization,
     yearsExperience: profile.yearsExperience,

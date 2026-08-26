@@ -53,7 +53,12 @@ export type AnalyzeAnswerInput = {
    * be answered instead of deflected. A candidate asking "how much longer is
    * this?" is asking something reasonable, and a real interviewer answers it.
    */
-  sessionFacts?: { answered: number; total: number; remaining: number };
+  sessionFacts?: {
+    answered: number;
+    total: number;
+    remaining: number;
+    minutesLeft: number | null;
+  };
   /**
    * The authored question that will be asked next if this turn moves on.
    *

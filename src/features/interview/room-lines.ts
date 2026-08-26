@@ -25,6 +25,7 @@
 /** Which room-composed line the speech route should synthesize. */
 export type RoomLineKind =
   | "latest"
+  | "time_up"
   | "waiting"
   | "retry"
   | "repeat"
@@ -34,6 +35,7 @@ export type RoomLineKind =
 
 export const ROOM_LINE_KINDS: readonly RoomLineKind[] = [
   "latest",
+  "time_up",
   "waiting",
   "retry",
   "repeat",
@@ -96,4 +98,13 @@ export const MOVING_ON_LINE =
  * A literal marker, never words the candidate did not say: an assessment must
  * not attribute speech to someone.
  */
+/**
+ * Said when the session clock runs out.
+ *
+ * Framed as the interview being over, not as the candidate being cut off: they
+ * kept to the time they were given, and everything they said still counts.
+ */
+export const TIME_UP_LINE =
+  "That's us out of time. Thanks for talking me through your work.";
+
 export const NO_RESPONSE_ANSWER = "(no response)";

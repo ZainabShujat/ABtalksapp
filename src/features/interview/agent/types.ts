@@ -182,6 +182,8 @@ export type InterviewDecision = {
  */
 export type InterviewAgentState = {
   interviewId: string;
+  /** Minutes remaining in the session, or null when unknown. */
+  minutesLeft?: number | null;
   blueprint: InterviewBlueprintKey;
 
   plan: InterviewPlan;

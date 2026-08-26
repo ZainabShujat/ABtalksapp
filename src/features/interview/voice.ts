@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { LANGUAGE_RETRY_LINE } from "@/features/interview/language-gate";
 import {
   MOVING_ON_LINE,
+  TIME_UP_LINE,
   RETRY_LINE,
   WAITING_LINE,
   repeatLine,
@@ -168,9 +169,20 @@ export async function transcribeAnswer(
     return { ok: false, status: 503, message: "Voice is not configured." };
   }
 
+  // whisper-1 on OpenAI, not gpt-4o-transcribe. Two reasons, both learned the
+  // hard way:
+  //
+  //   1. FORMAT. The browser sends `audio/webm;codecs=opus`, which the whisper
+  //      endpoints accept and the gpt-4o transcribe models reject as "Audio
+  //      file might be corrupted or unsupported" — surfacing as a 502 and a
+  //      mic check that could never pass. The same audio transcribed fine on
+  //      Groq's whisper the whole time, which is what isolated it to the model.
+  //   2. LANGUAGE. Only whisper supports `verbose_json`, which carries the
+  //      detected language the English-only gate prefers. On a gpt-4o model the
+  //      gate silently degrades to its script heuristic.
   const model =
     process.env.INTERVIEW_STT_MODEL ??
-    (vendor.name === "groq" ? "whisper-large-v3" : "gpt-4o-transcribe");
+    (vendor.name === "groq" ? "whisper-large-v3" : "whisper-1");
 
   const form = new FormData();
   form.append("file", audio, filename);
@@ -286,6 +298,9 @@ export async function resolveSpeakableLine(
 ): Promise<VoiceResult<{ text: string }>> {
   if (kind === "language") {
     return { ok: true, data: { text: LANGUAGE_RETRY_LINE } };
+  }
+  if (kind === "time_up") {
+    return { ok: true, data: { text: TIME_UP_LINE } };
   }
   if (kind === "moving_on") {
     return { ok: true, data: { text: MOVING_ON_LINE } };

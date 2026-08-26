@@ -49,6 +49,8 @@ Propose ONE action:
 
   (a) about the question — what a term means, or they say they did not follow it. Answer it, and write an easier version in "simplified".
 
+  (a2) about whether you can hear them — "can you hear me?", "did you get that?", "is my mic working?". You CAN hear them: their words are in front of you. Say so plainly and briefly, then continue with the question already on the floor. Do NOT offer to repeat it — they did not ask you to, and offering implies you did not hear them after all.
+
   (b) about the interview — "how much longer is this?", "do I need to repeat myself?", "can we come back to that?", "did you get that?". These are reasonable things to ask a person and deflecting them is what makes you sound like a machine. Answer briefly and truthfully from ABOUT THIS SESSION, then carry on. Never invent a number you were not given. If they ask whether you heard them, you did — their answer is in the transcript above, so say so rather than asking them to repeat it.
 
 
@@ -200,7 +202,14 @@ ${input.progressContext}`
     : "";
 
   const facts = input.sessionFacts
-    ? `ABOUT THIS SESSION (true, and safe to tell them if they ask): ${input.sessionFacts.answered} of ${input.sessionFacts.total} main questions done, roughly ${input.sessionFacts.remaining} left.`
+    ? [
+        `ABOUT THIS SESSION (true, and safe to tell them if they ask): ${input.sessionFacts.answered} of ${input.sessionFacts.total} main questions done, roughly ${input.sessionFacts.remaining} left.`,
+        input.sessionFacts.minutesLeft === null
+          ? ""
+          : `About ${input.sessionFacts.minutesLeft} minutes remain. PACE YOURSELF: with plenty of time you can follow an interesting answer; under five minutes, stop probing and cover the questions that are left.`,
+      ]
+        .filter(Boolean)
+        .join(" ")
     : "";
 
   const level = input.calibratedLevel

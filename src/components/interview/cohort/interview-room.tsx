@@ -14,6 +14,7 @@ import {
 } from "@/features/interview/turn-state";
 import { MIN_AUDIO_BYTES } from "@/features/interview/voice-contract";
 import {
+  COHORT_INTERVIEW_DURATION_SEC,
   MAX_ANSWER_MS,
   MAX_LANGUAGE_RETRIES_PER_QUESTION,
   PROCESSING_WATCHDOG_MS,
@@ -24,6 +25,7 @@ import {
   MOVING_ON_LINE,
   RETRY_LINE,
   NO_RESPONSE_ANSWER,
+  TIME_UP_LINE,
   WAITING_LINE,
   type RoomLineKind,
 } from "@/features/interview/room-lines";
@@ -986,7 +988,19 @@ export function InterviewRoom({
       // as one growing buffer released only at stop. Long answers were the
       // failure case: a single large final chunk is both more memory and more
       // to lose if anything interrupts the recording.
-      recorder.start(1000);
+      // NO TIMESLICE. `start(1000)` emits a chunk every second, and ONLY the
+      // first carries the EBML header that makes the bytes a WebM file. Any
+      // path that lost or replaced that first chunk produced a headless
+      // container: the upload still said `answer.webm`, the server still saw
+      // `audio/webm;codecs=opus`, and the provider rejected it with "Invalid
+      // file format" — observed as head bytes `41e38100` (a mid-stream cluster)
+      // where `1a45dfa3` was required.
+      //
+      // With no argument the recorder emits ONE blob at stop, headers included,
+      // so the file is valid by construction rather than by careful assembly.
+      // Nothing here needed the periodic chunks: the answer is only ever
+      // uploaded when the turn ends.
+      recorder.start();
       recorderRef.current = recorder;
       // Same stream, one analyser. Auto-stop runs the normal stop path, so the
       // captured audio goes through the existing STT pipeline unchanged.
@@ -1469,16 +1483,32 @@ export function InterviewRoom({
   // The orb is the candidate's turn made visible. It appears only while the
   // microphone is actually live — not while the interviewer talks, and not in
   // the brief gap before recording starts.
-  const orbVisible = phase === "listening";
+  // Visibility follows the TURN STATE, not `phase`.
+  //
+  // The two disagree after a nudge. The nudge speaks over a still-open
+  // microphone: `speak()` leaves `phase` at "idle" when it finishes, while the
+  // recorder is running and the turn machine is still WAITING_FOR_SPEECH. Keyed
+  // on `phase`, the orb vanished even though it was the candidate's turn — and
+  // it reappeared only if something else happened to set "listening", which is
+  // why it looked intermittent. The turn machine is the one thing that actually
+  // knows whose floor it is.
+  const orbVisible =
+    turnState === "WAITING_FOR_SPEECH" ||
+    turnState === "CANDIDATE_SPEAKING" ||
+    turnState === "CANDIDATE_PAUSED" ||
+    phase === "listening";
   const thinking = phase === "processing" || closing;
 
   const orbMode: OrbMode =
     phase === "speaking"
       ? "speaking"
-      : phase === "listening"
-        ? "listening"
-        : phase === "processing"
-          ? "processing"
+      : phase === "processing" || closing
+        ? "processing"
+        // Same reasoning as `orbVisible`: while the turn machine says the
+        // candidate has the floor, the orb listens — even if `phase` briefly
+        // says "idle" after the interviewer spoke over an open microphone.
+        : orbVisible
+          ? "listening"
           : "idle";
 
   // True while the first line is still being fetched/synthesised: nothing has
@@ -1490,6 +1520,33 @@ export function InterviewRoom({
     !fatal;
 
   const busy = phase === "processing" || phase === "speaking" || closing;
+  // Counts DOWN. A candidate needs to know how long is left, not how long they
+  // have been going — the same number read the other way round is the one that
+  // lets them decide whether to keep elaborating.
+  const remainingSec = Math.max(0, COHORT_INTERVIEW_DURATION_SEC - elapsed);
+
+  useEffect(() => {
+    if (remainingSec > 0 || closing || fatal) return;
+    // Time is up. SCORE what was answered rather than discarding it: the
+    // candidate sat the interview, and everything they said is evidence. The
+    // server still refuses a session with too little in it, so this cannot
+    // manufacture a report out of nothing.
+    // Deferred a tick: setting state synchronously in an effect body cascades
+    // renders, and the whole close-out is async anyway.
+    const id = setTimeout(() => {
+      setClosing(true);
+      cancelRecording();
+      void speak(TIME_UP_LINE, "time_up").finally(async () => {
+        const finished = await finishInterviewAction({ interviewId });
+        setClosing(false);
+        if (finished.ok) onFinishedAction(finished.data);
+        else setFatal(finished.message);
+      });
+    }, 0);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remainingSec === 0]);
+
   const copy = PHASE_COPY[phase];
   // The machine's own view, so the status the candidate reads comes from the
   // same place the turn decisions do rather than from a parallel phase flag.
@@ -1628,10 +1685,15 @@ export function InterviewRoom({
             )}
           </button>
           <span
-            className="font-mono text-[13px] tabular-nums text-[var(--iv-text-faint)]"
-            aria-label="Elapsed time"
+            className={cn(
+              "font-mono text-[13px] tabular-nums",
+              remainingSec <= 120
+                ? "text-[#C9282B]"
+                : "text-[var(--iv-text-faint)]",
+            )}
+            aria-label="Time remaining"
           >
-            {formatClock(elapsed)}
+            {formatClock(remainingSec)}
           </span>
           <button
             type="button"

@@ -150,7 +150,13 @@ export function MicCheck({
           const res = await fetch("/api/interview/stt", { 
             method: "POST", 
             body: form,
-            signal: AbortSignal.timeout(10_000),
+            // 10s was not enough: a real whisper round trip on a 5s clip
+            // measured almost exactly 10 seconds, so the check aborted a
+            // request that was about to succeed and reported it as "could not
+            // reach the transcription service". The server's own ceiling is
+            // 30s; this sits above it so the client never gives up on a request
+            // the server is still honestly working on.
+            signal: AbortSignal.timeout(35_000),
           });
           const raw = await res.text();
 
@@ -211,7 +217,19 @@ export function MicCheck({
         }
       };
 
-      recorder.start(1000);
+      // NO TIMESLICE. `start(1000)` emits a chunk every second, and ONLY the
+      // first carries the EBML header that makes the bytes a WebM file. Any
+      // path that lost or replaced that first chunk produced a headless
+      // container: the upload still said `answer.webm`, the server still saw
+      // `audio/webm;codecs=opus`, and the provider rejected it with "Invalid
+      // file format" — observed as head bytes `41e38100` (a mid-stream cluster)
+      // where `1a45dfa3` was required.
+      //
+      // With no argument the recorder emits ONE blob at stop, headers included,
+      // so the file is valid by construction rather than by careful assembly.
+      // Nothing here needed the periodic chunks: the answer is only ever
+      // uploaded when the turn ends.
+      recorder.start();
       setState("recording");
 
       // Countdown, purely so the five seconds do not feel indefinite.

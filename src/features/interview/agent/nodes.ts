@@ -167,6 +167,7 @@ export function createAnalyzeAnswer(llm: InterviewLLM) {
           answered,
           total: core.length,
           remaining: Math.max(0, core.length - answered),
+          minutesLeft: state.minutesLeft ?? null,
         };
       })(),
       // Peek at the next authored question so the connecting sentence can lead

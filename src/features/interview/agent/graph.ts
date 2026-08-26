@@ -173,6 +173,8 @@ function graphFor(llm: InterviewLLM) {
 }
 
 export type RunTurnInput = {
+  /** Minutes left in the session, from the server clock. Null when unknown. */
+  minutesLeft?: number | null;
   interviewId: string;
   blueprint: InterviewBlueprintKey;
   plan: InterviewPlan;
@@ -228,6 +230,7 @@ export async function runInterviewTurn(
 
   const initial: InterviewAgentState = {
     interviewId: input.interviewId,
+    minutesLeft: input.minutesLeft ?? null,
     blueprint: input.blueprint,
     plan: input.plan,
     interviewState: input.state,

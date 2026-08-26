@@ -95,7 +95,7 @@ async function main() {
   console.log("\n=== 3. Live transcription call ===");
   const model =
     process.env.INTERVIEW_STT_MODEL ??
-    (vendor.name === "groq" ? "whisper-large-v3-turbo" : "gpt-4o-mini-transcribe");
+    (vendor.name === "groq" ? "whisper-large-v3" : "whisper-1");
   console.log(`  model: ${model}`);
 
   const form = new FormData();

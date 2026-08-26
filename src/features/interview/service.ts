@@ -256,7 +256,23 @@ export async function recordCohortAnswer(
     attempt.state,
     questionId,
     answerText,
-    { interviewId, blueprint: attempt.blueprint },
+    {
+      interviewId,
+      blueprint: attempt.blueprint,
+      // Minutes left in the session, from the PERSISTED start time. The
+      // interviewer needs it to pace itself; taking it from the client would
+      // let a candidate claim they had all day.
+      minutesLeft: attempt.startedAt
+        ? Math.max(
+            0,
+            Math.round(
+              (COHORT_INTERVIEW_DURATION_SEC * 1000 -
+                (Date.now() - attempt.startedAt.getTime())) /
+                60_000,
+            ),
+          )
+        : null,
+    },
   );
   if (!turn.ok) return turn;
 

@@ -73,6 +73,15 @@ function run(
   return { stoppedAtMs: null as number | null, state };
 }
 
+/**
+ * Enough quiet frames to clear the silence window with room to spare.
+ *
+ * DERIVED, never a literal. These were hardcoded at 200 frames (10s) when the
+ * window was 4.5s; raising the window to 10s made every one of them land right
+ * on the boundary and the suite failed for the wrong reason.
+ */
+const PAST_WINDOW = Math.ceil(INTERVIEW_SILENCE_MS / 50) + 20;
+
 const SPEECH = SPEECH_ON_RMS + 0.03;
 const NOISE = SPEECH_OFF_RMS - 0.012;
 const QUIET = 0.001;
@@ -86,8 +95,8 @@ check("1. a candidate who never speaks is never auto-submitted", () => {
   assert.equal(state.hasSpoken, false);
 });
 
-check("2. speech then ~4.5s of silence submits the answer", () => {
-  const levels = [...Array(40).fill(SPEECH), ...Array(200).fill(QUIET)];
+check("2. speech then the full silence window submits the answer", () => {
+  const levels = [...Array(40).fill(SPEECH), ...Array(PAST_WINDOW).fill(QUIET)];
   const { stoppedAtMs } = run(levels);
   assert.ok(stoppedAtMs !== null, "should have stopped");
   const silenceElapsed = stoppedAtMs! - 40 * 50;
@@ -108,7 +117,7 @@ check("4. resuming before the window elapses resets the timer", () => {
     ...Array(20).fill(SPEECH),
     ...Array(60).fill(QUIET), // 3s pause, under the threshold
     ...Array(20).fill(SPEECH), // they carry on
-    ...Array(200).fill(QUIET), // and finally stop
+    ...Array(PAST_WINDOW).fill(QUIET), // and finally stop
   ];
   const { stoppedAtMs } = run(levels);
   assert.ok(stoppedAtMs !== null);
@@ -184,7 +193,7 @@ check("4e. a transient noise does not open the turn", () => {
   // enough to cross the ON threshold, far too short to be a voice. Before the
   // sustain requirement this flipped `hasSpoken`, which armed the silence clock
   // against a candidate who had not said anything yet.
-  const bang = [SPEECH, SPEECH, ...Array(200).fill(QUIET)];
+  const bang = [SPEECH, SPEECH, ...Array(PAST_WINDOW).fill(QUIET)];
   const { stoppedAtMs, state } = run(bang);
   assert.equal(state.hasSpoken, false, "a 100ms transient is not speech");
   assert.equal(stoppedAtMs, null);
@@ -204,7 +213,7 @@ check("4g. a blip during a pause does not reset the silence window", () => {
     ...Array(20).fill(SPEECH), // 1s of answer
     ...Array(40).fill(QUIET), // 2s quiet
     SPEECH, // a 50ms blip
-    ...Array(200).fill(QUIET),
+    ...Array(PAST_WINDOW).fill(QUIET),
   ];
   const { stoppedAtMs } = run(levels);
   assert.ok(stoppedAtMs !== null, "should still stop");
@@ -220,7 +229,7 @@ check("4h. genuinely resuming DOES reset the window", () => {
     ...Array(20).fill(SPEECH),
     ...Array(40).fill(QUIET), // 2s pause
     ...Array(12).fill(SPEECH), // 600ms, sustained: a real resumption
-    ...Array(200).fill(QUIET),
+    ...Array(PAST_WINDOW).fill(QUIET),
   ];
   const { stoppedAtMs } = run(levels);
   assert.ok(stoppedAtMs !== null);
@@ -230,20 +239,31 @@ check("4h. genuinely resuming DOES reset the window", () => {
   );
 });
 
-check("the wait to START speaking is far longer than the wait to STOP", () => {
-  // These were the same constant, and tying them together was a real defect:
-  // the microphone opens the moment the interviewer stops talking, so a
-  // candidate still thinking about the question was prompted after 4.5s and
-  // had the question abandoned after 9s. Ending an answer has a clear signal —
-  // they were talking and stopped. Waiting for one to begin is
-  // indistinguishable from thinking, so it must be much more generous.
+check("the two waits are a deliberate product decision, not an accident", () => {
+  // These are currently EQUAL, and that is intentional: the product decision is
+  // "~4.5s of nothing, one prompt, another ~4.5s, then move on". An earlier
+  // version of this check required the start-wait to be much longer, on the
+  // reasoning that a candidate thinking for five seconds should not be
+  // interrupted. That reasoning is sound and was overruled deliberately —
+  // waiting in silence tested worse than being asked whether they were there.
+  //
+  // What must stay true: neither is zero, and the nudge path is bounded so
+  // repeated silence always terminates.
+  assert.ok(NO_ANSWER_MS > 0 && INTERVIEW_SILENCE_MS > 0);
+  // They are now deliberately DIFFERENT, and in this direction:
+  //
+  //   NO_ANSWER_MS  (nothing said yet)  — short. Quiet here means they missed
+  //                                       the question; a prompt reassures.
+  //   INTERVIEW_SILENCE_MS (after speech) — long. Quiet here is thinking, and
+  //                                       cutting in is an interruption.
+  //
+  // An earlier version of this check required the opposite, from a single
+  // compromise value that served neither case. Real use settled it: 4.5s after
+  // real speech was interrupting people mid-thought.
   assert.ok(
-    NO_ANSWER_MS >= INTERVIEW_SILENCE_MS * 2,
-    `NO_ANSWER_MS (${NO_ANSWER_MS}) must be well clear of the silence window (${INTERVIEW_SILENCE_MS})`,
+    NO_ANSWER_MS < INTERVIEW_SILENCE_MS,
+    "waiting to START should be shorter than waiting to STOP",
   );
-  assert.ok(NO_ANSWER_MS >= 10_000, "a candidate needs time to begin");
-  // Still two chances before anything is recorded unanswered.
-  assert.ok(NO_ANSWER_MS * 2 >= 20_000, "two chances, not one");
 });
 
 check("4i. calibration can never raise the threshold out of voice range", () => {
@@ -325,7 +345,7 @@ check("4k. MODULATED speech registers — the syllable-dip regression", () => {
 check("4l. a transient is still rejected once the sound dies", () => {
   // The other half: ON starts a burst, but dropping below OFF ends it. A knock
   // is loud and then silent, so it never survives the sustain window.
-  const bang = [SPEECH_ON_RMS + 0.05, ...Array(200).fill(0.001)];
+  const bang = [SPEECH_ON_RMS + 0.05, ...Array(PAST_WINDOW).fill(0.001)];
   assert.equal(run(bang).state.hasSpoken, false);
 });
 
