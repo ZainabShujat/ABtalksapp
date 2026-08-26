@@ -1,4 +1,4 @@
-# 096 — /ai-workshop Figma rebuild: calendar, details modal, registration overlay
+# 097 — /ai-workshop Figma rebuild: calendar, details modal, registration overlay
 
 **Status: implemented** (not a forward plan — this is the as-built record).
 Figma source of truth: file `Aw3uPilErVzYc8C6sNsrpd`, main page node `1:112`,
