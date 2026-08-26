@@ -167,7 +167,10 @@ export function LoginClient({
           <Button
             type="button"
             variant="outline"
-            className={cn(HUB_BUTTON_CLASS, "h-11 w-full gap-3")}
+            className={cn(
+              HUB_BUTTON_CLASS,
+              "h-11 w-full gap-3 bg-white hover:bg-white dark:bg-white dark:text-black dark:hover:bg-white dark:hover:text-[#E05226]",
+            )}
             disabled={pending || !canSignIn}
             onClick={handleGoogleSignIn}
           >
@@ -225,7 +228,10 @@ export function LoginClient({
           <Button
             type="submit"
             variant="outline"
-            className={cn(HUB_BUTTON_CLASS, "h-11 w-full")}
+            className={cn(
+              HUB_BUTTON_CLASS,
+              "h-11 w-full bg-white hover:bg-white dark:bg-white dark:text-black dark:hover:bg-white dark:hover:text-[#E05226]",
+            )}
             disabled={pending || !canSignIn}
           >
             Sign in
