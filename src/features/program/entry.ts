@@ -13,6 +13,7 @@ import type { ApplyProfileInput } from "@/lib/validations/program";
 import { bootstrapMemberStartDay } from "@/features/program/bootstrap-start-day";
 import { programMember } from "@/repositories/legacy/program-member";
 import { studentProfile } from "@/repositories/legacy/student-profile";
+import { getCandidateProfile } from "@/repositories/candidate";
 import { dualWriteProgramMember } from "@/repositories/dual-write";
 
 export const ENTRY_DURATION_MIN = 25;
@@ -281,18 +282,14 @@ export async function createApplication(
 
   const existingStudent = await studentProfile.findUnique({
     where: { userId },
-    select: {
-      fullName: true,
-      role: true,
-      organization: true,
-      yearsExperience: true,
-      college: true,
-      graduationYear: true,
-      phone: true,
-      resumeUrl: true,
-    },
+    select: { id: true },
   });
   if (!existingStudent) {
+    return { ok: false, message: "Complete your registration before applying." };
+  }
+
+  const candidate = await getCandidateProfile(userId);
+  if (!candidate) {
     return { ok: false, message: "Complete your registration before applying." };
   }
 
@@ -310,17 +307,17 @@ export async function createApplication(
   }
 
   const data = {
-    fullName: existingStudent.fullName,
-    jobRole: existingStudent.role,
-    company: existingStudent.organization,
-    yearsExperience: existingStudent.yearsExperience,
+    fullName: candidate.fullName,
+    jobRole: candidate.role,
+    company: candidate.organization,
+    yearsExperience: candidate.yearsExperience,
     education: null,
-    university: existingStudent.college,
-    graduationYear: existingStudent.graduationYear,
+    university: candidate.college,
+    graduationYear: candidate.graduationYear,
     skills: profile.skills,
     linkedinUrl: emptyToNull(profile.linkedinUrl),
-    resumeUrl: existingStudent.resumeUrl,
-    phone: existingStudent.phone,
+    resumeUrl: candidate.resumeUrl,
+    phone: candidate.phone,
     githubUsername: profile.githubUsername,
     githubRepoUrl: profile.githubRepoUrl,
   };

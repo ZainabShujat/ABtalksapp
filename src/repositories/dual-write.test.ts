@@ -224,5 +224,82 @@ suite("ENABLE_NEW_* are not flipped in dual-write helpers", () => {
   assert(!src.includes("ENABLE_NEW_"), "no new-read flags");
 });
 
+suite("profile page identity reads through getCandidateProfile", () => {
+  const src = source("src/features/profile/get-profile.ts");
+  assert(src.includes("getCandidateProfile"), "repo");
+  assert(src.includes("studentProfile: { select: { domain: true } }"), "domain stays learning");
+});
+
+suite("dashboard identity reads through getCandidateProfile", () => {
+  const src = source("src/features/dashboard/get-dashboard-data.ts");
+  assert(src.includes("getCandidateProfile"), "repo");
+  assert(!src.includes("getUserWithProfile"), "old helper dropped");
+});
+
+suite("public profile identity reads through getCandidateProfile", () => {
+  const src = source("src/features/profile/get-public-profile.ts");
+  assert(src.includes("getCandidateProfile"), "repo");
+  assert(src.includes("resolvePublicProfileEnrollment"), "progress stays enrollment");
+});
+
+suite("admin student detail overlays candidate identity", () => {
+  const src = source("src/features/admin/get-student-detail.ts");
+  assert(src.includes("getCandidateProfile"), "repo");
+  assert(src.includes("getBalance"), "points unchanged");
+});
+
+suite("profile action userType comes from getCandidateProfile", () => {
+  const src = source("src/app/actions/profile-actions.ts");
+  assert(src.includes("getCandidateProfile"), "repo");
+  assert(!src.includes("studentProfile.findUnique"), "no legacy lookup");
+});
+
+suite("workshop prefill reads getCandidateProfile", () => {
+  const src = source("src/features/workshop/get-prefill.ts");
+  assert(src.includes("getCandidateProfile"), "repo");
+});
+
+suite("marketplace phone reads getCandidateProfile", () => {
+  const src = source("src/app/marketplace/page.tsx");
+  assert(src.includes("getCandidateProfile"), "repo");
+  assert(src.includes("hackathonParticipant"), "hackathon fallback stays");
+});
+
+suite("job applicants overlay listCandidateProfiles", () => {
+  const src = source("src/features/jobs/get-job-applicants.ts");
+  assert(src.includes("listCandidateProfiles"), "batch repo");
+  assert(src.includes("domain: true"), "domain stays on SP");
+});
+
+suite("referral stats identity through candidate repo", () => {
+  const src = source("src/features/profile/get-referral-stats.ts");
+  assert(src.includes("getCandidateProfile"), "own code");
+  assert(src.includes("listCandidateProfiles"), "referred names");
+});
+
+suite("program apply prefill through getCandidateProfile", () => {
+  const apply = source("src/app/program/apply/page.tsx");
+  const entry = source("src/features/program/entry.ts");
+  assert(apply.includes("getCandidateProfile"), "apply prefill");
+  assert(apply.includes("studentProfile.findUnique"), "registration gate stays SP");
+  assert(entry.includes("getCandidateProfile"), "apply copy");
+  assert(entry.includes('select: { id: true }'), "existence still SP");
+});
+
+suite("candidate new branch prefers StudentProfile-owned child ids", () => {
+  const src = source("src/repositories/candidate.ts");
+  assert(src.includes("educationIdForStudentProfile"), "edu_sp_");
+  assert(src.includes("experienceIdForStudentProfile"), "exp_sp_");
+  assert(src.includes("isNewCandidateRepoEnabled"), "flag");
+  assert(src.includes("legacy?.skills"), "skills stay on StudentProfile while CandidateSkill is empty");
+});
+
+suite("talent search is not switched in this phase", () => {
+  const talent = source("src/repositories/talent.ts");
+  const hire = source("src/repositories/hire.ts");
+  assert(!talent.includes("isNewCandidateRepoEnabled"), "talent flag-free");
+  assert(!hire.includes("isNewCandidateRepoEnabled"), "hire flag-free");
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

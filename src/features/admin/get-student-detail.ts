@@ -1,6 +1,7 @@
-import type { StudentProfile } from "@prisma/client";
+import type { StudentProfile, UserType } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getBalance } from "@/repositories/points";
+import { getCandidateProfile } from "@/repositories/candidate";
 
 export type ChallengeStudentDetail = {
   kind: "challenge";
@@ -139,6 +140,7 @@ export async function getStudentDetail(
   }
 
   const synergyPoints = await getBalance(user.id);
+  const candidate = await getCandidateProfile(user.id);
 
   if (!user.studentProfile) {
     if (!user.hackathonParticipant) {
@@ -228,22 +230,46 @@ export async function getStudentDetail(
   ).length;
   const lateCount = 0;
 
+  const profile = candidate
+    ? {
+        ...user.studentProfile,
+        fullName: candidate.fullName,
+        userType: candidate.userType as UserType,
+        college: candidate.college,
+        collegeId: candidate.collegeId,
+        graduationYear: candidate.graduationYear,
+        organization: candidate.organization,
+        role: candidate.role,
+        yearsExperience: candidate.yearsExperience,
+        skills: candidate.skills,
+        resumeUrl: candidate.resumeUrl,
+        phone: candidate.phone,
+        phoneVerified: candidate.phoneVerified,
+        linkedinUrl: candidate.linkedinUrl,
+        githubUsername: candidate.githubUsername,
+        referralCode: candidate.referralCode,
+        isReadyForInterview: candidate.isReadyForInterview,
+        isCampusAmbassadorCandidate: candidate.isCampusAmbassadorCandidate,
+        ambassadorDismissedAt: candidate.ambassadorDismissedAt,
+      }
+    : user.studentProfile;
+
   return {
     kind: "challenge",
     user: {
       id: user.id,
-      name: user.studentProfile.fullName,
+      name: profile.fullName,
       email: user.email,
       image: user.image,
       joinedAt: user.createdAt,
       synergyPoints,
     },
-    profile: user.studentProfile,
+    profile,
     enrollment,
     student: {
       userId: user.id,
-      fullName: user.studentProfile.fullName,
-      isReadyForInterview: user.studentProfile.isReadyForInterview,
+      fullName: profile.fullName,
+      isReadyForInterview: profile.isReadyForInterview,
       enrollmentStatus: enrollment?.status ?? null,
     },
     progress: {

@@ -1,4 +1,4 @@
-export { getCandidateProfile, getProfileSummary } from "./candidate";
+export { getCandidateProfile, getProfileSummary, listCandidateProfiles } from "./candidate";
 export { listChallengeEnrollments, findActiveMembership } from "./learning";
 export { getDashboardPrograms } from "./progress";
 export {

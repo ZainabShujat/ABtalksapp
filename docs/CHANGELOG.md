@@ -57,3 +57,9 @@ rather than deleted without authorization. Cursor appends new lines below.)_
 - 2026-08-25 [rule] Phase 5 pass #2 waits until 2026-08-25T15:57:57Z; extras treat recruiter-visible as all ProgramMembers plus platform_default (not consent-only); ENABLE_NEW_* stay off until that pack is clean
 - 2026-08-25 [convention] 078 points count-drift ignores Phase 2f User.synergyPoints plug rows (idempotencyKey reconciliation:phase2:*); those txs have no SynergyEvent by design and must not be deleted
 - 2026-08-25 [rule] Dual-write now covers CandidateProfile on registration/profile update and Credential on certificate issuance (legacy still authoritative; ENABLE_NEW_* stay off)
+- 2026-08-26 [rule] Phase 5 24h wait elapsed; 885d37a continuous-write is live; accelerated final gate is unscoped pass #2 now (no extra 24h after this deploy); ENABLE_NEW_* stay off; do not start Phase 6 until that pack is clean
+- 2026-08-26 [rule] Phase 5 complete: second unscoped pack clean after 24h dual-write; ENABLE_NEW_* still off until Phase 6 switches
+- 2026-08-26 [env] ENABLE_NEW_CREDENTIAL=true on production after clean smoke + recon
+- 2026-08-26 [convention] Phase 6 CREDENTIAL complete: /verify /achievements /download read via credential repository; ENABLE_NEW_POINTS is next; dual-write and legacy Certificate writes stay
+- 2026-08-26 [env] ENABLE_NEW_POINTS=true on production after clean smoke + recon
+- 2026-08-26 [convention] Phase 6 POINTS complete: header chip /marketplace /admin SP display read via points repository; ENABLE_NEW_CANDIDATE is next; dual-write and legacy User.synergyPoints writes stay

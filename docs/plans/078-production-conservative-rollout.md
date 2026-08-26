@@ -1,14 +1,16 @@
 # Plan 078 — conservative production rollout (2026-08-24)
 
-**Current posture (2026-08-25).** Phase 2 backfill is done. Pass #1 of the
-unscoped Phase 5 pack was clean at `2026-08-24T15:57:57Z`. Production stays
-on **legacy reads** + `ENABLE_DUAL_WRITE=true`. All `ENABLE_NEW_*` remain
-off. Do **not** start Phase 6 until pass #2 (earliest
-`2026-08-25T15:57:57Z`) is clean. Phase 6 runbook: `docs/plans/095-phase6-read-switches.md`.
+**Current posture (2026-08-26).** Phase 2 backfill is done. Phase 5 is
+**complete**. Phase 6 CREDENTIAL and POINTS are **complete**:
+`ENABLE_NEW_CREDENTIAL=true`, `ENABLE_NEW_POINTS=true`. Keep
+`ENABLE_DUAL_WRITE=true` and **legacy writes**. Next flag is
+`ENABLE_NEW_CANDIDATE`. Other `ENABLE_NEW_*` remain off. Runbook:
+`docs/plans/095-phase6-read-switches.md`.
 
-Gate checklist **before** any production write. Phase 6 is **not** in this
-rollout. Legacy tables stay authoritative. New 078 tables are additive
-shadow storage.
+Gate checklist **before** any production write. Phase 6 **read switches** are
+plan 095 (not this file). Phase 7 / new-only writes / drop legacy are **not**
+this rollout. Until each 095 switch, legacy tables stay authoritative. New
+078 tables are additive shadow storage. Dual-write stays on.
 
 The running app reads these exact keys (do not invent aliases):
 
@@ -25,12 +27,12 @@ The running app reads these exact keys (do not invent aliases):
 | Requirement | Status |
 |---|---|
 | No `DROP TABLE` / `DROP COLUMN` / `RENAME` in Phase 1 SQL | Confirmed (FK drop+re-add only) |
-| All `ENABLE_NEW_*` above | Stay **unset/false** |
-| `ENABLE_DUAL_WRITE` | **unset/false** until schema is healthy, then `true` |
+| All `ENABLE_NEW_*` above | Stay **unset/false** until the matching Phase 6 switch in plan 095 |
+| `ENABLE_DUAL_WRITE` | **true** (keep). Do not change legacy writes |
 | Historical backfill | Batched `INSERT … ON CONFLICT` (`PHASE2_BATCH_SIZE`, default 100), checkpoints, P1001 retry |
 | Reads | Legacy only |
 | Writes after dual-write on | Legacy authoritative + new secondary (`SAVEPOINT`) |
-| Phase 6 / new-only writes / drop legacy | **Not this rollout** |
+| Phase 7 / new-only writes / drop legacy | **Not this rollout.** Phase 6 reads: plan 095 |
 
 ## Connections
 
@@ -43,7 +45,8 @@ The running app reads these exact keys (do not invent aliases):
 
 ## Env
 
-Vercel production — keep unset/false: every `ENABLE_NEW_*` listed above.
+Vercel production — Phase 6 flips one `ENABLE_NEW_*` at a time (plan 095).
+Until that switch: keep unset/false. Keep `ENABLE_DUAL_WRITE=true`.
 
 After schema verify:
 
@@ -99,7 +102,7 @@ user-delete path is part of this rollout.
 7. Smoke enroll / submit / mission verify / points award / redeem / refund if safe — row in **both**
 8. Online Phase 2 (`PHASE2_ALLOW_PRODUCTION=1`, batch 100)
 9. Periodic drift (do not flip reads on row counts)
-10. Later (not today): freeze → delta → V1–V10 → reopen on legacy reads → Phase 6 later
+10. Phase 5 pass #1 + pass #2 complete (2026-08-26). Phase 6: plan 095, one flag at a time; dual-write stays on; do not change legacy writes
 
 ## Operator commands
 

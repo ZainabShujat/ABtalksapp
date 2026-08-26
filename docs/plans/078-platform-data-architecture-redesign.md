@@ -2852,6 +2852,12 @@ run hourly, alerting on any non-zero delta.
 
 ## Phase 5 — Verify
 
+**Status (2026-08-26).** Production Phase 5 is **complete**. Pass #1
+`2026-08-24T15:57:57Z`; pass #2 clean (V1–V10, full drift, extras, 200-user
+shadow, points/credentials/visibility/new-user interval). Recruiter-visible
+population is every `ProgramMember` plus searchable `platform_default` (plan
+095), not consent-only. Operational gate: `docs/plans/095-phase6-read-switches.md`.
+
 No code changes. Run the full verification pack (below), plus:
 
 - Re-run the Phase-2 delta backfill to absorb anything written before dual-write
@@ -2870,6 +2876,14 @@ apart.
 ---
 
 ## Phase 6 — Switch reads
+
+**Status (2026-08-26).** Phase 6 CREDENTIAL and POINTS are **complete**.
+`ENABLE_NEW_CREDENTIAL=true` and `ENABLE_NEW_POINTS=true` on production; live
+`/verify` / `/achievements` / download read `Credential`, and live SP display
+(`getBalance`) reads `PointsAccount`. Keep `ENABLE_DUAL_WRITE=true`. Do
+**not** change legacy writes. Remaining order in
+`docs/plans/095-phase6-read-switches.md` (next: CANDIDATE → LEARNING →
+PROGRESS → TALENT last).
 
 Flip the repository layer from legacy to new tables, **one repository at a time**,
 behind per-repository flags, in this order (least → most risky):

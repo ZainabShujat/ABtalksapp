@@ -1,5 +1,6 @@
 import { EnrollmentStatus, type UserType } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { getCandidateProfile } from "@/repositories/candidate";
 import { studentProfile } from "@/repositories/legacy/student-profile";
 
 export type PublicProfile = {
@@ -69,55 +70,39 @@ async function resolvePublicProfileEnrollment(
 export async function getPublicProfile(
   userId: string,
 ): Promise<PublicProfile | null> {
-  const [user, domainEnrollment] = await Promise.all([
+  const [user, candidate, domainEnrollment] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: {
         createdAt: true,
-        studentProfile: {
-          select: {
-            fullName: true,
-            userType: true,
-            domain: true,
-            college: true,
-            graduationYear: true,
-            organization: true,
-            role: true,
-            yearsExperience: true,
-            skills: true,
-            linkedinUrl: true,
-            githubUsername: true,
-            isReadyForInterview: true,
-          },
-        },
+        studentProfile: { select: { domain: true } },
       },
     }),
+    getCandidateProfile(userId),
     resolvePublicProfileEnrollment(userId),
   ]);
 
-  if (!user?.studentProfile) {
+  if (!user?.studentProfile || !candidate) {
     return null;
   }
 
-  const p = user.studentProfile;
-
   return {
-    fullName: p.fullName,
-    userType: p.userType,
-    domain: p.domain,
-    college: p.college,
-    graduationYear: p.graduationYear,
-    organization: p.organization,
-    role: p.role,
-    yearsExperience: p.yearsExperience,
-    skills: p.skills,
-    linkedinUrl: p.linkedinUrl,
-    githubUsername: p.githubUsername,
+    fullName: candidate.fullName,
+    userType: candidate.userType as UserType,
+    domain: user.studentProfile.domain,
+    college: candidate.college,
+    graduationYear: candidate.graduationYear,
+    organization: candidate.organization,
+    role: candidate.role,
+    yearsExperience: candidate.yearsExperience,
+    skills: candidate.skills,
+    linkedinUrl: candidate.linkedinUrl,
+    githubUsername: candidate.githubUsername,
     joinedAt: user.createdAt,
     daysCompleted: domainEnrollment?.daysCompleted ?? 0,
     currentStreak: domainEnrollment?.currentStreak ?? 0,
     longestStreak: domainEnrollment?.longestStreak ?? 0,
-    isReadyForInterview: p.isReadyForInterview,
+    isReadyForInterview: candidate.isReadyForInterview,
   };
 }
 
