@@ -5,6 +5,8 @@ import {
   type StartGateResult,
 } from "@/features/interview/cohort-eligibility";
 import type { InterviewBlueprintKey } from "@/features/interview/cohort/blueprint";
+import { generateCohortPhrasing } from "@/features/interview/cohort/generate-phrasing";
+import { resolveInterviewLLM } from "@/features/interview/agent/llm/registry";
 import { planCohortInterview } from "@/features/interview/cohort/planner";
 import { buildCohortCandidateContext } from "@/features/interview/cohort/candidate-context";
 import type {
@@ -88,5 +90,17 @@ export async function buildCohortPlan(
   blueprint: InterviewBlueprintKey,
 ): Promise<InterviewPlan> {
   const context = await buildCohortCandidateContext(memberId, blueprint);
-  return planCohortInterview(blueprint, context);
+
+  // Phrasing is generated ONCE, here, before the interview opens: there is no
+  // per-question dependency (nothing has been answered yet) and doing it per
+  // turn would add model latency to every exchange in a voice interview.
+  // Failure is not a failure mode — an empty map means every question is asked
+  // exactly as authored.
+  const phrasing = await generateCohortPhrasing(
+    resolveInterviewLLM(),
+    blueprint,
+    context,
+  );
+
+  return planCohortInterview(blueprint, context, phrasing);
 }

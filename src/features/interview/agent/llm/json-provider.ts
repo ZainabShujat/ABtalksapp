@@ -7,6 +7,8 @@ import {
   ANALYZE_SYSTEM_PROMPT,
   STRICT_JSON_REMINDER,
   buildAnalyzeUserMessage,
+  buildPhraseUserMessage,
+  PHRASE_SYSTEM_PROMPT,
 } from "@/features/interview/agent/llm/prompt";
 import { fallbackDecision } from "@/features/interview/agent/llm/heuristics";
 import type {
@@ -153,6 +155,39 @@ export function createJsonInterviewLLM(
 
   return {
     name,
+
+    async phraseQuestions(input) {
+      // One call for the whole plan. Per-question calls would multiply latency
+      // by ten at the moment the candidate is waiting for the interview to open.
+      try {
+        const res = await askJson({
+          system: PHRASE_SYSTEM_PROMPT,
+          user: buildPhraseUserMessage(input),
+          maxTokens: 1200,
+        });
+        if (!res.ok) return {};
+
+        const parsed = res.data;
+        if (!parsed || typeof parsed !== "object") return {};
+
+        const out: Record<string, string> = {};
+        for (const [id, value] of Object.entries(parsed as Record<string, unknown>)) {
+          if (typeof value === "string" && value.trim().length > 0) {
+            out[id] = value.trim();
+          }
+        }
+        return out;
+      } catch (err) {
+        // Never throws: an empty map means every question is asked as authored,
+        // which is a working interview rather than a failed one.
+        logger.warn("[interview-agent] question phrasing failed", {
+          provider: name,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return {};
+      }
+    },
+
     async analyzeAnswer(input: AnalyzeAnswerInput): Promise<InterviewDecision> {
       const user = buildAnalyzeUserMessage(input);
 

@@ -62,7 +62,13 @@ export function InterviewSession({
    * a failed microphone must not block a milestone that can be answered by
    * typing.
    */
-  const [micWorking, setMicWorking] = useState<boolean | null>(null);
+  /**
+   * Set only when the microphone check has recorded speech AND had it
+   * transcribed. The interview cannot be started until it has: a candidate
+   * whose audio never reaches the transcriber would otherwise spend their one
+   * attempt finding that out.
+   */
+  const [micVerified, setMicVerified] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const title = BLUEPRINT_LABEL[blueprint];
@@ -128,7 +134,7 @@ export function InterviewSession({
         </ul>
 
         <div className="mt-7">
-          <MicCheck onResultAction={setMicWorking} />
+          <MicCheck onResultAction={setMicVerified} />
         </div>
 
         {error ? (
@@ -141,7 +147,7 @@ export function InterviewSession({
           <button
             type="button"
             onClick={() => void begin()}
-            disabled={starting}
+            disabled={starting || !micVerified}
             className="inline-flex h-11 items-center gap-2 rounded-[12px] border border-[var(--iv-accent)]/50 bg-[var(--iv-accent)]/15 px-5 text-[14px] font-semibold text-[var(--iv-text)] transition-colors hover:bg-[var(--iv-accent)]/25 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {starting ? (
@@ -150,8 +156,7 @@ export function InterviewSession({
               </>
             ) : (
               <>
-                <Mic className="size-4" strokeWidth={1.75} />{" "}
-                {micWorking === false ? "Start interview (typing)" : "Start interview"}
+                <Mic className="size-4" strokeWidth={1.75} /> Start interview
               </>
             )}
           </button>
@@ -162,6 +167,14 @@ export function InterviewSession({
             Not now
           </Link>
         </div>
+
+        {!micVerified ? (
+          <p className="mt-3 text-[13px] text-[var(--iv-text-muted)]">
+            Run the microphone check above to start. It confirms we can hear and
+            transcribe you, so you don&apos;t spend your one attempt discovering
+            otherwise.
+          </p>
+        ) : null}
       </div>
     );
   }

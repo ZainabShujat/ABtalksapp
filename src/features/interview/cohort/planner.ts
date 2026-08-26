@@ -13,6 +13,7 @@ import {
 } from "@/features/interview/cohort/grounding";
 import { MAX_EXTENSION_QUESTIONS } from "@/features/interview/constants";
 import { buildRubricSnapshot } from "@/features/interview/rubric";
+import { choosePhrasing } from "@/features/interview/cohort/question-phrasing";
 import type {
   InterviewPlan,
   PlannedQuestion,
@@ -143,16 +144,56 @@ function selectExtensionQuestions(
  * The rubric snapshot travels with it so a historical score stays interpretable
  * if competency weights are ever changed.
  */
+/**
+ * Swaps in model-phrased wording, if it survives validation.
+ *
+ * `text` — the authored question — is never touched: it is the grading target
+ * and what makes two scores comparable. Only `spokenText`, what the candidate
+ * hears, can vary. That is the same field the grounding clause already writes
+ * to, so the report and transcript need no change to stay accurate.
+ */
+function applyPhrasing(
+  planned: PlannedQuestion,
+  expectedEvidence: readonly string[],
+  generated: string | undefined,
+): PlannedQuestion {
+  const choice = choosePhrasing(generated, planned.text, expectedEvidence);
+  if (!choice.generated) return planned;
+
+  // Keep the grounding clause in front of the reworded question: it is a
+  // factual pointer at their own work and is not the model's to rewrite.
+  const grounded = planned.spokenText ?? planned.text;
+  const clause = grounded.slice(0, Math.max(0, grounded.length - planned.text.length)).trim();
+
+  return {
+    ...planned,
+    spokenText: clause.length > 0 ? `${clause} ${choice.text}` : choice.text,
+    phrasedByModel: true,
+  };
+}
+
 export function planCohortInterview(
   blueprint: InterviewBlueprintKey,
   context?: CohortCandidateContext | null,
+  /**
+   * Model-phrased wording per question id, from `generateCohortPhrasing`.
+   *
+   * Optional by design: absent means every question is asked exactly as
+   * authored, which is the interview that existed before generation and the
+   * one a provider outage still produces.
+   */
+  phrasing?: Readonly<Record<string, string>> | null,
 ): InterviewPlan {
   const bank = getQuestionBank(blueprint);
   const facts = context ?? null;
 
   const core = bank.questions.map((question, index) => {
     assertWithinScope(blueprint, question);
-    return toPlannedQuestion(question, index, "CORE", facts);
+    return applyPhrasing(
+      toPlannedQuestion(question, index, "CORE", facts),
+      question.expectedEvidence,
+      phrasing?.[question.id],
+    );
   });
 
   // Extensions require a candidate context: without one we cannot know which

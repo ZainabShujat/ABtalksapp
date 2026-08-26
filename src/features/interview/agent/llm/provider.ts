@@ -60,4 +60,31 @@ export interface InterviewLLM {
    * degrades the interview rather than ending it.
    */
   analyzeAnswer(input: AnalyzeAnswerInput): Promise<InterviewDecision>;
+
+  /**
+   * Phrases CORE questions from their targets, once, at plan build.
+   *
+   * OPTIONAL: a provider that cannot do this simply omits it and every question
+   * is asked as authored — the interview that existed before generation. Like
+   * `analyzeAnswer` it must not throw: an empty map is the degraded answer.
+   */
+  phraseQuestions?(input: PhraseQuestionsInput): Promise<Record<string, string>>;
 }
+
+export type PhraseTarget = {
+  id: string;
+  /** The authored question. The model rewrites this; it never replaces it. */
+  authored: string;
+  competency: string;
+  /** Curriculum lines for the days this target draws on. */
+  curriculum: string;
+  /** What this candidate actually submitted for those days, if anything. */
+  candidateWork: string;
+};
+
+export type PhraseQuestionsInput = {
+  targets: PhraseTarget[];
+  /** Framing band from `question-phrasing.ts`, chosen by calibration. */
+  framing: string;
+  candidateFirstName?: string | null;
+};

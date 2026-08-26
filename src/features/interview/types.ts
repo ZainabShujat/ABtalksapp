@@ -146,6 +146,12 @@ export type PlannedQuestion = {
    * form, so personalisation cannot move a score.
    */
   spokenText?: string;
+  /**
+   * True when `spokenText` was phrased by the model rather than read from the
+   * bank. Frozen into the plan so a transcript can always be checked against
+   * the authored target it was generated from.
+   */
+  phrasedByModel?: boolean;
   /** True when a real artifact was found and referenced in `spokenText`. */
   grounded?: boolean;
   /** The fact that was referenced, for the plan/report audit trail. */

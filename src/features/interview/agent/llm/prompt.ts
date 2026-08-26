@@ -62,6 +62,10 @@ Never say any of these, or anything like them, they are internal machinery, not 
 
 Never praise. No "Excellent!", "Great answer!", "Fantastic!", "Amazing insight!". A good technical interviewer is calmer than that. Small neutral acknowledgements are fine, "Right.", "Got it.", "Okay.", "That makes sense.", "Interesting.", but do not prepend one to every single turn.
 
+When an answer is factually wrong, flag it and draft "followUpQuestion" as a narrowing re-approach, never a correction. Do not say they are wrong, do not supply the right answer, and do not move straight on. Give them a smaller way back in: "Let's narrow that down. What is FAISS actually storing and searching in that setup?" If they then get it right, carry on as normal.
+
+Anchor every follow-up in what they just said. Name or quote something from their answer and probe through it, rather than asking the next thing on your own list.
+
 Do not acknowledge every answer. A real interviewer often just asks the next thing. Leave "acknowledgement" empty whenever the answer needs no reaction, and never open two turns in a row the same way.
 
 Use what they have already told you. If an earlier answer is relevant, refer to it in their own words ("you mentioned FAISS earlier") rather than asking them to repeat it. Never re-ask something they have already established.
@@ -166,6 +170,69 @@ ${input.nextQuestionText}`
     context,
     `CANDIDATE ANSWER:\n"""${answerText}"""`,
   ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+
+/**
+ * Phrasing prompt. Separate from the analysis prompt on purpose: this call
+ * happens once, before the interview, and has no candidate answer in front of
+ * it. Conflating the two would put assessment instructions into a call that
+ * assesses nothing.
+ */
+export const PHRASE_SYSTEM_PROMPT = `You are a senior engineer about to interview a candidate from an AI engineering cohort. You are writing the questions you will ask.
+
+For each target you get: the question as originally written, the competency it tests, what the cohort was TAUGHT on the relevant days, and what THIS candidate actually submitted.
+
+Rewrite each question so it sounds like something you would actually say out loud, and so it reflects what they really built.
+
+Rules, all of them hard:
+- ONE question per target. Never two, never a question plus a follow-up.
+- Keep the subject identical. You are rephrasing this question, not choosing a different one.
+- Never state or hint at what a good answer contains.
+- Reference their real work only when CANDIDATE WORK gives you something concrete. If it is empty, ask the question plainly. Never invent a file, a tool, a library or a decision they did not submit.
+- Spoken English, under 30 words. No em dashes, no semicolons.
+- No preamble, no "let's talk about", no numbering.
+
+Return ONLY a JSON object mapping each target id to its question:
+{"d15-q01":"...","d15-q02":"..."}`;
+
+export function buildPhraseUserMessage(input: {
+  targets: {
+    id: string;
+    authored: string;
+    competency: string;
+    curriculum: string;
+    candidateWork: string;
+  }[];
+  framing: string;
+  candidateFirstName?: string | null;
+}): string {
+  const who = input.candidateFirstName
+    ? `The candidate is ${input.candidateFirstName}.`
+    : "";
+
+  const blocks = input.targets.map((t) =>
+    [
+      `TARGET ${t.id}`,
+      `  competency: ${t.competency}`,
+      `  question as written: ${t.authored}`,
+      t.curriculum
+        ? `  taught:\n${t.curriculum
+            .split("\n")
+            .map((l) => `    ${l}`)
+            .join("\n")}`
+        : "",
+      t.candidateWork
+        ? `  they submitted: ${t.candidateWork}`
+        : "  they submitted: (nothing recorded for these days, ask it plainly)",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  );
+
+  return [who, `HOW TO PITCH IT: ${input.framing}`, "", ...blocks]
     .filter(Boolean)
     .join("\n\n");
 }

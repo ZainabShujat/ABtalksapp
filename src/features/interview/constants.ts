@@ -139,6 +139,27 @@ export const MAX_CLARIFICATIONS_PER_QUESTION = 2;
  */
 export const CALIBRATION_ANSWERS = 3;
 
+/* --------------------------------------------------- question generation */
+
+/**
+ * Longest a generated CORE question may be, in characters.
+ *
+ * A spoken question that runs past this is no longer one question: it is a
+ * paragraph with a question mark, and it produces the two-minute monologue the
+ * bank was narrowed to avoid.
+ */
+export const MAX_GENERATED_QUESTION_CHARS = 200;
+
+/**
+ * Minimum share of the authored question's content words a generated one must
+ * reuse before it is accepted as the same question.
+ *
+ * This is the on-target check. Too high and every natural rephrasing is
+ * rejected; too low and the model can drift to an adjacent topic while the
+ * score still points at the original target.
+ */
+export const MIN_QUESTION_OVERLAP = 0.25;
+
 /* ------------------------------------------------------ voice turn-taking */
 
 /**
@@ -169,8 +190,8 @@ export const INTERVIEW_SILENCE_MS = 4_500;
  * 0.01. The room additionally raises these against a measured noise floor, so
  * these values are the FLOOR of the thresholds, not the whole rule.
  */
-export const SPEECH_ON_RMS = 0.045;
-export const SPEECH_OFF_RMS = 0.022;
+export const SPEECH_ON_RMS = 0.028;
+export const SPEECH_OFF_RMS = 0.014;
 
 /**
  * How long a level must STAY above the speech threshold before it counts as a
@@ -181,7 +202,7 @@ export const SPEECH_OFF_RMS = 0.022;
  * essentially any transient and shorter than the first syllable of a sentence,
  * so a real answer still opens the turn immediately as far as anyone can tell.
  */
-export const SPEECH_SUSTAIN_MS = 250;
+export const SPEECH_SUSTAIN_MS = 180;
 
 /**
  * Multipliers applied to the measured room noise floor.
@@ -191,8 +212,22 @@ export const SPEECH_SUSTAIN_MS = 250;
  * for a floor and takes `max(constant, floor * multiplier)`, so a noisy input
  * raises the bar instead of registering the room itself as speech.
  */
-export const SPEECH_ON_FLOOR_MULTIPLIER = 3.5;
-export const SPEECH_OFF_FLOOR_MULTIPLIER = 2.0;
+export const SPEECH_ON_FLOOR_MULTIPLIER = 2.2;
+export const SPEECH_OFF_FLOOR_MULTIPLIER = 1.5;
+
+/**
+ * Hard ceiling on the calibrated speech threshold.
+ *
+ * Noise-floor calibration could only ever raise the threshold — `max(base,
+ * floor * multiplier)` with nothing above it. A laptop fan measuring 0.02 put
+ * the ON threshold at 0.07, which is above where an ordinary speaking voice
+ * sits on a built-in microphone, so the room heard nothing at all and waited
+ * forever. Adapting to a noisy room must never cost the ability to hear the
+ * candidate: past this point, being slightly too sensitive is the correct
+ * failure.
+ */
+export const SPEECH_ON_MAX_RMS = 0.055;
+export const SPEECH_OFF_MAX_RMS = 0.03;
 
 /**
  * How long the room waits when the candidate has said NOTHING at all before

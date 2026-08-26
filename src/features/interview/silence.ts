@@ -88,19 +88,36 @@ export function stepSilence(
   // Before the first real speech, quiet means "not started yet", never "done".
   // Background noise sits below the ON threshold, so it cannot open the turn.
   if (!state.hasSpoken) {
-    if (rms < thresholds.on) {
-      // The burst ended before it lasted long enough to be speech: a knock, a
-      // click, a chair. Forget it and keep waiting.
-      return state.speechSince === null
-        ? { state, shouldStop: false }
-        : { state: { ...state, speechSince: null }, shouldStop: false };
+    // Onset uses BOTH thresholds, and that distinction is the whole of it.
+    //
+    // Speech is modulated: between syllables the level dips well below the ON
+    // threshold many times a second. Requiring it to stay CONTINUOUSLY above ON
+    // for the sustain window meant the burst timer reset on almost every frame
+    // and a real voice never registered at all — the room simply never heard
+    // the candidate. A transient is distinguished from speech by whether the
+    // sound DIES, not by whether every frame is loud.
+    //
+    // So: ON starts the burst, and only dropping below OFF ends it. The dips
+    // in between are what talking sounds like.
+    if (state.speechSince === null) {
+      if (rms < thresholds.on) return { state, shouldStop: false };
+      return {
+        state: { ...state, speechSince: now },
+        shouldStop: false,
+      };
     }
 
-    const speechSince = state.speechSince ?? now;
-    if (now - speechSince < sustainMs) {
-      // Loud, but not yet for long enough to be a voice.
-      return { state: { ...state, speechSince }, shouldStop: false };
+    if (rms < thresholds.off) {
+      // The sound died before it lasted long enough to be a voice: a knock, a
+      // click, a chair.
+      return { state: { ...state, speechSince: null }, shouldStop: false };
     }
+
+    if (now - state.speechSince < sustainMs) {
+      // Still going, not yet long enough to commit.
+      return { state, shouldStop: false };
+    }
+
     return {
       state: { hasSpoken: true, quietSince: null, speechSince: null },
       shouldStop: false,

@@ -17,8 +17,10 @@ import {
   NO_ANSWER_MS,
   PROCESSING_WATCHDOG_MS,
   SPEECH_OFF_FLOOR_MULTIPLIER,
+  SPEECH_OFF_MAX_RMS,
   SPEECH_OFF_RMS,
   SPEECH_ON_FLOOR_MULTIPLIER,
+  SPEECH_ON_MAX_RMS,
   SPEECH_ON_RMS,
 } from "@/features/interview/constants";
 import {
@@ -915,7 +917,11 @@ export function InterviewRoom({
           sum += v * v;
         }
         const rms = Math.sqrt(sum / samples.length);
-        levelRef.current = rms;
+        // The orb reads this, and it must only move when the candidate is
+        // actually audible. Publishing raw RMS made it twitch at room tone,
+        // which reads as "it can hear me" when it cannot. Below the speech
+        // threshold the orb is told silence.
+        levelRef.current = rms >= thresholdsRef.current.off ? rms : 0;
 
         const now = performance.now();
 
@@ -950,9 +956,19 @@ export function InterviewRoom({
 
         if (noiseFloorRef.current !== null) {
           const floor = noiseFloorRef.current;
+          // Clamped at BOTH ends. Raising against the measured floor stops a
+          // noisy room registering as speech; the ceiling stops a noisy room
+          // making the candidate inaudible, which is the worse failure of the
+          // two — an interview that cannot hear you is not an interview.
           thresholdsRef.current = {
-            on: Math.max(SPEECH_ON_RMS, floor * SPEECH_ON_FLOOR_MULTIPLIER),
-            off: Math.max(SPEECH_OFF_RMS, floor * SPEECH_OFF_FLOOR_MULTIPLIER),
+            on: Math.min(
+              SPEECH_ON_MAX_RMS,
+              Math.max(SPEECH_ON_RMS, floor * SPEECH_ON_FLOOR_MULTIPLIER),
+            ),
+            off: Math.min(
+              SPEECH_OFF_MAX_RMS,
+              Math.max(SPEECH_OFF_RMS, floor * SPEECH_OFF_FLOOR_MULTIPLIER),
+            ),
           };
           noiseFloorRef.current = null;
         }
@@ -1312,6 +1328,14 @@ export function InterviewRoom({
           ? "processing"
           : "idle";
 
+  // True while the first line is still being fetched/synthesised: nothing has
+  // been revealed yet and no turn has completed.
+  const waitingToBegin =
+    turns.length <= 1 &&
+    (reveal === null || reveal.chars === 0) &&
+    phase !== "listening" &&
+    !fatal;
+
   const busy = phase === "processing" || phase === "speaking" || closing;
   const copy = PHASE_COPY[phase];
 
@@ -1471,6 +1495,26 @@ export function InterviewRoom({
               *
               * Role labels go with it: with one speaker on screen, "AI
               * Interviewer" above every line is chrome, not information. */}
+          {/* The opening gap.
+              *
+              * Between mounting and the first audio there are several seconds
+              * of fetching and synthesising speech, during which every turn
+              * renders blank (the reveal has nothing yet). That looked like a
+              * frozen page on a screen the candidate has never seen before.
+              * This fills it, and disappears the moment the first word lands. */}
+          {waitingToBegin ? (
+            <div className="iv-enter flex flex-col gap-3">
+              <span className="flex items-center gap-2 text-[11px] font-medium tracking-wide text-[var(--iv-text-faint)] uppercase">
+                <span className="iv-dot inline-block size-1.5 rounded-full bg-[var(--iv-accent)]" />
+                Preparing
+              </span>
+              <p className="text-[17px] leading-[1.65] text-[var(--iv-text-muted)] md:text-[19px]">
+                Hang tight — I&apos;m reading through the work you submitted and
+                putting your questions together.
+              </p>
+            </div>
+          ) : null}
+
           {visibleTurns.map((turn, i) => {
             const isLast = i === visibleTurns.length - 1;
 
@@ -1496,6 +1540,24 @@ export function InterviewRoom({
                 key={`${interviewerTurns.length - visibleTurns.length + i}`}
                 className={cn("iv-enter", !isLast && "iv-turn-past")}
               >
+                {/* A turn marker. Without it, consecutive interviewer lines
+                    run together as one wall of text and the candidate cannot
+                    tell what was said when — three separate things the
+                    interviewer said minutes apart looked like one paragraph. */}
+                <span
+                  className="mb-2 flex items-center gap-2 text-[11px] font-medium tracking-wide text-[var(--iv-text-faint)] uppercase"
+                  aria-hidden
+                >
+                  <span
+                    className={cn(
+                      "inline-block size-1.5 rounded-full",
+                      isLast
+                        ? "bg-[var(--iv-accent)]"
+                        : "bg-[var(--iv-text-faint)]",
+                    )}
+                  />
+                  Interviewer
+                </span>
                 <p
                   className="whitespace-pre-line text-[17px] leading-[1.65] text-[var(--iv-text)] md:text-[19px]"
                   // The full line is always available to assistive tech even

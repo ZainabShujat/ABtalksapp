@@ -9,6 +9,7 @@ import type {
   PlannedQuestion,
 } from "@/features/interview/types";
 import {
+  classifyAnswer,
   decideLadderMove,
   nextScaffoldProbe,
 } from "@/features/interview/agent/depth";
@@ -322,6 +323,38 @@ export function routeDecision(
     };
   }
 
+  // A technically WRONG answer is not a thin one, and until now it routed like
+  // any other: flagged, then moved past. A real interviewer neither corrects
+  // nor shames — they re-approach, and give the candidate a second run at the
+  // reasoning. Bounded by the ordinary follow-up budget, so a candidate who
+  // stays wrong is moved on rather than interrogated.
+  const wrong = decision.evidence.flaggedIssues.includes("factually_wrong");
+  if (wrong) {
+    const budget = followUpBudgetFor(question);
+    if (counters.followUpsAsked < budget) {
+      const scaffold = nextScaffoldProbe(question, decision.evidence);
+      const reapproach = speakable(
+        (decision.followUpQuestion ?? "").trim() ||
+          scaffold?.text ||
+          question.followUpPrompt ||
+          "",
+      );
+      if (reapproach.length > 0) {
+        return {
+          action: "FOLLOW_UP",
+          rationale: "Answer was incorrect; re-approaching once before moving on.",
+          probeText: reapproach,
+        };
+      }
+    }
+    // Budget spent and still wrong. Move on without comment: the evidence
+    // already records what happened, and saying so aloud would only shame them.
+    return {
+      action: "NEXT_QUESTION",
+      rationale: "Answer remained incorrect after a re-approach; moving on.",
+    };
+  }
+
   const ladder = decideLadderMove(question, decision.evidence, state);
 
   if (ladder.move === "ESCALATE") {
@@ -381,6 +414,28 @@ export function routeDecision(
       rationale: ladder.rationale,
       probeText: text,
     };
+  }
+
+  // The ladder says move on. Before doing so: if the answer was STRONG and the
+  // model drafted a contextual probe, spend one follow-up pursuing it.
+  //
+  // This is the "question, answer, next question" gap. Escalation only fires
+  // when the bank happens to carry a deeper rung AND the calibrated ceiling
+  // allows one, so a candidate who said something genuinely interesting on a
+  // question with no authored rung got a thank-you and the next item on the
+  // list. The probe stays inside the current target — it is drafted from their
+  // own answer against this question's checklist — and it spends the ordinary
+  // follow-up budget, so nothing here can lengthen an interview.
+  if (classifyAnswer(question, decision.evidence) === "STRONG") {
+    const budget = followUpBudgetFor(question);
+    const drafted = speakable(decision.followUpQuestion ?? "");
+    if (counters.followUpsAsked < budget && drafted.length > 0) {
+      return {
+        action: "FOLLOW_UP",
+        rationale: "Strong answer with a thread worth pursuing; probing once.",
+        probeText: drafted,
+      };
+    }
   }
 
   return { action: "NEXT_QUESTION", rationale: ladder.rationale };

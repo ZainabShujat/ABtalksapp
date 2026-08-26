@@ -29,7 +29,10 @@ import {
   INTERVIEW_SILENCE_MS,
   NO_ANSWER_MS,
   MAX_LANGUAGE_RETRIES_PER_QUESTION,
+  SPEECH_OFF_MAX_RMS,
   SPEECH_OFF_RMS,
+  SPEECH_ON_FLOOR_MULTIPLIER,
+  SPEECH_ON_MAX_RMS,
   SPEECH_ON_RMS,
 } from "@/features/interview/constants";
 
@@ -222,6 +225,60 @@ check("two silence windows pass before anything is recorded unanswered", () => {
   // "(no response)" is submitted.
   assert.equal(NO_ANSWER_MS, INTERVIEW_SILENCE_MS);
   assert.ok(NO_ANSWER_MS * 2 >= 9_000, "two chances, not one");
+});
+
+check("4i. calibration can never raise the threshold out of voice range", () => {
+  // The regression this guards: `max(base, floor * mult)` had no ceiling, so a
+  // fan measuring 0.02 put the ON threshold at 0.07 and a normal speaking voice
+  // never registered. The room heard nothing and waited forever.
+  const noisyFloor = 0.05;
+  const on = Math.min(
+    SPEECH_ON_MAX_RMS,
+    Math.max(SPEECH_ON_RMS, noisyFloor * SPEECH_ON_FLOOR_MULTIPLIER),
+  );
+  assert.ok(on <= SPEECH_ON_MAX_RMS, `calibrated ON reached ${on}`);
+  assert.ok(
+    SPEECH_ON_MAX_RMS < 0.08,
+    "the ceiling must stay under a normal speaking level",
+  );
+  assert.ok(SPEECH_OFF_MAX_RMS < SPEECH_ON_MAX_RMS);
+});
+
+check("4j. a soft speaker still registers", () => {
+  // A quiet voice on a built-in microphone. This must open the turn.
+  const soft = 0.035;
+  assert.ok(
+    soft >= SPEECH_ON_RMS,
+    `a soft voice at ${soft} must clear the ON threshold (${SPEECH_ON_RMS})`,
+  );
+  const { state } = run([...Array(10).fill(soft), ...Array(4).fill(0.001)]);
+  assert.equal(state.hasSpoken, true, "a soft speaker must be heard");
+});
+
+check("4k. MODULATED speech registers — the syllable-dip regression", () => {
+  // This is what talking actually looks like on an analyser: the level rises
+  // and falls many times a second between syllables. The onset check used to
+  // require the level to stay CONTINUOUSLY above the ON threshold for the
+  // sustain window, so the burst timer reset on nearly every frame and a real
+  // voice never registered at all. The room heard nothing and waited forever.
+  const loud = SPEECH_ON_RMS + 0.02;
+  const dip = (SPEECH_ON_RMS + SPEECH_OFF_RMS) / 2; // between the thresholds
+  const speech: number[] = [];
+  for (let i = 0; i < 30; i++) speech.push(i % 2 === 0 ? loud : dip);
+
+  const { state } = run([...speech, ...Array(4).fill(0.001)]);
+  assert.equal(
+    state.hasSpoken,
+    true,
+    "modulated speech must open the turn — dips between syllables are normal",
+  );
+});
+
+check("4l. a transient is still rejected once the sound dies", () => {
+  // The other half: ON starts a burst, but dropping below OFF ends it. A knock
+  // is loud and then silent, so it never survives the sustain window.
+  const bang = [SPEECH_ON_RMS + 0.05, ...Array(200).fill(0.001)];
+  assert.equal(run(bang).state.hasSpoken, false);
 });
 
 console.log("\nRoom-composed lines");
