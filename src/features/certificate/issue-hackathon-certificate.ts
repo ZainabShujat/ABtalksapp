@@ -1,9 +1,10 @@
 import "server-only";
 import { CertificateType } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import type { HackathonCertificateVariant } from "./constants";
 import { generateCertificateId } from "./generate-certificate-id";
+import { dualWriteCredential } from "@/repositories/dual-write";
 
 /** Stamped into metadata so a future event can be told apart from this one. */
 export const HACKATHON_EVENT_KEY = "vicodathon-2026";
@@ -67,6 +68,12 @@ export async function ensureHackathonCertificate(
     select: { certificateId: true },
   });
   if (existing) {
+    await writeClient().$transaction(
+      async (tx) => {
+        await dualWriteCredential(tx, existing.certificateId);
+      },
+      { maxWait: 10000, timeout: 20000 },
+    );
     return {
       ok: true,
       data: { certificateId: existing.certificateId, alreadyIssued: true },
@@ -83,30 +90,37 @@ export async function ensureHackathonCertificate(
 
   try {
     const certificateId = await generateCertificateId(CertificateType.HACKATHON);
-    const created = await prisma.certificate.create({
-      data: {
-        certificateId,
-        userId,
-        type: CertificateType.HACKATHON,
-        recipientName: fullName,
-        domain: null,
-        enrollmentId: null,
-        issuedAt: new Date(),
-        metadata: {
-          event: HACKATHON_EVENT_KEY,
-          teamId: participant.team.id,
-          teamCode: participant.team.teamCode,
-          teamName: participant.team.teamName,
-          entryType: participant.team.entryType,
-          isLeader: participant.isLeader,
-          problemTitle: submission.problem?.title ?? null,
-          repoUrl,
-          liveUrl,
-          submittedAt: submission.updatedAt.toISOString(),
-        },
+    const created = await writeClient().$transaction(
+      async (tx) => {
+        const row = await tx.certificate.create({
+          data: {
+            certificateId,
+            userId,
+            type: CertificateType.HACKATHON,
+            recipientName: fullName,
+            domain: null,
+            enrollmentId: null,
+            issuedAt: new Date(),
+            metadata: {
+              event: HACKATHON_EVENT_KEY,
+              teamId: participant.team.id,
+              teamCode: participant.team.teamCode,
+              teamName: participant.team.teamName,
+              entryType: participant.team.entryType,
+              isLeader: participant.isLeader,
+              problemTitle: submission.problem?.title ?? null,
+              repoUrl,
+              liveUrl,
+              submittedAt: submission.updatedAt.toISOString(),
+            },
+          },
+          select: { certificateId: true },
+        });
+        await dualWriteCredential(tx, row.certificateId);
+        return row;
       },
-      select: { certificateId: true },
-    });
+      { maxWait: 10000, timeout: 20000 },
+    );
     return {
       ok: true,
       data: { certificateId: created.certificateId, alreadyIssued: false },
@@ -163,6 +177,12 @@ export async function ensureHackathonAwardCertificate(input: {
     (row) => metadataVariant(row.metadata) === variant,
   );
   if (existingAward) {
+    await writeClient().$transaction(
+      async (tx) => {
+        await dualWriteCredential(tx, existingAward.certificateId);
+      },
+      { maxWait: 10000, timeout: 20000 },
+    );
     return {
       ok: true,
       data: { certificateId: existingAward.certificateId, alreadyIssued: true },
@@ -175,31 +195,38 @@ export async function ensureHackathonAwardCertificate(input: {
 
   try {
     const certificateId = await generateCertificateId(CertificateType.HACKATHON);
-    const created = await prisma.certificate.create({
-      data: {
-        certificateId,
-        userId,
-        type: CertificateType.HACKATHON,
-        recipientName,
-        domain: null,
-        enrollmentId: null,
-        issuedAt: HACKATHON_CERTIFICATE_ISSUED_AT,
-        metadata: {
-          event: HACKATHON_EVENT_KEY,
-          teamId: participant.team.id,
-          teamCode: participant.team.teamCode,
-          teamName: participant.team.teamName,
-          entryType: participant.team.entryType,
-          isLeader: participant.isLeader,
-          problemTitle: submission?.problem?.title ?? null,
-          repoUrl,
-          liveUrl,
-          submittedAt: submission?.updatedAt.toISOString() ?? null,
-          hackathonVariant: variant,
-        },
+    const created = await writeClient().$transaction(
+      async (tx) => {
+        const row = await tx.certificate.create({
+          data: {
+            certificateId,
+            userId,
+            type: CertificateType.HACKATHON,
+            recipientName,
+            domain: null,
+            enrollmentId: null,
+            issuedAt: HACKATHON_CERTIFICATE_ISSUED_AT,
+            metadata: {
+              event: HACKATHON_EVENT_KEY,
+              teamId: participant.team.id,
+              teamCode: participant.team.teamCode,
+              teamName: participant.team.teamName,
+              entryType: participant.team.entryType,
+              isLeader: participant.isLeader,
+              problemTitle: submission?.problem?.title ?? null,
+              repoUrl,
+              liveUrl,
+              submittedAt: submission?.updatedAt.toISOString() ?? null,
+              hackathonVariant: variant,
+            },
+          },
+          select: { certificateId: true },
+        });
+        await dualWriteCredential(tx, row.certificateId);
+        return row;
       },
-      select: { certificateId: true },
-    });
+      { maxWait: 10000, timeout: 20000 },
+    );
     return {
       ok: true,
       data: { certificateId: created.certificateId, alreadyIssued: false },

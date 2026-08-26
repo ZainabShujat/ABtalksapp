@@ -1,12 +1,19 @@
-import type { Prisma } from "@prisma/client";
 import {
   AttemptLateness,
   AttemptStatus,
+  CandidatePersona,
+  CertificateStatus,
+  CertificateType,
+  CredentialSourceType,
+  CredentialStatus,
+  CredentialType,
   EnrollmentStatus,
   EnrollmentStatusV2,
   EvaluatorType,
   PointsSourceType,
+  Prisma,
   ProgramMemberStatus,
+  UserType,
 } from "@prisma/client";
 import { logger } from "@/lib/logger";
 import { isDualWriteEnabled } from "@/lib/feature-flags";
@@ -370,6 +377,286 @@ export async function dualWritePoints(
         createdByUserId: event.createdByUserId,
       },
       update: { amount: event.amount, reason: event.reason },
+    });
+  });
+}
+
+export function personaFromUserType(userType: UserType): CandidatePersona {
+  return userType === UserType.PROFESSIONAL
+    ? CandidatePersona.PROFESSIONAL
+    : CandidatePersona.STUDENT;
+}
+
+export function educationIdForStudentProfile(userId: string): string {
+  return `edu_sp_${userId}`;
+}
+
+export function experienceIdForStudentProfile(userId: string): string {
+  return `exp_sp_${userId}`;
+}
+
+function hackathonVariant(
+  metadata: Prisma.JsonValue | null,
+): string | undefined {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return undefined;
+  }
+  const v = (metadata as { hackathonVariant?: unknown }).hackathonVariant;
+  return typeof v === "string" ? v : undefined;
+}
+
+export function mapCertificateToCredential(cert: {
+  id: string;
+  certificateId: string;
+  userId: string;
+  type: CertificateType;
+  status: CertificateStatus;
+  recipientName: string;
+  enrollmentId: string | null;
+  issuedAt: Date;
+  revokedAt: Date | null;
+  revokedReason: string | null;
+  metadata: Prisma.JsonValue | null;
+}): {
+  id: string;
+  credentialId: string;
+  userId: string;
+  type: CredentialType;
+  sourceType: CredentialSourceType;
+  sourceKey: string;
+  status: CredentialStatus;
+  title: string;
+  recipientName: string;
+  metadata: Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput;
+  issuedAt: Date;
+  revokedAt: Date | null;
+  revokedReason: string | null;
+} {
+  let type: CredentialType = CredentialType.COMPLETION;
+  if (cert.type === CertificateType.HACKATHON) {
+    type = hackathonVariant(cert.metadata)
+      ? CredentialType.PLACEMENT
+      : CredentialType.PARTICIPATION;
+  } else if (cert.type === CertificateType.WORKSHOP) {
+    type = CredentialType.PARTICIPATION;
+  }
+
+  let sourceType: CredentialSourceType = CredentialSourceType.PROGRAM_ENROLLMENT;
+  let sourceKey = cert.enrollmentId
+    ? peIdForEnrollment(cert.enrollmentId)
+    : cert.id;
+  if (cert.type === CertificateType.HACKATHON) {
+    const meta = cert.metadata;
+    const teamId =
+      meta && typeof meta === "object" && !Array.isArray(meta)
+        ? (meta as { teamId?: unknown }).teamId
+        : null;
+    sourceType = CredentialSourceType.HACKATHON_TEAM;
+    sourceKey = typeof teamId === "string" ? `${teamId}:${cert.id}` : cert.id;
+  } else if (cert.type === CertificateType.WORKSHOP) {
+    sourceType = CredentialSourceType.WORKSHOP_REGISTRATION;
+    sourceKey = cert.id;
+  } else if (cert.type === CertificateType.COHORT) {
+    sourceType = CredentialSourceType.COHORT;
+    sourceKey = cert.id;
+  }
+
+  return {
+    id: `cred_${cert.id}`,
+    credentialId: cert.certificateId,
+    userId: cert.userId,
+    type,
+    sourceType,
+    sourceKey,
+    status:
+      cert.status === CertificateStatus.REVOKED
+        ? CredentialStatus.REVOKED
+        : CredentialStatus.ISSUED,
+    title: cert.type,
+    recipientName: cert.recipientName,
+    metadata:
+      cert.metadata === null
+        ? Prisma.JsonNull
+        : (cert.metadata as Prisma.InputJsonValue),
+    issuedAt: cert.issuedAt,
+    revokedAt: cert.revokedAt,
+    revokedReason: cert.revokedReason,
+  };
+}
+
+/**
+ * Upsert CandidateProfile (+ registration-owned education/experience) from the
+ * legacy StudentProfile already written in this transaction. Does not touch
+ * CandidateVisibility. Does not copy challenge domain.
+ */
+export async function dualWriteCandidateIdentity(
+  tx: Tx,
+  userId: string,
+): Promise<void> {
+  await runDualWrite(tx, "candidateIdentity", async () => {
+    const sp = await tx.studentProfile.findUnique({
+      where: { userId },
+      select: {
+        userId: true,
+        fullName: true,
+        userType: true,
+        college: true,
+        collegeId: true,
+        graduationYear: true,
+        organization: true,
+        role: true,
+        yearsExperience: true,
+        phone: true,
+        phoneVerified: true,
+        phoneVerifiedAt: true,
+        linkedinUrl: true,
+        githubUsername: true,
+        resumeUrl: true,
+        referralCode: true,
+        isReadyForInterview: true,
+        isCampusAmbassadorCandidate: true,
+        ambassadorAppliedAt: true,
+        ambassadorDismissedAt: true,
+      },
+    });
+    if (!sp) {
+      throw new Error(`Missing StudentProfile for ${userId}`);
+    }
+
+    const existing = await tx.candidateProfile.findUnique({
+      where: { userId },
+      select: { referralCode: true, phoneVerifiedAt: true },
+    });
+
+    const phoneVerifiedAt =
+      sp.phoneVerifiedAt ??
+      existing?.phoneVerifiedAt ??
+      (sp.phoneVerified ? new Date() : null);
+    const referralCode = existing?.referralCode ?? sp.referralCode;
+    const persona = personaFromUserType(sp.userType);
+
+    await tx.candidateProfile.upsert({
+      where: { userId },
+      create: {
+        id: `cp_${userId}`,
+        userId,
+        fullName: sp.fullName,
+        primaryPersona: persona,
+        phone: sp.phone,
+        phoneVerified: sp.phoneVerified,
+        phoneVerifiedAt,
+        linkedinUrl: sp.linkedinUrl,
+        githubUsername: sp.githubUsername,
+        resumeUrl: sp.resumeUrl,
+        referralCode,
+        isReadyForInterview: sp.isReadyForInterview,
+        isCampusAmbassadorCandidate: sp.isCampusAmbassadorCandidate,
+        ambassadorAppliedAt: sp.ambassadorAppliedAt,
+        ambassadorDismissedAt: sp.ambassadorDismissedAt,
+      },
+      update: {
+        fullName: sp.fullName,
+        primaryPersona: persona,
+        phone: sp.phone,
+        phoneVerified: sp.phoneVerified,
+        phoneVerifiedAt,
+        linkedinUrl: sp.linkedinUrl,
+        githubUsername: sp.githubUsername,
+        resumeUrl: sp.resumeUrl,
+        isReadyForInterview: sp.isReadyForInterview,
+        isCampusAmbassadorCandidate: sp.isCampusAmbassadorCandidate,
+        ambassadorAppliedAt: sp.ambassadorAppliedAt,
+        ambassadorDismissedAt: sp.ambassadorDismissedAt,
+      },
+    });
+
+    if (sp.college || sp.collegeId || sp.graduationYear != null) {
+      await tx.candidateEducation.upsert({
+        where: { id: educationIdForStudentProfile(userId) },
+        create: {
+          id: educationIdForStudentProfile(userId),
+          userId,
+          institutionName: sp.college?.trim() || "Not specified",
+          collegeId: sp.collegeId,
+          graduationYear: sp.graduationYear,
+          sortOrder: 0,
+        },
+        update: {
+          institutionName: sp.college?.trim() || "Not specified",
+          collegeId: sp.collegeId,
+          graduationYear: sp.graduationYear,
+        },
+      });
+    }
+
+    if (sp.organization || sp.role || sp.yearsExperience != null) {
+      const years = sp.yearsExperience ?? 0;
+      await tx.candidateExperience.upsert({
+        where: { id: experienceIdForStudentProfile(userId) },
+        create: {
+          id: experienceIdForStudentProfile(userId),
+          userId,
+          companyName: sp.organization?.trim() || "Not specified",
+          title: sp.role?.trim() || "Not specified",
+          startedOn: new Date(
+            Date.UTC(new Date().getUTCFullYear() - Math.max(years, 0), 0, 1),
+          ),
+          isCurrent: true,
+          totalMonths: Math.max(0, years) * 12,
+        },
+        update: {
+          companyName: sp.organization?.trim() || "Not specified",
+          title: sp.role?.trim() || "Not specified",
+          startedOn: new Date(
+            Date.UTC(new Date().getUTCFullYear() - Math.max(years, 0), 0, 1),
+          ),
+          isCurrent: true,
+          totalMonths: Math.max(0, years) * 12,
+        },
+      });
+    }
+  });
+}
+
+/**
+ * Upsert Credential from a legacy Certificate already written in this
+ * transaction. Public id is reused verbatim. Mapping matches Phase 2g.
+ */
+export async function dualWriteCredential(
+  tx: Tx,
+  certificateId: string,
+): Promise<void> {
+  await runDualWrite(tx, "credential", async () => {
+    const cert = await tx.certificate.findUnique({
+      where: { certificateId },
+      select: {
+        id: true,
+        certificateId: true,
+        userId: true,
+        type: true,
+        status: true,
+        recipientName: true,
+        enrollmentId: true,
+        issuedAt: true,
+        revokedAt: true,
+        revokedReason: true,
+        metadata: true,
+      },
+    });
+    if (!cert) {
+      throw new Error(`Missing Certificate ${certificateId}`);
+    }
+    const row = mapCertificateToCredential(cert);
+    await tx.credential.upsert({
+      where: { credentialId: row.credentialId },
+      create: row,
+      update: {
+        status: row.status,
+        recipientName: row.recipientName,
+        metadata: row.metadata,
+        revokedAt: row.revokedAt,
+        revokedReason: row.revokedReason,
+      },
     });
   });
 }

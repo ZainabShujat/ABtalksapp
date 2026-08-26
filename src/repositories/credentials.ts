@@ -53,7 +53,7 @@ export async function listForUser(userId: string): Promise<CredentialView[]> {
   if (isNewCredentialRepoEnabled()) {
     const rows = await prisma.credential.findMany({
       where: { userId },
-      orderBy: { issuedAt: "desc" },
+      orderBy: [{ issuedAt: "desc" }, { credentialId: "asc" }],
       select: {
         credentialId: true,
         userId: true,
@@ -70,7 +70,7 @@ export async function listForUser(userId: string): Promise<CredentialView[]> {
 
   const rows = await prisma.certificate.findMany({
     where: { userId },
-    orderBy: { issuedAt: "desc" },
+    orderBy: [{ issuedAt: "desc" }, { certificateId: "asc" }],
     select: {
       certificateId: true,
       userId: true,

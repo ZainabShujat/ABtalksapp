@@ -1,6 +1,7 @@
 import { UserType } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { writeClient } from "@/lib/db";
 import { studentProfile } from "@/repositories/legacy/student-profile";
+import { dualWriteCandidateIdentity } from "@/repositories/dual-write";
 import {
   updateProfessionalProfileSchema,
   updateStudentProfileSchema,
@@ -69,20 +70,26 @@ export async function updateProfile(
 
     const data = parsed.data;
 
-    await studentProfile.update({
-      where: { userId },
-      data: {
-        fullName: data.fullName,
-        college: data.college,
-        collegeId: data.collegeId || null,
-        graduationYear: data.graduationYear,
-        skills: data.skills,
-        linkedinUrl: data.linkedinUrl ?? null,
-        resumeUrl: data.resumeUrl === "" ? null : data.resumeUrl,
-        githubUsername: data.githubUsername ?? null,
-        phone: data.phone === "" ? null : data.phone,
+    await writeClient().$transaction(
+      async (tx) => {
+        await tx.studentProfile.update({
+          where: { userId },
+          data: {
+            fullName: data.fullName,
+            college: data.college,
+            collegeId: data.collegeId || null,
+            graduationYear: data.graduationYear,
+            skills: data.skills,
+            linkedinUrl: data.linkedinUrl ?? null,
+            resumeUrl: data.resumeUrl === "" ? null : data.resumeUrl,
+            githubUsername: data.githubUsername ?? null,
+            phone: data.phone === "" ? null : data.phone,
+          },
+        });
+        await dualWriteCandidateIdentity(tx, userId);
       },
-    });
+      { maxWait: 10000, timeout: 20000 },
+    );
 
     return { ok: true };
   }
@@ -112,20 +119,26 @@ export async function updateProfile(
 
   const data = parsed.data;
 
-  await studentProfile.update({
-    where: { userId },
-    data: {
-      fullName: data.fullName,
-      organization: data.organization,
-      role: data.role,
-      yearsExperience: data.yearsExperience,
-      skills: data.skills,
-      linkedinUrl: data.linkedinUrl ?? null,
-      resumeUrl: data.resumeUrl === "" ? null : data.resumeUrl,
-      githubUsername: data.githubUsername ?? null,
-      phone: data.phone === "" ? null : data.phone,
+  await writeClient().$transaction(
+    async (tx) => {
+      await tx.studentProfile.update({
+        where: { userId },
+        data: {
+          fullName: data.fullName,
+          organization: data.organization,
+          role: data.role,
+          yearsExperience: data.yearsExperience,
+          skills: data.skills,
+          linkedinUrl: data.linkedinUrl ?? null,
+          resumeUrl: data.resumeUrl === "" ? null : data.resumeUrl,
+          githubUsername: data.githubUsername ?? null,
+          phone: data.phone === "" ? null : data.phone,
+        },
+      });
+      await dualWriteCandidateIdentity(tx, userId);
     },
-  });
+    { maxWait: 10000, timeout: 20000 },
+  );
 
   return { ok: true };
 }

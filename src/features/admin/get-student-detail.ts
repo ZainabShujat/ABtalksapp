@@ -1,5 +1,6 @@
 import type { StudentProfile } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { getBalance } from "@/repositories/points";
 
 export type ChallengeStudentDetail = {
   kind: "challenge";
@@ -137,6 +138,8 @@ export async function getStudentDetail(
     return null;
   }
 
+  const synergyPoints = await getBalance(user.id);
+
   if (!user.studentProfile) {
     if (!user.hackathonParticipant) {
       return null;
@@ -153,7 +156,7 @@ export async function getStudentDetail(
         email: user.email,
         image: user.image,
         joinedAt: participant.createdAt,
-        synergyPoints: user.synergyPoints,
+        synergyPoints,
       },
       hackathon: {
         fullName: participant.fullName,
@@ -233,7 +236,7 @@ export async function getStudentDetail(
       email: user.email,
       image: user.image,
       joinedAt: user.createdAt,
-      synergyPoints: user.synergyPoints,
+      synergyPoints,
     },
     profile: user.studentProfile,
     enrollment,
