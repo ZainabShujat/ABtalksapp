@@ -1,6 +1,7 @@
 import { RedemptionStatus, PointsSourceType } from "@prisma/client";
-import { prisma, writeClient } from "@/lib/db";
+import { writeClient } from "@/lib/db";
 import { dualWritePoints } from "@/repositories/dual-write";
+import { getBalance } from "@/repositories/points";
 
 export type RedeemResult =
   | { ok: true; redemptionId: string; newBalance: number }
@@ -51,11 +52,13 @@ export async function redeemItem(input: {
       });
 
       if (debit.count === 0) {
-        const user = await tx.user.findUnique({
-          where: { id: input.userId },
-          select: { synergyPoints: true },
-        });
-        if (!user) {
+        const current = await getBalance(input.userId, tx);
+        if (
+          (await tx.user.findUnique({
+            where: { id: input.userId },
+            select: { id: true },
+          })) == null
+        ) {
           return {
             ok: false,
             reason: "not_found",
@@ -65,7 +68,7 @@ export async function redeemItem(input: {
         return {
           ok: false,
           reason: "insufficient",
-          message: `You need ${Math.max(item.costSP - user.synergyPoints, 0)} more SP for this item.`,
+          message: `You need ${Math.max(item.costSP - current, 0)} more SP for this item.`,
         };
       }
 
@@ -88,11 +91,6 @@ export async function redeemItem(input: {
         select: { id: true },
       });
 
-      const updated = await tx.user.findUniqueOrThrow({
-        where: { id: input.userId },
-        select: { synergyPoints: true },
-      });
-
       await tx.synergyEvent.create({
         data: {
           userId: input.userId,
@@ -110,10 +108,12 @@ export async function redeemItem(input: {
         reason: `Redeemed ${item.title} (redemptionId=${redemption.id})`,
       });
 
+      const newBalance = await getBalance(input.userId, tx);
+
       return {
         ok: true,
         redemptionId: redemption.id,
-        newBalance: updated.synergyPoints,
+        newBalance,
       };
     },
     { maxWait: 5000, timeout: 10000 },

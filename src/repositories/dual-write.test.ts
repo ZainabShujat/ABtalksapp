@@ -196,6 +196,28 @@ suite("listForUser orders issuedAt desc then public id", () => {
   assert(src.includes('{ certificateId: "asc" }'), "legacy stable key");
 });
 
+suite("admin student detail reads synergy through getBalance", () => {
+  const src = source("src/features/admin/get-student-detail.ts");
+  assert(src.includes("getBalance"), "repo");
+  assert(!src.includes("user.synergyPoints"), "no legacy field on the view");
+});
+
+suite("marketplace page and synergy action read through getMySynergy", () => {
+  const market = source("src/app/marketplace/page.tsx");
+  const action = source("src/app/actions/synergy-actions.ts");
+  const mine = source("src/features/synergy/get-my-synergy.ts");
+  assert(market.includes("getMySynergy"), "marketplace");
+  assert(action.includes("getMySynergy"), "action");
+  assert(mine.includes("getBalance"), "wrapper");
+});
+
+suite("redeem display balance uses getBalance after dual-write", () => {
+  const src = source("src/features/marketplace/redeem-item.ts");
+  assert(src.includes("getBalance"), "repo");
+  assert(src.includes("dualWritePoints"), "writes still dual-written");
+  assert(src.includes("synergyPoints: { gte: item.costSP }"), "legacy write guard");
+});
+
 suite("ENABLE_NEW_* are not flipped in dual-write helpers", () => {
   const src = source("src/repositories/dual-write.ts");
   assert(src.includes("isDualWriteEnabled"), "gated on dual-write");
