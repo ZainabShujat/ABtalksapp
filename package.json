@@ -29,6 +29,8 @@
     "db:check:078:dual-write": "cross-env PHASE2_SAMPLE=1 tsx prisma/scripts/check-078-dual-write.ts",
     "db:check:078:dual-write:rehearsal": "tsx prisma/scripts/check-078-dual-write.ts",
     "db:check:078:phase5": "tsx prisma/scripts/check-078-phase5.ts",
+    "db:check:078:verify:production": "cross-env PHASE2_ALLOW_PRODUCTION=1 tsx prisma/scripts/migrate-078-verify.ts",
+    "db:check:078:phase5:production": "cross-env PHASE2_ALLOW_PRODUCTION=1 tsx prisma/scripts/check-078-phase5.ts",
     "db:078:preflight:production": "tsx prisma/scripts/apply-078-phase1-production.ts",
     "db:migrate:078:phase2:production": "cross-env PHASE2_ALLOW_PRODUCTION=1 tsx prisma/scripts/migrate-078-phase2.ts",
     "db:check:078:drift:production": "cross-env PHASE2_ALLOW_PRODUCTION=1 tsx prisma/scripts/check-078-drift.ts",
@@ -48,6 +50,7 @@
     "test:scout": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/scout-agent.test.ts",
     "test:sample": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/sample-card.test.ts",
     "test:visibility": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/visibility.test.ts",
+    "test:078-dual-write": "NODE_OPTIONS=--conditions=react-server tsx src/repositories/dual-write.test.ts",
     "verify:hire-pool": "tsx scripts/verify-hire-pool.ts",
     "test:virtual": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/virtual-candidate.test.ts"
   },

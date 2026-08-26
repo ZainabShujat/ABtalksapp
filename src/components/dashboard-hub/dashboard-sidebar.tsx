@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import {
   Award,
   Briefcase,
+  ChevronLeft,
+  ChevronRight,
   Grid3X3,
   LogOut,
   Presentation,
@@ -36,10 +38,15 @@ const ICON_MAP: Record<
   user: User,
 };
 
+const SIDEBAR_COLLAPSED_WIDTH_CLASS = "w-[72px]";
+
 type DashboardSidebarProps = {
   user: { name: string; email: string; image: string | null };
   mobileOpen: boolean;
   onNavigate: () => void;
+  collapsible?: boolean;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 };
 
 function initials(name: string) {
@@ -54,25 +61,20 @@ export function DashboardSidebar({
   user,
   mobileOpen,
   onNavigate,
+  collapsible = false,
+  collapsed = false,
+  onToggleCollapse,
 }: DashboardSidebarProps) {
   const pathname = usePathname();
   const displayName = user.name.trim() || user.email || "User";
+  const isCollapsed = collapsible && collapsed;
 
-  const sidebarContent = (
-    <>
-      <div className={SIDEBAR_BRAND_ROW_CLASS}>
-        <Link href="/dashboard" onClick={onNavigate}>
-          <Image
-            src="/abtalks-logo.png"
-            alt="ABTalks"
-            width={120}
-            height={32}
-            className="h-8 w-auto brightness-0"
-          />
-        </Link>
-      </div>
-
-      <nav className="flex-1 space-y-1 px-3 py-4" aria-label="Main">
+  function renderNav(compact: boolean) {
+    return (
+      <nav
+        className={cn("flex-1 space-y-1 py-4", compact ? "px-2" : "px-3")}
+        aria-label="Main"
+      >
         {NAV_ITEMS.map(({ label, href, icon }) => {
           const Icon = ICON_MAP[icon];
           const active =
@@ -84,21 +86,42 @@ export function DashboardSidebar({
               key={href}
               href={href}
               onClick={onNavigate}
+              title={compact ? label : undefined}
+              aria-label={compact ? label : undefined}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 ease-[var(--ease-spark)]",
+                "flex items-center rounded-lg text-sm font-medium transition-colors duration-200 ease-[var(--ease-spark)]",
+                compact
+                  ? "justify-center px-2 py-2.5"
+                  : "gap-3 px-3 py-2.5",
                 active ? HUB_NAV_ACTIVE_CLASS : HUB_NAV_IDLE_CLASS,
               )}
             >
               <Icon className="size-5 shrink-0" aria-hidden />
-              {label}
+              <span className={cn(compact && "sr-only")}>{label}</span>
             </Link>
           );
         })}
       </nav>
+    );
+  }
 
-      <div className={`mt-auto ${SIDEBAR_FOOTER_ROW_CLASS}`}>
-        <div className="flex items-center gap-3">
+  function renderFooter(compact: boolean) {
+    return (
+      <div
+        className={cn(
+          "mt-auto",
+          compact
+            ? "flex shrink-0 flex-col items-center gap-3 border-t border-neutral-200 p-3"
+            : SIDEBAR_FOOTER_ROW_CLASS,
+        )}
+      >
+        <div
+          className={cn(
+            "flex items-center",
+            compact ? "justify-center" : "gap-3",
+          )}
+        >
           {user.image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -114,32 +137,113 @@ export function DashboardSidebar({
               {initials(displayName)}
             </span>
           )}
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-black">
-              {displayName}
-            </p>
-            <p className="truncate text-xs text-[#555555]">{user.email}</p>
-          </div>
+          {!compact ? (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-black">
+                {displayName}
+              </p>
+              <p className="truncate text-xs text-[#555555]">{user.email}</p>
+            </div>
+          ) : null}
         </div>
-        <form action={signOutAction} className="mt-3">
+        <form action={signOutAction} className={cn(!compact && "mt-3")}>
           <button
             type="submit"
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-neutral-200 px-3 py-2 text-sm font-medium text-[#555555] transition-[border-color,background-color,color] duration-200 ease-[var(--ease-spark)] hover:border-[#e05226] hover:bg-[#e05226]/10 hover:text-[#e05226]"
+            title={compact ? "Sign out" : undefined}
+            aria-label={compact ? "Sign out" : undefined}
+            className={cn(
+              "flex items-center justify-center gap-2 rounded-lg border border-neutral-200 text-sm font-medium text-[#555555] transition-[border-color,background-color,color] duration-200 ease-[var(--ease-spark)] hover:border-[#e05226] hover:bg-[#e05226]/10 hover:text-[#e05226]",
+              compact ? "size-9 p-0" : "w-full px-3 py-2",
+            )}
           >
             <LogOut className="size-4" aria-hidden />
-            Sign out
+            <span className={cn(compact && "sr-only")}>Sign out</span>
           </button>
         </form>
       </div>
+    );
+  }
+
+  const expandedContent = (
+    <>
+      <div className={SIDEBAR_BRAND_ROW_CLASS}>
+        <Link href="/dashboard" onClick={onNavigate}>
+          <Image
+            src="/abtalks-logo.png"
+            alt="ABTalks"
+            width={120}
+            height={32}
+            className="h-8 w-auto brightness-0"
+          />
+        </Link>
+      </div>
+      {renderNav(false)}
+      {collapsible && onToggleCollapse ? (
+        <div className="hidden border-t border-neutral-200 px-3 py-2 md:block">
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            aria-expanded={!isCollapsed}
+            aria-label="Collapse sidebar"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-neutral-200 px-3 py-2 text-sm font-medium text-[#555555] transition-colors duration-200 ease-[var(--ease-spark)] hover:border-[#e05226] hover:text-[#e05226]"
+          >
+            <ChevronLeft className="size-4" aria-hidden />
+            <span>Collapse</span>
+          </button>
+        </div>
+      ) : null}
+      {renderFooter(false)}
     </>
   );
+
+  const collapsedContent = (
+    <>
+      <div className="flex h-[72px] items-center justify-center border-b border-neutral-200">
+        <Link
+          href="/dashboard"
+          onClick={onNavigate}
+          aria-label="ABTalks dashboard"
+        >
+          <Image
+            src="/abtalks-logo.png"
+            alt=""
+            width={32}
+            height={32}
+            className="h-8 w-8 object-contain brightness-0"
+          />
+        </Link>
+      </div>
+      {renderNav(true)}
+      {onToggleCollapse ? (
+        <div className="border-t border-neutral-200 p-2">
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            aria-expanded={false}
+            aria-label="Expand sidebar"
+            className="flex w-full items-center justify-center rounded-lg border border-neutral-200 py-2 text-[#555555] transition-colors duration-200 ease-[var(--ease-spark)] hover:border-[#e05226] hover:text-[#e05226]"
+          >
+            <ChevronRight className="size-4" aria-hidden />
+          </button>
+        </div>
+      ) : null}
+      {renderFooter(true)}
+    </>
+  );
+
+  const desktopWidth = isCollapsed
+    ? SIDEBAR_COLLAPSED_WIDTH_CLASS
+    : SIDEBAR_WIDTH_CLASS;
 
   return (
     <>
       <aside
-        className={`sticky top-0 hidden h-svh shrink-0 flex-col overflow-y-auto border-r border-neutral-200 bg-[#FBF9F7] md:flex ${SIDEBAR_WIDTH_CLASS}`}
+        className={cn(
+          "sticky top-0 hidden h-svh shrink-0 flex-col overflow-y-auto border-r border-neutral-200 bg-[#FBF9F7] transition-[width] duration-200 ease-[var(--ease-spark)] md:flex",
+          desktopWidth,
+        )}
       >
-        {sidebarContent}
+        {isCollapsed ? collapsedContent : expandedContent}
       </aside>
 
       <aside
@@ -152,7 +256,7 @@ export function DashboardSidebar({
           mobileOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        {sidebarContent}
+        {expandedContent}
       </aside>
     </>
   );

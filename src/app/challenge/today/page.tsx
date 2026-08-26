@@ -41,5 +41,10 @@ export default async function ChallengeTodayPage({
     enrollment.challenge,
   );
   const enc = encodeURIComponent(enrollment.id);
+
+  if (enrollment.domain === "CLAUDE") {
+    redirect(`/claude/day/${currentDayNumber}?challenge=${enc}`);
+  }
+
   redirect(`/challenge/${currentDayNumber}?challenge=${enc}`);
 }

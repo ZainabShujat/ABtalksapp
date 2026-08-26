@@ -2,15 +2,20 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { isNewPointsRepoEnabled } from "@/lib/feature-flags";
 
-export async function getBalance(userId: string): Promise<number> {
+type PointsReadClient = Pick<typeof prisma, "pointsAccount" | "user">;
+
+export async function getBalance(
+  userId: string,
+  db: PointsReadClient = prisma,
+): Promise<number> {
   if (isNewPointsRepoEnabled()) {
-    const account = await prisma.pointsAccount.findUnique({
+    const account = await db.pointsAccount.findUnique({
       where: { userId },
       select: { balance: true },
     });
     return account?.balance ?? 0;
   }
-  const user = await prisma.user.findUnique({
+  const user = await db.user.findUnique({
     where: { id: userId },
     select: { synergyPoints: true },
   });

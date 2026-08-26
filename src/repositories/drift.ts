@@ -48,7 +48,9 @@ export async function checkDualWriteDrift(): Promise<DriftReport> {
     prisma.$queryRaw<CountRow[]>`
       SELECT COUNT(*)::bigint AS n FROM "ProgramEnrollment" WHERE id LIKE 'pe_pm_%'`,
     prisma.$queryRaw<CountRow[]>`SELECT COUNT(*)::bigint AS n FROM "SynergyEvent"`,
-    prisma.$queryRaw<CountRow[]>`SELECT COUNT(*)::bigint AS n FROM "PointsTransaction"`,
+    prisma.$queryRaw<CountRow[]>`
+      SELECT COUNT(*)::bigint AS n FROM "PointsTransaction"
+      WHERE "idempotencyKey" NOT LIKE 'reconciliation:phase2:%'`,
   ]);
 
   const deltas: DriftDelta[] = [

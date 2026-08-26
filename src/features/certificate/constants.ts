@@ -282,3 +282,19 @@ export function certificateDomainLabel(domain: Domain | null): string {
     default: return "—";
   }
 }
+
+/** Phase 2g stores CertificateType on Credential.title. */
+export function certificateTypeFromCredentialTitle(
+  title: string,
+): CertificateType | null {
+  if (title in CERTIFICATE_TYPES) return title as CertificateType;
+  return null;
+}
+
+/**
+ * Track snapshot is on Certificate.domain, not Credential. Claude issuance
+ * always writes Domain.CLAUDE; other types have null domain.
+ */
+export function domainForCertificateType(type: CertificateType): Domain | null {
+  return type === CertificateType.CLAUDE_CHALLENGE ? Domain.CLAUDE : null;
+}

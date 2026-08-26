@@ -1,5 +1,11 @@
 # Plan 078 — conservative production rollout (2026-08-24)
 
+**Current posture (2026-08-25).** Phase 2 backfill is done. Pass #1 of the
+unscoped Phase 5 pack was clean at `2026-08-24T15:57:57Z`. Production stays
+on **legacy reads** + `ENABLE_DUAL_WRITE=true`. All `ENABLE_NEW_*` remain
+off. Do **not** start Phase 6 until pass #2 (earliest
+`2026-08-25T15:57:57Z`) is clean. Phase 6 runbook: `docs/plans/095-phase6-read-switches.md`.
+
 Gate checklist **before** any production write. Phase 6 is **not** in this
 rollout. Legacy tables stay authoritative. New 078 tables are additive
 shadow storage.
