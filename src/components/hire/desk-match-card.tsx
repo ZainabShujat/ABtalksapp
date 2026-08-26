@@ -17,6 +17,7 @@ import {
   useUpgradePrompt,
 } from "@/components/hire/locked-field";
 import { cn } from "@/lib/utils";
+import { SKILL_PILL_CAP } from "@/components/hire/hire-card-facts";
 
 function trackLabel(source?: CandidateSource): string | null {
   switch (source) {
@@ -258,15 +259,12 @@ export function DeskMatchCard({
             {e.cleanPassCount} first-attempt
           </span>
         )}
-        {typeof e.yearsExperience === "number" && e.yearsExperience > 0 && (
-          <span className="desk-pill">{e.yearsExperience} yrs</span>
-        )}
-        {(e.workingLanguages ?? []).slice(0, 3).map((l) => (
-          <span key={l} className="desk-pill desk-pill--good">
-            {l.toLowerCase()}
-          </span>
-        ))}
-        {skills.slice(0, 5).map((s) => {
+        {/* Years and working languages used to sit here too, which put ten
+            pills on a card. Both were already said: the years are in the meta
+            row directly above, and a working language is the same word as the
+            skill beside it — "python" next to "Python". What is left is the
+            evidence a CV cannot claim, plus three skills. */}
+        {skills.slice(0, SKILL_PILL_CAP).map((s) => {
           const hit = needles.some((n) =>
             s.toLowerCase().includes(n.toLowerCase()),
           );

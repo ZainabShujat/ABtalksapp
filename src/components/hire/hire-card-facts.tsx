@@ -105,6 +105,19 @@ export function MatchMetaTags({ match }: { match: Pick<MatchCardData, "evidence"
 }
 
 /** Evidence + skill pills used on list cards. */
+/**
+ * Three skill pills, everywhere.
+ *
+ * Three cards drew this row and each picked its own number — 5, 5 and 4 — so
+ * capping one of them left the others as tag clouds. A card carrying five skill
+ * pills on top of the evidence pills is read to the second one and abandoned.
+ *
+ * The evidence pills are not capped with them: "24 of 31 missions passed" is the
+ * one thing on this card a CV cannot claim, so it is the last thing that should
+ * be trimmed for space.
+ */
+export const SKILL_PILL_CAP = 3;
+
 export function MatchPills({
   match,
   compact = false,
@@ -119,7 +132,7 @@ export function MatchPills({
   const isChallenge = match.source === "CLAUDE" || match.source === "CHALLENGE_60";
   const workLabel = isChallenge ? "days shipped" : "missions passed";
   const totalDays = e.totalTrackDays;
-  const skillCap = compact ? 4 : 5;
+  const skillCap = SKILL_PILL_CAP;
 
   return (
     <div className="desk-card__facts">
