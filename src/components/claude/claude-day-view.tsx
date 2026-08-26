@@ -513,38 +513,48 @@ export function ClaudeDayView({
             </div>
           </section>
         ) : (
-          <section className="rounded-[12px] border border-[#E0E0E0] bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] md:p-5">
+          <section className="min-w-0 overflow-hidden rounded-[12px] border border-[#E0E0E0] bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] md:p-5">
             <h2 className="mb-4 font-heading text-base font-semibold text-[#111111] md:text-lg">
               {existingSubmission ? "Your submission" : "View only"}
             </h2>
             {existingSubmission &&
             (existingSubmission.githubUrl || existingSubmission.linkedinUrl) ? (
-              <div className="mb-4 space-y-3 text-sm">
+              <div className="mb-4 min-w-0 space-y-3 text-sm">
                 {existingSubmission.githubUrl ? (
-                  <div className="space-y-1">
+                  <div className="min-w-0 space-y-1">
                     <p className="font-medium text-[#8F8F8F]">GitHub</p>
                     <a
                       href={existingSubmission.githubUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-[#E05226] underline-offset-4 hover:underline"
+                      className="flex max-w-full items-start gap-1 text-[#E05226] underline-offset-4 hover:underline"
                     >
-                      {existingSubmission.githubUrl}
-                      <ExternalLink className="size-3.5" aria-hidden />
+                      <span className="min-w-0 flex-1 break-all">
+                        {existingSubmission.githubUrl}
+                      </span>
+                      <ExternalLink
+                        className="mt-0.5 size-3.5 shrink-0"
+                        aria-hidden
+                      />
                     </a>
                   </div>
                 ) : null}
                 {existingSubmission.linkedinUrl ? (
-                  <div className="space-y-1">
+                  <div className="min-w-0 space-y-1">
                     <p className="font-medium text-[#8F8F8F]">LinkedIn</p>
                     <a
                       href={existingSubmission.linkedinUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-[#E05226] underline-offset-4 hover:underline"
+                      className="flex max-w-full items-start gap-1 text-[#E05226] underline-offset-4 hover:underline"
                     >
-                      {existingSubmission.linkedinUrl}
-                      <ExternalLink className="size-3.5" aria-hidden />
+                      <span className="min-w-0 flex-1 break-all">
+                        {existingSubmission.linkedinUrl}
+                      </span>
+                      <ExternalLink
+                        className="mt-0.5 size-3.5 shrink-0"
+                        aria-hidden
+                      />
                     </a>
                   </div>
                 ) : null}
