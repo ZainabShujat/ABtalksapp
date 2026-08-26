@@ -75,7 +75,6 @@ export const LEGAL_ENTITY = {
   entityType: "Sole Proprietorship",
   tradingName: "ABTalks",
   address:
-    "Flat No 803-A, Tower 2A, 8th Floor, Panchsheel Wellington, " +
     "Crossing Republic, Ghaziabad, Uttar Pradesh 201016, India",
   registrationNumber: "UDYAM-UP-29-0250625",
   registrationType: "Udyam Registration (MSME)",

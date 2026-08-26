@@ -13,7 +13,6 @@ import type { Domain } from "@prisma/client";
 import { auth } from "@/auth";
 import { AppHeader } from "@/components/shared/app-header";
 import { EnrollmentEndedScreen } from "@/components/dashboard/enrollment-ended-screen";
-import { QuizUnlockBanner } from "@/components/dashboard/quiz-unlock-banner";
 import { ConsentRefreshBanner } from "@/components/legal/consent-refresh-banner";
 import { needsReconsent } from "@/features/legal/needs-reconsent";
 import { PastMissedChallengeToast } from "@/components/dashboard/past-missed-challenge-toast";
@@ -39,17 +38,11 @@ import { formatDateIST, isEnrollmentPreStart } from "@/lib/date-utils";
 import { PreStartDashboard } from "@/components/dashboard/pre-start-dashboard";
 import { prisma } from "@/lib/db";
 import { isUserRegistered } from "@/features/hackathon/registration-status";
-import { ClaudeChallengeModal } from "@/components/dashboard/claude-challenge-modal";
 import { getUserActiveEnrollments } from "@/features/enrollment/get-user-enrollments";
-import { isClaudeEnabled, isOtpVerificationRequired } from "@/lib/feature-flags";
-import { shouldShowClaudeBanner } from "@/features/user/check-claude-enrollment";
-import { ClaudeEnrollmentBanner } from "@/components/shared/claude-enrollment-banner";
-import { CampusAmbassadorBanner } from "@/components/dashboard/campus-ambassador-banner";
+import { isOtpVerificationRequired } from "@/lib/feature-flags";
 import { PhoneVerifyNudge } from "@/components/dashboard/phone-verify-nudge";
 import { ClaudeFAQ } from "@/components/shared/claude-faq";
 import { DashboardWalkthrough } from "@/components/dashboard/dashboard-walkthrough";
-import { ClaudeDay0SharePrompt } from "@/components/claude/claude-day0-share-prompt";
-import { HackathonPromoModal } from "@/components/dashboard/hackathon-promo-modal";
 
 const TRACK_PATH: Record<Domain, string> = {
   AI: "/ai",
@@ -130,7 +123,6 @@ export async function TrackPage({ domain, searchParams }: TrackPageProps) {
   const trackPath = TRACK_PATH[domain];
   const showPastMissedToast = readQueryParam(query, "toast") === "past-missed";
   const trackPathWithoutToast = `${trackPath}${stripQueryKeys(query, ["toast"])}`;
-  const claudeEnabled = isClaudeEnabled();
 
   const [allEnrollments, data, isHackathonRegistered] = await Promise.all([
     getUserActiveEnrollments(session.user.id),
@@ -157,34 +149,10 @@ export async function TrackPage({ domain, searchParams }: TrackPageProps) {
   };
   const { enrollment, profile, todayTask, isTodayCompleted } = dashboardData;
 
-  const hasClaudeEnrollment = allEnrollments.some((e) => e.domain === "CLAUDE");
-  const claudeEnrollment = allEnrollments.find((e) => e.domain === "CLAUDE");
-  let hasClaudeDay1Submission = false;
-  if (claudeEnrollment) {
-    const day1 = await prisma.submission.findUnique({
-      where: {
-        enrollmentId_dayNumber: {
-          enrollmentId: claudeEnrollment.id,
-          dayNumber: 1,
-        },
-      },
-      select: { id: true },
-    });
-    hasClaudeDay1Submission = day1 != null;
-  }
-  const shouldShowAmbassadorBanner =
-    profile.userType === "STUDENT" &&
-    !profile.isCampusAmbassadorCandidate &&
-    !profile.ambassadorDismissedAt;
-
   const isPreStart = isEnrollmentPreStart(
     dashboardData.enrollment,
     dashboardData.enrollment.challenge,
   );
-
-  const claudeBanner = claudeEnabled
-    ? await shouldShowClaudeBanner(session.user.id, hasClaudeEnrollment)
-    : { show: false, startsAt: null as Date | null };
 
   if (dashboardData.enrollment.status === "ABANDONED") {
     const endedAction = await prisma.adminAction.findFirst({
@@ -225,17 +193,6 @@ export async function TrackPage({ domain, searchParams }: TrackPageProps) {
           headerDomain={dashboardData.enrollment.domain}
           domain={dashboardData.profile.domain as Domain}
         />
-        {!hasClaudeEnrollment && claudeBanner.show && claudeBanner.startsAt ? (
-          <ClaudeEnrollmentBanner
-            claudeStartsAt={claudeBanner.startsAt}
-            useSharedModal
-          />
-        ) : null}
-        {hasClaudeEnrollment && shouldShowAmbassadorBanner ? (
-          <CampusAmbassadorBanner
-            alreadyApplied={profile.isCampusAmbassadorCandidate}
-          />
-        ) : null}
         <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1">
           <EnrollmentEndedScreen
             studentName={dashboardData.profile.fullName}
@@ -247,9 +204,6 @@ export async function TrackPage({ domain, searchParams }: TrackPageProps) {
       </div>
     );
   }
-
-  const showClaudeModal = claudeBanner.show && !!claudeBanner.startsAt;
-  const claudeModalStartsAt = claudeBanner.startsAt;
 
   if (isPreStart) {
     return (
@@ -266,27 +220,12 @@ export async function TrackPage({ domain, searchParams }: TrackPageProps) {
           headerDomain={dashboardData.enrollment.domain}
           domain={dashboardData.profile.domain as Domain}
         />
-        {!hasClaudeEnrollment && claudeBanner.show && claudeBanner.startsAt ? (
-          <ClaudeEnrollmentBanner
-            claudeStartsAt={claudeBanner.startsAt}
-            useSharedModal
-          />
-        ) : null}
-        {hasClaudeEnrollment && shouldShowAmbassadorBanner ? (
-          <CampusAmbassadorBanner
-            alreadyApplied={profile.isCampusAmbassadorCandidate}
-          />
-        ) : null}
-        {hasClaudeEnrollment ? (
-          <ClaudeDay0SharePrompt hasDay1Submission={hasClaudeDay1Submission} />
-        ) : null}
         {showPastMissedToast ? (
           <PastMissedChallengeToast
             trigger={showPastMissedToast}
             cleanPath={trackPathWithoutToast}
           />
         ) : null}
-        <HackathonPromoModal />
         <div className="relative z-10 flex-1">
           <PreStartDashboard
             enrollment={{
@@ -336,24 +275,6 @@ export async function TrackPage({ domain, searchParams }: TrackPageProps) {
         headerDomain={dashboardData.enrollment.domain}
         domain={dashboardData.profile.domain as Domain}
       />
-      {!hasClaudeEnrollment && claudeBanner.show && claudeBanner.startsAt ? (
-        <ClaudeEnrollmentBanner
-          claudeStartsAt={claudeBanner.startsAt}
-          useSharedModal
-        />
-      ) : null}
-      {hasClaudeEnrollment && shouldShowAmbassadorBanner ? (
-        <CampusAmbassadorBanner
-            alreadyApplied={profile.isCampusAmbassadorCandidate}
-          />
-      ) : null}
-      {showClaudeModal && claudeModalStartsAt ? (
-        <ClaudeChallengeModal startsAt={claudeModalStartsAt} />
-      ) : null}
-      <HackathonPromoModal />
-      {hasClaudeEnrollment ? (
-        <ClaudeDay0SharePrompt hasDay1Submission={hasClaudeDay1Submission} />
-      ) : null}
       {showPastMissedToast ? (
         <PastMissedChallengeToast
           trigger={showPastMissedToast}
@@ -368,16 +289,6 @@ export async function TrackPage({ domain, searchParams }: TrackPageProps) {
       ) : null}
       <main className="relative z-10 mx-auto w-full max-w-6xl flex-1 space-y-6 px-4 py-6 sm:px-6">
         <ConsentRefreshBanner needsReconsent={mustReconsent} />
-        {quizAvailability.banner ? (
-          <div className="mb-6">
-            <QuizUnlockBanner
-              weekNumber={quizAvailability.banner.weekNumber}
-              quizId={quizAvailability.banner.quizId}
-              title={quizAvailability.banner.title}
-              questionCount={quizAvailability.banner.questionCount}
-            />
-          </div>
-        ) : null}
 
         <Card className="shadow-md">
           <CardHeader className="pb-3">

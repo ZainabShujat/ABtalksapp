@@ -192,6 +192,12 @@
   --elevation-pop: 0 10px 48px -10px hsl(224 71% 2% / 0.70);
 }
 
+.theme-abtalks-orange {
+  --primary: 14 75% 51%; /* #E05226 */
+  --primary-foreground: 0 0% 100%;
+  --ring: 14 75% 51%;
+}
+
 /* Theme-independent light surface for shareable recruiter report (/r/[token]) */
 .report-light {
   --background: 38 38% 98%;

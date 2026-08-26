@@ -9,6 +9,7 @@ import {
   getActivityHeatmap,
   type ActivityHeatmap,
 } from "@/features/dashboard/get-activity-heatmap";
+import type { ActivityStreak } from "@/features/dashboard/compute-activity-streak";
 
 export type HubDataNoUser = {
   hasUser: false;
@@ -32,7 +33,7 @@ export type HubData = {
   hasProgramMembership: boolean;
   isHackathonRegistered: boolean;
   heatmap: ActivityHeatmap;
-  streak: { current: number; longest: number };
+  streak: ActivityStreak;
 };
 
 export async function getHubData(
@@ -87,13 +88,6 @@ export async function getHubData(
     ...new Set(rows.filter((r) => r.status === "ABANDONED").map((r) => r.domain)),
   ];
 
-  let current = 0;
-  let longest = 0;
-  for (const r of joined) {
-    current = Math.max(current, r.currentStreak);
-    longest = Math.max(longest, r.longestStreak);
-  }
-
   return {
     hasUser: true,
     profile,
@@ -103,6 +97,6 @@ export async function getHubData(
     hasProgramMembership,
     isHackathonRegistered,
     heatmap,
-    streak: { current, longest },
+    streak: heatmap.streak,
   };
 }

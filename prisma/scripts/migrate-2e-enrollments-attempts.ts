@@ -36,6 +36,7 @@ import {
   SAMPLE_DAY_CAP,
   whereUserId,
 } from "./migrate-078-shared";
+import { bulkUpsertBatched } from "./migrate-078-bulk";
 
 const prisma = new PrismaClient();
 
@@ -89,23 +90,24 @@ async function main() {
         droppedAt: e.status === EnrollmentStatus.ABANDONED ? e.updatedAt : null,
       };
     });
-    let peCreated = 0;
-    await chunked(peRows, 40, async (chunk) => {
-      for (const row of chunk) {
-        await ctx.prisma.programEnrollment.upsert({
-          where: { id: row.id },
-          create: row,
-          update: {
-            status: row.status,
-            startedAt: row.startedAt,
-            enrolledAt: row.enrolledAt,
-            completedAt: row.completedAt,
-            droppedAt: row.droppedAt,
-          },
-        });
-        peCreated += 1;
-      }
+    const now = new Date();
+    await bulkUpsertBatched(ctx.prisma, {
+      label: "2e-pe-enrollments",
+      table: "ProgramEnrollment",
+      cursorField: "id",
+      rows: peRows.map((row) => ({ ...row, updatedAt: now })),
+      conflict: ["id"],
+      update: [
+        "status",
+        "startedAt",
+        "enrolledAt",
+        "completedAt",
+        "droppedAt",
+        "updatedAt",
+      ],
+      casts: { status: '"EnrollmentStatusV2"' },
     });
+    let peCreated = peRows.length;
 
     const members = await ctx.prisma.programMember.findMany({ where: uw });
     const memberPe = members.map((m) => {
@@ -125,25 +127,26 @@ async function main() {
         skipTokensUsed: m.skipTokensUsed,
       };
     });
-    await chunked(memberPe, 40, async (chunk) => {
-      for (const row of chunk) {
-        await ctx.prisma.programEnrollment.upsert({
-          where: { id: row.id },
-          create: row,
-          update: {
-            status: row.status,
-            startedAt: row.startedAt,
-            enrolledAt: row.enrolledAt,
-            completedAt: row.completedAt,
-            droppedAt: row.droppedAt,
-            githubRepoUrl: row.githubRepoUrl,
-            unlockFloorDay: row.unlockFloorDay,
-            skipTokensUsed: row.skipTokensUsed,
-          },
-        });
-        peCreated += 1;
-      }
+    await bulkUpsertBatched(ctx.prisma, {
+      label: "2e-pe-members",
+      table: "ProgramEnrollment",
+      cursorField: "id",
+      rows: memberPe.map((row) => ({ ...row, updatedAt: now })),
+      conflict: ["id"],
+      update: [
+        "status",
+        "startedAt",
+        "enrolledAt",
+        "completedAt",
+        "droppedAt",
+        "githubRepoUrl",
+        "unlockFloorDay",
+        "skipTokensUsed",
+        "updatedAt",
+      ],
+      casts: { status: '"EnrollmentStatusV2"' },
     });
+    peCreated += memberPe.length;
 
     const submissions = await ctx.prisma.submission.findMany({
       where: sample ? { ...uw, dayNumber: { lte: SAMPLE_DAY_CAP } } : uw,
@@ -167,22 +170,26 @@ async function main() {
       startedAt: s.submittedAt,
       submittedAt: s.submittedAt,
     }));
-    let attempts = 0;
-    await chunked(subAttempts, 40, async (chunk) => {
-      for (const row of chunk) {
-        await ctx.prisma.activityAttempt.upsert({
-          where: { id: row.id },
-          create: row,
-          update: {
-            payload: row.payload,
-            passed: row.passed,
-            lateness: row.lateness,
-            pointsAwarded: row.pointsAwarded,
-            submittedAt: row.submittedAt,
-          },
-        });
-        attempts += 1;
-      }
+    let attempts = subAttempts.length;
+    await bulkUpsertBatched(ctx.prisma, {
+      label: "2e-attempts-submissions",
+      table: "ActivityAttempt",
+      cursorField: "id",
+      rows: subAttempts.map((row) => ({ ...row, updatedAt: now })),
+      conflict: ["id"],
+      update: [
+        "payload",
+        "passed",
+        "lateness",
+        "pointsAwarded",
+        "submittedAt",
+        "updatedAt",
+      ],
+      casts: {
+        status: '"AttemptStatus"',
+        lateness: '"AttemptLateness"',
+        payload: "jsonb",
+      },
     });
     const subEvals = submissions.map((s) => ({
       id: `ev_sub_${s.id}`,
@@ -323,21 +330,26 @@ async function main() {
         });
       }
     }
-    await chunked(msAttempts, 40, async (chunk) => {
-      for (const row of chunk) {
-        await ctx.prisma.activityAttempt.upsert({
-          where: { id: row.id },
-          create: row,
-          update: {
-            payload: row.payload,
-            passed: row.passed,
-            pointsAwarded: row.pointsAwarded,
-            submittedAt: row.submittedAt,
-          },
-        });
-        attempts += 1;
-      }
+    await bulkUpsertBatched(ctx.prisma, {
+      label: "2e-attempts-missions",
+      table: "ActivityAttempt",
+      cursorField: "id",
+      rows: msAttempts.map((row) => ({ ...row, updatedAt: now })),
+      conflict: ["id"],
+      update: [
+        "payload",
+        "passed",
+        "pointsAwarded",
+        "submittedAt",
+        "updatedAt",
+      ],
+      casts: {
+        status: '"AttemptStatus"',
+        lateness: '"AttemptLateness"',
+        payload: "jsonb",
+      },
     });
+    attempts += msAttempts.length;
     await chunked(msEvals, 200, async (chunk) => {
       const r = await ctx.prisma.activityEvaluation.createMany({
         data: chunk,
@@ -636,16 +648,32 @@ async function main() {
       };
     });
 
-    let progress = 0;
-    await chunked(progressRows, 100, async (chunk) => {
-      for (const row of chunk) {
-        await ctx.prisma.enrollmentProgress.upsert({
-          where: { enrollmentId: row.enrollmentId },
-          create: row,
-          update: row,
-        });
-        progress += 1;
-      }
+    const progress = progressRows.length;
+    await bulkUpsertBatched(ctx.prisma, {
+      label: "2e-progress",
+      table: "EnrollmentProgress",
+      cursorField: "enrollmentId",
+      rows: progressRows.map((row) => ({
+        id: `ep_${row.enrollmentId}`,
+        ...row,
+        updatedAt: now,
+      })),
+      conflict: ["enrollmentId"],
+      update: [
+        "cohortId",
+        "completedActivities",
+        "totalActivities",
+        "percentCompleteBp",
+        "pointsEarned",
+        "pointsPossible",
+        "currentStreak",
+        "longestStreak",
+        "lastActivityAt",
+        "currentActivityId",
+        "nextActivityId",
+        "recomputedAt",
+        "updatedAt",
+      ],
     });
 
     return {

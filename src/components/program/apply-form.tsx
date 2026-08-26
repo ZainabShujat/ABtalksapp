@@ -8,11 +8,6 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { z } from "zod";
 import { applyToProgramAction } from "@/app/actions/program-entry-actions";
-import {
-  LegalConsentFields,
-  legalConsentAccepted,
-  type LegalConsentValues,
-} from "@/components/legal/legal-consent-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,32 +23,27 @@ function FieldError({ message }: { message?: string }) {
   return <p className="text-[0.8rem] font-medium text-destructive">{message}</p>;
 }
 
-export function ApplyForm({ joinCode }: { joinCode: string }) {
+export function ApplyForm({
+  joinCode,
+  initialLinkedinUrl,
+  initialSkills,
+}: {
+  joinCode: string;
+  initialLinkedinUrl: string;
+  initialSkills: string[];
+}) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [skillInput, setSkillInput] = useState("");
-  const [legalConsent, setLegalConsent] = useState<LegalConsentValues>({
-    acceptLegal: false,
-    newsletterOptIn: true,
-  });
   const [recruiterVisibility, setRecruiterVisibility] = useState(false);
 
   const form = useForm<ApplyFormInput, unknown, ApplyProfileInput>({
     resolver: zodResolver(applyProfileSchema),
     defaultValues: {
-      fullName: "",
-      jobRole: "",
-      company: "",
-      education: "",
-      university: "",
-      skills: [],
-      linkedinUrl: "",
-      resumeUrl: "",
-      phone: "",
+      skills: initialSkills,
+      linkedinUrl: initialLinkedinUrl,
       githubUsername: "",
       githubRepoUrl: "",
-      acceptLegal: false,
-      newsletterOptIn: true,
       recruiterVisibilityConsent: false,
     },
   });
@@ -101,17 +91,11 @@ export function ApplyForm({ joinCode }: { joinCode: string }) {
   }
 
   async function onSubmit(values: ApplyProfileInput) {
-    if (!legalConsentAccepted(legalConsent)) {
-      toast.error("Please accept the Terms of Service and Privacy Policy.");
-      return;
-    }
     setSubmitting(true);
     try {
       const res = await applyToProgramAction({
         ...values,
         joinCode,
-        acceptLegal: legalConsent.acceptLegal,
-        newsletterOptIn: legalConsent.newsletterOptIn,
         recruiterVisibilityConsent: recruiterVisibility,
       });
       if (!res.ok) {
@@ -130,60 +114,13 @@ export function ApplyForm({ joinCode }: { joinCode: string }) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       <div className="space-y-2">
-        <Label htmlFor="fullName">Full name</Label>
-        <Input id="fullName" {...register("fullName")} />
-        <FieldError message={errors.fullName?.message} />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="jobRole">Current role</Label>
-          <Input id="jobRole" {...register("jobRole")} />
-          <FieldError message={errors.jobRole?.message} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="company">Company</Label>
-          <Input id="company" {...register("company")} />
-          <FieldError message={errors.company?.message} />
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="yearsExperience">Years of experience</Label>
-          <Input
-            id="yearsExperience"
-            type="number"
-            min={0}
-            max={40}
-            {...register("yearsExperience", { valueAsNumber: true })}
-          />
-          <FieldError message={errors.yearsExperience?.message} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="graduationYear">Graduation year (optional)</Label>
-          <Input
-            id="graduationYear"
-            type="number"
-            {...register("graduationYear", {
-              setValueAs: (v) => (v === "" ? "" : Number(v)),
-            })}
-          />
-          <FieldError message={errors.graduationYear?.message} />
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="education">Education (optional)</Label>
-          <Input id="education" {...register("education")} />
-          <FieldError message={errors.education?.message} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="university">University (optional)</Label>
-          <Input id="university" {...register("university")} />
-          <FieldError message={errors.university?.message} />
-        </div>
+        <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
+        <Input
+          id="linkedinUrl"
+          placeholder="https://linkedin.com/in/you"
+          {...register("linkedinUrl")}
+        />
+        <FieldError message={errors.linkedinUrl?.message} />
       </div>
 
       <div className="space-y-2">
@@ -215,29 +152,6 @@ export function ApplyForm({ joinCode }: { joinCode: string }) {
           placeholder="Type a skill and press Enter"
         />
         <FieldError message={errors.skills?.message} />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
-          <Input
-            id="linkedinUrl"
-            placeholder="https://linkedin.com/in/you"
-            {...register("linkedinUrl")}
-          />
-          <FieldError message={errors.linkedinUrl?.message} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="resumeUrl">Resume URL (optional)</Label>
-          <Input id="resumeUrl" {...register("resumeUrl")} />
-          <FieldError message={errors.resumeUrl?.message} />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="phone">Phone (optional)</Label>
-        <Input id="phone" {...register("phone")} />
-        <FieldError message={errors.phone?.message} />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -290,36 +204,27 @@ export function ApplyForm({ joinCode }: { joinCode: string }) {
         <FieldError message={errors.hasLaptop8Gb?.message} />
       </div>
 
-      <LegalConsentFields
-        values={legalConsent}
-        onChange={(next) => {
-          setLegalConsent(next);
-          setValue("acceptLegal", next.acceptLegal);
-          setValue("newsletterOptIn", next.newsletterOptIn);
-        }}
-      >
-        <label className="flex items-start gap-3 text-sm leading-snug">
-          <input
-            type="checkbox"
-            className="mt-0.5 size-4 shrink-0 rounded border"
-            checked={recruiterVisibility}
-            onChange={(e) => {
-              setRecruiterVisibility(e.target.checked);
-              setValue("recruiterVisibilityConsent", e.target.checked);
-            }}
-          />
-          <span>
-            I opt in to share my program profile with approved recruiters on the
-            ABTalks talent portal after results are published (email, LinkedIn,
-            resume, GitHub, scores, and interview summary — not my phone or full
-            interview transcript).
-          </span>
-        </label>
-      </LegalConsentFields>
+      <label className="flex items-start gap-3 text-sm leading-snug">
+        <input
+          type="checkbox"
+          className="mt-0.5 size-4 shrink-0 rounded border"
+          checked={recruiterVisibility}
+          onChange={(e) => {
+            setRecruiterVisibility(e.target.checked);
+            setValue("recruiterVisibilityConsent", e.target.checked);
+          }}
+        />
+        <span>
+          I opt in to share my program profile with approved recruiters on the
+          ABTalks talent portal after results are published (email, LinkedIn,
+          resume, GitHub, scores, and interview summary — not my phone or full
+          interview transcript).
+        </span>
+      </label>
 
       <Button
         type="submit"
-        disabled={submitting || !legalConsentAccepted(legalConsent)}
+        disabled={submitting}
         className="w-full sm:w-auto"
       >        {submitting ? (
           <>

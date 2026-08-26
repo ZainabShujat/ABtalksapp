@@ -19,6 +19,7 @@ import {
   runStep,
   whereUserId,
 } from "./migrate-078-shared";
+import { bulkUpsertBatched } from "./migrate-078-bulk";
 
 const prisma = new PrismaClient();
 
@@ -82,36 +83,46 @@ async function main() {
   await runStep(prisma, "2g-credentials", async (ctx) => {
     const sample = await resolveSampleUserIds(ctx.prisma);
     const certs = await ctx.prisma.certificate.findMany({ where: whereUserId(sample) });
-    let copied = 0;
-    await chunked(certs, 50, async (chunk) => {
-      for (const c of chunk) {
+    const copied = certs.length;
+    const now = new Date();
+    await bulkUpsertBatched(ctx.prisma, {
+      label: "2g-credentials",
+      table: "Credential",
+      cursorField: "credentialId",
+      rows: certs.map((c) => {
         const source = mapSource(c);
-        await ctx.prisma.credential.upsert({
-          where: { credentialId: c.certificateId },
-          create: {
-            credentialId: c.certificateId,
-            userId: c.userId,
-            type: mapType(c),
-            sourceType: source.sourceType,
-            sourceKey: source.sourceKey,
-            status: mapStatus(c.status),
-            title: c.type,
-            recipientName: c.recipientName,
-            metadata: (c.metadata as Prisma.InputJsonValue) ?? Prisma.JsonNull,
-            issuedAt: c.issuedAt,
-            revokedAt: c.revokedAt,
-            revokedReason: c.revokedReason,
-          },
-          update: {
-            status: mapStatus(c.status),
-            recipientName: c.recipientName,
-            metadata: (c.metadata as Prisma.InputJsonValue) ?? Prisma.JsonNull,
-            revokedAt: c.revokedAt,
-            revokedReason: c.revokedReason,
-          },
-        });
-        copied += 1;
-      }
+        return {
+          id: `cred_${c.id}`,
+          credentialId: c.certificateId,
+          userId: c.userId,
+          type: mapType(c),
+          sourceType: source.sourceType,
+          sourceKey: source.sourceKey,
+          status: mapStatus(c.status),
+          title: c.type,
+          recipientName: c.recipientName,
+          metadata: c.metadata ?? null,
+          issuedAt: c.issuedAt,
+          revokedAt: c.revokedAt,
+          revokedReason: c.revokedReason,
+          updatedAt: now,
+        };
+      }),
+      conflict: ["credentialId"],
+      update: [
+        "status",
+        "recipientName",
+        "metadata",
+        "revokedAt",
+        "revokedReason",
+        "updatedAt",
+      ],
+      casts: {
+        type: '"CredentialType"',
+        sourceType: '"CredentialSourceType"',
+        status: '"CredentialStatus"',
+        metadata: "jsonb",
+      },
     });
     return { credentials: copied };
   });

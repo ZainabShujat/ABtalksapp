@@ -1,7 +1,7 @@
 import "server-only";
 import type { Prisma } from "@prisma/client";
 import { formatInTimeZone } from "date-fns-tz";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import {
   PROGRAM_TOTAL_DAYS,
@@ -325,7 +325,7 @@ export async function submitMissionRun(
   let unlockedDay: number | undefined;
   const cleanPass = verifyResult.passed && attemptNumber === 1;
 
-  await prisma.$transaction(async (tx) => {
+  await writeClient().$transaction(async (tx) => {
     if (verifyResult.passed && isFirstPass) {
       pointsAwarded = day.missionPoints;
     }

@@ -14,15 +14,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { SubmissionFlow } from "./submission-flow";
+import { SubmissionFlow } from "@/components/challenge/submission-flow";
 import {
   DayPage,
   type DayContent,
 } from "@/components/challenge/day-page";
 import { AppHeader } from "@/components/shared/app-header";
-import { isClaudeEnabled, isDayLockBypassEnabled } from "@/lib/feature-flags";
-import { shouldShowClaudeBanner } from "@/features/user/check-claude-enrollment";
-import { ClaudeEnrollmentBanner } from "@/components/shared/claude-enrollment-banner";
+import { isDayLockBypassEnabled } from "@/lib/feature-flags";
 import { prisma } from "@/lib/db";
 
 type PageProps = {
@@ -49,21 +47,16 @@ type HeaderUser = {
 
 function ChallengePageShell({
   headerUser,
-  claudeBanner,
   children,
   mainClassName,
 }: {
   headerUser: HeaderUser;
-  claudeBanner: { show: boolean; startsAt: Date | null };
   children: ReactNode;
   mainClassName?: string;
 }) {
   return (
     <div className="flex min-h-svh flex-col bg-muted/30">
       <AppHeader user={headerUser} />
-      {claudeBanner.show && claudeBanner.startsAt ? (
-        <ClaudeEnrollmentBanner claudeStartsAt={claudeBanner.startsAt} />
-      ) : null}
       <div className={cn("flex flex-1 flex-col", mainClassName)}>{children}</div>
     </div>
   );
@@ -82,11 +75,6 @@ export default async function ChallengeDayPage({ params, searchParams }: PagePro
   if (!userExists) {
     redirect("/api/auth/signout?callbackUrl=/login");
   }
-
-  const claudeEnabled = isClaudeEnabled();
-  const claudeBanner = claudeEnabled
-    ? await shouldShowClaudeBanner(session.user.id)
-    : { show: false, startsAt: null as Date | null };
 
   const headerUser = {
     name: session.user.name ?? null,
@@ -114,7 +102,6 @@ export default async function ChallengeDayPage({ params, searchParams }: PagePro
     return (
       <ChallengePageShell
         headerUser={headerUser}
-        claudeBanner={claudeBanner}
         mainClassName="mx-auto w-full max-w-lg justify-center px-4 py-12"
       >
         <Card>
@@ -138,6 +125,11 @@ export default async function ChallengeDayPage({ params, searchParams }: PagePro
     );
   }
 
+  if (data.enrollment.domain === "CLAUDE") {
+    const enc = encodeURIComponent(data.enrollment.id);
+    redirect(`/claude/day/${day}?challenge=${enc}`);
+  }
+
   const bypassEnabled = isDayLockBypassEnabled();
 
   if (!bypassEnabled && !data.isUnlocked) {
@@ -145,7 +137,6 @@ export default async function ChallengeDayPage({ params, searchParams }: PagePro
     return (
       <ChallengePageShell
         headerUser={headerUser}
-        claudeBanner={claudeBanner}
         mainClassName="mx-auto w-full max-w-2xl px-4 py-8"
       >
         <Card>
@@ -198,7 +189,6 @@ export default async function ChallengeDayPage({ params, searchParams }: PagePro
     return (
       <ChallengePageShell
         headerUser={headerUser}
-        claudeBanner={claudeBanner}
         mainClassName="mx-auto w-full max-w-3xl gap-6 px-4 py-8"
       >
         <Card>
@@ -256,7 +246,6 @@ export default async function ChallengeDayPage({ params, searchParams }: PagePro
   return (
     <ChallengePageShell
       headerUser={headerUser}
-      claudeBanner={claudeBanner}
       mainClassName={
         enrichedDayContent
           ? "flex flex-1 flex-col"

@@ -9,15 +9,20 @@ import { GET_STARTED_ITEMS, NAV_LINKS } from "./landing-content";
 
 type Props = {
   user: LandingUser | null;
+  getStartedHref: string;
+  showRecruiterCta?: boolean;
 };
 
 function scrollToId(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 }
 
+type GetStartedItem = (typeof GET_STARTED_ITEMS)[number];
+
 type GetStartedCtaProps = {
   size: "nav" | "sm";
   className?: string;
+  items: readonly GetStartedItem[];
   ctaOpen: boolean;
   menuId: string;
   onOpen: () => void;
@@ -29,6 +34,7 @@ type GetStartedCtaProps = {
 function GetStartedCta({
   size,
   className,
+  items,
   ctaOpen,
   menuId,
   onOpen,
@@ -38,6 +44,15 @@ function GetStartedCta({
 }: GetStartedCtaProps) {
   const btnClass =
     size === "nav" ? "btn btn--ghost btn--nav" : "btn btn--ghost btn--sm";
+
+  if (items.length === 1) {
+    return (
+      <Link href={items[0].href} className={className ? `${className} ${btnClass}` : btnClass}>
+        Get Started
+      </Link>
+    );
+  }
+
   const wrapClass = [
     className,
     "nav__cta-menu",
@@ -64,7 +79,7 @@ function GetStartedCta({
         <span className="nav__cta-caret" aria-hidden="true"></span>
       </button>
       <ul className="nav__cta-dropdown" id={menuId} role="menu">
-        {GET_STARTED_ITEMS.map((item) => (
+        {items.map((item) => (
           <li key={item.href} role="none">
             <Link
               href={item.href}
@@ -81,7 +96,11 @@ function GetStartedCta({
   );
 }
 
-export function LandingNav({ user }: Props) {
+export function LandingNav({ user, showRecruiterCta = false }: Props) {
+  const getStartedItems = showRecruiterCta
+    ? GET_STARTED_ITEMS
+    : GET_STARTED_ITEMS.filter((item) => item.href !== "/hire");
+
   const wrapRef = useRef<HTMLElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const linksRef = useRef<HTMLUListElement>(null);
@@ -199,6 +218,7 @@ export function LandingNav({ user }: Props) {
               ) : (
                 <GetStartedCta
                   size="sm"
+                  items={getStartedItems}
                   ctaOpen={ctaOpen}
                   menuId="navCtaMenuMobile"
                   onOpen={() => setCtaOpen(true)}
@@ -225,6 +245,7 @@ export function LandingNav({ user }: Props) {
             <GetStartedCta
               size="nav"
               className="nav__cta"
+              items={getStartedItems}
               ctaOpen={ctaOpen}
               menuId="navCtaMenu"
               onOpen={() => setCtaOpen(true)}

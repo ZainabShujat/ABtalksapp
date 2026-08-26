@@ -23,7 +23,15 @@ function getPhoneServerSnapshot() {
   return false;
 }
 
-export function HeroSection() {
+export function HeroSection({
+  getStartedHref,
+  isSignedIn,
+  showRecruiterCta = false,
+}: {
+  getStartedHref: string;
+  isSignedIn: boolean;
+  showRecruiterCta?: boolean;
+}) {
   const reduce = useSafeReducedMotion();
   const isMobile = useSyncExternalStore(
     subscribePhone,
@@ -194,19 +202,19 @@ export function HeroSection() {
           </h1>
 
           <p className="hero__desc">
-            ABTalks runs hackathons, cohorts and challenges where people build
-            in public. Companies see the work, not a rehearsed answer. We sit
-            in the middle: matching real output to real requirements, and never
-            sharing a profile without the candidate saying yes first.
+          We help students build real-world skills and help companies discover talent through the work they actually do.
+
           </p>
 
           <div className="hero__actions">
-            <Link href="/program" className="btn btn--primary btn--lg">
-              Get Started
+            <Link href={getStartedHref} className="btn btn--primary btn--lg">
+              {isSignedIn ? "Open Dashboard" : "Get Started"}
             </Link>
-            <Link href="/talent" className="btn btn--ghost-light btn--lg">
-              Post a requirement
-            </Link>
+            {showRecruiterCta ? (
+              <Link href="/hire" className="btn btn--ghost-light btn--lg">
+                Post a requirement
+              </Link>
+            ) : null}
           </div>
         </div>
       </div>

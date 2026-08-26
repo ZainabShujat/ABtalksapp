@@ -48,8 +48,26 @@ const TIER_RANK: Record<string, number> = {
   WorkshopRegistration: 3,
 };
 
+export function isPhase2ProductionRun(): boolean {
+  return process.env.PHASE2_ALLOW_PRODUCTION === "1";
+}
+
 export function assertChildBranch(): void {
   const dbUrl = process.env.DATABASE_URL ?? "";
+  if (isPhase2ProductionRun()) {
+    if (!dbUrl.toLowerCase().includes(PRODUCTION_NEON_HOST_ID)) {
+      throw new Error(
+        `PHASE2_ALLOW_PRODUCTION=1 requires production host ${PRODUCTION_NEON_HOST_ID}.`,
+      );
+    }
+    if (dbUrl.includes("-pooler")) {
+      throw new Error(
+        "Phase 2 production must use the Neon direct host, not the -pooler URL.",
+      );
+    }
+    console.warn("PHASE2_ALLOW_PRODUCTION=1 — running against production");
+    return;
+  }
   if (process.env.SEED_ALLOW_PRODUCTION === "true") {
     console.warn("SEED_ALLOW_PRODUCTION=true — production guard bypassed");
     return;
@@ -63,9 +81,16 @@ export function assertChildBranch(): void {
   console.log(`Phase 2 targeting host: ${host}`);
 }
 
-/** Full unscoped backfill must target the rehearsal child, never sample or prod. */
+/** Full unscoped backfill must target rehearsal, or production when explicitly allowed. */
 export function assertNotSampleChildForFullRun(): void {
   if (isSampleMode()) return;
+  if (isPhase2ProductionRun()) {
+    const dbUrl = process.env.DATABASE_URL ?? "";
+    if (!dbUrl.includes(PRODUCTION_NEON_HOST_ID)) {
+      throw new Error("PHASE2_ALLOW_PRODUCTION=1 requires the production host.");
+    }
+    return;
+  }
   const dbUrl = process.env.DATABASE_URL ?? "";
   if (dbUrl.includes(PHASE2_CHILD_HOST_ID)) {
     throw new Error(

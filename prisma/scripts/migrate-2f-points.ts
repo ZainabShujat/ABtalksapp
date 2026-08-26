@@ -10,6 +10,7 @@ import {
   runStep,
   whereUserId,
 } from "./migrate-078-shared";
+import { bulkUpsertBatched } from "./migrate-078-bulk";
 
 const prisma = new PrismaClient();
 
@@ -103,48 +104,58 @@ async function main() {
     });
     const ledgerByUser = new Map(ledger.map((l) => [l.userId, l._sum.amount ?? 0]));
 
-    let accounts = 0;
-    let recon = 0;
-    await chunked(users, 100, async (chunk) => {
-      for (const u of chunk) {
-        const sum = ledgerByUser.get(u.id) ?? 0;
-        const earned = Math.max(0, sum);
-        const spent = sum < 0 ? -sum : 0;
-        await ctx.prisma.pointsAccount.upsert({
-          where: { userId: u.id },
-          create: {
-            userId: u.id,
-            balance: u.synergyPoints,
-            lifetimeEarned: earned,
-            lifetimeSpent: spent,
-            reconciledAt: new Date(),
-          },
-          update: {
-            balance: u.synergyPoints,
-            lifetimeEarned: earned,
-            lifetimeSpent: spent,
-            reconciledAt: new Date(),
-          },
-        });
-        accounts += 1;
-        if (sum !== u.synergyPoints) {
-          const delta = u.synergyPoints - sum;
-          await ctx.prisma.pointsTransaction.upsert({
-            where: { idempotencyKey: `reconciliation:phase2:${u.id}` },
-            create: {
-              userId: u.id,
-              amount: delta,
-              sourceType: PointsSourceType.RECONCILIATION,
-              sourceId: u.id,
-              idempotencyKey: `reconciliation:phase2:${u.id}`,
-              reason: "phase2 backfill recon to User.synergyPoints",
-            },
-            update: { amount: delta },
-          });
-          recon += 1;
-        }
-      }
+    const now = new Date();
+    const accountRows = users.map((u) => {
+      const sum = ledgerByUser.get(u.id) ?? 0;
+      return {
+        id: `pa_${u.id}`,
+        userId: u.id,
+        balance: u.synergyPoints,
+        lifetimeEarned: Math.max(0, sum),
+        lifetimeSpent: sum < 0 ? -sum : 0,
+        reconciledAt: now,
+        updatedAt: now,
+      };
     });
+    const reconRows = users
+      .filter((u) => (ledgerByUser.get(u.id) ?? 0) !== u.synergyPoints)
+      .map((u) => {
+        const sum = ledgerByUser.get(u.id) ?? 0;
+        return {
+          id: `pt_recon_${u.id}`,
+          userId: u.id,
+          amount: u.synergyPoints - sum,
+          sourceType: PointsSourceType.RECONCILIATION,
+          sourceId: u.id,
+          idempotencyKey: `reconciliation:phase2:${u.id}`,
+          reason: "phase2 backfill recon to User.synergyPoints",
+        };
+      });
+    await bulkUpsertBatched(ctx.prisma, {
+      label: "2f-accounts",
+      table: "PointsAccount",
+      cursorField: "userId",
+      rows: accountRows,
+      conflict: ["userId"],
+      update: [
+        "balance",
+        "lifetimeEarned",
+        "lifetimeSpent",
+        "reconciledAt",
+        "updatedAt",
+      ],
+    });
+    await bulkUpsertBatched(ctx.prisma, {
+      label: "2f-recon",
+      table: "PointsTransaction",
+      cursorField: "id",
+      rows: reconRows,
+      conflict: ["idempotencyKey"],
+      update: ["amount"],
+      casts: { sourceType: '"PointsSourceType"' },
+    });
+    const accounts = accountRows.length;
+    const recon = reconRows.length;
 
     return { transactions: copied, accounts, reconciliations: recon };
   });

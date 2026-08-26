@@ -32,6 +32,7 @@ const protectedPaths = [
   "/dashboard",
   "/explore",
   "/challenge/",
+  "/claude/day",
   "/profile",
   "/achievements",
   "/quiz",
@@ -49,6 +50,7 @@ const protectedPaths = [
   "/program/interview",
   "/program/cohort-interview",
   "/talent",
+  "/hire",
   "/hackathon/register",
   "/hackathon/dashboard",
   "/hackathon/submission",
@@ -133,13 +135,36 @@ export default auth((req) => {
   // capture `/claude-signup`. All of those are public.
   const exactProtectedPaths = ["/ai", "/ds", "/se", "/claude"];
 
+  // Scout itself is public. Auth is a dialog on this page, or a dedicated
+  // register/login route. Exact match only: /hire/requests and /hire/[id]
+  // stay behind a session. Same for the cart — guests keep it locally.
+  const isPublicRecruiterEntry =
+    pathname === "/hire" ||
+    pathname === "/talent" ||
+    pathname === "/hire/matches" ||
+    pathname === "/talent/shortlist" ||
+    pathname === "/talent/login" ||
+    pathname === "/talent/register";
+
   const isProtected =
-    protectedPaths.some((p) => pathname.startsWith(p)) ||
-    exactProtectedPaths.includes(pathname);
+    !isPublicRecruiterEntry &&
+    (protectedPaths.some((p) => pathname.startsWith(p)) ||
+      exactProtectedPaths.includes(pathname));
   const isAuthPage = pathname === "/login";
 
   if (isProtected && !isLoggedIn) {
-    const url = new URL("/login", req.nextUrl);
+    // Send people to their own door. A signed-out recruiter opening a
+    // bookmarked /hire used to land on the candidate's Google button, which is
+    // the whole complaint this change exists to fix.
+    const isRecruiterArea =
+      pathname === "/hire" ||
+      pathname.startsWith("/hire/") ||
+      pathname === "/talent" ||
+      pathname.startsWith("/talent/");
+    const url = new URL(
+      isRecruiterArea ? "/talent/login" : "/login",
+      req.nextUrl,
+    );
     url.searchParams.set("from", pathname + req.nextUrl.search);
     return withTracking(
       NextResponse.redirect(url),

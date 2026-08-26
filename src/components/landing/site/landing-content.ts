@@ -9,8 +9,8 @@ export const NAV_LINKS = [
 ] as const;
 
 export const GET_STARTED_ITEMS = [
-  { href: "/program", label: "Candidates" },
-  { href: "/talent", label: "Recruiter" },
+  { href: "/register", label: "Candidates" },
+  { href: "/hire", label: "Recruiter" },
 ] as const;
 
 export const STATS = [
@@ -20,9 +20,20 @@ export const STATS = [
 ] as const;
 
 export const BRIDGE_SLABS = [
-  { key: "top", slab: 3, label: "20+ companies" },
+  { key: "top", slab: 3, label: "100+ companies" },
   { key: "middle", slab: 2, label: "ABTalks" },
-  { key: "bottom", slab: 1, label: "500+ users" },
+  { key: "bottom", slab: 1, label: "12k+ users" },
+] as const;
+
+export const COMPANY_LOGOS = [
+  { name: "Meta", src: "/landing/company-logo/meta.svg" },
+  { name: "Amazon", src: "/landing/company-logo/amazon.svg" },
+  { name: "JPMorgan Chase", src: "/landing/company-logo/J_P_Morgan.svg" },
+  { name: "Deloitte", src: "/landing/company-logo/deloitte.svg" },
+  { name: "American Express", src: "/landing/company-logo/americanexpress.svg" },
+  { name: "Infosys", src: "/landing/company-logo/infosys.svg" },
+  { name: "Samsung", src: "/landing/company-logo/samsung.svg" },
+  { name: "EXL", src: "/landing/company-logo/EXLS.svg" },
 ] as const;
 
 export const BRIDGE_PANELS = [
@@ -169,16 +180,16 @@ export const DASHBOARD_STAGES: readonly DashStage[] = [
     pill: "Longlist",
     cards: [
       {
-        title: "#1 Aarav Mehta",
+        title: "#1 Sohail Khan",
         titleEm: "· 8 yrs",
-        role: "Senior Backend Engineer · Razorpay",
+        role: "Senior Backend Engineer",
       },
       {
-        title: "#2 Nikhil Reddy",
+        title: "#2 Shivansh Rai",
         titleEm: "· 6 yrs",
-        role: "Platform Engineer · Swiggy",
+        role: "Platform Engineer",
       },
-      { title: "#3 Ishita Rao", titleEm: "· 5 yrs", fade: true },
+      { title: "#3 Ishita ", titleEm: "· 5 yrs", fade: true },
     ],
   },
   {
@@ -187,10 +198,10 @@ export const DASHBOARD_STAGES: readonly DashStage[] = [
     pill: "2 shortlisted",
     cards: [
       {
-        title: "#1 Aarav Mehta",
+        title: "#1 Sohail Khan",
         titleEm: "· 8 yrs",
         star: true,
-        role: "Senior Backend Engineer · Razorpay",
+        role: "Senior Backend Engineer",
         chips: [
           "Python",
           "Distributed Systems",
@@ -204,10 +215,10 @@ export const DASHBOARD_STAGES: readonly DashStage[] = [
         scoreNote: "86% clean passes",
       },
       {
-        title: "#2 Nikhil Reddy",
+        title: "#2 Shivansh Rai",
         titleEm: "· 6 yrs",
         star: true,
-        role: "Platform Engineer · Swiggy",
+        role: "Platform Engineer",
         chips: ["Python", "Kubernetes", "gRPC", "Redis", "Terraform"],
         meters: [78, 71],
         score: "902",
@@ -221,16 +232,16 @@ export const DASHBOARD_STAGES: readonly DashStage[] = [
     pill: "3 booked",
     cards: [
       {
-        title: "Aarav Mehta",
+        title: "Sohail Khan",
         when: "Tue · 11:00",
         role: "System design · 60 min",
       },
       {
-        title: "Nikhil Reddy",
+        title: "Shivansh Rai",
         when: "Wed · 15:30",
         role: "Platform deep dive · 45 min",
       },
-      { title: "Ishita Rao", when: "Fri · 10:00", fade: true },
+      { title: "Ishita ", when: "Fri · 10:00", fade: true },
     ],
   },
   {
@@ -239,12 +250,12 @@ export const DASHBOARD_STAGES: readonly DashStage[] = [
     pill: "Scored",
     cards: [
       {
-        title: "Aarav Mehta",
+        title: "Sohail Khan",
         score: "943",
         meters: [94, 88, 81],
       },
       {
-        title: "Nikhil Reddy",
+        title: "Shivansh Rai",
         score: "902",
         meters: [80, 74, 69],
       },
@@ -256,7 +267,7 @@ export const DASHBOARD_STAGES: readonly DashStage[] = [
     pill: "1 of 5",
     cards: [
       {
-        title: "Aarav Mehta",
+        title: "Sohail Khan",
         titleEm: "· closest fit",
         star: true,
         role: "Shipped an event-driven payments service in the 60-day cohort — same stack, same load profile as your brief.",
@@ -271,7 +282,7 @@ export const DASHBOARD_STAGES: readonly DashStage[] = [
     pillOk: true,
     cards: [
       {
-        title: "Aarav Mehta",
+        title: "Sohail Khan",
         when: "Offer accepted",
         role: "Senior Backend Engineer · start in 4 weeks",
         meters: [100],
@@ -302,20 +313,20 @@ export const COHORT_DEFAULTS: readonly Omit<
     href: "/challenges",
     order: 0,
     bullets: [
-      "Ship one feature every day",
-      "Weekly peer code review",
-      "Public build log",
+      "Choose AI, Data Science, or Software Engineering",
+      "One task a day for 60 days",
+      "Proof of work on GitHub and LinkedIn",
     ],
   },
   {
     key: "hackathon",
-    title: "ABTalks Vicodathon",
-    href: "/hackathon",
+    title: "Databricks Cohort",
+    href: "/t",
     order: 2,
     bullets: [
-      "48-hour build sprint",
-      "Live demo to recruiters",
-      "Team or solo entry",
+      "Spark, lakehouse, and production pipelines",
+      "Build against a real data brief",
+      "Dates announced to the waitlist",
     ],
   },
   {
@@ -324,9 +335,9 @@ export const COHORT_DEFAULTS: readonly Omit<
     href: "/program",
     order: 1,
     bullets: [
-      "From prompts to production",
-      "Mentor office hours",
-      "Capstone with a real brief",
+      "Ship a production-grade healthcare chatbot",
+      "RAG, agents, MCP, and deploy",
+      "Recruiter-visible after you finish",
     ],
   },
   {
@@ -335,9 +346,9 @@ export const COHORT_DEFAULTS: readonly Omit<
     href: "/claude-signup",
     order: 3,
     bullets: [
-      "Agent-first problem sets",
-      "Evaluated on real output",
-      "Open to all levels",
+      "60 days building with Claude",
+      "Prompt engineering through real projects",
+      "Daily public builds",
     ],
   },
 ];
@@ -440,7 +451,7 @@ export const FOOTER_COLUMNS = [
     title: "Company",
     links: [
       { href: "/mission", label: "About Us" },
-      { href: "/talent", label: "Talent" },
+      { href: "/hire", label: "Talent" },
       { href: "/jobs", label: "Jobs" },
     ],
   },
@@ -460,8 +471,6 @@ export const FOOTER_COLUMNS = [
       { href: "/terms", label: "Terms" },
       { href: "/privacy", label: "Privacy" },
       { href: "/cookies", label: "Cookies" },
-      { href: "/contact", label: "Contact" },
-      { href: "/login", label: "Sign in" },
     ],
   },
 ] as const;

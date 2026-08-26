@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { FOOTER_COLUMNS } from "./landing-content";
 
-export function SiteFooter() {
+export function SiteFooter({
+  showRecruiterCta = false,
+}: {
+  showRecruiterCta?: boolean;
+}) {
   const year = new Date().getFullYear();
 
   return (
@@ -15,7 +19,9 @@ export function SiteFooter() {
           <nav className="footer__col" aria-label={col.title} key={col.title}>
             <h3 className="footer__head">{col.title}</h3>
             <ul>
-              {col.links.map((link) => (
+              {col.links
+                .filter((link) => showRecruiterCta || link.href !== "/hire")
+                .map((link) => (
                 <li key={link.href + link.label}>
                   {link.href.startsWith("#") ? (
                     <a href={link.href}>{link.label}</a>
@@ -30,8 +36,8 @@ export function SiteFooter() {
       </div>
 
       <div className="container footer__legal">
-        <span>ABTalks © {year}</span>
-        <span>Profiles are shared only with candidate consent.</span>
+        <span>© ABTalks {year} All rights reserved.</span>
+       
       </div>
     </footer>
   );

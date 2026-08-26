@@ -59,8 +59,8 @@ export type CohortOverview = {
 export type AdminMemberRow = {
   id: string;
   fullName: string;
-  company: string;
-  jobRole: string;
+  company: string | null;
+  jobRole: string | null;
   status: ProgramMemberStatus;
   totalScore: number;
   highestUnlockedDay: number;
@@ -70,7 +70,8 @@ export type AdminMemberRow = {
   interviewOverall: number | null;
 };
 
-function experienceBand(years: number): string {
+function experienceBand(years: number | null): string {
+  if (years == null) return "—";
   if (years <= 2) return "0–2 yrs";
   if (years <= 5) return "3–5 yrs";
   if (years <= 10) return "6–10 yrs";
@@ -852,7 +853,7 @@ export async function regenerateMemberRecommendation(
     system:
       'Write recruiter-readable recommendations. Reply JSON only: {"recommendation":"..."}. 2-3 sentences, concrete.',
     user: [
-      `Candidate: ${member.fullName}, ${member.jobRole} at ${member.company}`,
+      `Candidate: ${member.fullName}, ${member.jobRole ?? "—"} at ${member.company ?? "—"}`,
       `Scores: total ${member.totalScore}, missions ${member.missionPoints}, concepts ${member.conceptPoints}, commits ${member.commitPoints}, projects ${member.projectPoints}`,
       `Clean pass rate: ${cleanPassPct}%, behind cohort by ${behindBy} days, skip tokens used ${member.skipTokensUsed}`,
       `Projects: ${member.projects.map((p) => `M${p.moduleNumber}=${p.adminScore ?? p.aiScore}`).join(", ") || "none"}`,

@@ -1,5 +1,5 @@
 import { Domain, EnrollmentStatus } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { dualWriteChallengeEnrollment } from "@/repositories/dual-write";
 
@@ -30,7 +30,7 @@ export type CreateCoreEnrollmentResult =
 
 /**
  * Adds an AI / DS / SE challenge enrollment for an existing user joining a
- * second (or third) core track. Does not modify StudentProfile.domain.
+ * second (or third) core track. First track joined backfills a null profile domain.
  */
 export async function createCoreEnrollment(
   userId: string,
@@ -80,7 +80,7 @@ export async function createCoreEnrollment(
   }
 
   try {
-    await prisma.$transaction(async (tx) => {
+    await writeClient().$transaction(async (tx) => {
       const enrollment = await tx.enrollment.create({
         data: {
           userId,
@@ -99,6 +99,11 @@ export async function createCoreEnrollment(
           startedAt: true,
           completedAt: true,
         },
+      });
+      // First track joined becomes the profile's primary domain. Never overwrite.
+      await tx.studentProfile.updateMany({
+        where: { userId, domain: null },
+        data: { domain },
       });
       await dualWriteChallengeEnrollment(tx, enrollment);
     });

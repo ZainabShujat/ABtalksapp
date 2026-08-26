@@ -58,7 +58,7 @@ export const EVENTS: WorkshopEvent[] = [
     accent: "#8b5cf6",
     Icon: GraduationCap,
     title: "FREE AI Bootcamp Live Workshop",
-    desc: "Master ChatGPT, Claude & Gemini in one hands-on live hour — prompt engineering, real workflows, and the tools that 10x your output.",
+    desc: "Master ChatGPT, Claude & Gemini in one hands-on live hour - prompt engineering, real workflows, and the tools that 10x your output.",
     host: "ABTalks",
     location: "Live · Zoom",
   },

@@ -1,6 +1,6 @@
 import "server-only";
 import type { Prisma, ProgramEntrySection } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
 import { isProgramEntryBypassEnabled } from "@/lib/feature-flags";
 import { logger } from "@/lib/logger";
 import {
@@ -11,9 +11,8 @@ import {
 } from "@/lib/program-auth";
 import type { ApplyProfileInput } from "@/lib/validations/program";
 import { bootstrapMemberStartDay } from "@/features/program/bootstrap-start-day";
-import { recordLegalConsents } from "@/features/legal/record-consent";
-import { recordNewsletterOptIn } from "@/features/legal/record-newsletter-optin";
 import { programMember } from "@/repositories/legacy/program-member";
+import { studentProfile } from "@/repositories/legacy/student-profile";
 import { dualWriteProgramMember } from "@/repositories/dual-write";
 
 export const ENTRY_DURATION_MIN = 25;
@@ -192,7 +191,7 @@ export async function getEntryState(
     const cohort = applied.cohort;
 
     if (isProgramEntryBypassEnabled()) {
-      const outcome = await prisma.$transaction(
+      const outcome = await writeClient().$transaction(
         (tx) => enrollOrWaitlist(tx, userId, cohort.id),
         { maxWait: 10_000, timeout: 20_000 },
       );
@@ -280,6 +279,23 @@ export async function createApplication(
     return { ok: false, message: "You are already enrolled in a program cohort." };
   }
 
+  const existingStudent = await studentProfile.findUnique({
+    where: { userId },
+    select: {
+      fullName: true,
+      role: true,
+      organization: true,
+      yearsExperience: true,
+      college: true,
+      graduationYear: true,
+      phone: true,
+      resumeUrl: true,
+    },
+  });
+  if (!existingStudent) {
+    return { ok: false, message: "Complete your registration before applying." };
+  }
+
   const existing = await programMember.findUnique({
     where: { userId_cohortId: { userId, cohortId: cohort.id } },
     select: { status: true },
@@ -294,30 +310,32 @@ export async function createApplication(
   }
 
   const data = {
-    fullName: profile.fullName,
-    jobRole: profile.jobRole,
-    company: profile.company,
-    yearsExperience: profile.yearsExperience,
-    education: emptyToNull(profile.education),
-    university: emptyToNull(profile.university),
-    graduationYear:
-      typeof profile.graduationYear === "number" ? profile.graduationYear : null,
+    fullName: existingStudent.fullName,
+    jobRole: existingStudent.role,
+    company: existingStudent.organization,
+    yearsExperience: existingStudent.yearsExperience,
+    education: null,
+    university: existingStudent.college,
+    graduationYear: existingStudent.graduationYear,
     skills: profile.skills,
     linkedinUrl: emptyToNull(profile.linkedinUrl),
-    resumeUrl: emptyToNull(profile.resumeUrl),
-    phone: emptyToNull(profile.phone),
+    resumeUrl: existingStudent.resumeUrl,
+    phone: existingStudent.phone,
     githubUsername: profile.githubUsername,
     githubRepoUrl: profile.githubRepoUrl,
-    recruiterVisibilityConsentAt: profile.recruiterVisibilityConsent
-      ? new Date()
-      : null,
   };
 
-  await prisma.$transaction(
+  await writeClient().$transaction(
     async (tx) => {
       const member = await tx.programMember.upsert({
         where: { userId_cohortId: { userId, cohortId: cohort.id } },
-        create: { userId, cohortId: cohort.id, status: "APPLIED", ...data },
+        create: {
+          userId,
+          cohortId: cohort.id,
+          status: "APPLIED",
+          ...data,
+          recruiterVisibilityConsentAt: new Date(),
+        },
         update: { status: "APPLIED", ...data },
         select: { id: true },
       });
@@ -329,23 +347,6 @@ export async function createApplication(
     // Neon pooler drops idle interactive txs (~5s). Bootstrap needs headroom.
     { maxWait: 10_000, timeout: 20_000 },
   );
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { email: true },
-  });
-  await recordLegalConsents({
-    userId,
-    email: user?.email,
-    source: "program_apply",
-  });
-
-  await recordNewsletterOptIn({
-    userId,
-    email: user?.email,
-    source: "program_apply",
-    optIn: profile.newsletterOptIn === true,
-  });
 
   return { ok: true, cohortId: cohort.id };
 }
@@ -522,7 +523,7 @@ export async function submitEntryAttempt(
   answers: (number | null)[],
 ): Promise<EntrySubmitOk | { ok: false; message: string }> {
   try {
-    return await prisma.$transaction(async (tx) => {
+    return await writeClient().$transaction(async (tx) => {
       const attempt = await tx.programEntryAttempt.findFirst({
         where: { id: attemptId, userId },
         select: {

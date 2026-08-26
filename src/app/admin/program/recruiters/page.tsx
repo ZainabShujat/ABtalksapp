@@ -1,29 +1,8 @@
-import { prisma } from "@/lib/db";
+import { listPendingRecruiterApplications } from "@/features/talent-pool/recruiter-registration";
 import { AdminRecruitersPanel } from "@/components/talent/admin-recruiters-panel";
 
 export default async function AdminProgramRecruitersPage() {
-
-  const pending = await prisma.recruiterProfile.findMany({
-    where: { approved: false },
-    orderBy: { createdAt: "asc" },
-    select: {
-      id: true,
-      fullName: true,
-      company: true,
-      phone: true,
-      createdAt: true,
-      user: { select: { email: true } },
-    },
-  });
-
-  const rows = pending.map((p) => ({
-    id: p.id,
-    fullName: p.fullName,
-    company: p.company,
-    phone: p.phone,
-    createdAt: p.createdAt.toISOString(),
-    email: p.user.email,
-  }));
+  const rows = await listPendingRecruiterApplications();
 
   return (
     <div className="space-y-6">

@@ -5,7 +5,7 @@ import { studentProfile } from "@/repositories/legacy/student-profile";
 export type PublicProfile = {
   fullName: string;
   userType: UserType;
-  domain: string;
+  domain: string | null;
   college: string | null;
   graduationYear: number | null;
   organization: string | null;
@@ -38,7 +38,7 @@ async function resolvePublicProfileEnrollment(
     select: { domain: true },
   });
 
-  if (!profile) {
+  if (!profile?.domain) {
     return null;
   }
 

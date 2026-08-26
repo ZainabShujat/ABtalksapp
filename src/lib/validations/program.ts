@@ -1,7 +1,5 @@
 import { z } from "zod";
 import { PROGRAM_TOTAL_DAYS } from "@/features/program/constants";
-import { optionalPhoneSchema } from "./phone";
-import { legalAcceptanceSchema } from "./legal";
 
 const githubUsernameRegex = /^[a-zA-Z0-9-]{1,39}$/;
 const githubRepoRegex =
@@ -9,22 +7,6 @@ const githubRepoRegex =
 
 export const applyProfileSchema = z
   .object({
-    fullName: z.string().trim().min(1, "Full name is required").max(120),
-    jobRole: z.string().trim().min(1, "Current role is required").max(120),
-    company: z.string().trim().min(1, "Company is required").max(120),
-    yearsExperience: z.coerce
-      .number({ error: "Enter your years of experience" })
-      .int("Enter a whole number")
-      .min(0, "Cannot be negative")
-      .max(40, "Max 40 years"),
-    education: z.string().trim().max(160).optional().or(z.literal("")),
-    university: z.string().trim().max(160).optional().or(z.literal("")),
-    graduationYear: z
-      .union([
-        z.literal(""),
-        z.coerce.number().int().min(1950, "Invalid year").max(2035, "Invalid year"),
-      ])
-      .optional(),
     skills: z
       .array(z.string().trim().min(1).max(40))
       .min(1, "Add at least one skill")
@@ -34,10 +16,6 @@ export const applyProfileSchema = z
       .trim()
       .url("Enter a valid URL")
       .refine((v) => /linkedin\.com/i.test(v), "Enter your LinkedIn profile URL"),
-    resumeUrl: z
-      .union([z.literal(""), z.string().trim().url("Enter a valid URL")])
-      .optional(),
-    phone: optionalPhoneSchema,
     githubUsername: z
       .string()
       .trim()
@@ -52,9 +30,9 @@ export const applyProfileSchema = z
     hasLaptop8Gb: z.literal(true, {
       error: "Confirm you have a laptop with at least 8 GB RAM",
     }),
-    recruiterVisibilityConsent: z.boolean().default(false),
+    // Accepted if a stale client still posts it; ignored. Not a candidate preference.
+    recruiterVisibilityConsent: z.boolean().optional(),
   })
-  .merge(legalAcceptanceSchema)
   .refine(
     (data) => {
       const match = data.githubRepoUrl.match(githubRepoRegex);

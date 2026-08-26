@@ -1,6 +1,17 @@
 /**
- * 078 Phase 2b — CandidateVisibility. Default CLOSED; opt-in ONLY from
- * ProgramMember.recruiterVisibilityConsentAt.
+ * 078 Phase 2b — CandidateVisibility.
+ *
+ * Intended searchable population:
+ * - Every ProgramMember (AI Cohort), including members who never set
+ *   recruiterVisibilityConsentAt. Recruiter search is a platform default, not a
+ *   candidate preference.
+ * - Users created after the first successful 2b run (consentSource =
+ *   platform_default).
+ *
+ * Other legacy users stay closed. Explicit recruiterVisibilityConsentAt is
+ * copied onto ProgramMembers as program_apply_migrated for audit only.
+ *
+ * openToWork / CandidatePreference is independent and is not written here.
  */
 import { config } from "dotenv";
 import { PrismaClient } from "@prisma/client";
@@ -14,24 +25,94 @@ import {
 
 const prisma = new PrismaClient();
 
+const LEGACY_CONSENT_SOURCE = "program_apply_migrated";
+const PLATFORM_DEFAULT_SOURCE = "platform_default";
+
 async function main() {
   config({ path: ".env.local" });
   config();
   assertChildBranch();
   await runStep(prisma, "2b-visibility", async (ctx) => {
+    const priorOk = await ctx.prisma.migrationRun.findFirst({
+      where: {
+        step: "2b-visibility",
+        ok: true,
+        id: { not: ctx.runId },
+        finishedAt: { not: null },
+      },
+      orderBy: { finishedAt: "asc" },
+      select: { finishedAt: true },
+    });
+    const cutoff = priorOk?.finishedAt ?? null;
+
     const sample = await resolveSampleUserIds(ctx.prisma);
     const users = await ctx.prisma.user.findMany({
       where: sample ? { id: { in: sample } } : undefined,
-      select: { id: true },
+      select: { id: true, createdAt: true },
     });
     const existing = await ctx.prisma.candidateVisibility.findMany({
       select: { userId: true },
     });
     const have = new Set(existing.map((r) => r.userId));
-    const missing = users.filter((u) => !have.has(u.id)).map((u) => ({
-      userId: u.id,
-      searchableByRecruiters: false,
-    }));
+
+    const members = await ctx.prisma.programMember.findMany({
+      where: whereUserId(sample),
+      select: {
+        userId: true,
+        recruiterVisibilityConsentAt: true,
+        createdAt: true,
+        enrolledAt: true,
+      },
+    });
+    const memberUserIds = new Set(members.map((m) => m.userId));
+    const consentByUser = new Map<string, Date>();
+    const memberSince = new Map<string, Date>();
+    for (const m of members) {
+      const since = m.enrolledAt ?? m.createdAt;
+      const prevSince = memberSince.get(m.userId);
+      if (!prevSince || since < prevSince) memberSince.set(m.userId, since);
+      const at = m.recruiterVisibilityConsentAt;
+      if (!at) continue;
+      const prev = consentByUser.get(m.userId);
+      if (!prev || at < prev) consentByUser.set(m.userId, at);
+    }
+
+    const missing = users
+      .filter((u) => !have.has(u.id))
+      .map((u) => {
+        const legacy = !cutoff || u.createdAt < cutoff;
+        if (consentByUser.has(u.id)) {
+          return {
+            userId: u.id,
+            searchableByRecruiters: true,
+            consentSource: LEGACY_CONSENT_SOURCE,
+            consentedAt: consentByUser.get(u.id)!,
+          };
+        }
+        if (memberUserIds.has(u.id)) {
+          return {
+            userId: u.id,
+            searchableByRecruiters: true,
+            consentSource: PLATFORM_DEFAULT_SOURCE,
+            consentedAt: memberSince.get(u.id) ?? u.createdAt,
+          };
+        }
+        if (legacy) {
+          return {
+            userId: u.id,
+            searchableByRecruiters: false,
+            consentSource: null as string | null,
+            consentedAt: null as Date | null,
+          };
+        }
+        return {
+          userId: u.id,
+          searchableByRecruiters: true,
+          consentSource: PLATFORM_DEFAULT_SOURCE,
+          consentedAt: new Date(),
+        };
+      });
+
     let inserted = 0;
     await chunked(missing, 200, async (chunk) => {
       const result = await ctx.prisma.candidateVisibility.createMany({
@@ -40,18 +121,6 @@ async function main() {
       });
       inserted += result.count;
     });
-
-    const consented = await ctx.prisma.programMember.findMany({
-      where: { recruiterVisibilityConsentAt: { not: null }, ...whereUserId(sample) },
-      select: { userId: true, recruiterVisibilityConsentAt: true },
-    });
-    const consentByUser = new Map<string, Date>();
-    for (const m of consented) {
-      const at = m.recruiterVisibilityConsentAt;
-      if (!at) continue;
-      const prev = consentByUser.get(m.userId);
-      if (!prev || at < prev) consentByUser.set(m.userId, at);
-    }
 
     let optedIn = 0;
     const consentEntries = [...consentByUser.entries()];
@@ -63,7 +132,7 @@ async function main() {
             data: {
               searchableByRecruiters: true,
               consentedAt,
-              consentSource: "program_apply_migrated",
+              consentSource: LEGACY_CONSENT_SOURCE,
               withdrawnAt: null,
             },
           }),
@@ -72,8 +141,24 @@ async function main() {
       optedIn += chunk.length;
     });
 
+    let cohortOpened = 0;
+    const cohortWithoutConsent = [...memberUserIds].filter(
+      (id) => !consentByUser.has(id),
+    );
+    await chunked(cohortWithoutConsent, 50, async (chunk) => {
+      const result = await ctx.prisma.candidateVisibility.updateMany({
+        where: { userId: { in: chunk }, withdrawnAt: null },
+        data: {
+          searchableByRecruiters: true,
+          consentSource: PLATFORM_DEFAULT_SOURCE,
+        },
+      });
+      cohortOpened += result.count;
+    });
+
+    const protectedIds = new Set([...memberUserIds, ...consentByUser.keys()]);
     const closeIds = sample
-      ? sample.filter((id) => !consentByUser.has(id))
+      ? sample.filter((id) => !protectedIds.has(id))
       : null;
     const closed =
       closeIds && closeIds.length === 0
@@ -81,9 +166,10 @@ async function main() {
         : await ctx.prisma.candidateVisibility.updateMany({
             where: {
               searchableByRecruiters: true,
+              consentSource: LEGACY_CONSENT_SOURCE,
               userId: closeIds
                 ? { in: closeIds }
-                : { notIn: [...consentByUser.keys()] },
+                : { notIn: [...protectedIds] },
             },
             data: {
               searchableByRecruiters: false,
@@ -92,10 +178,16 @@ async function main() {
             },
           });
 
+    console.log(
+      "2b-visibility cutoff",
+      cutoff ? cutoff.toISOString() : "first-run (treat all missing as legacy)",
+    );
     return {
       users: users.length,
       inserted,
       optedIn,
+      cohortOpened,
+      cohortMembers: memberUserIds.size,
       forcedClosed: closed.count,
     };
   });

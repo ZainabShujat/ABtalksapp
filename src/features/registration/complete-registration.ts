@@ -1,15 +1,15 @@
-import { EnrollmentStatus, UserType } from "@prisma/client";
+import { UserType } from "@prisma/client";
 import { clearRefCookie } from "@/lib/cookies";
-import { isClaudeEnabled, isOtpVerificationRequired } from "@/lib/feature-flags";
+import { isOtpVerificationRequired } from "@/lib/feature-flags";
 import type { RegisterPayloadInput } from "@/lib/validations/register";
 import { INDIA_DIALING_CODE, toE164 } from "@/lib/validations/phone";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
 import { awardReferralSynergy } from "@/features/synergy/award-referral-synergy";
 import { recordLegalConsents } from "@/features/legal/record-consent";
 import { recordNewsletterOptIn } from "@/features/legal/record-newsletter-optin";
 import { generateUniqueReferralCode } from "./generate-referral-code";
 import { studentProfile } from "@/repositories/legacy/student-profile";
-import { dualWriteChallengeEnrollment } from "@/repositories/dual-write";
+import { dualWriteCandidateIdentity } from "@/repositories/dual-write";
 
 export type CompleteRegistrationResult =
   | { ok: true; profileId: string }
@@ -38,28 +38,12 @@ export async function completeRegistration(
     where: { userId },
     select: { id: true },
   });
-  const existingEnrollment = await prisma.enrollment.findFirst({
-    where: { userId },
-    select: { id: true },
-  });
 
-  if (existingProfile && existingEnrollment) {
+  if (existingProfile) {
     return {
       ok: false,
       reason: "already_registered",
       message: "You are already registered.",
-    };
-  }
-
-  if (existingProfile && !existingEnrollment) {
-    await studentProfile.delete({ where: { userId } });
-  }
-
-  if (input.domain === "CLAUDE" && !isClaudeEnabled()) {
-    return {
-      ok: false,
-      reason: "internal_error",
-      message: "The Claude challenge is not available yet.",
     };
   }
 
@@ -87,18 +71,6 @@ export async function completeRegistration(
       ok: false,
       reason: "internal_error",
       message: "Could not assign a referral code. Try again.",
-    };
-  }
-
-  const challenge = await prisma.challenge.findUnique({
-    where: { domain: input.domain },
-    select: { id: true },
-  });
-  if (!challenge) {
-    return {
-      ok: false,
-      reason: "internal_error",
-      message: "Challenge for this domain is not available.",
     };
   }
 
@@ -140,7 +112,7 @@ export async function completeRegistration(
   }
 
   try {
-    const profileId = await prisma.$transaction(async (tx) => {
+    const profileId = await writeClient().$transaction(async (tx) => {
       // Lock the account row before creating the rollback mirror so a
       // simultaneous grant cannot leave the two balances out of sync.
       const account = await tx.user.update({
@@ -162,7 +134,7 @@ export async function completeRegistration(
                 organization: null,
                 role: null,
                 yearsExperience: null,
-                domain: input.domain,
+                domain: null,
                 skills: input.skills ?? [],
                 linkedinUrl,
                 phone,
@@ -181,7 +153,7 @@ export async function completeRegistration(
                 organization: input.organization,
                 role: input.role,
                 yearsExperience: input.yearsExperience,
-                domain: input.domain,
+                domain: null,
                 skills: input.skills ?? [],
                 linkedinUrl,
                 phone,
@@ -192,23 +164,7 @@ export async function completeRegistration(
               },
       });
 
-      const enrollment = await tx.enrollment.create({
-        data: {
-          userId,
-          challengeId: challenge.id,
-          domain: input.domain,
-          status: EnrollmentStatus.ACTIVE,
-        },
-        select: {
-          id: true,
-          userId: true,
-          domain: true,
-          status: true,
-          startedAt: true,
-          completedAt: true,
-        },
-      });
-      await dualWriteChallengeEnrollment(tx, enrollment);
+      await dualWriteCandidateIdentity(tx, userId);
 
       return profile.id;
     }, {
@@ -218,7 +174,7 @@ export async function completeRegistration(
 
     if (referrerId) {
       try {
-        await prisma.$transaction(async (tx) => {
+        await writeClient().$transaction(async (tx) => {
           const referral = await tx.referral.create({
             data: {
               referrerId,

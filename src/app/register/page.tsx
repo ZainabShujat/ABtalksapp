@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getRefCookie } from "@/lib/cookies";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { isClaudeEnabled, isOtpVerificationRequired } from "@/lib/feature-flags";
+import { isOtpVerificationRequired } from "@/lib/feature-flags";
 import {
   CORE_TRACK_PATH,
   createCoreEnrollment,
@@ -44,13 +44,9 @@ export default async function RegisterPage({ searchParams }: PageProps) {
     where: { userId: session.user.id },
     select: { id: true },
   });
-  // Registration completeness gate: "has the user ever enrolled in anything",
-  // ANY status. Narrowing this would delete the profile of removed users.
-  const enrollmentCount = await prisma.enrollment.count({
-    where: { userId: session.user.id },
-  });
 
-  if (profile && enrollmentCount > 0) {
+  // Registered = has a StudentProfile (registration no longer creates an enrollment).
+  if (profile) {
     if (isCoreDomain(requestedDomain)) {
       const existing = await prisma.enrollment.findFirst({
         where: { userId: session.user.id, domain: requestedDomain },
@@ -78,20 +74,6 @@ export default async function RegisterPage({ searchParams }: PageProps) {
     redirect("/dashboard");
   }
 
-  if (profile && enrollmentCount === 0) {
-    await studentProfile.delete({
-      where: { userId: session.user.id },
-    });
-  }
-
-  const claudeEnabled = isClaudeEnabled();
-  const requested = params.domain;
-  const initialDomain =
-    requested === "CLAUDE"
-      ? (claudeEnabled ? "CLAUDE" : undefined)
-      : requested === "SE" || requested === "DS" || requested === "AI"
-        ? requested
-        : undefined;
   const refParam = params.ref;
   const refFromUrlNormalized =
     typeof refParam === "string"
@@ -115,7 +97,7 @@ export default async function RegisterPage({ searchParams }: PageProps) {
   const initialName = session.user.name?.trim() ?? "";
 
   return (
-    <div className="flex min-h-svh flex-col bg-gradient-to-br from-primary/5 via-background to-background">
+    <div className="theme-abtalks-orange flex min-h-svh flex-col bg-[#FBF9F7]">
       <div className="flex flex-1 flex-col items-center justify-center p-6">
         <Card className="w-full max-w-2xl border-border/60 shadow-md">
           <CardHeader className="space-y-2">
@@ -134,8 +116,6 @@ export default async function RegisterPage({ searchParams }: PageProps) {
             <RegistrationForm
               initialName={initialName}
               initialRef={initialRef}
-              claudeEnabled={claudeEnabled}
-              initialDomain={initialDomain}
               otpVerificationRequired={isOtpVerificationRequired()}
             />
           </CardContent>

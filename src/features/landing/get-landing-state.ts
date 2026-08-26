@@ -24,6 +24,7 @@ export type LandingState = {
   claudeCta: TrackCta;
   programCta: TrackCta;
   hackathonCta: TrackCta;
+  getStartedHref: string;
 };
 
 const EMPTY_CTAS = {
@@ -31,6 +32,7 @@ const EMPTY_CTAS = {
   claudeCta: null,
   programCta: null,
   hackathonCta: null,
+  getStartedHref: "/login?from=%2Fregister",
 } as const;
 
 export async function getLandingState(): Promise<LandingState> {
@@ -48,12 +50,11 @@ export async function getLandingState(): Promise<LandingState> {
   };
 
   try {
-    const [enrollment, claudeEnrollment, programMember, hackathonRegistered] =
+    const [profile, claudeEnrollment, programMember, hackathonRegistered] =
       await Promise.all([
-        prisma.enrollment.findFirst({
+        prisma.studentProfile.findUnique({
           where: { userId },
           select: { id: true },
-          orderBy: { startedAt: "asc" },
         }),
         prisma.enrollment.findFirst({
           where: { userId, domain: Domain.CLAUDE },
@@ -67,7 +68,8 @@ export async function getLandingState(): Promise<LandingState> {
 
     return {
       user,
-      challengeCta: enrollment
+      getStartedHref: profile ? "/dashboard" : "/register",
+      challengeCta: profile
         ? { href: "/dashboard", ctaLabel: "Open dashboard" }
         : null,
       claudeCta: claudeEnrollment

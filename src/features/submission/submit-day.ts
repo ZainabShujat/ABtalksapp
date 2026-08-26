@@ -1,6 +1,6 @@
 import { formatInTimeZone } from "date-fns-tz";
 import { EnrollmentStatus, SubmissionStatus } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
 import { readDayNumberFromMetadata } from "@/lib/admin-action-metadata";
 import {
   getCurrentDayNumber,
@@ -193,7 +193,7 @@ export async function submitDay(input: {
   const newStatus = SubmissionStatus.ON_TIME;
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await writeClient().$transaction(async (tx) => {
       const existing = await tx.submission.findUnique({
         where: {
           enrollmentId_dayNumber: {

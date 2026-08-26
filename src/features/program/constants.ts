@@ -2,7 +2,7 @@
 export const PROGRAM_TOTAL_DAYS = 31;
 
 /** New ENROLLED members unlock here; days 1..(n-1) are waived as PASSED. */
-export const PROGRAM_MEMBER_START_DAY = 4;
+export const PROGRAM_MEMBER_START_DAY = 1;
 
 /** Program day boundaries and unlock calendar (IST). */
 export const PROGRAM_TZ = "Asia/Kolkata";

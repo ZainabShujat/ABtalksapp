@@ -142,13 +142,19 @@ export function AppFooter() {
   const isTalent = pathname === "/talent" || pathname.startsWith("/talent/");
   const isHackathon =
     pathname === "/hackathon" || pathname.startsWith("/hackathon/");
+  // the Modernist landing ships its own footer
+  const isLanding = pathname === "/";
   const supportEmail = "team@abtalks.in";
+
+// Landing hub ships its own footer.
+  if (isLanding) return null;
 
   // The workshop pages carry their own branded footer, which links legal
   // inline — anything here would duplicate their copyright line.
   if (isWorkshop) return null;
 
   if (pathname === "/dashboard") return null;
+  if (pathname === "/claude" || pathname.startsWith("/claude/day")) return null;
   if (pathname === "/") return null;
 
   // The cohort interview and its report share the cream program surface, so

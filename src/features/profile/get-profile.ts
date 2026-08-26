@@ -16,7 +16,7 @@ export type ProfileData = {
   organization: string | null;
   role: string | null;
   yearsExperience: number | null;
-  domain: Domain;
+  domain: Domain | null;
   skills: string[];
   resumeUrl: string | null;
   phone: string | null;

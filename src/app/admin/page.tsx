@@ -136,6 +136,53 @@ export default async function AdminHomePage() {
 
         <Card className="rounded-xl shadow-[var(--shadow-card)]">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle>Recruiter applications</CardTitle>
+            <Link
+              href="/admin/recruiters"
+              className="text-xs text-primary hover:underline"
+            >
+              View all →
+            </Link>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {data.pendingRecruiters.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No recruiter applications waiting.
+              </p>
+            ) : (
+              data.pendingRecruiters.map((row) => (
+                <div
+                  key={row.id}
+                  className="flex items-center gap-3 rounded-lg border p-3 text-sm"
+                >
+                  <Avatar size="sm">
+                    <AvatarFallback className="text-xs">
+                      {initials(row.fullName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{row.fullName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {row.company} · {row.email}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {row.createdAtRelative}
+                    </p>
+                  </div>
+                  <Link
+                    href="/admin/recruiters"
+                    className={buttonVariants({ variant: "outline", size: "sm" })}
+                  >
+                    Review
+                  </Link>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-xl shadow-[var(--shadow-card)]">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle>Recent Activity</CardTitle>
             <Link
               href="/admin/actions"
