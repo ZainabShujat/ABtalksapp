@@ -10,7 +10,6 @@ import { ClaudeFaqBody } from "@/components/shared/claude-faq";
 import type { HeatmapCell } from "@/features/dashboard/get-heatmap-data";
 import type { AvailableQuizPayload } from "@/features/quiz/get-available-quiz";
 import type { QuizHistoryRow } from "@/features/quiz/get-quiz-attempt-history";
-import { formatDateIST } from "@/lib/date-utils";
 import { cn } from "@/lib/utils";
 
 export type ClaudeContinueInfo = {
@@ -23,7 +22,7 @@ type RecentSubmission = {
   id: string;
   dayNumber: number;
   status: string;
-  submittedAt: Date | string;
+  submittedAtLabel: string;
 };
 
 type Props = {
@@ -130,12 +129,7 @@ export function ClaudeChallengeView({
             </p>
           ) : (
             <ul className="space-y-2 text-sm">
-              {recentSubmissions.map((s) => {
-                const submittedAt =
-                  typeof s.submittedAt === "string"
-                    ? new Date(s.submittedAt)
-                    : s.submittedAt;
-                return (
+              {recentSubmissions.map((s) => (
                   <li
                     key={s.id}
                     className="flex flex-wrap items-center justify-between gap-2 rounded-[12px] border border-[#E0E0E0] bg-[#FBF9F7] px-4 py-3"
@@ -146,7 +140,7 @@ export function ClaudeChallengeView({
                       </span>
                       <span className="text-[#8F8F8F]">
                         {" "}
-                        · completed on {formatDateIST(submittedAt)} ·{" "}
+                        · completed on {s.submittedAtLabel} ·{" "}
                         {s.status === "ON_TIME" || s.status === "LATE"
                           ? "on time"
                           : "late"}
@@ -159,8 +153,7 @@ export function ClaudeChallengeView({
                       View
                     </Link>
                   </li>
-                );
-              })}
+                ))}
             </ul>
           )}
         </ClaudeCollapsiblePanel>

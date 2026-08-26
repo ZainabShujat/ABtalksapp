@@ -17,7 +17,7 @@ import { getHeatmapData } from "@/features/dashboard/get-heatmap-data";
 import { needsReconsent } from "@/features/legal/needs-reconsent";
 import { getAvailableQuiz } from "@/features/quiz/get-available-quiz";
 import { getQuizAttemptHistory } from "@/features/quiz/get-quiz-attempt-history";
-import { isEnrollmentPreStart } from "@/lib/date-utils";
+import { isEnrollmentPreStart, formatDateIST } from "@/lib/date-utils";
 import { prisma } from "@/lib/db";
 import { mapHeatmapCellToUiState } from "@/features/claude/map-day-ui-state";
 
@@ -181,6 +181,12 @@ export default async function ClaudeTrackPage() {
 
   const mustReconsent = await needsReconsent(session.user.id);
   const continueInfo = buildContinueInfo(dashboardData, heatmapData);
+  const recentSubmissions = dashboardData.recentSubmissions.map((s) => ({
+    id: s.id,
+    dayNumber: s.dayNumber,
+    status: s.status,
+    submittedAtLabel: formatDateIST(s.submittedAt),
+  }));
 
   return (
     <DashboardShell
@@ -199,7 +205,7 @@ export default async function ClaudeTrackPage() {
         daysCompleted={dashboardData.enrollment.daysCompleted}
         cells={heatmapData}
         continueInfo={continueInfo}
-        recentSubmissions={dashboardData.recentSubmissions}
+        recentSubmissions={recentSubmissions}
         quizAvailability={quizAvailability}
         quizHistory={quizHistory}
         isReadyForInterview={dashboardData.profile.isReadyForInterview}

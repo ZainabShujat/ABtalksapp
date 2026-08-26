@@ -12,7 +12,7 @@ import { formatDateIST } from "@/lib/date-utils";
 import { prisma } from "@/lib/db";
 import { isDayLockBypassEnabled } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
-import { SubmissionFlow } from "@/app/challenge/[day]/submission-flow";
+import { SubmissionFlow } from "@/components/challenge/submission-flow";
 
 type PageProps = {
   params: Promise<{ day: string }>;

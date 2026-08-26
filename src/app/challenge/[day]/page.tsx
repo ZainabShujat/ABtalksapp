@@ -14,7 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { SubmissionFlow } from "./submission-flow";
+import { SubmissionFlow } from "@/components/challenge/submission-flow";
 import {
   DayPage,
   type DayContent,

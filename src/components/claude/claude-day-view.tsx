@@ -3,20 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  BookOpen,
   Check,
   Clock,
   Copy,
   ExternalLink,
-  FileCode,
-  FileOutput,
-  Lightbulb,
-  ListChecks,
   PlayCircle,
   Send,
-  Share2,
   Tag,
-  Wrench,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -216,9 +209,8 @@ export function ClaudeDayView({
           </div>
         </header>
 
-        <DaySectionCard title="Prompt Template" iconPlaceholder>
-          <div className="mb-3 flex items-center gap-2">
-            <FileCode className="size-4 text-[#E05226]" aria-hidden />
+        <DaySectionCard title="Prompt Template" iconPlaceholder={false}>
+          <div className="mb-3">
             <button
               type="button"
               onClick={() => void handleCopyPrompt()}
@@ -243,13 +235,10 @@ export function ClaudeDayView({
         </DaySectionCard>
 
         {solutionVideoUrl ? (
-          <DaySectionCard title="Tutorial Video" iconPlaceholder>
-            <div className="mb-3 flex items-center gap-2">
-              <PlayCircle className="size-4 text-[#E05226]" aria-hidden />
-              <span className="text-xs text-[#8F8F8F]">
-                Step-by-step video guide
-              </span>
-            </div>
+          <DaySectionCard title="Tutorial Video" iconPlaceholder={false}>
+            <p className="mb-3 text-xs text-[#8F8F8F]">
+              Step-by-step video guide
+            </p>
             {solutionVideoUrl.includes("REPLACE_WITH") ? (
               <p className="text-sm text-[#4B4B4B]">
                 Tutorial video coming soon. Check back shortly.
@@ -289,9 +278,8 @@ export function ClaudeDayView({
         ) : null}
 
         {content.tool ? (
-          <DaySectionCard title="Tool of the Day" iconPlaceholder>
-            <div className="mb-2 flex items-center gap-2">
-              <Wrench className="size-4 text-[#E05226]" aria-hidden />
+          <DaySectionCard title="Tool of the Day" iconPlaceholder={false}>
+            <div className="mb-2 flex flex-wrap items-center gap-2">
               <span className="font-semibold text-[#111111]">
                 {content.tool.name}
               </span>
@@ -327,10 +315,7 @@ export function ClaudeDayView({
           </DaySectionCard>
         ) : null}
 
-        <DaySectionCard title={content.task.title} icon="objectives">
-          <div className="mb-3 flex items-center gap-2">
-            <ListChecks className="size-4 text-[#E05226]" aria-hidden />
-          </div>
+        <DaySectionCard title={content.task.title} iconPlaceholder={false}>
           <ol className="space-y-3">
             {content.task.steps.map((step, i) => (
               <li key={i} className="flex items-start gap-3">
@@ -345,10 +330,7 @@ export function ClaudeDayView({
           </ol>
         </DaySectionCard>
 
-        <DaySectionCard title="What You'll Learn" iconPlaceholder>
-          <div className="mb-3 flex items-center gap-2">
-            <Lightbulb className="size-4 text-[#E05226]" aria-hidden />
-          </div>
+        <DaySectionCard title="What You'll Learn" iconPlaceholder={false}>
           <p className="mb-4 text-sm leading-relaxed text-[#4B4B4B]">
             {content.learning.summary}
           </p>
@@ -370,7 +352,7 @@ export function ClaudeDayView({
         </DaySectionCard>
 
         {resources.length > 0 ? (
-          <DaySectionCard title="Resources" icon="resources">
+          <DaySectionCard title="Resources" iconPlaceholder={false}>
             <ul className="space-y-2">
               {resources.map((url, i) => {
                 let label = url;
@@ -387,9 +369,8 @@ export function ClaudeDayView({
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-sm text-[#E05226] hover:underline"
+                      className="text-sm text-[#E05226] hover:underline"
                     >
-                      <BookOpen className="h-3 w-3 shrink-0" />
                       <span className="break-all">{label}</span>
                     </a>
                   </li>
@@ -399,13 +380,11 @@ export function ClaudeDayView({
           </DaySectionCard>
         ) : null}
 
-        <DaySectionCard title="LinkedIn Post Guidelines" iconPlaceholder>
-          <div className="mb-2 flex items-center gap-2">
-            <Share2 className="size-4 text-[#E05226]" aria-hidden />
-            <span className="text-xs text-[#8F8F8F]">
-              {content.engagement.type}
-            </span>
-          </div>
+        <DaySectionCard
+          title="LinkedIn Post Guidelines"
+          iconPlaceholder={false}
+        >
+          <p className="mb-2 text-xs text-[#8F8F8F]">{content.engagement.type}</p>
           <p className="mb-3 text-sm leading-relaxed text-[#4B4B4B]">
             {content.engagement.description}
           </p>
@@ -444,10 +423,7 @@ export function ClaudeDayView({
           </div>
         </DaySectionCard>
 
-        <DaySectionCard title="Your Deliverable" iconPlaceholder>
-          <div className="mb-2 flex items-center gap-2">
-            <FileOutput className="size-4 text-[#E05226]" aria-hidden />
-          </div>
+        <DaySectionCard title="Your Deliverable" iconPlaceholder={false}>
           <p className="text-sm text-[#4B4B4B]">
             {content.deliverable.description}
           </p>

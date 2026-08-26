@@ -81,7 +81,7 @@ export function ClaudeDayList({ cells, currentDay, enrollmentId }: Props) {
                 {state === "window_closed" ? (
                   <>
                     <span className="inline-flex items-center gap-1.5 text-[14px] leading-[21px] text-[#8F8F8F]">
-                      Window closed
+                      Missed submission
                     </span>
                     <Link
                       href={href}
