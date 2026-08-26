@@ -179,7 +179,7 @@ export function DashboardSidebar({
       </div>
       {renderNav(false)}
       {collapsible && onToggleCollapse ? (
-        <div className="border-t border-neutral-200 px-3 py-2">
+        <div className="hidden border-t border-neutral-200 px-3 py-2 md:block">
           <button
             type="button"
             onClick={onToggleCollapse}
