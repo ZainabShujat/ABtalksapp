@@ -1,12 +1,15 @@
 import "server-only";
 import { CertificateStatus, CertificateType } from "@prisma/client";
-import { prisma } from "@/lib/db";
 import { formatDateIST } from "@/lib/date-utils";
 import { certificateIdSchema } from "@/lib/validations/certificate";
+import { getByPublicId } from "@/repositories/credentials";
+import type { CredentialView } from "@/repositories/types";
 import {
   CERTIFICATE_TYPES,
   HACKATHON_VARIANT_LABELS,
   certificateDomainLabel,
+  certificateTypeFromCredentialTitle,
+  domainForCertificateType,
   parseHackathonVariant,
   type HackathonCertificateVariant,
 } from "./constants";
@@ -27,44 +30,32 @@ export type PublicCertificateView = {
   isRevoked: boolean;
 };
 
-export async function getPublicCertificate(
-  rawId: string,
-): Promise<PublicCertificateView | null> {
-  const parsed = certificateIdSchema.safeParse(rawId);
-  if (!parsed.success) return null;
+function metaRecord(metadata: unknown): Record<string, unknown> {
+  if (metadata !== null && typeof metadata === "object" && !Array.isArray(metadata)) {
+    return metadata as Record<string, unknown>;
+  }
+  return {};
+}
 
-  const cert = await prisma.certificate.findUnique({
-    where: { certificateId: parsed.data },
-    select: {
-      certificateId: true,
-      recipientName: true,
-      type: true,
-      status: true,
-      domain: true,
-      issuedAt: true,
-      metadata: true,
-    },
-  });
+export function publicCertificateFromCredential(
+  row: CredentialView,
+): PublicCertificateView | null {
+  const type = certificateTypeFromCredentialTitle(row.title);
+  if (!type) return null;
 
-  if (!cert) return null;
-
-  const meta =
-    cert.metadata !== null &&
-    typeof cert.metadata === "object" &&
-    !Array.isArray(cert.metadata)
-      ? (cert.metadata as Record<string, unknown>)
-      : {};
-  const typeConfig = CERTIFICATE_TYPES[cert.type];
+  const meta = metaRecord(row.metadata);
+  const typeConfig = CERTIFICATE_TYPES[type];
+  const domain = domainForCertificateType(type);
 
   let statusLabel = "Issued";
   const details: { label: string; value: string }[] = [];
 
-  if (cert.type === CertificateType.CLAUDE_CHALLENGE) {
+  if (type === CertificateType.CLAUDE_CHALLENGE) {
     statusLabel = "Completed";
-    if (cert.domain != null) {
+    if (domain != null) {
       details.push({
         label: "Track",
-        value: certificateDomainLabel(cert.domain),
+        value: certificateDomainLabel(domain),
       });
     }
     if (typeof meta.daysCompleted === "number") {
@@ -79,7 +70,7 @@ export async function getPublicCertificate(
         value: String(meta.longestStreak),
       });
     }
-  } else if (cert.type === CertificateType.HACKATHON) {
+  } else if (type === CertificateType.HACKATHON) {
     const hackathonVariant = parseHackathonVariant(meta.hackathonVariant);
     statusLabel = hackathonVariant
       ? HACKATHON_VARIANT_LABELS[hackathonVariant]
@@ -95,20 +86,31 @@ export async function getPublicCertificate(
   }
 
   const hackathonVariant =
-    cert.type === CertificateType.HACKATHON
+    type === CertificateType.HACKATHON
       ? parseHackathonVariant(meta.hackathonVariant)
       : null;
 
   return {
-    certificateId: cert.certificateId,
-    recipientName: cert.recipientName,
-    type: cert.type,
+    certificateId: row.credentialId,
+    recipientName: row.recipientName,
+    type,
     title: typeConfig.title,
     subtitle: typeConfig.subtitle,
-    issuedOn: formatDateIST(cert.issuedAt),
+    issuedOn: formatDateIST(row.issuedAt),
     statusLabel,
     details,
     hackathonVariant,
-    isRevoked: cert.status === CertificateStatus.REVOKED,
+    isRevoked: row.status === CertificateStatus.REVOKED,
   };
+}
+
+export async function getPublicCertificate(
+  rawId: string,
+): Promise<PublicCertificateView | null> {
+  const parsed = certificateIdSchema.safeParse(rawId);
+  if (!parsed.success) return null;
+
+  const row = await getByPublicId(parsed.data);
+  if (!row) return null;
+  return publicCertificateFromCredential(row);
 }

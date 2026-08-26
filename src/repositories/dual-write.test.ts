@@ -170,6 +170,32 @@ suite("lazy achievements path still goes through ensureClaudeCertificate", () =>
   assert(src.includes("ensureClaudeCertificate"), "lazy issue");
 });
 
+suite("verify lookup goes through getByPublicId", () => {
+  const src = source("src/features/certificate/get-certificate.ts");
+  assert(src.includes("getByPublicId"), "repo lookup");
+  assert(!src.includes("prisma.certificate"), "no direct certificate query");
+});
+
+suite("achievements listing goes through listForUser", () => {
+  const src = source("src/features/certificate/get-achievements.ts");
+  assert(src.includes("listForUser"), "repo list");
+  assert(src.includes("ensureClaudeCertificate"), "lazy issue unchanged");
+  assert(!src.includes("prisma.certificate"), "no direct certificate query");
+});
+
+suite("download lookup stays on getPublicCertificate", () => {
+  const src = source("src/app/verify/[certificateId]/download/route.ts");
+  assert(src.includes("getPublicCertificate"), "same lookup as verify");
+  assert(src.includes("renderCertificatePdf"), "pdf render unchanged");
+});
+
+suite("listForUser orders issuedAt desc then public id", () => {
+  const src = source("src/repositories/credentials.ts");
+  assert(src.includes('{ issuedAt: "desc" }'), "issuedAt desc");
+  assert(src.includes('{ credentialId: "asc" }'), "new-side stable key");
+  assert(src.includes('{ certificateId: "asc" }'), "legacy stable key");
+});
+
 suite("ENABLE_NEW_* are not flipped in dual-write helpers", () => {
   const src = source("src/repositories/dual-write.ts");
   assert(src.includes("isDualWriteEnabled"), "gated on dual-write");
