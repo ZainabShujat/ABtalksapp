@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Mic, Moon, Square, Sun } from "lucide-react";
+import { Mic, MicOff, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LANGUAGE_RETRY_LINE } from "@/features/interview/language-gate";
 import {
@@ -10,6 +10,7 @@ import {
   type SilenceState,
   type SilenceThresholds,
 } from "@/features/interview/silence";
+import { MIN_AUDIO_BYTES } from "@/features/interview/voice-contract";
 import {
   MAX_ANSWER_MS,
   MAX_LANGUAGE_RETRIES_PER_QUESTION,
@@ -23,8 +24,7 @@ import {
 import {
   MOVING_ON_LINE,
   NO_RESPONSE_ANSWER,
-  REPEAT_PREFIX,
-  repeatLine,
+  WAITING_LINE,
   type RoomLineKind,
 } from "@/features/interview/room-lines";
 import {
@@ -83,8 +83,8 @@ function readStoredRoomTheme(): OrbPalette {
 }
 
 const PHASE_COPY: Record<Phase, { label: string; hint: string }> = {
-  idle: { label: "Your turn", hint: "Tap the microphone and answer out loud." },
-  listening: { label: "Listening", hint: "Tap again when you have finished." },
+  idle: { label: "Your turn", hint: "" },
+  listening: { label: "Interviewer is listening", hint: "" },
   processing: { label: "Evaluating your answer", hint: "One moment." },
   speaking: { label: "Interviewer speaking", hint: "" },
 };
@@ -97,6 +97,14 @@ const PHASE_COPY: Record<Phase, { label: string; hint: string }> = {
  * does not read as the interview having frozen.
  */
 const TTS_TIMEOUT_MS = 12_000;
+
+/**
+ * Interviewer lines kept on screen, including the current one.
+ *
+ * Enough to glance back at what was just asked, few enough that the room never
+ * becomes a transcript to scroll.
+ */
+const HISTORY_TURNS = 3;
 
 /**
  * Decodes the exact spoken line out of the speech response header.
@@ -131,7 +139,6 @@ export function InterviewRoom({
   title,
   firstQuestion,
   openingPrompt,
-  candidateName,
   onFinishedAction,
   onAbandonedAction,
 }: {
@@ -146,7 +153,11 @@ export function InterviewRoom({
    * every interview appeared to start mid-thought.
    */
   openingPrompt?: string;
-  candidateName: string;
+  /**
+   * Part of the contract with the session, but no longer rendered: the room
+   * shows interviewer lines only, so there is no candidate label to print.
+   */
+  candidateName?: string;
   onFinishedAction: (data: FinishInterviewData) => void;
   onAbandonedAction: () => void;
 }) {
@@ -154,6 +165,17 @@ export function InterviewRoom({
   const [turns, setTurns] = useState<Turn[]>([
     { role: "interviewer", text: opening },
   ]);
+  // The room renders interviewer lines only (see the transcript block). Kept as
+  // a derived list rather than by filtering inline, so "is this the line being
+  // spoken" is an index check against what is actually on screen.
+  // The current interviewer line, plus a little history behind it.
+  //
+  // Showing every past turn rebuilt the chat transcript this room exists to
+  // avoid; showing none of it left the candidate with no way to glance back at
+  // what was just asked. A short tail, faded, is the compromise: the current
+  // line reads first and the previous ones recede.
+  const interviewerTurns = turns.filter((t) => t.role === "interviewer");
+  const visibleTurns = interviewerTurns.slice(-HISTORY_TURNS);
   const [question, setQuestion] = useState<ClientQuestion | null>(firstQuestion);
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -162,6 +184,16 @@ export function InterviewRoom({
   const [closing, setClosing] = useState(false);
   const [confirmExit, setConfirmExit] = useState(false);
   const [theme, setTheme] = useState<OrbPalette>("light");
+  /**
+   * Microphone muted.
+   *
+   * The mic control is MUTE, not submit. Pressing it must never end a turn:
+   * only silence does that. It used to call `stopRecording`, which submitted
+   * whatever had been captured — so a candidate muting to cough sent a
+   * half-answer, and one labelled "Done" invited exactly that.
+   */
+  const [muted, setMuted] = useState(false);
+  const mutedRef = useRef(false);
   /**
    * Set when the interview is OVER but could not be completed — scoring
    * refused, or the finish request failed.
@@ -233,7 +265,6 @@ export function InterviewRoom({
    * Kept out of `turns` for that reason: it is never a transcript entry, only
    * on-screen feedback that the room is hearing them.
    */
-  const [livePreview, setLivePreview] = useState("");
   /** How many times we have prompted an unanswered question. Resets per turn. */
   /** Language corrections used on the question currently on the floor. */
   const languageRetriesRef = useRef(0);
@@ -537,32 +568,6 @@ export function InterviewRoom({
     [interviewId, startReveal, stopReveal],
   );
 
-  /**
-   * Hands the floor back automatically when the interviewer stops talking.
-   *
-   * Previously the candidate had to notice that speech had ended and press a
-   * button, which is not how a conversation works: the other person stops, and
-   * it is your turn. The microphone control stays, so anyone who wants to stop
-   * or restart still can.
-   *
-   * Guarded on `question` so it never opens the microphone after the closing
-   * line, and on `micUnavailable` so a denied permission is not retried on a
-   * loop.
-   */
-  useEffect(() => {
-    if (phase !== "idle" || !question || micUnavailable || closing || fatal) {
-      return;
-    }
-    if (recorderRef.current) return;
-    // Never open the microphone while the interviewer's audio is still playing.
-    // The phase is set to "idle" in `speak`'s finally block, but a browser-voice
-    // fallback or a stalled element can leave sound in the room; recording it
-    // would feed the interviewer's own question back through transcription.
-    if (speakingRef.current !== null) return;
-    const id = setTimeout(() => void startRecording(), 350);
-    return () => clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, question, micUnavailable, closing, fatal]);
 
   // Speak the opening question once the room mounts.
   //
@@ -653,6 +658,8 @@ export function InterviewRoom({
       }
       setQuestion(turn.data.question);
       nudgeCountRef.current = 0;
+      setMuted(false);
+      mutedRef.current = false;
       languageRetriesRef.current = 0;
       setProgress(turn.data.progress);
 
@@ -732,6 +739,19 @@ export function InterviewRoom({
         const blob = new Blob(chunksRef.current, {
           type: recorder.mimeType || "audio/webm",
         });
+
+        // Nothing was ever said, or the recorder produced only container
+        // headers — which is exactly what a muted track yields. Uploading that
+        // earns a 400 ("Audio file might be corrupted or unsupported") and
+        // burns a request, so hand the turn back instead. Nothing is spent:
+        // no answer was submitted and the question stays on the floor.
+        if (!hasSpokenRef.current || blob.size < MIN_AUDIO_BYTES) {
+          setError(
+            "I didn't catch anything there. Tap the microphone and try again.",
+          );
+          setPhase("idle");
+          return;
+        }
 
         setPhase("processing");
         const form = new FormData();
@@ -910,10 +930,21 @@ export function InterviewRoom({
             noiseFloorRef.current === null
               ? rms
               : Math.min(noiseFloorRef.current, rms);
-          if (rms >= thresholdsRef.current.on) {
-            silenceRef.current = { hasSpoken: true, quietSince: null };
-            hasSpokenRef.current = true;
-          }
+          // Through the reducer, not a bare threshold test: a single loud
+          // frame is a cough or a knock, and marking that as "they have
+          // started" armed the silence clock against a candidate who had not
+          // said anything yet. `shouldStop` is ignored here — calibration
+          // decides only whether they have begun, never that they have
+          // finished.
+          const opening = stepSilence(
+            silenceRef.current,
+            rms,
+            now,
+            undefined,
+            thresholdsRef.current,
+          );
+          silenceRef.current = opening.state;
+          hasSpokenRef.current = opening.state.hasSpoken;
           return;
         }
 
@@ -929,6 +960,11 @@ export function InterviewRoom({
         // The rule itself lives in features/interview/silence.ts as a pure
         // function, so turn-taking can be tested without a microphone. This
         // loop owns the audio; that owns the decision.
+        // Muted is not a pause. Advancing the timer here would submit the
+        // answer 4.5s after the candidate muted, which is the one thing the
+        // mute control must never cause.
+        if (mutedRef.current) return;
+
         const step = stepSilence(
           silenceRef.current,
           rms,
@@ -1025,8 +1061,11 @@ export function InterviewRoom({
         // With one signal only, a microphone whose level never crossed the
         // threshold looked exactly like silence and the nudge cut the candidate
         // off while they were talking.
+        // The recognised words are NOT displayed — the candidate's transcript
+        // is deliberately absent from the room. Recognition is kept purely as a
+        // second signal that speech has started, alongside the analyser, so a
+        // very quiet speaker still ends their own turn.
         if (preview.length > 0) hasSpokenRef.current = true;
-        setLivePreview(preview);
       };
       rec.onerror = () => {
         // No-speech, network, aborted: all harmless for a preview.
@@ -1049,7 +1088,6 @@ export function InterviewRoom({
     }
     recognitionRef.current = null;
     recognitionActiveRef.current = false;
-    setLivePreview("");
   }
 
   function clearAnswerCap() {
@@ -1057,6 +1095,65 @@ export function InterviewRoom({
       clearTimeout(answerCapRef.current);
       answerCapRef.current = null;
     }
+  }
+
+  /**
+   * Hands the floor back automatically when the interviewer stops talking.
+   *
+   * Previously the candidate had to notice that speech had ended and press a
+   * button, which is not how a conversation works: the other person stops, and
+   * it is your turn. The microphone control stays, so anyone who wants to stop
+   * or restart still can.
+   *
+   * Guarded on `question` so it never opens the microphone after the closing
+   * line, and on `micUnavailable` so a denied permission is not retried on a
+   * loop.
+   */
+  useEffect(() => {
+    if (phase !== "idle" || !question || micUnavailable || closing || fatal) {
+      return;
+    }
+    if (recorderRef.current) return;
+    // Never open the microphone while the interviewer's audio is still playing.
+    // The phase is set to "idle" in `speak`'s finally block, but a browser-voice
+    // fallback or a stalled element can leave sound in the room; recording it
+    // would feed the interviewer's own question back through transcription.
+    if (speakingRef.current !== null) return;
+    const id = setTimeout(() => void startRecording(), 350);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, question, micUnavailable, closing, fatal]);
+
+  /**
+   * Mutes or unmutes the microphone, without ending the turn.
+   *
+   * Disabling the track is what actually stops audio reaching the recorder;
+   * the analyser then reads silence, so the silence timer is suspended
+   * alongside it (see the analyser loop) or muting would auto-submit after
+   * 4.5 seconds — the precise thing this control must never do.
+   */
+  function toggleMute() {
+    // Not recording yet: this press opens the microphone rather than muting it.
+    if (phaseRef.current !== "listening") {
+      setMuted(false);
+      mutedRef.current = false;
+      void startRecording();
+      return;
+    }
+
+    setMuted((current) => {
+      const next = !current;
+      mutedRef.current = next;
+      streamRef.current?.getAudioTracks().forEach((t) => {
+        t.enabled = !next;
+      });
+      // Coming back from mute, the quiet period must not count toward the
+      // silence window: they were not pausing, they were muted.
+      if (!next) {
+        silenceRef.current = { ...silenceRef.current, quietSince: null };
+      }
+      return next;
+    });
   }
 
   /** Ends the turn and SUBMITS what was captured. */
@@ -1099,23 +1196,46 @@ export function InterviewRoom({
       // Only fires if they genuinely have not spoken. `hasSpokenRef` is set by
       // the analyser the moment their level crosses the speech threshold, and
       // by the live preview the moment it recognises a word.
-      if (hasSpokenRef.current || phaseRef.current !== "listening") return;
-      // With no signal at all, silence and a long answer are indistinguishable.
-      // Interrupting on that guess is worse than waiting.
-      if (!analyserActiveRef.current && !recognitionActiveRef.current) return;
+      if (hasSpokenRef.current) return;
+
+      // After the first nudge the room is mid-cycle: it cancelled the recording
+      // to speak, so the microphone may be closed and the analyser detached,
+      // and the phase may be "idle" rather than "listening". The escalation
+      // must not depend on either. Requiring them is why a muted candidate sat
+      // at "Take your time" indefinitely: nudge one fired, tore down the audio
+      // it was gated on, and nothing could ever fire nudge two.
+      const escalating = nudgeCountRef.current >= 1;
+
+      if (!escalating) {
+        if (phaseRef.current !== "listening") return;
+        // With no signal at all, silence and a long answer are
+        // indistinguishable. Interrupting on that guess is worse than waiting.
+        if (!analyserActiveRef.current && !recognitionActiveRef.current) return;
+      } else if (phaseRef.current === "processing" || phaseRef.current === "speaking") {
+        // Something else already took the turn; let it finish.
+        return;
+      }
 
       nudgeCountRef.current += 1;
 
       if (nudgeCountRef.current === 1) {
         // CANCEL, not stop: the capture is the silence that got us here.
         cancelRecording();
-        const line = question ? repeatLine(question.text) : REPEAT_PREFIX;
-        setTurns((prev) => [...prev, { role: "interviewer", text: line }]);
-        setReveal({ text: line, chars: 0 });
-        // "repeat", so the speech route restates the question the server has on
-        // the floor. Asking for the latest transcript line here is what made the
-        // interviewer read the opening greeting again instead.
-        void speak(line, "repeat");
+        // A short prompt, NOT the question again. It was asked seconds ago and
+        // is still on screen — restating it made the interviewer look like it
+        // had spoken twice and forgotten the first time.
+        setTurns((prev) => [
+          ...prev,
+          { role: "interviewer", text: WAITING_LINE },
+        ]);
+        setReveal({ text: WAITING_LINE, chars: WAITING_LINE.length });
+        // Reschedule from HERE rather than relying on the microphone being
+        // reopened. Muting, a denied permission or a failed reopen must not be
+        // able to strand the interview on this line — the escalation to
+        // "moving on" is what makes repeated silence bounded.
+        void speak(WAITING_LINE, "waiting").finally(() => {
+          if (!hasSpokenRef.current) scheduleNoAnswerNudge();
+        });
         return;
       }
 
@@ -1341,52 +1461,50 @@ export function InterviewRoom({
       {/* --------------------------------------------------- transcript */}
       <div className="flex-1 overflow-y-auto py-8" ref={containerRef}>
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
-          {turns.map((turn, i) => {
-            const isLatest = i >= turns.length - 2;
-            const isLast = i === turns.length - 1;
+          {/* Interviewer lines only.
+              *
+              * A voice interview is not a chat log. Showing the candidate's own
+              * words back to them turns it into ChatGPT with a microphone, and
+              * it invites them to read their answer rather than talk. What they
+              * said is still captured, transcribed, scored and reported — it is
+              * simply not on screen while they are being interviewed.
+              *
+              * Role labels go with it: with one speaker on screen, "AI
+              * Interviewer" above every line is chrome, not information. */}
+          {visibleTurns.map((turn, i) => {
+            const isLast = i === visibleTurns.length - 1;
 
             // While this exact line is being spoken, show only the portion the
-            // audio has reached. `reveal.text` is the same string that was sent
-            // to the speech endpoint, so matching on it guarantees we never
-            // truncate a different turn, and never show a paraphrase.
+            // audio has reached. `reveal.text` is the same string sent to the
+            // speech endpoint, so matching on it guarantees we never truncate a
+            // different turn and never show a paraphrase.
             //
-            // If we are already in "speaking" but reveal has not caught up
-            // (TTS still fetching), keep the line blank rather than dumping
-            // the full question before the voice starts.
+            // If we are already in "speaking" but reveal has not caught up (TTS
+            // still fetching), keep the line blank rather than dumping the whole
+            // question before the voice starts. This is what stops the next
+            // question appearing before the interviewer has asked it.
             const revealing =
-              isLast &&
-              turn.role === "interviewer" &&
-              reveal !== null &&
-              reveal.text === turn.text;
+              isLast && reveal !== null && reveal.text === turn.text;
             const shown = revealing
               ? turn.text.slice(0, reveal.chars)
-              : isLast && turn.role === "interviewer" && phase === "speaking"
+              : isLast && phase === "speaking"
                 ? ""
                 : turn.text;
 
             return (
-              <div key={i} className={cn("iv-enter", !isLatest && "iv-turn-past")}>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--iv-text-faint)]">
-                  {turn.role === "interviewer" ? "AI Interviewer" : candidateName}
+              <div
+                key={`${interviewerTurns.length - visibleTurns.length + i}`}
+                className={cn("iv-enter", !isLast && "iv-turn-past")}
+              >
+                <p
+                  className="whitespace-pre-line text-[17px] leading-[1.65] text-[var(--iv-text)] md:text-[19px]"
+                  // The full line is always available to assistive tech even
+                  // mid-reveal; a screen reader must not have to wait for an
+                  // animation to learn what was asked.
+                  aria-label={turn.text}
+                >
+                  {shown}
                 </p>
-
-                {turn.role === "interviewer" ? (
-                  <p
-                    className="whitespace-pre-line text-[17px] leading-[1.65] text-[var(--iv-text)] md:text-[19px]"
-                    // The full line is always available to assistive tech even
-                    // mid-reveal; a screen reader must not have to wait for an
-                    // animation to learn what was asked.
-                    aria-label={turn.text}
-                  >
-                    {shown}
-                  </p>
-                ) : (
-                  <div className="rounded-[12px] border border-[var(--iv-border-soft)] bg-[var(--iv-surface-raised)] px-4 py-3">
-                    <p className="whitespace-pre-line text-[15px] leading-relaxed text-[var(--iv-text-muted)]">
-                      {turn.text}
-                    </p>
-                  </div>
-                )}
               </div>
             );
           })}
@@ -1397,17 +1515,12 @@ export function InterviewRoom({
             </p>
           ) : null}
 
-          {phase === "listening" && livePreview ? (
-            <div className="iv-enter">
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--iv-text-faint)]">
-                {candidateName}
-              </p>
-              <div className="rounded-[12px] border border-dashed border-[var(--iv-border)] bg-[var(--iv-surface-raised)] px-4 py-3">
-                <p className="text-[15px] leading-relaxed text-[var(--iv-text-muted)]">
-                  {livePreview}
-                </p>
-              </div>
-            </div>
+          {/* The candidate's turn is signalled by the orb and one quiet line,
+              not by their transcript scrolling past them. */}
+          {phase === "listening" ? (
+            <p className="text-[13px] text-[var(--iv-text-faint)]">
+              Interviewer is listening…
+            </p>
           ) : null}
 
           <div ref={bottomRef} />
@@ -1513,29 +1626,31 @@ export function InterviewRoom({
                 <button
                   type="button"
                   disabled={busy || !question || Boolean(fatal)}
-                  onClick={phase === "listening" ? stopRecording : startRecording}
+                  onClick={toggleMute}
                   aria-label={
-                    phase === "listening"
-                      ? "Stop recording and submit answer"
-                      : "Record answer"
+                    phase !== "listening"
+                      ? "Turn on the microphone"
+                      : muted
+                        ? "Unmute the microphone"
+                        : "Mute the microphone"
                   }
                   className={cn(
                     "flex size-14 items-center justify-center rounded-full border-2 transition-all duration-200",
-                    phase === "listening"
+                    phase === "listening" && !muted
                       ? "border-[#1A7F37]/70 bg-[#1A7F37]/12 text-[#1A7F37] hover:bg-[#1A7F37]/20"
                       : "border-[var(--iv-border)] bg-[var(--iv-surface)] text-[var(--iv-text)] hover:border-[var(--iv-accent)]/60 hover:bg-[var(--iv-accent)]/10",
                     (busy || !question || fatal) &&
                       "cursor-not-allowed opacity-40 hover:bg-transparent",
                   )}
                 >
-                  {phase === "listening" ? (
-                    <Square className="size-5 fill-current" />
+                  {muted ? (
+                    <MicOff className="size-5" strokeWidth={1.75} />
                   ) : (
                     <Mic className="size-5" strokeWidth={1.75} />
                   )}
                 </button>
                 <span className="text-[11px] font-medium text-[var(--iv-text-faint)]">
-                  {phase === "listening" ? "Done" : "Mic"}
+                  {muted ? "Muted" : "Mic on"}
                 </span>
               </div>
             ) : null}

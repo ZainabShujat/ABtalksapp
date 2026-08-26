@@ -1,6 +1,7 @@
 import { logger } from "@/lib/logger";
 import { mergeEvidence } from "@/features/interview/evidence";
 import { buildInterviewMemory } from "@/features/interview/memory";
+import { NO_RESPONSE_ANSWER } from "@/features/interview/room-lines";
 import {
   activeQuestionView,
   classifyAnswer,
@@ -110,6 +111,30 @@ export function createAnalyzeAnswer(llm: InterviewLLM) {
     const asked = questionAsAsked(question, depthLevel);
     const view = activeQuestionView(question, depthLevel);
 
+    // Nothing was said. There is no answer to analyse, so no model is asked:
+    // sending the marker to a provider would spend a request to be told what we
+    // already know, and risks it being read as a terse answer worth probing.
+    if (state.candidateAnswer.trim() === NO_RESPONSE_ANSWER) {
+      return {
+        decision: {
+          action: "NEXT_QUESTION",
+          reason: "No response captured.",
+          evidence: {
+            conceptualFound: false,
+            practicalFound: false,
+            tradeoffsFound: false,
+            flaggedIssues: ["stuck_or_evasive"],
+            reasoning: "No response captured.",
+            matchedEvidence: [],
+            relevance: "ON_TOPIC",
+          },
+          acknowledgement: null,
+          noResponse: true,
+          degraded: false,
+        },
+      };
+    }
+
     const decision = await llm.analyzeAnswer({
       question: asked,
       answerText: state.candidateAnswer,
@@ -122,6 +147,12 @@ export function createAnalyzeAnswer(llm: InterviewLLM) {
       recentTranscript: state.interviewState.transcript,
       calibratedLevel: state.interviewState.calibration?.level ?? null,
       memory: buildInterviewMemory(state.plan, state.interviewState),
+      // Peek at the next authored question so the connecting sentence can lead
+      // into it. Read-only: the plan decides what is asked, not the model.
+      nextQuestionText:
+        state.plan.questions[
+          (state.interviewState.currentQuestionIndex ?? 0) + 1
+        ]?.text ?? null,
     });
 
     logger.info("[interview-agent] answer analyzed", {

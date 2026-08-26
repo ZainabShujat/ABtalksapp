@@ -20,6 +20,17 @@ import { createHash } from "node:crypto";
  */
 export const MAX_AUDIO_BYTES = 24 * 1024 * 1024;
 
+/**
+ * Smallest upload that could possibly contain speech.
+ *
+ * A MediaRecorder whose track has been DISABLED still emits a valid container:
+ * webm headers, cues, no audio. That is a few hundred bytes, it passes a
+ * `size > 0` check, and the provider answers "Audio file might be corrupted or
+ * unsupported" with a 400. One second of Opus at the browser's default bitrate
+ * is roughly 3 KB, so anything under 2 KB is a header and nothing else.
+ */
+export const MIN_AUDIO_BYTES = 2048;
+
 export const ALLOWED_AUDIO_TYPES = [
   "audio/webm",
   "audio/ogg",
@@ -72,7 +83,7 @@ export function rejectAudioUpload(
   size: number,
   rawType: string,
 ): AudioRejection {
-  if (size <= 0) return "EMPTY";
+  if (size < MIN_AUDIO_BYTES) return "EMPTY";
   if (size > MAX_AUDIO_BYTES) return "TOO_LARGE";
   if (!isAllowedAudioType(rawType)) return "UNSUPPORTED_TYPE";
   return null;

@@ -138,6 +138,16 @@ export type InterviewDecision = {
    * is what stops that probe arriving as a non-sequitur.
    */
   bridge?: string | null;
+  /**
+   * The room submitted its no-response marker rather than anything the
+   * candidate said.
+   *
+   * Kept separate from `stuck_or_evasive`, which describes a real answer that
+   * happened to contain nothing. This one means there was no answer at all, so
+   * it must not earn a scaffold, must not spend follow-up budget, and must not
+   * record evidence — see `routeDecision`.
+   */
+  noResponse?: boolean;
   confidence?: number | null;
   /**
    * True when this decision came from the deterministic fallback rather than a

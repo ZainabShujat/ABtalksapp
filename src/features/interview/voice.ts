@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { LANGUAGE_RETRY_LINE } from "@/features/interview/language-gate";
 import {
   MOVING_ON_LINE,
+  WAITING_LINE,
   repeatLine,
   type RoomLineKind,
 } from "@/features/interview/room-lines";
@@ -280,6 +281,12 @@ export async function resolveSpeakableLine(
   }
   if (kind === "moving_on") {
     return { ok: true, data: { text: MOVING_ON_LINE } };
+  }
+  // A short prompt, not a restatement: the question was asked seconds ago and
+  // is still on screen. Composed here like the others, so the client still
+  // cannot choose what the interviewer says.
+  if (kind === "waiting") {
+    return { ok: true, data: { text: WAITING_LINE } };
   }
 
   const row = await prisma.generalInterview.findFirst({

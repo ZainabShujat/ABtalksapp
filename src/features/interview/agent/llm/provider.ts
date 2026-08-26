@@ -41,6 +41,14 @@ export type AnalyzeAnswerInput = {
    * window for resolving references.
    */
   memory?: string[];
+  /**
+   * The authored question that will be asked next if this turn moves on.
+   *
+   * Given to the model ONLY so the connecting sentence can lead into it. The
+   * question itself is still spoken verbatim from the bank — the model never
+   * chooses it, rewords it, or decides whether it is reached.
+   */
+  nextQuestionText?: string | null;
 };
 
 export interface InterviewLLM {

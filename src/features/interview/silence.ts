@@ -1,5 +1,6 @@
 import {
   INTERVIEW_SILENCE_MS,
+  SPEECH_SUSTAIN_MS,
   SPEECH_OFF_RMS,
   SPEECH_ON_RMS,
 } from "@/features/interview/constants";
@@ -22,6 +23,16 @@ import {
  */
 
 export type SilenceState = {
+  /**
+   * When the level first rose above the ON threshold in the current burst.
+   *
+   * Loudness alone cannot tell a voice from a door closing, a cough or a desk
+   * knock — they all cross the threshold. Duration can: speech stays up for
+   * hundreds of milliseconds, a transient does not. Holding the burst here and
+   * only calling it speech once it has SUSTAINED is what stops a single bang
+   * from opening the turn and starting the silence clock.
+   */
+  speechSince: number | null;
   /** True once the candidate has crossed the speech threshold at least once. */
   hasSpoken: boolean;
   /** When the current run of quiet began, in ms on the same clock as `now`. */
@@ -29,7 +40,7 @@ export type SilenceState = {
 };
 
 export function initialSilenceState(): SilenceState {
-  return { hasSpoken: false, quietSince: null };
+  return { hasSpoken: false, quietSince: null, speechSince: null };
 }
 
 export type SilenceStep = {
@@ -72,28 +83,74 @@ export function stepSilence(
   now: number,
   silenceMs: number = INTERVIEW_SILENCE_MS,
   thresholds: SilenceThresholds = defaultThresholds,
+  sustainMs: number = SPEECH_SUSTAIN_MS,
 ): SilenceStep {
   // Before the first real speech, quiet means "not started yet", never "done".
   // Background noise sits below the ON threshold, so it cannot open the turn.
   if (!state.hasSpoken) {
-    if (rms >= thresholds.on) {
-      return { state: { hasSpoken: true, quietSince: null }, shouldStop: false };
+    if (rms < thresholds.on) {
+      // The burst ended before it lasted long enough to be speech: a knock, a
+      // click, a chair. Forget it and keep waiting.
+      return state.speechSince === null
+        ? { state, shouldStop: false }
+        : { state: { ...state, speechSince: null }, shouldStop: false };
     }
-    return { state, shouldStop: false };
+
+    const speechSince = state.speechSince ?? now;
+    if (now - speechSince < sustainMs) {
+      // Loud, but not yet for long enough to be a voice.
+      return { state: { ...state, speechSince }, shouldStop: false };
+    }
+    return {
+      state: { hasSpoken: true, quietSince: null, speechSince: null },
+      shouldStop: false,
+    };
   }
 
-  // Anything at or above the LOWER threshold counts as still talking, so a
-  // quiet syllable between two loud ones does not restart the clock.
   if (rms >= thresholds.off) {
-    return { state: { hasSpoken: true, quietSince: null }, shouldStop: false };
+    // Already talking: nothing to decide, keep going.
+    if (state.quietSince === null) {
+      return {
+        state: { hasSpoken: true, quietSince: null, speechSince: null },
+        shouldStop: false,
+      };
+    }
+
+    // They had gone quiet and something just crossed the threshold. A cough, a
+    // chair or a keystroke must NOT wipe the silence window and buy another
+    // full 4.5 seconds, so the quiet clock keeps running until the sound has
+    // lasted long enough to be someone actually resuming.
+    const resumeSince = state.speechSince ?? now;
+    if (now - resumeSince < sustainMs) {
+      return {
+        state: { ...state, speechSince: resumeSince },
+        shouldStop: false,
+      };
+    }
+
+    // Sustained: they are genuinely talking again. Now the window resets.
+    return {
+      state: { hasSpoken: true, quietSince: null, speechSince: null },
+      shouldStop: false,
+    };
   }
 
   const quietSince = state.quietSince ?? now;
+  // The blip ended before it became speech; forget it.
+  if (state.speechSince !== null) {
+    return {
+      state: { ...state, quietSince, speechSince: null },
+      shouldStop: now - quietSince >= silenceMs,
+    };
+  }
   if (now - quietSince >= silenceMs) {
     return {
-      state: { hasSpoken: true, quietSince: null },
+      state: { hasSpoken: true, quietSince: null, speechSince: null },
       shouldStop: true,
     };
   }
-  return { state: { hasSpoken: true, quietSince }, shouldStop: false };
+  return {
+    state: { hasSpoken: true, quietSince, speechSince: null },
+    shouldStop: false,
+  };
 }

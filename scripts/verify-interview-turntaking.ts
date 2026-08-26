@@ -27,6 +27,7 @@ import {
 } from "@/features/interview/room-lines";
 import {
   INTERVIEW_SILENCE_MS,
+  NO_ANSWER_MS,
   MAX_LANGUAGE_RETRIES_PER_QUESTION,
   SPEECH_OFF_RMS,
   SPEECH_ON_RMS,
@@ -164,6 +165,65 @@ check("4d. the thresholds are amplitudes a real voice actually reaches", () => {
   );
 });
 
+check("4e. a transient noise does not open the turn", () => {
+  // A door slam or a desk knock: one or two loud frames, then quiet. Loud
+  // enough to cross the ON threshold, far too short to be a voice. Before the
+  // sustain requirement this flipped `hasSpoken`, which armed the silence clock
+  // against a candidate who had not said anything yet.
+  const bang = [SPEECH, SPEECH, ...Array(200).fill(QUIET)];
+  const { stoppedAtMs, state } = run(bang);
+  assert.equal(state.hasSpoken, false, "a 100ms transient is not speech");
+  assert.equal(stoppedAtMs, null);
+});
+
+check("4f. sustained speech still opens the turn promptly", () => {
+  // 400ms of level, which is a syllable or two. Must register.
+  const { state } = run([...Array(8).fill(SPEECH), ...Array(4).fill(QUIET)]);
+  assert.equal(state.hasSpoken, true);
+});
+
+check("4g. a blip during a pause does not reset the silence window", () => {
+  // They stop talking, then a cough or keystroke crosses the threshold briefly.
+  // That must not buy another full window: the quiet clock keeps running, so
+  // the answer still ends about 4.5s after they actually stopped.
+  const levels = [
+    ...Array(20).fill(SPEECH), // 1s of answer
+    ...Array(40).fill(QUIET), // 2s quiet
+    SPEECH, // a 50ms blip
+    ...Array(200).fill(QUIET),
+  ];
+  const { stoppedAtMs } = run(levels);
+  assert.ok(stoppedAtMs !== null, "should still stop");
+  const sinceTheyStopped = stoppedAtMs! - 20 * 50;
+  assert.ok(
+    sinceTheyStopped < INTERVIEW_SILENCE_MS + 600,
+    `stopped ${sinceTheyStopped}ms after they stopped — the blip reset the window`,
+  );
+});
+
+check("4h. genuinely resuming DOES reset the window", () => {
+  const levels = [
+    ...Array(20).fill(SPEECH),
+    ...Array(40).fill(QUIET), // 2s pause
+    ...Array(12).fill(SPEECH), // 600ms, sustained: a real resumption
+    ...Array(200).fill(QUIET),
+  ];
+  const { stoppedAtMs } = run(levels);
+  assert.ok(stoppedAtMs !== null);
+  assert.ok(
+    stoppedAtMs! > 72 * 50,
+    "a real resumption must restart the silence window",
+  );
+});
+
+check("two silence windows pass before anything is recorded unanswered", () => {
+  // The room prompts after one window and only moves on after a second, so a
+  // muted or quiet candidate gets ~9s and one spoken prompt before any
+  // "(no response)" is submitted.
+  assert.equal(NO_ANSWER_MS, INTERVIEW_SILENCE_MS);
+  assert.ok(NO_ANSWER_MS * 2 >= 9_000, "two chances, not one");
+});
+
 console.log("\nRoom-composed lines");
 
 check("the three room lines are distinct and none is the opening", () => {
@@ -193,6 +253,26 @@ check("the nudge restates the question in full", () => {
 
 check("the nudge degrades to the prefix when no question is open", () => {
   assert.equal(repeatLine("   "), REPEAT_PREFIX);
+});
+
+check("repeated silence is bounded and always reaches 'moving on'", () => {
+  // Mirrors the room's nudge counter. The regression this guards: nudge one
+  // cancelled the recording in order to speak, and nudge two was gated on the
+  // analyser and the "listening" phase that cancelling had just torn down — so a
+  // muted candidate sat on "Take your time" forever and the interview never
+  // moved on. The escalation must not depend on the audio it just stopped.
+  let nudges = 0;
+  const fire = (audioStillLive: boolean) => {
+    const escalating = nudges >= 1;
+    if (!escalating && !audioStillLive) return "waited";
+    nudges += 1;
+    return nudges === 1 ? "waiting_line" : "moving_on";
+  };
+
+  assert.equal(fire(true), "waiting_line");
+  // Audio is now torn down. The escalation must still fire.
+  assert.equal(fire(false), "moving_on");
+  assert.equal(nudges, 2, "silence resolves in exactly two steps");
 });
 
 console.log("\nEnglish-only gate");

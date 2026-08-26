@@ -173,6 +173,17 @@ export const SPEECH_ON_RMS = 0.045;
 export const SPEECH_OFF_RMS = 0.022;
 
 /**
+ * How long a level must STAY above the speech threshold before it counts as a
+ * voice rather than a noise.
+ *
+ * Amplitude alone cannot separate speech from a cough, a door or a knock on the
+ * desk: all of them cross the threshold. Duration can. 250ms is longer than
+ * essentially any transient and shorter than the first syllable of a sentence,
+ * so a real answer still opens the turn immediately as far as anyone can tell.
+ */
+export const SPEECH_SUSTAIN_MS = 250;
+
+/**
  * Multipliers applied to the measured room noise floor.
  *
  * A fixed threshold cannot serve both a headset in a quiet room and a laptop
@@ -187,8 +198,12 @@ export const SPEECH_OFF_FLOOR_MULTIPLIER = 2.0;
  * How long the room waits when the candidate has said NOTHING at all before
  * prompting them. Distinct from the silence timer, which ends an answer that
  * has already happened.
+ *
+ * Deliberately the same interval, applied twice: quiet for this long earns one
+ * prompt, quiet for this long again is what finally moves the interview on. Two
+ * chances before anything is recorded as unanswered.
  */
-export const NO_ANSWER_MS = 10_000;
+export const NO_ANSWER_MS = INTERVIEW_SILENCE_MS;
 
 /**
  * Hard ceiling on a single recorded answer.

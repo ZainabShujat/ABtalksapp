@@ -23,14 +23,34 @@
  */
 
 /** Which room-composed line the speech route should synthesize. */
-export type RoomLineKind = "latest" | "repeat" | "language" | "moving_on";
+export type RoomLineKind =
+  | "latest"
+  | "waiting"
+  | "repeat"
+  | "language"
+  | "moving_on";
 
 export const ROOM_LINE_KINDS: readonly RoomLineKind[] = [
   "latest",
+  "waiting",
   "repeat",
   "language",
   "moving_on",
 ];
+
+/**
+ * Said when the candidate has not spoken since the microphone opened.
+ *
+ * It deliberately does NOT restate the question. The interviewer asked it a few
+ * seconds earlier and it is still on screen; repeating it verbatim reads as the
+ * interviewer talking twice in a row and having forgotten it just spoke. A
+ * human waits a beat and says something small instead.
+ *
+ * The full restatement below is still used when the candidate ASKS for it — the
+ * agent's own REPEAT action — where it is what was actually requested.
+ */
+export const WAITING_LINE =
+  "I can't hear you at the moment. Take your time, and check your microphone isn't muted.";
 
 /**
  * Said once when the candidate has not spoken at all since the microphone

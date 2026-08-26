@@ -243,6 +243,15 @@ export function routeDecision(
   // question, and the candidate then gets "I'll keep us focused on the
   // interview", which accuses an honest person of dodging. Moving on records
   // the question as unanswered, which is the correct and sufficient penalty.
+  // Nothing was said at all. No scaffold, no budget, no evidence: the room
+  // already gave them two chances and a prompt before submitting this.
+  if (decision.noResponse) {
+    return {
+      action: "NEXT_QUESTION",
+      rationale: "No response captured; recorded unanswered without probing.",
+    };
+  }
+
   if (stuck) {
     // One nudge, then move on. Answering "I don't know" with silence and the
     // next question is not what an interviewer does: they offer a smaller way
