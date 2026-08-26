@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronRight, UserRound } from "lucide-react";
-import { refPublicId, type CandidateSource } from "@/features/hire/candidate-ref";
+import { refPublicId } from "@/features/hire/candidate-ref";
 import { RequestIntroButton } from "@/components/hire/request-intro-button";
 import { DeskShortlistButton } from "@/components/hire/desk-shortlist-button";
 import { ShortlistButton } from "@/components/talent/shortlist-button";
@@ -17,22 +17,7 @@ import {
   useUpgradePrompt,
 } from "@/components/hire/locked-field";
 import { cn } from "@/lib/utils";
-import { SKILL_PILL_CAP } from "@/components/hire/hire-card-facts";
-
-function trackLabel(source?: CandidateSource): string | null {
-  switch (source) {
-    case "CLAUDE":
-      return "Claude";
-    case "CHALLENGE_60":
-      return "60-day";
-    case "HACKATHON":
-      return "Hackathon";
-    case "PROGRAM":
-      return "US cohort";
-    default:
-      return null;
-  }
-}
+import { buildCardPills } from "@/components/hire/hire-card-facts";
 
 /**
  * A stable tint index for a skill name.
@@ -70,11 +55,6 @@ export function DeskMatchCard({
   const e = match.evidence ?? {};
   const publicId = refPublicId(match.candidateRef);
   const skills = e.skills ?? [];
-  const needles = match.highlightSkills ?? [];
-  const track = trackLabel(match.source);
-  const isChallenge = match.source === "CLAUDE" || match.source === "CHALLENGE_60";
-  const workLabel = isChallenge ? "days shipped" : "missions passed";
-  const totalDays = e.totalTrackDays;
 
   if (preview) {
     const p = preview;
@@ -238,56 +218,11 @@ export function DeskMatchCard({
       </header>
 
       <div className="desk-card__facts">
-        {track && <span className="desk-pill">{track}</span>}
-        {match.source === "HACKATHON" && (
-          <span className="desk-pill desk-pill--good">Shipped project</span>
-        )}
-        {match.source !== "HACKATHON" && typeof e.missionsPassed === "number" && (
-          <span className="desk-pill desk-pill--good">
-            {e.missionsPassed}
-            {totalDays ? ` of ${totalDays}` : ""} {workLabel}
+        {buildCardPills(match).map((pill) => (
+          <span key={pill.key} className={pill.className}>
+            {pill.label}
           </span>
-        )}
-        {e.certificateIssued && (
-          <span className="desk-pill desk-pill--good">Certified</span>
-        )}
-        {typeof e.quizAverage === "number" && (
-          <span className="desk-pill desk-pill--good">Quiz {e.quizAverage}</span>
-        )}
-        {typeof e.cleanPassCount === "number" && e.cleanPassCount > 0 && (
-          <span className="desk-pill desk-pill--good">
-            {e.cleanPassCount} first-attempt
-          </span>
-        )}
-        {/* Years and working languages used to sit here too, which put ten
-            pills on a card. Both were already said: the years are in the meta
-            row directly above, and a working language is the same word as the
-            skill beside it — "python" next to "Python". What is left is the
-            evidence a CV cannot claim, plus three skills. */}
-        {skills.slice(0, SKILL_PILL_CAP).map((s) => {
-          const hit = needles.some((n) =>
-            s.toLowerCase().includes(n.toLowerCase()),
-          );
-          return (
-            <span
-              key={s}
-              // A skill the recruiter asked for keeps the emphasis mark; the
-              // rest take their own tint. Dropping the hit state to match the
-              // mockup would lose which skill actually answered the search.
-              className={
-                hit ? "desk-pill desk-pill--hit" : `desk-pill ${skillTint(s)}`
-              }
-            >
-              {s}
-            </span>
-          );
-        })}
-        {match.compensationBand && (
-          <span className="desk-pill">est. {match.compensationBand}</span>
-        )}
-        {match.availabilityUnknown && (
-          <span className="desk-pill desk-pill--warn">Availability unconfirmed</span>
-        )}
+        ))}
       </div>
 
       {match.rationale && <p className="desk-card__why">{match.rationale}</p>}

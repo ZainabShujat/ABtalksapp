@@ -118,69 +118,111 @@ export function MatchMetaTags({ match }: { match: Pick<MatchCardData, "evidence"
  */
 export const SKILL_PILL_CAP = 3;
 
-export function MatchPills({
-  match,
-  compact = false,
-}: {
-  match: MatchCardData;
-  compact?: boolean;
-}) {
+/** Hard ceiling on the row. Everything else lives behind View details. */
+export const MAX_CARD_PILLS = 5;
+
+
+export type CardPill = { key: string; label: string; className: string };
+
+/**
+ * The pills a card shows, in the order they earn their place — and no more
+ * than five of them.
+ *
+ * Five because everything is on the card behind "View details" anyway. A row
+ * that wraps to three lines is not more information, it is less: the reader
+ * stops at the second pill either way, so the only question is which two they
+ * see.
+ *
+ * The order is the answer to that. Matched skills come first, because they are
+ * why this person surfaced at all. Then the evidence headline, which is the one
+ * claim here a CV cannot make. Then an availability warning, because it changes
+ * what the recruiter does next. Everything after that is context, and context
+ * is what the details view is for.
+ *
+ * One builder, used by every card that draws this row. Three components used to
+ * each keep their own copy of this list and they had already drifted apart —
+ * different skill caps, and pills on one that were absent from another.
+ */
+export function buildCardPills(
+  match: Pick<
+    MatchCardData,
+    | "evidence"
+    | "source"
+    | "highlightSkills"
+    | "compensationBand"
+    | "compensationDeclared"
+    | "availabilityUnknown"
+  >,
+  max: number = MAX_CARD_PILLS,
+): CardPill[] {
   const e = match.evidence ?? {};
   const skills = e.skills ?? [];
   const needles = match.highlightSkills ?? [];
   const track = trackLabel(match.source);
   const isChallenge = match.source === "CLAUDE" || match.source === "CHALLENGE_60";
   const workLabel = isChallenge ? "days shipped" : "missions passed";
-  const totalDays = e.totalTrackDays;
-  const skillCap = SKILL_PILL_CAP;
 
+  const isHit = (s: string) =>
+    needles.some((n) => s.toLowerCase().includes(n.toLowerCase()));
+  // Matched skills first, in the recruiter's own order of interest.
+  const ranked = [...skills.filter(isHit), ...skills.filter((s) => !isHit(s))];
+
+  const out: CardPill[] = [];
+  const push = (key: string, label: string, className: string) =>
+    out.push({ key, label, className });
+
+  for (const s of ranked.slice(0, SKILL_PILL_CAP)) {
+    push(
+      `skill:${s}`,
+      s,
+      isHit(s) ? "desk-pill desk-pill--hit" : `desk-pill ${skillTint(s)}`,
+    );
+  }
+
+  if (match.source === "HACKATHON") {
+    push("shipped", "Shipped project", "desk-pill desk-pill--good");
+  } else if (typeof e.missionsPassed === "number") {
+    const total = e.totalTrackDays ? ` of ${e.totalTrackDays}` : "";
+    push("missions", `${e.missionsPassed}${total} ${workLabel}`, "desk-pill desk-pill--good");
+  }
+
+  if (match.availabilityUnknown) {
+    push("availability", "Availability unconfirmed", "desk-pill desk-pill--warn");
+  }
+  if (e.certificateIssued) push("certified", "Certified", "desk-pill desk-pill--good");
+  if (typeof e.cleanPassCount === "number" && e.cleanPassCount > 0) {
+    push("clean", `${e.cleanPassCount} first-attempt`, "desk-pill desk-pill--good");
+  }
+  if (typeof e.quizAverage === "number") {
+    push("quiz", `Quiz ${e.quizAverage}`, "desk-pill desk-pill--good");
+  }
+  if (match.compensationBand) {
+    const prefix = match.compensationDeclared ? "" : "est. ";
+    push("band", `${prefix}${match.compensationBand}`, "desk-pill");
+  }
+  if (track) push("track", track, "desk-pill");
+
+  return out.slice(0, Math.max(0, max));
+}
+
+/**
+ * `compact` is still accepted because callers pass it, but it no longer changes
+ * the row: the cap is five everywhere, and a card that showed fewer pills in a
+ * narrow column was the same card telling a recruiter less for no reason.
+ */
+export function MatchPills({
+  match,
+}: {
+  match: MatchCardData;
+  compact?: boolean;
+}) {
   return (
     <div className="desk-card__facts">
-      {track && <span className="desk-pill">{track}</span>}
-      {match.source === "HACKATHON" && (
-        <span className="desk-pill desk-pill--good">Shipped project</span>
-      )}
-      {match.source !== "HACKATHON" && typeof e.missionsPassed === "number" && (
-        <span className="desk-pill desk-pill--good">
-          {e.missionsPassed}
-          {totalDays ? ` of ${totalDays}` : ""} {workLabel}
+      {buildCardPills(match).map((pill) => (
+        <span key={pill.key} className={pill.className}>
+          {pill.label}
         </span>
-      )}
-      {e.certificateIssued && (
-        <span className="desk-pill desk-pill--good">Certified</span>
-      )}
-      {typeof e.quizAverage === "number" && (
-        <span className="desk-pill desk-pill--good">Quiz {e.quizAverage}</span>
-      )}
-      {typeof e.cleanPassCount === "number" && e.cleanPassCount > 0 && (
-        <span className="desk-pill desk-pill--good">
-          {e.cleanPassCount} first-attempt
-        </span>
-      )}
-      {skills.slice(0, skillCap).map((s) => {
-        const hit = needles.some((n) =>
-          s.toLowerCase().includes(n.toLowerCase()),
-        );
-        return (
-          <span
-            key={s}
-            className={
-              hit ? "desk-pill desk-pill--hit" : `desk-pill ${skillTint(s)}`
-            }
-          >
-            {s}
-          </span>
-        );
-      })}
-      {match.compensationBand && (
-        <span className="desk-pill">
-          {match.compensationDeclared ? "" : "est. "}
-          {match.compensationBand}
-        </span>
-      )}
-      {match.availabilityUnknown && (
-        <span className="desk-pill desk-pill--warn">Availability unconfirmed</span>
-      )}
+      ))}
     </div>
   );
 }
