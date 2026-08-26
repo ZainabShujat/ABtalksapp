@@ -37,7 +37,7 @@ export function OtherChallenges({
               HUB_CARD_HOVER_CLASS,
             )}
           >
-            <p className="font-heading font-semibold text-black">
+            <p className="font-inter font-bold text-black">
               Claude Challenge
             </p>
             <p className="mt-1 text-sm text-[#555555]">

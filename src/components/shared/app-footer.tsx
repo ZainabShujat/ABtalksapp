@@ -154,6 +154,7 @@ export function AppFooter() {
   if (isWorkshop) return null;
 
   if (pathname === "/dashboard") return null;
+  if (pathname === "/claude" || pathname.startsWith("/claude/day")) return null;
   if (pathname === "/") return null;
 
   if (
