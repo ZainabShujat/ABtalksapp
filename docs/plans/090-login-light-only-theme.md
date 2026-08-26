@@ -19,8 +19,12 @@ The login page already uses cream `bg-[#FBF9F7]`, but the card, shadcn Button, a
 
 ## 5. Steps
 
-1. Add login layout with `forcedTheme="light"`, `enableSystem={false}`, `disableTransitionOnChange`.
-2. Do not call `setTheme("light")` (would persist and change the rest of the app).
+1. ~~Add login layout with `forcedTheme="light"`~~ — nested provider does not clear `html.dark` against the root ThemeProvider.
+2. Apply `.report-light` on the login page wrapper so card/muted/border tokens stay light on a subtree.
+3. Force Google/dev buttons to `bg-white` / `dark:bg-white` with black text so contrast holds even if `html.dark` remains.
+4. Keep `layout.tsx` as a passthrough (no nested ThemeProvider).
+
+Do not call `setTheme("light")` (would persist and change the rest of the app).
 
 ## 6. Guardrails for Cursor (DO NOT)
 
