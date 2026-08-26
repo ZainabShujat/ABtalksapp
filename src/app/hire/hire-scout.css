@@ -4140,3 +4140,222 @@ html.dark .hire-app.hire-menu {
     padding: 0 18px;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Virtual candidate — a requirement drawn as a card.
+
+   Deliberately unlike a real match. A real card is a solid surface with an
+   avatar, a name and a score, because somebody was measured. This one has a
+   dashed edge, no avatar, no score and a badge that says what it is, because
+   nobody has been. The difference has to survive a glance: a recruiter
+   skimming must never take one for the other, and colour alone would not do it
+   for anyone who cannot see colour — hence the dash and the words.
+   --------------------------------------------------------------------------- */
+.vc-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 20px;
+  border: 1px dashed var(--h-border-strong);
+  border-radius: 16px;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--h-peach-wash),
+    var(--h-peach-wash) 10px,
+    transparent 10px,
+    transparent 20px
+  );
+}
+
+html.dark .vc-card {
+  border-color: rgba(255, 176, 140, 0.34);
+  background: rgba(255, 176, 140, 0.05);
+}
+
+.vc-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.vc-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--h-primary);
+  color: var(--h-primary);
+  background: transparent;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.vc-card__kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--h-gray-500);
+}
+
+.vc-card__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 24px;
+  color: var(--h-ink);
+}
+
+.vc-card__explain {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--h-gray-600);
+}
+
+.vc-card__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 18px;
+  margin: 4px 0 0;
+}
+
+.vc-card__facts dt {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--h-gray-500);
+}
+
+.vc-card__facts dd {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 19px;
+  font-weight: 600;
+  color: var(--h-ink);
+  overflow-wrap: anywhere;
+}
+
+.vc-card__status {
+  margin: 2px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--h-primary);
+}
+
+.vc-card__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  align-self: flex-start;
+  height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--h-primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.vc-card__cta:hover {
+  background: var(--h-primary-hover);
+}
+
+.vc-card__cta:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.vc-card__ghost {
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--h-border-strong);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--h-gray-700);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.vc-card__done {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--h-good-ink);
+}
+
+.vc-card__form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--h-border);
+}
+
+.vc-card__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--h-gray-500);
+}
+
+.vc-card__input,
+.vc-card__textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--h-border);
+  border-radius: 10px;
+  background: var(--h-surface);
+  color: var(--h-ink);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.vc-card__textarea {
+  resize: vertical;
+  min-height: 66px;
+}
+
+.vc-card__input:focus,
+.vc-card__textarea:focus {
+  outline: none;
+  border-color: var(--h-primary);
+}
+
+.vc-card__formcta {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+@media (max-width: 900px) {
+  .vc-card {
+    padding: 16px 14px;
+  }
+
+  /* Same two-up rhythm the evidence pills use on a phone. */
+  .vc-card__facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 12px;
+  }
+
+  .vc-card__cta,
+  .vc-card__ghost {
+    flex: 1;
+  }
+}

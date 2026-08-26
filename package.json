@@ -48,7 +48,8 @@
     "test:scout": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/scout-agent.test.ts",
     "test:sample": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/sample-card.test.ts",
     "test:visibility": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/visibility.test.ts",
-    "verify:hire-pool": "tsx scripts/verify-hire-pool.ts"
+    "verify:hire-pool": "tsx scripts/verify-hire-pool.ts",
+    "test:virtual": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/virtual-candidate.test.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

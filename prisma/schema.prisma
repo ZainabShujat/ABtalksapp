@@ -340,6 +340,11 @@ model User {
   hackathonRemovalsPerformed HackathonRemoval[]      @relation("HackathonRemover")
 
   // hire — Scout engagements, requests and availability
+  virtualCandidateRequests VirtualCandidateRequest[] @relation("VirtualCandidateRequester")
+  virtualCandidatesAssigned VirtualCandidateRequest[] @relation("VirtualCandidateAssignee")
+  virtualCandidatesLinked   VirtualCandidateRequest[] @relation("VirtualCandidateLinked")
+  virtualCandidatesConverted VirtualCandidate[]       @relation("VirtualCandidateConverted")
+  virtualCandidateEvents    VirtualCandidateEvent[]   @relation("VirtualCandidateActor")
   talentRequests        TalentRequest[]
   engagementsAsRecruiter TalentEngagementRequest[] @relation("RecruiterEngagements")
   engagementsAsCandidate TalentEngagementRequest[] @relation("CandidateEngagements")
@@ -1071,6 +1076,8 @@ model TalentRequest {
   @@index([recruiterUserId, createdAt(sort: Desc)])
   @@index([status, createdAt(sort: Desc)])
   engagements TalentEngagementRequest[]
+  virtualCandidates        VirtualCandidate[]        @relation("VirtualCandidateOrigin")
+  virtualCandidateRequests VirtualCandidateRequest[] @relation("VirtualCandidateRequestBrief")
 }
 
 model TalentRequestMessage {
@@ -2749,4 +2756,135 @@ model RecruiterEmailOtp {
 
   @@index([email])
   @@index([expiresAt])
+}
+
+/// A recruiter requirement the pool could not answer, kept as a profile.
+///
+/// Deliberately NOT a Candidate row and never joined to one as if it were: it
+/// describes work to be done, not a person who exists. There is no name field,
+/// no contact field and no employer field on purpose — a column that could hold
+/// a fabricated identity is a column somebody eventually fills.
+///
+/// Deduplicated on `fingerprintKey` (see features/hire/requirement-fingerprint),
+/// so two recruiters asking for the same stack share one sourcing job while
+/// keeping separate requests.
+model VirtualCandidate {
+  id             String                 @id @default(cuid())
+  /// Order-independent signature of the requirement. Unique: one profile per
+  /// distinct requirement, which is what makes demand countable.
+  fingerprintKey String                 @unique
+  /// The requirement said back, e.g. "Python + Flask + MERN Full Stack
+  /// Developer". Never a person's name.
+  title          String
+  roleFamily     String
+  requiredSkills String[]               @default([])
+  preferredSkills String[]              @default([])
+  experienceMin  Int?
+  experienceMax  Int?
+  locationLabel  String?
+  employmentType TalentEmploymentType?
+  /// Free-text requirement, e.g. "within 15 days". Not a promise about anyone.
+  availabilityRequirement String?
+  educationRequirement    String?
+  status         VirtualCandidateStatus @default(AVAILABLE_ON_REQUEST)
+  /// The TalentRequest that first produced this profile, for provenance.
+  originRequestId String?
+  /// Set once sourcing succeeds. From here the recruiter sees the real person
+  /// and this profile stops being offered.
+  convertedCandidateUserId String?
+  adminNotes     String?
+  expiresAt      DateTime?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  fulfilledAt    DateTime?
+
+  originRequest      TalentRequest? @relation("VirtualCandidateOrigin", fields: [originRequestId], references: [id], onDelete: SetNull)
+  convertedCandidate User?          @relation("VirtualCandidateConverted", fields: [convertedCandidateUserId], references: [id], onDelete: SetNull)
+  requests           VirtualCandidateRequest[]
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([roleFamily])
+}
+
+/// One recruiter asking us to source one virtual candidate.
+///
+/// Kept separate from VirtualCandidate so that deduplicating the *work* never
+/// merges the *asks*: recruiter, timeline, notes and priority stay per request,
+/// which is what lets two recruiters chase the same profile without either of
+/// them losing their own context or being told about the other.
+model VirtualCandidateRequest {
+  id                 String                        @id @default(cuid())
+  virtualCandidateId String
+  recruiterUserId    String
+  /// The TalentRequest this was asked from, so the brief is recoverable.
+  talentRequestId    String?
+  status             VirtualCandidateRequestStatus @default(REQUESTED)
+  /// Days the recruiter can wait. Their constraint, not our commitment.
+  timelineDays       Int?
+  recruiterNote      String?
+  adminNotes         String?
+  priority           Int                           @default(0)
+  assignedAdminId    String?
+  expectedBy         DateTime?
+  /// The real person sourced for THIS recruiter. Per request, not per profile:
+  /// two recruiters can be served by different people from one requirement.
+  linkedCandidateUserId String?
+  createdAt          DateTime                      @default(now())
+  updatedAt          DateTime                      @updatedAt
+  fulfilledAt        DateTime?
+  cancelledAt        DateTime?
+
+  virtualCandidate VirtualCandidate @relation(fields: [virtualCandidateId], references: [id], onDelete: Cascade)
+  recruiter        User             @relation("VirtualCandidateRequester", fields: [recruiterUserId], references: [id], onDelete: Cascade)
+  talentRequest    TalentRequest?   @relation("VirtualCandidateRequestBrief", fields: [talentRequestId], references: [id], onDelete: SetNull)
+  assignedAdmin    User?            @relation("VirtualCandidateAssignee", fields: [assignedAdminId], references: [id], onDelete: SetNull)
+  linkedCandidate  User?            @relation("VirtualCandidateLinked", fields: [linkedCandidateUserId], references: [id], onDelete: SetNull)
+  events           VirtualCandidateEvent[]
+
+  /// One open ask per recruiter per requirement. A second click is the same
+  /// ask, not a second sourcing job — enforced here rather than remembered in
+  /// an action.
+  @@unique([virtualCandidateId, recruiterUserId])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([recruiterUserId, createdAt(sort: Desc)])
+  @@index([assignedAdminId, status])
+}
+
+/// Append-only history for one request. Every status move and every link lands
+/// here, so "who promised what, when" survives the row being edited.
+model VirtualCandidateEvent {
+  id        String   @id @default(cuid())
+  requestId String
+  /// STATUS_CHANGED | NOTE_ADDED | ASSIGNED | CANDIDATE_LINKED | CANCELLED …
+  kind      String
+  fromStatus VirtualCandidateRequestStatus?
+  toStatus   VirtualCandidateRequestStatus?
+  note      String?
+  actorUserId String?
+  createdAt DateTime @default(now())
+
+  request VirtualCandidateRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  actor   User?                   @relation("VirtualCandidateActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([requestId, createdAt])
+}
+
+enum VirtualCandidateStatus {
+  AVAILABLE_ON_REQUEST
+  REQUESTED
+  SOURCING
+  CANDIDATE_FOUND
+  FULFILLED
+  EXPIRED
+  CANCELLED
+}
+
+enum VirtualCandidateRequestStatus {
+  REQUESTED
+  SOURCING
+  CANDIDATE_FOUND
+  CANDIDATE_SHARED
+  FULFILLED
+  CANCELLED
+  EXPIRED
 }

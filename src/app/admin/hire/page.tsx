@@ -4,6 +4,8 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
 import { EngagementDecision } from "@/components/admin/engagement-decision";
 import { getDemandBoard } from "@/features/hire/demand-board";
+import { listVirtualCandidateRequests } from "@/features/hire/virtual-candidate-store";
+import { VirtualCandidateQueue } from "@/components/admin/virtual-candidate-queue";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -26,6 +28,10 @@ export default async function AdminHirePage() {
   // to. Reading them apart meant deciding an introduction without seeing which
   // stacks keep being asked for.
   const demand = await getDemandBoard();
+
+  // Demand we could not answer at all. Distinct from the introductions above:
+  // those are about someone we have, these are about someone we do not.
+  const virtualQueue = await listVirtualCandidateRequests({ take: 50 });
 
   const engagements = await prisma.talentEngagementRequest.findMany({
     orderBy: [{ submittedAt: "desc" }, { createdAt: "desc" }],
@@ -100,6 +106,28 @@ export default async function AdminHirePage() {
           Recruiters see only the reference ID until you share contact.
         </p>
       </div>
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="font-display text-lg font-semibold">
+            Virtual candidate requests
+          </h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Requirements the pool could not answer, that a recruiter asked us to
+            source. Nothing here is a person yet.
+          </p>
+        </div>
+        {virtualQueue.ok ? (
+          <VirtualCandidateQueue
+            rows={virtualQueue.data.rows.map((r) => ({
+              ...r,
+              createdAt: r.createdAt.toISOString(),
+            }))}
+          />
+        ) : (
+          <p className="text-sm text-destructive">{virtualQueue.message}</p>
+        )}
+      </section>
 
       <section className="space-y-3">
         <h2 className="font-display text-lg font-semibold">

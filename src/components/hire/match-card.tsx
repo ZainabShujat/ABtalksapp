@@ -28,6 +28,13 @@ export type PublicScoreSlice = {
 export type MatchCardData = {
   /** `PROGRAM:<id>` / `CLAUDE:<id>` — what every action on this card addresses. */
   candidateRef: string;
+  /**
+   * Set only by `virtual-candidate.ts`. The card is a requirement, not a
+   * person: no name, no contact, nothing measured. The UI must say so plainly
+   * wherever this is true — a requirement that reads as inventory is the one
+   * failure this feature cannot have.
+   */
+  isVirtual?: boolean;
   /** Which track the evidence came from. Decides the wording of the counts:
    *  the cohort passes graded missions, the challenge submits daily work. */
   source?: CandidateSource;
