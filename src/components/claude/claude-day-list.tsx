@@ -19,6 +19,61 @@ function dayHref(enrollmentId: string, dayNumber: number) {
   return `/claude/day/${dayNumber}?challenge=${encodeURIComponent(enrollmentId)}`;
 }
 
+function DayRowContent({
+  cell,
+  currentDay,
+  state,
+  title,
+}: {
+  cell: HeatmapCell;
+  currentDay: number;
+  state: ReturnType<typeof mapHeatmapCellToUiState>;
+  title: string;
+}) {
+  return (
+    <>
+      <div className="min-w-0">
+        
+        <p className="text-[17px] leading-7 font-semibold text-[#111111]">
+          {title}
+        </p>
+      </div>
+      <div className="flex shrink-0 flex-wrap items-center gap-3">
+        {state === "available" ? (
+          <span className={startClass}>
+            {cell.dayNumber === currentDay ? "Start Challenge" : "Submit"}
+          </span>
+        ) : null}
+        {state === "completed" ? (
+          <>
+            <span className="inline-flex items-center gap-1.5 text-[14px] leading-[21px] font-semibold text-[#2E7D32]">
+              <CheckCircle2 className="size-5" aria-hidden />
+              Completed
+            </span>
+            
+          </>
+        ) : null}
+        {state === "window_closed" ? (
+          <>
+            <span className="inline-flex items-center gap-1.5 text-[14px] leading-[21px] text-[#8F8F8F]">
+              Missed submission
+            </span>
+            <span className="text-[14px] leading-[21px] text-[#E05226]">
+              View
+            </span>
+          </>
+        ) : null}
+        {state === "locked" ? (
+          <span className="inline-flex items-center gap-1.5 text-[14px] leading-[21px] text-[#8F8F8F]">
+            <Lock className="size-4" aria-hidden />
+            Not Unlocked
+          </span>
+        ) : null}
+      </div>
+    </>
+  );
+}
+
 export function ClaudeDayList({ cells, currentDay, enrollmentId }: Props) {
   return (
     <div
@@ -37,68 +92,39 @@ export function ClaudeDayList({ cells, currentDay, enrollmentId }: Props) {
           const title = cell.taskTitle?.trim() || `Day ${cell.dayNumber}`;
           const href = dayHref(enrollmentId, cell.dayNumber);
           const locked = state === "locked";
+          const rowClass = cn(
+            "flex flex-col gap-3 rounded-[12px] border border-transparent bg-[#FBF9F7] px-5 py-4 transition-colors sm:flex-row sm:items-center sm:justify-between",
+            locked
+              ? "opacity-70"
+              : "hover:border-[#E05226] hover:bg-[#FFECE3]",
+          );
+
+          if (locked) {
+            return (
+              <div key={cell.dayNumber} className={rowClass}>
+                <DayRowContent
+                  cell={cell}
+                  currentDay={currentDay}
+                  state={state}
+                  title={title}
+                />
+              </div>
+            );
+          }
 
           return (
-            <div
+            <Link
               key={cell.dayNumber}
-              className={cn(
-                "flex flex-col gap-3 rounded-[12px] border border-transparent bg-[#FBF9F7] px-5 py-4 transition-colors sm:flex-row sm:items-center sm:justify-between",
-                locked
-                  ? "opacity-70"
-                  : "hover:border-[#E05226] hover:bg-[#FFECE3]",
-              )}
+              href={href}
+              className={cn(rowClass, "no-underline")}
             >
-              <div className="min-w-0">
-                <p className="text-[12px] leading-4 font-semibold uppercase text-[#8F8F8F]">
-                  Day {cell.dayNumber}
-                </p>
-                <p className="text-[17px] leading-7 font-semibold text-[#111111]">
-                  {title}
-                </p>
-              </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-3">
-                {state === "available" ? (
-                  <Link href={href} className={startClass}>
-                    {cell.dayNumber === currentDay
-                      ? "Start Challenge"
-                      : "Submit"}
-                  </Link>
-                ) : null}
-                {state === "completed" ? (
-                  <>
-                    <span className="inline-flex items-center gap-1.5 text-[14px] leading-[21px] font-semibold text-[#2E7D32]">
-                      <CheckCircle2 className="size-5" aria-hidden />
-                      Completed
-                    </span>
-                    <Link
-                      href={href}
-                      className="text-[14px] leading-[21px] text-[#E05226] hover:underline"
-                    >
-                      View
-                    </Link>
-                  </>
-                ) : null}
-                {state === "window_closed" ? (
-                  <>
-                    <span className="inline-flex items-center gap-1.5 text-[14px] leading-[21px] text-[#8F8F8F]">
-                      Missed submission
-                    </span>
-                    <Link
-                      href={href}
-                      className="text-[14px] leading-[21px] text-[#E05226] hover:underline"
-                    >
-                      View
-                    </Link>
-                  </>
-                ) : null}
-                {state === "locked" ? (
-                  <span className="inline-flex items-center gap-1.5 text-[14px] leading-[21px] text-[#8F8F8F]">
-                    <Lock className="size-4" aria-hidden />
-                    Not Unlocked
-                  </span>
-                ) : null}
-              </div>
-            </div>
+              <DayRowContent
+                cell={cell}
+                currentDay={currentDay}
+                state={state}
+                title={title}
+              />
+            </Link>
           );
         })}
       </div>
