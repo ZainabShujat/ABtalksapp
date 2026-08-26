@@ -1,10 +1,10 @@
 "use client";
+
 import { useState, type ReactNode } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, HelpCircle } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const FAQS = [
+export const CLAUDE_FAQS = [
   {
     question: "Is purchasing a Claude subscription mandatory for this challenge?",
     answer:
@@ -17,8 +17,7 @@ const FAQS = [
   },
   {
     question: "Where can I find the daily task?",
-    answer:
-      "Daily tasks are available on the challenge dashboard.",
+    answer: "Daily tasks are available on the challenge dashboard.",
   },
   {
     question: "Will I receive daily tasks or teaching sessions?",
@@ -52,11 +51,10 @@ const FAQS = [
   },
   {
     question: "Can I use tools other than Claude for the challenge?",
-    answer: 
-    "Unless a task specifically requires a particular tool, you are encouraged to explore and learn from different AI tools. Always check the task instructions for any tool-specific requirements"
-  }
+    answer:
+      "Unless a task specifically requires a particular tool, you are encouraged to explore and learn from different AI tools. Always check the task instructions for any tool-specific requirements",
+  },
 ] as const;
-
 
 function renderAnswerWithInlineUrls(text: string) {
   const urlPattern = /https?:\/\/[^\s,]+/g;
@@ -70,7 +68,7 @@ function renderAnswerWithInlineUrls(text: string) {
     parts.push(
       <code
         key={index}
-        className="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
+        className="rounded bg-[#FFECE3] px-1 py-0.5 font-mono text-xs text-[#C9411C]"
       >
         {match[0]}
       </code>,
@@ -83,75 +81,52 @@ function renderAnswerWithInlineUrls(text: string) {
   return parts.length > 0 ? parts : text;
 }
 
-export function ClaudeFAQ() {
+/** FAQ accordion body for embedding inside ClaudeChallengeView. */
+export function ClaudeFaqBody() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section className="rounded-2xl border bg-card p-6">
-      <div className="mb-6 flex items-center gap-2">
-        <div className="rounded-lg bg-primary/10 p-2">
-          <HelpCircle className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <h2 className="font-display text-xl font-bold">
-            Frequently Asked Questions
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Everything you need to know
-          </p>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        {FAQS.map((faq, i) => (
-          <div
-            key={faq.question}
-            className={cn(
-              "overflow-hidden rounded-xl border bg-background/50 transition-colors",
-              openIndex === i && "bg-background",
-            )}
+    <div className="space-y-2">
+      {CLAUDE_FAQS.map((faq, i) => (
+        <div
+          key={faq.question}
+          className={cn(
+            "overflow-hidden rounded-[12px] border border-[#E0E0E0] bg-[#FBF9F7]",
+            openIndex === i && "bg-white",
+          )}
+        >
+          <button
+            type="button"
+            onClick={() => setOpenIndex(openIndex === i ? null : i)}
+            className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-[#FFF5F0]"
+            aria-expanded={openIndex === i}
           >
-            <button
-              type="button"
-              onClick={() => setOpenIndex(openIndex === i ? null : i)}
-              className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-muted/30"
-            >
-              <span className="flex-1 text-sm font-medium">{faq.question}</span>
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
-                  openIndex === i && "rotate-180",
-                )}
-              />
-            </button>
+            <span className="flex-1 text-sm font-medium text-[#111111]">
+              {faq.question}
+            </span>
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 shrink-0 text-[#8F8F8F] transition-transform",
+                openIndex === i && "rotate-180",
+              )}
+            />
+          </button>
+          {openIndex === i ? (
+            <div className="px-4 pb-4 text-sm leading-relaxed text-[#4B4B4B]">
+              {renderAnswerWithInlineUrls(faq.answer)}
+            </div>
+          ) : null}
+        </div>
+      ))}
 
-            <AnimatePresence initial={false}>
-              {openIndex === i ? (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
-                >
-                  <div className="px-4 pb-4 text-sm leading-relaxed text-muted-foreground">
-                    {renderAnswerWithInlineUrls(faq.answer)}
-                  </div>
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-6 rounded-xl border bg-muted/30 p-4">
-        <p className="text-xs text-muted-foreground">
+      <div className="mt-4 rounded-[12px] border border-[#E0E0E0] bg-[#FBF9F7] p-4">
+        <p className="text-xs text-[#8F8F8F]">
           Still have questions? Reach out via the{" "}
           <a
             href="https://chat.whatsapp.com/LSru1BgvifpEB4OMZsaZEi"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary hover:underline"
+            className="text-[#E05226] hover:underline"
           >
             WhatsApp community
           </a>{" "}
@@ -160,13 +135,30 @@ export function ClaudeFAQ() {
             href="https://www.youtube.com/@ABTalksonAI"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary hover:underline"
+            className="text-[#E05226] hover:underline"
           >
             ABTalks on AI YouTube channel
           </a>
           .
         </p>
       </div>
+    </div>
+  );
+}
+
+/** Standalone FAQ card (pre-start dashboard). */
+export function ClaudeFAQ() {
+  return (
+    <section className="rounded-[12px] border border-[#E0E0E0] bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+      <div className="mb-6">
+        <h2 className="font-heading text-xl font-semibold text-[#111111]">
+          Frequently Asked Questions
+        </h2>
+        <p className="mt-1 text-xs text-[#8F8F8F]">
+          Everything you need to know
+        </p>
+      </div>
+      <ClaudeFaqBody />
     </section>
   );
 }

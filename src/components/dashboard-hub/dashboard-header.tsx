@@ -6,27 +6,51 @@ import { NotificationBellButton } from "@/components/shared/notification-bell-bu
 import { HUB_BUTTON_CLASS } from "@/components/dashboard-hub/nav-items";
 import { cn } from "@/lib/utils";
 
+export type HeaderSectionNavItem = {
+  href: string;
+  label: string;
+};
+
 type DashboardHeaderProps = {
   isAdmin: boolean;
   menuOpen: boolean;
   onMenuClick: () => void;
+  /** Hub page section anchors. Default true. Ignored when sectionNavItems is set. */
+  showSectionNav?: boolean;
+  /** Custom header links (Claude). Shown on all breakpoints and wraps. */
+  sectionNavItems?: HeaderSectionNavItem[];
 };
+
+const HUB_SECTION_NAV: HeaderSectionNavItem[] = [
+  { href: "#your-challenge", label: "Your Challenges" },
+  { href: "#prep-kit", label: "Prep Kit" },
+  { href: "#domains", label: "Domains" },
+  { href: "#events", label: "Events" },
+];
 
 const bellClassName =
   "inline-flex size-9 items-center justify-center rounded-md border border-neutral-200 text-neutral-900 transition-[border-color,background-color,color,transform] duration-200 ease-[var(--ease-spark)] hover:border-[#e05226] hover:bg-[#e05226]/10 hover:text-[#e05226] motion-safe:hover:scale-[1.04]";
+
+const navLinkClass =
+  "text-sm font-medium text-[#555555] transition-colors duration-200 ease-[var(--ease-spark)] hover:text-[#e05226]";
 
 export function DashboardHeader({
   isAdmin,
   menuOpen,
   onMenuClick,
+  showSectionNav = true,
+  sectionNavItems,
 }: DashboardHeaderProps) {
+  const customNav = sectionNavItems && sectionNavItems.length > 0;
+  const hubNav = !customNav && showSectionNav;
+
   return (
     <header className="sticky top-0 z-40 border-b border-neutral-200 bg-[#FBF9F7]">
       <div className="flex h-[72px] items-center justify-between gap-4 px-4 sm:px-6">
         <div className="flex items-center gap-3">
           <button
             type="button"
-            className="inline-flex size-9 items-center justify-center rounded-md border border-neutral-200 text-neutral-900 transition-[border-color,color,transform] duration-200 ease-[var(--ease-spark)] hover:border-[#e05226] hover:text-[#e05226] motion-safe:hover:scale-[1.04] md:hidden"
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-neutral-200 text-neutral-900 transition-[border-color,color,transform] duration-200 ease-[var(--ease-spark)] hover:border-[#e05226] hover:text-[#e05226] motion-safe:hover:scale-[1.04] md:hidden"
             aria-label="Open menu"
             aria-expanded={menuOpen}
             onClick={onMenuClick}
@@ -34,38 +58,34 @@ export function DashboardHeader({
             <Menu className="size-5" aria-hidden />
           </button>
 
-          <nav
-            className="hidden items-center gap-6 md:flex"
-            aria-label="Page sections"
-          >
-            <a
-              href="#your-challenge"
-              className="text-sm font-medium text-[#555555] transition-colors duration-200 ease-[var(--ease-spark)] hover:text-[#e05226]"
+          {customNav ? (
+            <nav
+              className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 md:gap-x-8"
+              aria-label="Page sections"
             >
-              Your Challenges
-            </a>
-            <a
-              href="#prep-kit"
-              className="text-sm font-medium text-[#555555] transition-colors duration-200 ease-[var(--ease-spark)] hover:text-[#e05226]"
+              {sectionNavItems.map((item) => (
+                <a key={item.href} href={item.href} className={navLinkClass}>
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+          ) : null}
+
+          {hubNav ? (
+            <nav
+              className="hidden items-center gap-6 md:flex"
+              aria-label="Page sections"
             >
-              Prep Kit
-            </a>
-            <a
-              href="#domains"
-              className="text-sm font-medium text-[#555555] transition-colors duration-200 ease-[var(--ease-spark)] hover:text-[#e05226]"
-            >
-              Domains
-            </a>
-            <a
-              href="#events"
-              className="text-sm font-medium text-[#555555] transition-colors duration-200 ease-[var(--ease-spark)] hover:text-[#e05226]"
-            >
-              Events
-            </a>
-          </nav>
+              {HUB_SECTION_NAV.map((item) => (
+                <a key={item.href} href={item.href} className={navLinkClass}>
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+          ) : null}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <NotificationBellButton className={bellClassName} />
           {isAdmin ? (
             <Link

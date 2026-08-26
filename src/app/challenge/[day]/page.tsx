@@ -125,6 +125,11 @@ export default async function ChallengeDayPage({ params, searchParams }: PagePro
     );
   }
 
+  if (data.enrollment.domain === "CLAUDE") {
+    const enc = encodeURIComponent(data.enrollment.id);
+    redirect(`/claude/day/${day}?challenge=${enc}`);
+  }
+
   const bypassEnabled = isDayLockBypassEnabled();
 
   if (!bypassEnabled && !data.isUnlocked) {

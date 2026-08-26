@@ -44,6 +44,7 @@ _(Cleared 2026-08-24 — the 17 entries that were under this heading were folded
 reconciled against `3b040d8`. The un-headed block above (2026-08-06 → 2026-08-20) was logged outside this
 heading and was never reconciled; its facts were folded into the same pass, but the lines were left in place
 rather than deleted without authorization. Cursor appends new lines below.)_
+- 2026-08-26 [convention] Claude Challenge (/claude + /claude/day/[day]) restyled onto hub DashboardShell (Claude-only desktop collapse) and cream/orange AI Cohort language; heatmap/stats/AppHeader removed from Claude UI; no schema change
 - 2026-08-25 [convention] Campus Ambassador onboarding banner and derived notification-bell item removed from student surfaces.
 - 2026-08-25 [convention] Campus Ambassador onboarding banner unmounted from dashboard hub and challenge track pages.
 - 2026-08-25 [convention] AUTH_SECRET + session cookie v2 to stop JWTSessionError; login/register use scoped orange outline CTAs.
