@@ -33,7 +33,7 @@ function DayRowContent({
   return (
     <>
       <div className="min-w-0">
-        
+        <p className="text-[12px] leading-4 font-semibold uppercase text-[#8F8F8F]">Day {cell.dayNumber}</p>
         <p className="text-[17px] leading-7 font-semibold text-[#111111]">
           {title}
         </p>
