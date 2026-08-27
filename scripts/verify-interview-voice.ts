@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 import {
   ALLOWED_AUDIO_TYPES,
   MAX_AUDIO_BYTES,
+  MIN_AUDIO_BYTES,
   audioFilenameFor,
   isAllowedAudioType,
   normalizeAudioType,
@@ -69,7 +70,14 @@ check("accepts what MediaRecorder actually produces", () => {
 
 check("accepts every allowed container", () => {
   for (const type of ALLOWED_AUDIO_TYPES) {
-    assert.equal(rejectAudioUpload(1024, type), null, `${type} was rejected`);
+    // Sized from the constant, not a literal. This read 1024 and silently
+    // started asserting the SIZE floor instead of the type gate the moment
+    // MIN_AUDIO_BYTES was raised to 2048 for muted-track container headers.
+    assert.equal(
+      rejectAudioUpload(MIN_AUDIO_BYTES, type),
+      null,
+      `${type} was rejected`,
+    );
   }
 });
 
@@ -83,9 +91,17 @@ check("rejects an oversized recording", () => {
 });
 
 check("rejects a non-audio upload", () => {
-  assert.equal(rejectAudioUpload(1024, "application/zip"), "UNSUPPORTED_TYPE");
-  assert.equal(rejectAudioUpload(1024, "image/png"), "UNSUPPORTED_TYPE");
-  assert.equal(rejectAudioUpload(1024, ""), "UNSUPPORTED_TYPE");
+  // Above the size floor on purpose: below it the gate returns EMPTY and this
+  // would pass without ever reaching the type check it exists to verify.
+  assert.equal(
+    rejectAudioUpload(MIN_AUDIO_BYTES, "application/zip"),
+    "UNSUPPORTED_TYPE",
+  );
+  assert.equal(
+    rejectAudioUpload(MIN_AUDIO_BYTES, "image/png"),
+    "UNSUPPORTED_TYPE",
+  );
+  assert.equal(rejectAudioUpload(MIN_AUDIO_BYTES, ""), "UNSUPPORTED_TYPE");
 });
 
 check("rejects a type that merely starts with an allowed one", () => {

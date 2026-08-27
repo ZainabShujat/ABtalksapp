@@ -1,10 +1,23 @@
 /**
  * Grounding and generation checks. Deterministic, offline, no provider.
  *
- *   npx tsx scripts/verify-interview-grounding.ts
+ *   npm run test:interview:grounding
  *
  * Exercises the whole phrasing path with a mock LLM: curriculum context, the
  * generation call, validation, and what ends up frozen in the plan.
+ *
+ * THE CONDITIONS FLAG IS REQUIRED, not optional. `generate-phrasing.ts` is
+ * `server-only`, and that package resolves to an entry that throws on import
+ * unless the `react-server` condition is set — so a plain `npx tsx` run of this
+ * file dies at import and reports zero checks rather than failing one.
+ *
+ * The npm script above passes it to `tsx` directly rather than through
+ * NODE_OPTIONS, which is how the older `test:scout` style scripts do it: npm
+ * runs scripts through cmd.exe on Windows, where a `VAR=value command` prefix
+ * is not shell syntax and the run dies before node starts.
+ *
+ * Nothing about the production boundary changes: `generate-phrasing.ts` keeps
+ * its `server-only` import and still cannot be pulled into a client bundle.
  */
 import assert from "node:assert/strict";
 import { describeCurriculum } from "@/features/interview/cohort/curriculum-context";

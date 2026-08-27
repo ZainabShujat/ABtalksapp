@@ -50,6 +50,7 @@
     "test:scout": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/scout-agent.test.ts",
     "test:sample": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/sample-card.test.ts",
     "test:visibility": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/visibility.test.ts",
+    "test:interview:grounding": "tsx --conditions=react-server scripts/verify-interview-grounding.ts",
     "test:078-dual-write": "NODE_OPTIONS=--conditions=react-server tsx src/repositories/dual-write.test.ts",
     "db:repair:078:one-claude-pe:production": "cross-env PHASE2_ALLOW_PRODUCTION=1 tsx prisma/scripts/repair-078-one-claude-pe.ts",
     "db:repair:078:referral": "tsx prisma/scripts/repair-078-referral-codes.ts",
