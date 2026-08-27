@@ -2,11 +2,11 @@ export default function ComingSoonCard() {
   return (
     <div
       className="wk-soon relative flex h-full flex-col items-center justify-center overflow-hidden rounded-2xl px-5 py-8 text-center"
-      style={{ background: "rgba(255,255,255,0.015)" }}
+      style={{ background: "var(--wk-chip)" }}
     >
       <style>{`
         .wk-soon {
-          border: 1.5px dashed rgba(255,255,255,0.14);
+          border: 1.5px dashed var(--wk-card-border);
         }
         .wk-soon::before {
           content: "";
@@ -37,10 +37,10 @@ export default function ComingSoonCard() {
 
       <span className="wk-soon-emoji relative z-10 text-4xl">✨</span>
 
-      <h4 className="relative z-10 mt-3 text-[17px] font-bold tracking-tight text-white">
+      <h4 className="wk-t relative z-10 mt-3 text-[17px] font-bold tracking-tight">
         More Coming Soon
       </h4>
-      <p className="relative z-10 mt-2 max-w-[240px] text-[12.5px] font-medium leading-relaxed text-white/45">
+      <p className="wk-dim relative z-10 mt-2 max-w-[240px] text-[12.5px] font-medium leading-relaxed">
         New live workshops drop regularly. Register above to be the first to know.
       </p>
 
@@ -61,9 +61,9 @@ export default function ComingSoonCard() {
       <span
         className="relative z-10 mt-5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest"
         style={{
-          background: "rgba(255,255,255,0.04)",
-          color: "rgba(255,255,255,0.5)",
-          border: "1px solid rgba(255,255,255,0.1)",
+          background: "var(--wk-chip)",
+          color: "var(--wk-text-dim)",
+          border: "1px solid var(--wk-card-border)",
         }}
       >
         Stay tuned
