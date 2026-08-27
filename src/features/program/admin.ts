@@ -5,7 +5,7 @@ import type {
   ProgramMemberStatus,
 } from "@prisma/client";
 import { formatInTimeZone } from "date-fns-tz";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
 import { formatDateTimeIST } from "@/lib/date-utils";
 import { PROGRAM_TOTAL_DAYS, PROGRAM_TZ } from "@/features/program/constants";
 import { bootstrapMemberStartDay } from "@/features/program/bootstrap-start-day";
@@ -19,6 +19,7 @@ import {
 import { askClaudeJson } from "@/lib/anthropic";
 import { generateProgramJoinCode } from "@/lib/program-auth";
 import { programMember } from "@/repositories/legacy/program-member";
+import { dualWriteProgramMember } from "@/repositories/dual-write";
 
 export type CohortOverview = {
   cohort: {
@@ -668,7 +669,7 @@ export async function promoteWaitlisted(
   }
 
   try {
-    await prisma.$transaction(async (tx) => {
+    await writeClient().$transaction(async (tx) => {
       const enrolled = await tx.programMember.count({
         where: { cohortId: member.cohortId, status: "ENROLLED" },
       });
@@ -680,6 +681,7 @@ export async function promoteWaitlisted(
         data: { status: "ENROLLED", enrolledAt: new Date() },
       });
       await bootstrapMemberStartDay(tx, memberId);
+      await dualWriteProgramMember(tx, memberId);
       await tx.adminAction.create({
         data: {
           adminUserId: adminId,
@@ -712,11 +714,12 @@ export async function dropMember(
     return { ok: false, message: "Member is already dropped." };
   }
 
-  await prisma.$transaction(async (tx) => {
+  await writeClient().$transaction(async (tx) => {
     await tx.programMember.update({
       where: { id: memberId },
       data: { status: "DROPPED" },
     });
+    await dualWriteProgramMember(tx, memberId);
     await tx.adminAction.create({
       data: {
         adminUserId: adminId,

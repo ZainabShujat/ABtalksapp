@@ -51,12 +51,14 @@
     "test:sample": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/sample-card.test.ts",
     "test:visibility": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/visibility.test.ts",
     "test:078-dual-write": "NODE_OPTIONS=--conditions=react-server tsx src/repositories/dual-write.test.ts",
+    "db:repair:078:one-claude-pe:production": "cross-env PHASE2_ALLOW_PRODUCTION=1 tsx prisma/scripts/repair-078-one-claude-pe.ts",
     "db:repair:078:referral": "tsx prisma/scripts/repair-078-referral-codes.ts",
     "db:repair:078:referral:production": "cross-env PHASE2_ALLOW_PRODUCTION=1 tsx prisma/scripts/repair-078-referral-codes.ts",
     "db:catch-up:078:candidate-children": "NODE_OPTIONS=--conditions=react-server tsx prisma/scripts/catch-up-078-candidate-children.ts",
     "db:catch-up:078:candidate-children:production": "cross-env PHASE2_ALLOW_PRODUCTION=1 NODE_OPTIONS=--conditions=react-server tsx prisma/scripts/catch-up-078-candidate-children.ts",
     "db:compare:078:candidate": "tsx prisma/scripts/compare-078-candidate-views.ts",
     "db:compare:078:candidate:production": "cross-env PHASE2_ALLOW_PRODUCTION=1 tsx prisma/scripts/compare-078-candidate-views.ts",
+    "db:compare:078:learning:production": "cross-env PHASE2_ALLOW_PRODUCTION=1 tsx prisma/scripts/compare-078-learning.ts",
     "verify:hire-pool": "tsx scripts/verify-hire-pool.ts"
   },
   "dependencies": {

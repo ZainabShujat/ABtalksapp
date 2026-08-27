@@ -15,6 +15,10 @@ import { programMember } from "@/repositories/legacy/program-member";
 import { studentProfile } from "@/repositories/legacy/student-profile";
 import { getCandidateProfile } from "@/repositories/candidate";
 import { dualWriteProgramMember } from "@/repositories/dual-write";
+import {
+  findAppliedMembership,
+  findWaitlistedMembership,
+} from "@/repositories/learning";
 
 export const ENTRY_DURATION_MIN = 25;
 export const ENTRY_PER_SECTION = 10;
@@ -107,45 +111,11 @@ function emptyToNull(value: string | undefined): string | null {
 
 /** Newest APPLIED (or mid-funnel) membership for assessment resume. */
 async function getAppliedMembership(userId: string) {
-  return programMember.findFirst({
-    where: { userId, status: "APPLIED" },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      status: true,
-      cohortId: true,
-      fullName: true,
-      jobRole: true,
-      company: true,
-      yearsExperience: true,
-      education: true,
-      university: true,
-      graduationYear: true,
-      skills: true,
-      linkedinUrl: true,
-      resumeUrl: true,
-      phone: true,
-      githubUsername: true,
-      githubRepoUrl: true,
-      cohort: {
-        select: {
-          id: true,
-          name: true,
-          status: true,
-          capacity: true,
-          joinCode: true,
-        },
-      },
-    },
-  });
+  return findAppliedMembership(userId);
 }
 
 async function getWaitlistedMembership(userId: string) {
-  return programMember.findFirst({
-    where: { userId, status: "WAITLISTED" },
-    orderBy: { createdAt: "desc" },
-    select: { id: true },
-  });
+  return findWaitlistedMembership(userId);
 }
 
 /** Capacity-checked enroll or waitlist + Day-start bootstrap when enrolled. */
@@ -173,6 +143,7 @@ async function enrollOrWaitlist(
   await dualWriteProgramMember(tx, memberAfter.id);
   if (hasRoom) {
     await bootstrapMemberStartDay(tx, memberAfter.id);
+    await dualWriteProgramMember(tx, memberAfter.id);
   }
   return hasRoom ? "ENROLLED" : "WAITLISTED";
 }

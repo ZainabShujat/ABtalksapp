@@ -39,6 +39,7 @@ import { PreStartDashboard } from "@/components/dashboard/pre-start-dashboard";
 import { prisma } from "@/lib/db";
 import { isUserRegistered } from "@/features/hackathon/registration-status";
 import { getUserActiveEnrollments } from "@/features/enrollment/get-user-enrollments";
+import { findChallengeEnrollment } from "@/repositories/learning";
 import { isOtpVerificationRequired } from "@/lib/feature-flags";
 import { PhoneVerifyNudge } from "@/components/dashboard/phone-verify-nudge";
 import { ClaudeFAQ } from "@/components/shared/claude-faq";
@@ -109,10 +110,8 @@ export async function TrackPage({ domain, searchParams }: TrackPageProps) {
   // @@unique([userId, challengeId]) + unique Challenge.domain => at most one row
   // per domain. Any status: COMPLETED renders its finished track, ABANDONED
   // renders EnrollmentEndedScreen below.
-  const enrollmentForDomain = await prisma.enrollment.findFirst({
-    where: { userId: session.user.id, domain },
-    orderBy: { startedAt: "desc" },
-    select: { id: true },
+  const enrollmentForDomain = await findChallengeEnrollment(session.user.id, {
+    domain,
   });
 
   if (!enrollmentForDomain) {

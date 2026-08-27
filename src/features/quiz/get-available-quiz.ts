@@ -1,6 +1,7 @@
 import type { Domain } from "@prisma/client";
 import { EnrollmentStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { listQuizCatalog } from "@/repositories/learning";
 
 export type QuizAvailabilityReason =
   | "none_available"
@@ -46,48 +47,34 @@ type ResolvedQuizEnrollment = {
 };
 
 /**
- * Single set-based resolution shared by the quiz card and the unlock banner.
- * One `quiz.findMany` (≤8 rows) + one `quizAttempt.findMany` replace the prior
- * per-week N+1 loop. The **card** offers only the current week (W =
- * floor(daysCompleted / 7), capped at 8, once ≥7 days are completed); the
- * **banner** offers the highest unlocked week with a quiz and no attempt.
+ * Catalog from LEARNING; QuizAttempt stays PROGRESS.
+ * Card offers only the current week; banner offers the highest unlocked week
+ * with a quiz and no attempt.
  */
 export async function getAvailableQuiz(
   userId: string,
   enrollment: ResolvedQuizEnrollment,
 ): Promise<AvailableQuizPayload> {
-  const { challengeId, domain, daysCompleted, status } = enrollment;
+  const { domain, daysCompleted, status } = enrollment;
 
   if (status === EnrollmentStatus.ABANDONED) {
     return { quiz: null, reason: "none_available", attempt: null, banner: null };
   }
 
-  const [quizzes, attempts] = await Promise.all([
-    prisma.quiz.findMany({
-      where: { challengeId, domain },
-      orderBy: { weekNumber: "asc" },
-      select: {
-        id: true,
-        weekNumber: true,
-        title: true,
-        domain: true,
-        _count: { select: { quizQuestions: true } },
-      },
-    }),
-    prisma.quizAttempt.findMany({
-      where: { userId, quiz: { challengeId, domain } },
-      select: {
-        score: true,
-        quizId: true,
-        quiz: { select: { id: true, weekNumber: true, title: true } },
-      },
-    }),
-  ]);
+  const quizzes = await listQuizCatalog(domain);
+  const quizIds = quizzes.map((q) => q.id);
+  const attempts =
+    quizIds.length === 0
+      ? []
+      : await prisma.quizAttempt.findMany({
+          where: { userId, quizId: { in: quizIds } },
+          select: { score: true, quizId: true },
+        });
 
   const quizByWeek = new Map(quizzes.map((q) => [q.weekNumber, q]));
+  const quizById = new Map(quizzes.map((q) => [q.id, q]));
   const attemptByQuizId = new Map(attempts.map((a) => [a.quizId, a]));
 
-  // Banner: highest unlocked week (≤ min(floor(daysCompleted/7), 8)) with a quiz and no attempt.
   let banner: AvailableQuizBanner | null = null;
   const unlockedWeek = Math.floor(daysCompleted / 7);
   if (unlockedWeek >= 1) {
@@ -100,13 +87,12 @@ export async function getAvailableQuiz(
         quizId: quiz.id,
         weekNumber: quiz.weekNumber,
         title: quiz.title,
-        questionCount: quiz._count.quizQuestions,
+        questionCount: quiz.questionCount,
       };
       break;
     }
   }
 
-  // Card: only the current week's quiz.
   if (daysCompleted < 7) {
     return { quiz: null, reason: "not_yet_unlocked", attempt: null, banner };
   }
@@ -120,15 +106,16 @@ export async function getAvailableQuiz(
 
   const currentAttempt = attemptByQuizId.get(currentQuiz.id);
   if (currentAttempt) {
+    const catalog = quizById.get(currentQuiz.id) ?? currentQuiz;
     return {
       quiz: null,
       reason: "already_attempted",
       attempt: {
         score: currentAttempt.score,
         quiz: {
-          id: currentAttempt.quiz.id,
-          weekNumber: currentAttempt.quiz.weekNumber,
-          title: currentAttempt.quiz.title,
+          id: catalog.id,
+          weekNumber: catalog.weekNumber,
+          title: catalog.title,
         },
       },
       banner,

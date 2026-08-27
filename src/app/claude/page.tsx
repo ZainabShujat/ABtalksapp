@@ -20,6 +20,7 @@ import { getQuizAttemptHistory } from "@/features/quiz/get-quiz-attempt-history"
 import { isEnrollmentPreStart, formatDateIST } from "@/lib/date-utils";
 import { prisma } from "@/lib/db";
 import { mapHeatmapCellToUiState } from "@/features/claude/map-day-ui-state";
+import { findChallengeEnrollment } from "@/repositories/learning";
 
 function buildContinueInfo(
   data: DashboardDataWithEnrollment,
@@ -70,10 +71,8 @@ export default async function ClaudeTrackPage() {
     redirect("/login");
   }
 
-  const enrollmentForDomain = await prisma.enrollment.findFirst({
-    where: { userId: session.user.id, domain: "CLAUDE" },
-    orderBy: { startedAt: "desc" },
-    select: { id: true },
+  const enrollmentForDomain = await findChallengeEnrollment(session.user.id, {
+    domain: "CLAUDE",
   });
 
   if (!enrollmentForDomain) {

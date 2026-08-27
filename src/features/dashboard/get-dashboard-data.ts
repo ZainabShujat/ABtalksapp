@@ -9,6 +9,7 @@ import { resolveDashboardEnrollment } from "@/features/enrollment/resolve-dashbo
 import { getCandidateProfile } from "@/repositories/candidate";
 import { getDailyTasksCached } from "@/features/challenge/get-daily-tasks-cached";
 import { prisma } from "@/lib/db";
+import { getDailyTaskByChallengeDay } from "@/repositories/learning";
 
 /** User row missing (deleted) — the page should sign the session out. */
 export type DashboardDataNoUser = {
@@ -184,15 +185,10 @@ export async function getDashboardData(
     const tasks = await getDailyTasksCached(enrollment.challengeId);
     const task = tasks.find((t) => t.dayNumber === currentDay);
     if (task) {
-      const titleRow = await prisma.dailyTask.findUnique({
-        where: {
-          challengeId_dayNumber: {
-            challengeId: enrollment.challengeId,
-            dayNumber: currentDay,
-          },
-        },
-        select: { title: true },
-      });
+      const titleRow = await getDailyTaskByChallengeDay(
+        enrollment.challengeId,
+        currentDay,
+      );
       if (titleRow) {
         todayTask = {
           id: task.id,

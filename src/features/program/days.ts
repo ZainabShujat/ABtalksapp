@@ -9,6 +9,7 @@ import {
 } from "@/features/program/progression";
 import { isDayLockBypassEnabled } from "@/lib/feature-flags";
 import { programMember } from "@/repositories/legacy/program-member";
+import { getProgramDayShell } from "@/repositories/learning";
 
 export type { DayState } from "@/features/program/progression";
 
@@ -46,35 +47,7 @@ export async function getDayShell(
   memberId: string,
   dayNumber: number,
 ): Promise<DayShellResult | null> {
-  const day = await prisma.programDay.findUnique({
-    where: { dayNumber },
-    select: {
-      id: true,
-      dayNumber: true,
-      title: true,
-      missionType: true,
-      briefMd: true,
-      assetsJson: true,
-      starterCode: true,
-      language: true,
-      objectives: true,
-      tools: true,
-      estimatedMin: true,
-      missionPoints: true,
-      isProjectDay: true,
-      module: { select: { number: true, title: true, color: true } },
-      videos: {
-        select: {
-          id: true,
-          order: true,
-          title: true,
-          youtubeId: true,
-          durationMin: true,
-        },
-        orderBy: { order: "asc" },
-      },
-    },
-  });
+  const day = await getProgramDayShell(dayNumber);
   if (!day) return null;
 
   const member = await programMember.findUnique({

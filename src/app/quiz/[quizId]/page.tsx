@@ -6,9 +6,9 @@ import {
   type QuizWithQuestionsPayload,
 } from "@/features/quiz/get-quiz-with-questions";
 import { AppHeader } from "@/components/shared/app-header";
-import { prisma } from "@/lib/db";
 import { QuizForm } from "./quiz-form";
 import { ResultsView } from "./results-view";
+import { listChallengeEnrollments } from "@/repositories/learning";
 
 type QuestionWithSolution = QuizWithQuestionsPayload["questions"][number] & {
   correctAnswer: string;
@@ -23,11 +23,8 @@ export default async function QuizPage({ params }: PageProps) {
     redirect("/login");
   }
 
-  const abandonedEnrollment = await prisma.enrollment.findFirst({
-    where: { userId: session.user.id, status: "ABANDONED" },
-    select: { id: true },
-  });
-  if (abandonedEnrollment) {
+  const enrollments = await listChallengeEnrollments(session.user.id);
+  if (enrollments.some((e) => e.status === "ABANDONED")) {
     redirect("/dashboard");
   }
 

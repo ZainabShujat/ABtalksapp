@@ -10,15 +10,25 @@ import {
   CredentialSourceType,
   CredentialStatus,
   CredentialType,
+  EnrollmentStatus,
+  EnrollmentStatusV2,
+  ProgramMemberStatus,
   UserType,
 } from "@prisma/client";
 import {
   educationIdForStudentProfile,
   experienceIdForStudentProfile,
   mapCertificateToCredential,
+  mapChallengeStatus,
+  mapMemberStatus,
   personaFromUserType,
 } from "@/repositories/dual-write";
 import { peIdForEnrollment } from "@/repositories/ids";
+import {
+  compareMembershipRows,
+  mapPeToEnrollmentStatus,
+  mapPeToMemberStatus,
+} from "@/repositories/learning";
 
 let passed = 0;
 let failed = 0;
@@ -348,6 +358,169 @@ suite("talent search is not switched in this phase", () => {
   const hire = source("src/repositories/hire.ts");
   assert(!talent.includes("isNewCandidateRepoEnabled"), "talent flag-free");
   assert(!hire.includes("isNewCandidateRepoEnabled"), "hire flag-free");
+});
+
+suite("Enrollment status maps onto ProgramEnrollment", () => {
+  assert(
+    mapChallengeStatus(EnrollmentStatus.ACTIVE) === EnrollmentStatusV2.ACTIVE,
+    "ACTIVE",
+  );
+  assert(
+    mapChallengeStatus(EnrollmentStatus.COMPLETED) ===
+      EnrollmentStatusV2.COMPLETED,
+    "COMPLETED",
+  );
+  assert(
+    mapChallengeStatus(EnrollmentStatus.ABANDONED) ===
+      EnrollmentStatusV2.DROPPED,
+    "ABANDONED",
+  );
+});
+
+suite("ProgramMember status maps including APPLIED and WAITLISTED", () => {
+  assert(
+    mapMemberStatus(ProgramMemberStatus.APPLIED) === EnrollmentStatusV2.APPLIED,
+    "APPLIED",
+  );
+  assert(
+    mapMemberStatus(ProgramMemberStatus.WAITLISTED) ===
+      EnrollmentStatusV2.WAITLISTED,
+    "WAITLISTED",
+  );
+  assert(
+    mapMemberStatus(ProgramMemberStatus.ENROLLED) === EnrollmentStatusV2.ACTIVE,
+    "ENROLLED",
+  );
+  assert(
+    mapMemberStatus(ProgramMemberStatus.COMPLETED) ===
+      EnrollmentStatusV2.COMPLETED,
+    "COMPLETED",
+  );
+  assert(
+    mapMemberStatus(ProgramMemberStatus.DROPPED) === EnrollmentStatusV2.DROPPED,
+    "DROPPED",
+  );
+});
+
+suite("PE status reverse maps preserve legacy names", () => {
+  assert(
+    mapPeToEnrollmentStatus(EnrollmentStatusV2.COMPLETED) ===
+      EnrollmentStatus.COMPLETED,
+    "enr COMPLETED",
+  );
+  assert(
+    mapPeToEnrollmentStatus(EnrollmentStatusV2.DROPPED) ===
+      EnrollmentStatus.ABANDONED,
+    "enr ABANDONED",
+  );
+  assert(
+    mapPeToEnrollmentStatus(EnrollmentStatusV2.ACTIVE) ===
+      EnrollmentStatus.ACTIVE,
+    "enr ACTIVE",
+  );
+  assert(
+    mapPeToMemberStatus(EnrollmentStatusV2.APPLIED) ===
+      ProgramMemberStatus.APPLIED,
+    "APPLIED",
+  );
+  assert(
+    mapPeToMemberStatus(EnrollmentStatusV2.WAITLISTED) ===
+      ProgramMemberStatus.WAITLISTED,
+    "WAITLISTED",
+  );
+  assert(
+    mapPeToMemberStatus(EnrollmentStatusV2.ACTIVE) ===
+      ProgramMemberStatus.ENROLLED,
+    "ENROLLED",
+  );
+});
+
+suite("membership sort prefers ACTIVE/ENROLLED over COMPLETED, then enrolledAt, then id", () => {
+  const completedNewer = {
+    id: "a",
+    status: "COMPLETED",
+    enrolledAt: new Date("2026-08-20"),
+  };
+  const activeOlder = {
+    id: "b",
+    status: "ENROLLED",
+    enrolledAt: new Date("2026-08-01"),
+  };
+  const rows = [completedNewer, activeOlder].sort(compareMembershipRows);
+  assert(rows[0]?.id === "b", "ENROLLED wins over newer COMPLETED");
+
+  const activeNew = {
+    id: "c",
+    status: "ACTIVE",
+    enrolledAt: new Date("2026-08-10"),
+  };
+  const activeOld = {
+    id: "d",
+    status: "ACTIVE",
+    enrolledAt: new Date("2026-08-01"),
+  };
+  const sameStatus = [activeOld, activeNew].sort(compareMembershipRows);
+  assert(sameStatus[0]?.id === "c", "newer enrolledAt among ACTIVE");
+
+  const tieA = { id: "m1", status: "ENROLLED", enrolledAt: new Date("2026-08-01") };
+  const tieB = { id: "m2", status: "ENROLLED", enrolledAt: new Date("2026-08-01") };
+  const tied = [tieB, tieA].sort(compareMembershipRows);
+  assert(tied[0]?.id === "m1", "id asc when enrolledAt ties");
+});
+
+suite("submit-day dual-writes enrollment on COMPLETED", () => {
+  const src = source("src/features/submission/submit-day.ts");
+  assert(src.includes("EnrollmentStatus.COMPLETED"), "sets COMPLETED");
+  assert(src.includes("dualWriteChallengeEnrollmentById"), "continuous dual-write");
+});
+
+suite("admin enrollment status writers dual-write", () => {
+  const src = source("src/app/actions/admin-actions.ts");
+  const count = src.split("dualWriteChallengeEnrollmentById").length - 1;
+  assert(count >= 3, `reset/remove/reject expected ≥3, got ${count}`);
+  assert(src.includes('status: "ABANDONED"'), "ABANDONED path");
+  assert(src.includes('status: "ACTIVE"'), "reset ACTIVE");
+});
+
+suite("program member APPLIED/WAITLISTED/ENROLLED/DROPPED dual-write", () => {
+  const entry = source("src/features/program/entry.ts");
+  const admin = source("src/features/program/admin.ts");
+  assert(entry.includes('status: "APPLIED"'), "APPLIED write");
+  assert(entry.includes("dualWriteProgramMember"), "apply dual-write");
+  assert(entry.includes('status: "WAITLISTED"'), "WAITLISTED write");
+  assert(entry.includes('status: "ENROLLED"'), "ENROLLED write");
+  assert(admin.includes("dualWriteProgramMember"), "admin dual-write");
+  assert(admin.includes('status: "ENROLLED"'), "promote ENROLLED");
+  assert(admin.includes('status: "DROPPED"'), "drop DROPPED");
+});
+
+suite("learning repo is the flag-gated compatibility boundary", () => {
+  const src = source("src/repositories/learning.ts");
+  assert(src.includes("isNewLearningRepoEnabled"), "flag");
+  assert(src.includes("getQuizDefinition"), "quiz definition");
+  assert(src.includes("findAppliedMembership"), "APPLIED");
+  assert(src.includes("findWaitlistedMembership"), "WAITLISTED");
+  assert(src.includes("listDailyTasks"), "DailyTask-shaped");
+  assert(src.includes("getProgramDayShell"), "ProgramDay-shaped");
+  assert(src.includes("listProgramModules"), "ProgramModule-shaped");
+  assert(src.includes("getCohortByJoinCode"), "join code");
+  assert(src.includes("getOpenEnrollmentCohort"), "open enrollment");
+  assert(!src.includes("activityAttempt"), "no ActivityAttempt");
+  assert(!src.includes("enrollmentProgress"), "no EnrollmentProgress");
+});
+
+suite("ON membership path does not select only by newest enrolledAt", () => {
+  const src = source("src/repositories/learning.ts");
+  assert(src.includes("compareMembershipRows"), "deterministic sort helper");
+  assert(
+    !src.includes('orderBy: { enrolledAt: "desc" }'),
+    "no enrolledAt-only findFirst",
+  );
+});
+
+suite("ENABLE_NEW_LEARNING is not flipped in app code", () => {
+  const flags = source("src/lib/feature-flags.ts");
+  assert(flags.includes('process.env.ENABLE_NEW_LEARNING === "true"'), "still env-gated");
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

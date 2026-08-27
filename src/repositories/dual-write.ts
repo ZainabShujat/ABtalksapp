@@ -89,13 +89,13 @@ async function ensureCandidateVisibility(tx: Tx, userId: string): Promise<void> 
   });
 }
 
-function mapChallengeStatus(status: EnrollmentStatus): EnrollmentStatusV2 {
+export function mapChallengeStatus(status: EnrollmentStatus): EnrollmentStatusV2 {
   if (status === EnrollmentStatus.COMPLETED) return EnrollmentStatusV2.COMPLETED;
   if (status === EnrollmentStatus.ABANDONED) return EnrollmentStatusV2.DROPPED;
   return EnrollmentStatusV2.ACTIVE;
 }
 
-function mapMemberStatus(status: ProgramMemberStatus): EnrollmentStatusV2 {
+export function mapMemberStatus(status: ProgramMemberStatus): EnrollmentStatusV2 {
   switch (status) {
     case ProgramMemberStatus.APPLIED:
       return EnrollmentStatusV2.APPLIED;
@@ -147,6 +147,25 @@ export async function dualWriteChallengeEnrollment(
     });
     await ensureCandidateVisibility(tx, enrollment.userId);
   });
+}
+
+export async function dualWriteChallengeEnrollmentById(
+  tx: Tx,
+  enrollmentId: string,
+): Promise<void> {
+  const enrollment = await tx.enrollment.findUnique({
+    where: { id: enrollmentId },
+    select: {
+      id: true,
+      userId: true,
+      domain: true,
+      status: true,
+      startedAt: true,
+      completedAt: true,
+    },
+  });
+  if (!enrollment) return;
+  await dualWriteChallengeEnrollment(tx, enrollment);
 }
 
 export async function dualWriteProgramMember(

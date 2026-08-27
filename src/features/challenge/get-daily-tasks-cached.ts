@@ -1,5 +1,9 @@
 import { unstable_cache } from "next/cache";
-import { prisma } from "@/lib/db";
+import { isNewLearningRepoEnabled } from "@/lib/feature-flags";
+import {
+  listCachedDailyTasks,
+  listDailyTasks,
+} from "@/repositories/learning";
 
 export type CachedDailyTask = {
   id: string;
@@ -21,24 +25,12 @@ export type CachedDailyTask = {
 export function getDailyTasksCached(
   challengeId: string,
 ): Promise<CachedDailyTask[]> {
+  const learningOn = isNewLearningRepoEnabled();
   return unstable_cache(
     async (): Promise<CachedDailyTask[]> => {
-      return prisma.dailyTask.findMany({
-        where: { challengeId, dayNumber: { gte: 1, lte: 60 } },
-        orderBy: { dayNumber: "asc" },
-        select: {
-          id: true,
-          dayNumber: true,
-          problemStatement: true,
-          learningObjectives: true,
-          resources: true,
-          tags: true,
-          difficulty: true,
-          estimatedMinutes: true,
-        },
-      });
+      return listCachedDailyTasks(challengeId);
     },
-    ["daily-tasks", challengeId],
+    ["daily-tasks", challengeId, learningOn ? "new" : "legacy"],
     { tags: [`daily-tasks:${challengeId}`], revalidate: false },
   )();
 }
@@ -46,9 +38,6 @@ export function getDailyTasksCached(
 export async function getDailyTaskTitlesLive(
   challengeId: string,
 ): Promise<Map<number, string>> {
-  const rows = await prisma.dailyTask.findMany({
-    where: { challengeId, dayNumber: { gte: 1, lte: 60 } },
-    select: { dayNumber: true, title: true },
-  });
+  const rows = await listDailyTasks(challengeId);
   return new Map(rows.map((r) => [r.dayNumber, r.title]));
 }

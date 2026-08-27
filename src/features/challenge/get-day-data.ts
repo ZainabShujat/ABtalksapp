@@ -1,12 +1,16 @@
-import type { DailyTask, Domain, SubmissionStatus } from "@prisma/client";
+import type { Domain, SubmissionStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getCurrentDayNumber, getElapsedDayNumber } from "@/lib/date-utils";
 import { readDayNumberFromMetadata } from "@/lib/admin-action-metadata";
 import { resolveChallengeEnrollment } from "@/features/enrollment/resolve-dashboard-enrollment";
 import { isWithinRelaxationWindow } from "@/features/submission/submit-day";
+import {
+  getDailyTaskByChallengeDay,
+  type DailyTaskRow,
+} from "@/repositories/learning";
 
 export type DayData = {
-  task: DailyTask;
+  task: DailyTaskRow;
   existingSubmission: {
     githubUrl: string | null;
     linkedinUrl: string | null;
@@ -36,14 +40,10 @@ export async function getDayData(
     return null;
   }
 
-  const task = await prisma.dailyTask.findUnique({
-    where: {
-      challengeId_dayNumber: {
-        challengeId: enrollment.challengeId,
-        dayNumber,
-      },
-    },
-  });
+  const task = await getDailyTaskByChallengeDay(
+    enrollment.challengeId,
+    dayNumber,
+  );
 
   if (!task) {
     return null;

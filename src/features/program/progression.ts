@@ -7,6 +7,10 @@ import { parseCalendarKeyToUtcDate } from "@/lib/date-utils";
 import { isDayLockBypassEnabled } from "@/lib/feature-flags";
 import { programMember } from "@/repositories/legacy/program-member";
 import {
+  listProgramDayCatalog,
+  listProgramModules,
+} from "@/repositories/learning";
+import {
   PROGRAM_HOLD_OPEN_COHORT_NAME,
   PROGRAM_MEMBER_START_DAY,
   PROGRAM_TOTAL_DAYS,
@@ -222,27 +226,8 @@ export async function getMemberDayStates(
   );
 
   const [modules, days, submissions] = await Promise.all([
-    prisma.programModule.findMany({
-      orderBy: { number: "asc" },
-      select: {
-        number: true,
-        title: true,
-        subtitle: true,
-        color: true,
-        startDay: true,
-        endDay: true,
-      },
-    }),
-    prisma.programDay.findMany({
-      orderBy: { dayNumber: "asc" },
-      select: {
-        dayNumber: true,
-        title: true,
-        missionType: true,
-        isProjectDay: true,
-        module: { select: { number: true } },
-      },
-    }),
+    listProgramModules(),
+    listProgramDayCatalog(),
     prisma.programMissionSubmission.findMany({
       where: { memberId },
       select: { dayNumber: true, passed: true, payload: true },
@@ -257,7 +242,7 @@ export async function getMemberDayStates(
     title: d.title,
     missionType: d.missionType,
     isProjectDay: d.isProjectDay,
-    moduleNumber: d.module.number,
+    moduleNumber: d.moduleNumber,
     state: deriveDayState(
       d.dayNumber,
       maxContentDay,
@@ -286,9 +271,7 @@ export async function getMemberCurrentModuleNumber(
     member.cohort,
     member.highestUnlockedDay,
   );
-  const day = await prisma.programDay.findUnique({
-    where: { dayNumber },
-    select: { module: { select: { number: true } } },
-  });
-  return day?.module.number ?? 1;
+  const days = await listProgramDayCatalog();
+  const day = days.find((d) => d.dayNumber === dayNumber);
+  return day?.moduleNumber ?? 1;
 }
