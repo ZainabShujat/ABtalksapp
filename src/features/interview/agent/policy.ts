@@ -120,36 +120,85 @@ export function closingLineFor(interviewId: string): string {
  * know" is a fine answer), and hand over to the first question as a deliberate
  * move rather than a collision.
  *
- * Deterministic, never model-drafted. Every candidate hears the same opening,
- * which is part of what makes two interviews comparable — and the one line
- * guaranteed to be spoken cannot be left to a provider that might be down.
+ * VARIED, but never model-drafted. It used to be a single fixed string, on the
+ * theory that an identical opening makes two interviews comparable. It does not:
+ * what has to be constant for comparability is the QUESTION SET and the rubric,
+ * not the sentence that greets someone. A word-for-word identical greeting is
+ * the single loudest tell that a candidate is talking to a script, and it lands
+ * in the first three seconds, before anything else has a chance to.
+ *
+ * So each slot is drawn from a pool, seeded per interview: 4x3x3x3 = 108
+ * openings. Seeded rather than random because the opening is spoken once and
+ * stored in the transcript, and a replay of the same interview must reproduce
+ * it. Authored rather than generated because this is the one line guaranteed to
+ * be spoken, and it cannot depend on a provider that might be down.
  */
+const OPENING_GREETINGS = [
+  (n: string) => (n ? `Hi ${n}, thanks for making the time.` : "Thanks for making the time."),
+  (n: string) => (n ? `${n}, good to meet you. Thanks for making the time.` : "Good to meet you. Thanks for making the time."),
+  (n: string) => (n ? `Hi ${n}. Thanks for sitting down with me today.` : "Thanks for sitting down with me today."),
+  (n: string) => (n ? `Hey ${n}, glad we could do this.` : "Glad we could do this."),
+] as const;
+
+const OPENING_FRAMINGS: Record<"DAY_15" | "DAY_31", readonly string[]> = {
+  DAY_15: [
+    "This is your Day 15 checkpoint.",
+    "This is the Day 15 checkpoint, so we're at the halfway mark.",
+    "We're here for your Day 15 checkpoint.",
+  ],
+  DAY_31: [
+    "This is your final interview for the cohort.",
+    "This is the last one, your final cohort interview.",
+    "We're at your final interview for the cohort.",
+  ],
+};
+
+const OPENING_SHAPES: Record<"DAY_15" | "DAY_31", readonly string[]> = {
+  DAY_15: [
+    "I'll ask you about the work you've submitted so far, and I'll dig deeper into some of your answers as we go.",
+    "I want to go through the work you've submitted so far, and I'll push on a few of your answers along the way.",
+    "We'll talk through what you've built so far, and I'll follow up on anything I want to understand better.",
+  ],
+  DAY_31: [
+    "I'll ask you about what you built across the thirty-one days, and I'll dig deeper into some of your answers as we go.",
+    "I want to go through what you built over the thirty-one days, and I'll push on a few of your answers along the way.",
+    "We'll talk through the whole thirty-one days of work, and I'll follow up on anything I want to understand better.",
+  ],
+};
+
+const OPENING_PERMISSIONS = [
+  "If you'd like me to repeat or clarify anything, just ask. And if you don't know something, say so and we'll move on.",
+  "Ask me to repeat or rephrase anything you need. And if something isn't familiar, just say so and we'll keep going.",
+  "Stop me any time if you want a question again. And if you don't know an answer, saying that is completely fine.",
+] as const;
+
 export function openingLine(params: {
   firstName?: string | null;
   blueprint: "DAY_15" | "DAY_31";
   questionCount: number;
+  /**
+   * Varies the wording across interviews. Callers pass something unique per
+   * attempt; tests pass a constant to pin the output.
+   */
+  seed?: string;
 }): string {
   const name = (params.firstName ?? "").trim();
-  const greeting = name ? `Hi ${name}, thanks for making the time.` : "Thanks for making the time.";
+  const seed = params.seed ?? "";
 
-  const framing =
-    params.blueprint === "DAY_15"
-      ? "This is your Day 15 checkpoint."
-      : "This is your final interview for the cohort.";
-
-  const shape =
-    params.blueprint === "DAY_15"
-      ? "I'll ask you about the work you've submitted so far, and I'll dig deeper into some of your answers as we go."
-      : "I'll ask you about what you built across the thirty-one days, and I'll dig deeper into some of your answers as we go.";
-
-  const permission =
-    "If you'd like me to repeat or clarify anything, just ask. And if you don't know something, say so and we'll move on.";
+  // Distinct sub-seeds per slot, so the four choices are independent and the
+  // combinations multiply instead of moving in lockstep.
+  const greeting = pickFor(OPENING_GREETINGS, `open:greet:${seed}`)(name);
+  const framing = pickFor(OPENING_FRAMINGS[params.blueprint], `open:frame:${seed}`);
+  const shape = pickFor(OPENING_SHAPES[params.blueprint], `open:shape:${seed}`);
+  const permission = pickFor(OPENING_PERMISSIONS, `open:perm:${seed}`);
 
   // No handover sentence. "Let's start here." is the kind of stock
   // transition that makes an interview sound read rather than conducted;
   // the first question follows the framing directly.
 
-  return `${greeting} ${framing}\n\n${shape} ${permission}`;
+  return `${greeting} ${framing}
+
+${shape} ${permission}`;
 }
 
 /** Said once, when the interview ends. */

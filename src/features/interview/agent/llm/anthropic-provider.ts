@@ -14,7 +14,7 @@ import type { InterviewLLM } from "@/features/interview/agent/llm/provider";
 export function createAnthropicInterviewLLM(): InterviewLLM {
   return createJsonInterviewLLM({
     name: "anthropic",
-    askJson: ({ system, user, maxTokens }) =>
-      askClaudeJson<unknown>({ system, user, maxTokens }),
+    askJson: ({ system, user, maxTokens, temperature }) =>
+      askClaudeJson<unknown>({ system, user, maxTokens, temperature }),
   });
 }

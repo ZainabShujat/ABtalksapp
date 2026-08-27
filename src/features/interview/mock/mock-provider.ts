@@ -232,7 +232,7 @@ export const mockInterviewProvider = {
     const questions = await phraseQuestions(context, base.questions);
     const plan: InterviewPlan = { ...base, questions };
 
-    const opened = beginInterview(plan, createInitialState());
+    const opened = beginInterview(plan, createInitialState(), "mock");
     if (!opened.ok) return { ok: false, message: opened.message };
 
     const first = opened.data.nextQuestion;

@@ -65,6 +65,11 @@ export type TurnOutcome =
 export function beginInterview(
   plan: InterviewPlan,
   state: InterviewState,
+  /**
+   * Varies the opening wording. Unique per attempt in production; tests and the
+   * mock provider pass a constant so their expected transcript is stable.
+   */
+  seed: string = `${Date.now()}`,
 ): TurnOutcome {
   if (state.status !== "NOT_STARTED") {
     return { ok: false, message: "This interview has already started." };
@@ -84,6 +89,7 @@ export function beginInterview(
           firstName: ctx.candidateFirstName,
           blueprint: ctx.blueprint,
           questionCount: ctx.questionCount,
+          seed,
         })
       : "Thanks for making the time. Talk me through your thinking rather than giving me the short version — and if you don't know something, just say so and we'll move on.\n\nLet's start here.";
 

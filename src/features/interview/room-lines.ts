@@ -55,11 +55,23 @@ export const ROOM_LINE_KINDS: readonly RoomLineKind[] = [
  * The full restatement below is still used when the candidate ASKS for it — the
  * agent's own REPEAT action — where it is what was actually requested.
  */
-export const WAITING_LINE =
-  "I couldn't hear you, can you speak again?";
+export const WAITING_LINES = [
+  "I couldn't hear you, can you speak again?",
+  "Sorry, I'm not picking you up. Could you say that again?",
+  "I didn't get any of that. Go ahead whenever you're ready.",
+  "Nothing came through on my end. Can you try that again?",
+] as const;
 
-export const NOISY_ROOM_LINE =
-  "There is too much background noise, can you sit in a quieter room?";
+/** First variant. Kept so callers with no variant to hand still compile. */
+export const WAITING_LINE = WAITING_LINES[0];
+
+export const NOISY_ROOM_LINES = [
+  "There is too much background noise, can you sit in a quieter room?",
+  "I'm getting a lot of background noise. Is there somewhere quieter you can sit?",
+  "There's quite a bit of noise coming through. Could you move somewhere quieter?",
+] as const;
+
+export const NOISY_ROOM_LINE = NOISY_ROOM_LINES[0];
 
 /**
  * Said once when the candidate has not spoken at all since the microphone
@@ -86,11 +98,21 @@ export function repeatLine(questionText: string): string {
  * question stays open: moving on would score an unanswered question against
  * someone who did answer it.
  */
-export const RETRY_LINE =
-  "Sorry, I didn't catch that clearly. Could you say it once more?";
+export const RETRY_LINES = [
+  "Sorry, I didn't catch that clearly. Could you say it once more?",
+  "That came through garbled on my side. Would you mind repeating it?",
+  "I lost part of that. Could you run it by me once more?",
+] as const;
 
-export const MOVING_ON_LINE =
-  "That's completely fine. If you can't answer this one we'll move on.";
+export const RETRY_LINE = RETRY_LINES[0];
+
+export const MOVING_ON_LINES = [
+  "That's completely fine. If you can't answer this one we'll move on.",
+  "No problem at all. Let's leave that one and keep going.",
+  "That's alright. We'll skip this one and move on.",
+] as const;
+
+export const MOVING_ON_LINE = MOVING_ON_LINES[0];
 
 /**
  * What is submitted in place of speech after the second silence.
@@ -104,7 +126,44 @@ export const MOVING_ON_LINE =
  * Framed as the interview being over, not as the candidate being cut off: they
  * kept to the time they were given, and everything they said still counts.
  */
-export const TIME_UP_LINE =
-  "That's us out of time. Thanks for talking me through your work.";
+export const TIME_UP_LINES = [
+  "That's us out of time. Thanks for talking me through your work.",
+  "We're at time. Thanks for walking me through all of that.",
+  "That's the clock. Thanks for taking me through your work today.",
+] as const;
+
+export const TIME_UP_LINE = TIME_UP_LINES[0];
+
+/**
+ * Resolves one room line to its wording.
+ *
+ * `variant` exists because these lines repeat WITHIN a single interview — the
+ * nudge fires on every silence — and hearing the identical sentence four times
+ * in fifteen minutes is the clearest possible signal that nobody is listening.
+ *
+ * It is a NUMBER, not text, and it is taken modulo the pool, so a client can
+ * pick which authored line is spoken but can never introduce one. That keeps
+ * the property the TTS route depends on: the endpoint can only voice something
+ * this interview would have said. See `voice.ts:resolveSpeakableLine`.
+ */
+export function roomLineFor(
+  kind: "waiting" | "retry" | "moving_on" | "time_up" | "noisy_room",
+  variant: number,
+): string {
+  const pool =
+    kind === "waiting"
+      ? WAITING_LINES
+      : kind === "retry"
+        ? RETRY_LINES
+        : kind === "moving_on"
+          ? MOVING_ON_LINES
+          : kind === "time_up"
+            ? TIME_UP_LINES
+            : NOISY_ROOM_LINES;
+  const index = Number.isFinite(variant)
+    ? ((Math.trunc(variant) % pool.length) + pool.length) % pool.length
+    : 0;
+  return pool[index]!;
+}
 
 export const NO_RESPONSE_ANSWER = "(no response)";

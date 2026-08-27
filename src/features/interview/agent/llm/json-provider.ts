@@ -32,6 +32,13 @@ export type AskJson = (args: {
   system: string;
   user: string;
   maxTokens: number;
+  /**
+   * Omitted means 0, which is what ASSESSMENT needs: two candidates giving the
+   * same answer must get the same evidence read, or the interview stops being
+   * comparable. Only question PHRASING overrides it, where the whole point is
+   * that no two interviews open with the same sentence.
+   */
+  temperature?: number;
 }) => Promise<
   | { ok: true; data: unknown }
   /**
@@ -164,9 +171,25 @@ export function createJsonInterviewLLM(
         const res = await askJson({
           system: PHRASE_SYSTEM_PROMPT,
           user: buildPhraseUserMessage(input),
-          maxTokens: 1200,
+          // Every target must fit in ONE response. A cap that truncates the
+          // JSON does not degrade gracefully: the parse fails, the map comes
+          // back empty, and every question is asked exactly as authored — the
+          // failure looks like "the LLM changed nothing", not like an error.
+          maxTokens: 200 * input.targets.length + 600,
+          // High, deliberately. Assessment must be reproducible; phrasing must
+          // NOT be. At zero, two candidates with similar submissions were asked
+          // word-for-word identical questions, which is what made the
+          // interviewer sound scripted.
+          temperature: 0.9,
         });
-        if (!res.ok) return {};
+        if (!res.ok) {
+          logger.warn("[interview-agent] question phrasing rejected", {
+            provider: name,
+            message: res.message,
+            targets: input.targets.length,
+          });
+          return {};
+        }
 
         const parsed = res.data;
         if (!parsed || typeof parsed !== "object") return {};

@@ -115,7 +115,7 @@ export function createGeminiInterviewLLM(
 ): InterviewLLM {
   return createJsonInterviewLLM({
     name: `gemini:${model}`,
-    async askJson({ system, user, maxTokens }) {
+    async askJson({ system, user, maxTokens, temperature }) {
       const res = await fetch(`${ENDPOINT}/${model}:generateContent`, {
         method: "POST",
         headers: {
@@ -130,7 +130,7 @@ export function createGeminiInterviewLLM(
           generationConfig: {
             responseMimeType: "application/json",
             maxOutputTokens: Math.max(maxTokens, MIN_OUTPUT_TOKENS),
-            temperature: 0.2,
+            temperature: temperature ?? 0.2,
           },
         }),
       });

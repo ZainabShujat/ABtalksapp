@@ -65,7 +65,7 @@ export function createOpenAiInterviewLLM(
 ): InterviewLLM {
   return createJsonInterviewLLM({
     name: `openai:${model}`,
-    async askJson({ system, user, maxTokens }) {
+    async askJson({ system, user, maxTokens, temperature }) {
       const attempt = () =>
         fetch(OPENAI_URL, {
           method: "POST",
@@ -76,9 +76,10 @@ export function createOpenAiInterviewLLM(
           body: JSON.stringify({
             model,
             max_tokens: maxTokens,
-            // Zero temperature: two candidates giving the same answer must get
-            // the same evidence read, or the interview stops being comparable.
-            temperature: 0,
+            // Assessment defaults to zero: two candidates giving the same
+            // answer must get the same evidence read, or the interview stops
+            // being comparable. Phrasing overrides it — see AskJson.
+            temperature: temperature ?? 0,
             // The system prompt already says "Return ONLY a JSON object", which
             // is what json_object mode requires the conversation to contain.
             response_format: { type: "json_object" },

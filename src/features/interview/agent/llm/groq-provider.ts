@@ -62,7 +62,7 @@ export function createGroqInterviewLLM(
 ): InterviewLLM {
   return createJsonInterviewLLM({
     name: `groq:${model}`,
-    async askJson({ system, user, maxTokens }) {
+    async askJson({ system, user, maxTokens, temperature }) {
       /**
        * One attempt. `strictJson` asks Groq to enforce JSON server-side.
        *
@@ -82,9 +82,10 @@ export function createGroqInterviewLLM(
           body: JSON.stringify({
             model,
             max_tokens: maxTokens,
-            // Zero temperature: two candidates giving the same answer must get
-            // the same evidence read, or the interview stops being comparable.
-            temperature: 0,
+            // Assessment defaults to zero: two candidates giving the same
+            // answer must get the same evidence read, or the interview stops
+            // being comparable. Phrasing overrides it — see AskJson.
+            temperature: temperature ?? 0,
             // gpt-oss reasons before answering and those tokens count against
             // a per-minute budget a long interview can exhaust; the task is
             // extraction against a supplied checklist, so low effort costs

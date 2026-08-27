@@ -154,7 +154,13 @@ export async function startCohortInterview(
   if (!gate.ok) return { ok: false, message: gate.message };
 
   const plan = await buildCohortPlan(memberId, blueprint);
-  const opened = beginInterview(plan, createInitialState());
+  // Seeded per attempt so no two interviews open with the same sentence, and
+  // so two members starting in the same second still differ.
+  const opened = beginInterview(
+    plan,
+    createInitialState(),
+    `${memberId}:${Date.now()}`,
+  );
   if (!opened.ok) return { ok: false, message: opened.message };
 
   const firstQuestion = opened.data.nextQuestion;

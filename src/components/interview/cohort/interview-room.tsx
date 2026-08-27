@@ -22,11 +22,10 @@ import {
   SPEECH_ON_RMS,
 } from "@/features/interview/constants";
 import {
-  MOVING_ON_LINE,
   RETRY_LINE,
   NO_RESPONSE_ANSWER,
   TIME_UP_LINE,
-  WAITING_LINE,
+  roomLineFor,
   type RoomLineKind,
 } from "@/features/interview/room-lines";
 import {
@@ -405,6 +404,14 @@ export function InterviewRoom({
    * without muting a genuine repeat.
    */
   const speakingRef = useRef<string | null>(null);
+  /**
+   * How many room-composed lines have been spoken this interview.
+   *
+   * Drives which authored wording of a repeating line is used, so the nudge does
+   * not say the identical sentence on every silence. A ref, not state: it must
+   * advance exactly once per occurrence and must never trigger a re-render.
+   */
+  const roomLineCountRef = useRef(0);
   /** The opening is spoken exactly once, whatever React does on mount. */
   const openingSpokenRef = useRef(false);
   /**
@@ -541,7 +548,7 @@ export function InterviewRoom({
    * not the interview this is meant to be.
    */
   const speak = useCallback(
-    async (text: string, kind: RoomLineKind = "latest") => {
+    async (text: string, kind: RoomLineKind = "latest", variant = 0) => {
       // Re-entrancy guard: the same line already has audio in flight (a
       // double-invoked effect, a re-render). Return without touching the phase —
       // the call that is already running owns it, and stamping "idle" here would
@@ -599,7 +606,7 @@ export function InterviewRoom({
           // server's transcript, so asking for "the latest line" while one of
           // them was on screen synthesized the agent's last line instead. That
           // is why a candidate who went quiet heard the greeting again.
-          body: JSON.stringify({ interviewId, line: kind }),
+          body: JSON.stringify({ interviewId, line: kind, variant }),
           signal: AbortSignal.timeout(TTS_TIMEOUT_MS),
         });
 
@@ -1409,17 +1416,25 @@ export function InterviewRoom({
       // The recording KEEPS RUNNING. Nothing is cancelled and nothing is
       // discarded — this is a prompt over the top of an open microphone, which
       // is what makes "the nudge ate my answer" structurally impossible.
-      setTurns((prev) => [...prev, { role: "interviewer", text: WAITING_LINE }]);
-      setReveal({ text: WAITING_LINE, chars: WAITING_LINE.length });
-      void speak(WAITING_LINE, "waiting");
+      // Varied per occurrence: this fires on EVERY silence, and the same
+      // sentence four times in one interview is the loudest possible tell that
+      // nothing is listening. The transcript length is the counter, and the
+      // same value goes to the server so the spoken line matches the shown one.
+      const waitingVariant = roomLineCountRef.current++;
+      const waitingText = roomLineFor("waiting", waitingVariant);
+      setTurns((prev) => [...prev, { role: "interviewer", text: waitingText }]);
+      setReveal({ text: waitingText, chars: waitingText.length });
+      void speak(waitingText, "waiting", waitingVariant);
       return;
     }
 
     if (effect === "moveOn") {
       // Reached only from WAITING_FOR_SPEECH, so `hasSpoken` is false by
       // construction and "(no response)" is the truth rather than a guess.
-      setTurns((prev) => [...prev, { role: "interviewer", text: MOVING_ON_LINE }]);
-      setReveal({ text: MOVING_ON_LINE, chars: MOVING_ON_LINE.length });
+      const movingOnVariant = roomLineCountRef.current++;
+      const movingOnText = roomLineFor("moving_on", movingOnVariant);
+      setTurns((prev) => [...prev, { role: "interviewer", text: movingOnText }]);
+      setReveal({ text: movingOnText, chars: movingOnText.length });
       // "moveOn" means VOICE DETECTION never saw speech — which is not the same
       // as nothing having been said. It was discarding thirteen seconds of
       // captured audio on the strength of that guess, which is exactly the
@@ -1435,7 +1450,7 @@ export function InterviewRoom({
       }
 
       cancelRecording();
-      void speak(MOVING_ON_LINE, "moving_on").then(() => {
+      void speak(movingOnText, "moving_on", movingOnVariant).then(() => {
         void send(NO_RESPONSE_ANSWER);
       });
     }

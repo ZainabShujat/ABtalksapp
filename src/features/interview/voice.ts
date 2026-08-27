@@ -7,6 +7,7 @@ import {
   TIME_UP_LINE,
   RETRY_LINE,
   WAITING_LINE,
+  roomLineFor,
   repeatLine,
   type RoomLineKind,
 } from "@/features/interview/room-lines";
@@ -295,24 +296,30 @@ export async function resolveSpeakableLine(
   interviewId: string,
   memberId: string,
   kind: RoomLineKind = "latest",
+  /**
+   * Which authored wording of a repeating room line to speak. A number, never
+   * text — see `roomLineFor`. The room sends the same value it displayed, so
+   * the candidate hears the sentence they are reading.
+   */
+  variant = 0,
 ): Promise<VoiceResult<{ text: string }>> {
   if (kind === "language") {
     return { ok: true, data: { text: LANGUAGE_RETRY_LINE } };
   }
   if (kind === "time_up") {
-    return { ok: true, data: { text: TIME_UP_LINE } };
+    return { ok: true, data: { text: roomLineFor("time_up", variant) } };
   }
   if (kind === "moving_on") {
-    return { ok: true, data: { text: MOVING_ON_LINE } };
+    return { ok: true, data: { text: roomLineFor("moving_on", variant) } };
   }
   // A short prompt, not a restatement: the question was asked seconds ago and
   // is still on screen. Composed here like the others, so the client still
   // cannot choose what the interviewer says.
   if (kind === "retry") {
-    return { ok: true, data: { text: RETRY_LINE } };
+    return { ok: true, data: { text: roomLineFor("retry", variant) } };
   }
   if (kind === "waiting") {
-    return { ok: true, data: { text: WAITING_LINE } };
+    return { ok: true, data: { text: roomLineFor("waiting", variant) } };
   }
 
   const row = await prisma.generalInterview.findFirst({

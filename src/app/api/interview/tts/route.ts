@@ -30,6 +30,12 @@ export const dynamic = "force-dynamic";
 const bodySchema = z.object({
   interviewId: z.string().min(1).max(64),
   line: z.enum(["time_up", "latest", "waiting", "retry", "repeat", "language", "moving_on"]).default("latest"),
+  /**
+   * Which authored wording of a repeating line to speak. Bounded and taken
+   * modulo the pool server-side, so it selects among our own sentences and
+   * cannot introduce one — the no-client-text rule above still holds.
+   */
+  variant: z.number().int().min(0).max(999).default(0),
 });
 
 export async function POST(request: Request) {
@@ -60,6 +66,7 @@ export async function POST(request: Request) {
     parsed.data.interviewId,
     memberId,
     parsed.data.line,
+    parsed.data.variant,
   );
   if (!line.ok) {
     return NextResponse.json(
