@@ -14,7 +14,7 @@ import { validateLinkedinUrl } from "./validate-linkedin-url";
 import { computeStreakStats } from "./streak-utils";
 import { resolveChallengeEnrollment } from "@/features/enrollment/resolve-dashboard-enrollment";
 import { awardSubmissionSynergy } from "@/features/synergy/award-submission-synergy";
-import { dualWriteSubmissionAttempt } from "@/repositories/dual-write";
+import { dualWriteCandidateIdentity, dualWriteSubmissionAttempt } from "@/repositories/dual-write";
 
 /**
  * Relaxation window: today + previous 4 days = 5 calendar days total.
@@ -283,6 +283,9 @@ export async function submitDay(input: {
         await tx.studentProfile.updateMany({
           where: { userId },
           data: { isReadyForInterview: true },
+        });
+        await dualWriteCandidateIdentity(tx, userId, {
+          isReadyForInterview: true,
         });
       }
 

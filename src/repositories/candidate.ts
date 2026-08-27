@@ -46,6 +46,7 @@ const newIdentitySelect = {
   isCampusAmbassadorCandidate: true,
   ambassadorDismissedAt: true,
   education: {
+    where: { id: { startsWith: "edu_sp_" } },
     select: {
       id: true,
       institutionName: true,
@@ -55,6 +56,7 @@ const newIdentitySelect = {
     },
   },
   experience: {
+    where: { id: { startsWith: "exp_sp_" } },
     select: {
       id: true,
       companyName: true,
@@ -183,47 +185,16 @@ function unspecifiedToNull(value: string | undefined): string | null {
   return value;
 }
 
-/**
- * Live challenge identity while dual-write is on: StudentProfile is still the
- * write and the user-visible contract. ENABLE_NEW_CANDIDATE requires a
- * CandidateProfile row, then returns that StudentProfile view so /profile
- * cannot show 2a-merged ProgramMember extras or a second referral code.
- *
- * referralCode owner is StudentProfile (6-char shareable / registration
- * lookup). CandidateProfile.referralCode is a dual-write shadow. 2a and
- * ensureCandidateProfile minted an 8-char code when the SP code was already
- * taken on CandidateProfile — that is why ENABLE_NEW_CANDIDATE was rolled
- * back. Display and lookup both stay on the SP code.
- *
- * CandidateSkill is empty (never dual-written). Skills stay on StudentProfile.
- * Domain / enrollment / streak / talent search are not this repository.
- */
-function liveView(
-  candidate: Parameters<typeof viewFromNew>[0],
-  legacy: Parameters<typeof viewFromLegacy>[0] | null,
-): CandidateProfileView {
-  if (legacy) return viewFromLegacy(legacy);
-  const view = viewFromNew(candidate);
-  view.skills = [];
-  return view;
-}
-
 export async function getCandidateProfile(
   userId: string,
 ): Promise<CandidateProfileView | null> {
   if (isNewCandidateRepoEnabled()) {
-    const [row, legacy] = await Promise.all([
-      prisma.candidateProfile.findUnique({
-        where: { userId },
-        select: newIdentitySelect,
-      }),
-      studentProfile.findUnique({
-        where: { userId },
-        select: legacyIdentitySelect,
-      }),
-    ]);
+    const row = await prisma.candidateProfile.findUnique({
+      where: { userId },
+      select: newIdentitySelect,
+    });
     if (!row) return null;
-    return liveView(row, legacy);
+    return viewFromNew(row);
   }
 
   const row = await studentProfile.findUnique({
@@ -241,23 +212,11 @@ export async function listCandidateProfiles(
   if (ids.length === 0) return new Map();
 
   if (isNewCandidateRepoEnabled()) {
-    const [rows, legacy] = await Promise.all([
-      prisma.candidateProfile.findMany({
-        where: { userId: { in: ids } },
-        select: newIdentitySelect,
-      }),
-      studentProfile.findMany({
-        where: { userId: { in: ids } },
-        select: legacyIdentitySelect,
-      }),
-    ]);
-    const legacyByUser = new Map(legacy.map((r) => [r.userId, r]));
-    return new Map(
-      rows.map((row) => [
-        row.userId,
-        liveView(row, legacyByUser.get(row.userId) ?? null),
-      ]),
-    );
+    const rows = await prisma.candidateProfile.findMany({
+      where: { userId: { in: ids } },
+      select: newIdentitySelect,
+    });
+    return new Map(rows.map((row) => [row.userId, viewFromNew(row)]));
   }
 
   const rows = await studentProfile.findMany({
@@ -277,13 +236,20 @@ export async function getProfileSummary(userId: string): Promise<{
 }
 
 /**
- * Resolve a pasted/shared referral code to a user. Always StudentProfile —
- * that is the live unique shareable code. Do not look up CandidateProfile
- * here: some CP rows still hold an 8-char placeholder from 2a / ensure.
+ * Resolve a pasted/shared referral code to a user.
+ * Flag off: StudentProfile (legacy unique). Flag on: CandidateProfile
+ * (canonical unique). Both tables must hold the same live code.
  */
 export async function findUserIdByReferralCode(
   code: string,
 ): Promise<string | null> {
+  if (isNewCandidateRepoEnabled()) {
+    const row = await prisma.candidateProfile.findUnique({
+      where: { referralCode: code },
+      select: { userId: true },
+    });
+    return row?.userId ?? null;
+  }
   const row = await studentProfile.findUnique({
     where: { referralCode: code },
     select: { userId: true },
@@ -392,15 +358,28 @@ function randomReferralCode(): string {
   return out;
 }
 
+async function mintHireOnlyReferralCode(tx: Prisma.TransactionClient): Promise<string> {
+  for (let i = 0; i < 10; i++) {
+    const code = randomReferralCode();
+    const [onCandidate, onStudent] = await Promise.all([
+      tx.candidateProfile.findUnique({
+        where: { referralCode: code },
+        select: { userId: true },
+      }),
+      tx.studentProfile.findUnique({
+        where: { referralCode: code },
+        select: { userId: true },
+      }),
+    ]);
+    if (!onCandidate && !onStudent) return code;
+  }
+  throw new Error("Could not mint unique hire-only referral code");
+}
+
 /**
  * `CandidatePreference.userId` is an FK to `CandidateProfile`, not to `User`.
- * Phase 2a has backfilled ~10.9k of ~12.8k users, so a live candidate can still
- * be without a profile row — writing a preference for them would fail on the FK.
- *
- * This creates the missing row using the same precedence Phase 2a uses
- * (`StudentProfile` first, then the User record), and reuses the student's own
- * `referralCode` where it is free, so a later 2a run finds this row and keeps
- * it rather than allocating a second code.
+ * If StudentProfile exists, CandidateProfile copies that live referral code.
+ * 8-character codes are only for users with no StudentProfile (hire-only).
  */
 async function ensureCandidateProfile(
   tx: Prisma.TransactionClient,
@@ -440,15 +419,11 @@ async function ensureCandidateProfile(
     user?.email?.split("@")[0] ||
     "Unknown";
 
-  let referralCode = sp?.referralCode ?? randomReferralCode();
-  const taken = await tx.candidateProfile.findUnique({
-    where: { referralCode },
-    select: { userId: true },
-  });
-  // If the live SP code is already on another CandidateProfile, mint a
-  // placeholder. Live display/lookup never use this column while SP exists.
-  if (taken && taken.userId !== userId) {
-    referralCode = randomReferralCode();
+  let referralCode: string;
+  if (sp?.referralCode) {
+    referralCode = sp.referralCode;
+  } else {
+    referralCode = await mintHireOnlyReferralCode(tx);
   }
 
   await tx.candidateProfile.create({

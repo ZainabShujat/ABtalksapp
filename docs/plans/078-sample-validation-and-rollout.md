@@ -6,10 +6,10 @@
   clean 2026-08-26: V1–V10, drift, extras, 200-user shadow, interval checks).
 - Production **Phase 6 CREDENTIAL is complete**. `ENABLE_NEW_CREDENTIAL=true`.
 - Production **Phase 6 POINTS is complete**. `ENABLE_NEW_POINTS=true`.
-- Production **Phase 6 CANDIDATE is complete**. `ENABLE_NEW_CANDIDATE=true`.
-  Keep `ENABLE_DUAL_WRITE=true`. Do not change legacy writes. Remaining flags
-  one at a time per `docs/plans/095-phase6-read-switches.md` (next:
-  `ENABLE_NEW_LEARNING`).
+- Production **Phase 6 CANDIDATE is in flight** (`ENABLE_NEW_CANDIDATE=true`).
+  Genuine new-table reads + referral repair + skills/edu/exp catch-up are in
+  plan 095. Keep `ENABLE_DUAL_WRITE=true`. Do not change legacy writes. Do
+  **not** start `ENABLE_NEW_LEARNING` until that verification is clean.
 - `plan-078-phase1` remains the **sample-validation test bed**. Do not
   full-backfill it. Do not run Phase 6 there.
 - Production is never written as part of rehearsal.

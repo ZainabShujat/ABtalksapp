@@ -21,11 +21,15 @@ start Phase 7 in this plan.
   `ENABLE_NEW_POINTS=true` on Production. Signed-in smoke: header chip 1070,
   marketplace redeem shortfalls imply 1070, admin grant +1 dual-wrote
   (`User` / `PointsAccount` / ledger all 16). Recon 0.
-- **Phase 6 CANDIDATE complete (2026-08-27).** `ENABLE_NEW_CANDIDATE=true`
-  (`8c647f5` / `dpl_HQfq6zHKijJvfEpoSpfX22mTpMhr`). Live identity requires a
-  CandidateProfile row then returns the StudentProfile view. Referral display
-  and lookup stay on StudentProfile. Dual-write copies SP→CP when the code is
-  free. LEARNING / PROGRESS / TALENT stay off.
+- **Phase 6 CANDIDATE genuine reads (2026-08-27, in flight).** Flag is on.
+  After referral-code repair + skills/edu/exp catch-up, `getCandidateProfile`
+  reads only `CandidateProfile` + profile-owned `edu_sp_*` / `exp_sp_*` +
+  `CandidateSkill`. Referral lookup follows the flag. Dual-write copies the
+  live SP referral code and only submitted identity fields. Do **not** start
+  LEARNING until verification in §C is clean. Admin student list/search, admin
+  CSV, and campus-ambassador admin still read `StudentProfile` identity
+  directly — that is pre-Phase-7 retirement work, not a blocker for this
+  slice. PROGRESS / TALENT stay off.
 - Production: `ENABLE_DUAL_WRITE=true` (keep it). `ENABLE_NEW_CREDENTIAL=true`,
   `ENABLE_NEW_POINTS=true`, and `ENABLE_NEW_CANDIDATE=true`. LEARNING /
   PROGRESS / TALENT stay unset/false. Dual-write still writes new tables
@@ -128,16 +132,18 @@ Credential path; smoke + V6 + drift clean 2026-08-26 (`48125d5` /
 `dpl_CRGkwsQxwnx3HZGvJ5ntwEFQCJkC`). Header chip and marketplace redeem
 eligibility read `PointsAccount`. Admin grant +1 dual-wrote. Recon 0.
 
-**CANDIDATE:** complete (`ENABLE_NEW_CANDIDATE=true`, `8c647f5` /
-`dpl_HQfq6zHKijJvfEpoSpfX22mTpMhr`). Live identity requires CandidateProfile
-then returns the StudentProfile view. Referral lookup is
-`findUserIdByReferralCode` (SP). Dual-write copies SP→CP when unique. Smoke:
-`/profile` (referral `X26L7G`), save dual-wrote, dashboard greeting, admin
-student identity. V1–V10 zero, drift clean. Raw table `referralCode` still
-differs for 6 users; live paths do not use that CP placeholder. Do not start
-LEARNING.
+**CANDIDATE:** genuine new-table reads (in flight). `ENABLE_NEW_CANDIDATE=true`.
+Repair the six CP placeholder referral codes from SP (preflight: those codes
+are not owned by another CP user). Dual-write copies the live SP code and
+syncs `CandidateSkill` + `edu_sp_*` / `exp_sp_*`. Flag ON reads only
+CandidateProfile + those profile-owned children; lookup uses CandidateProfile.
+Do not bulk-clear 2a ProgramMember extras. Do not start LEARNING / PROGRESS /
+TALENT. Admin list/search, admin CSV, and campus-ambassador admin remain on
+StudentProfile until Phase 7 retirement.
 
-**Next operator action:** set `ENABLE_NEW_LEARNING=true` on Production only.
+**Next operator action:** finish CANDIDATE verification (referral mismatch 0,
+cross-table collision 0, CandidateSkill populated, `/profile` from new tables,
+V1–V10 + drift clean). Only then set `ENABLE_NEW_LEARNING=true` on Production.
 Leave PROGRESS / TALENT unset/false.
 
 Order (do not reorder):

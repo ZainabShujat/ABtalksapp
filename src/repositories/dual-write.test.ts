@@ -286,14 +286,20 @@ suite("program apply prefill through getCandidateProfile", () => {
   assert(entry.includes('select: { id: true }'), "existence still SP");
 });
 
-suite("candidate new branch requires CandidateProfile then uses live StudentProfile identity", () => {
+suite("candidate flag ON reads only new candidate tables", () => {
   const src = source("src/repositories/candidate.ts");
   assert(src.includes("educationIdForStudentProfile"), "edu_sp_");
   assert(src.includes("experienceIdForStudentProfile"), "exp_sp_");
+  assert(src.includes('startsWith: "edu_sp_"'), "profile-owned education only");
+  assert(src.includes('startsWith: "exp_sp_"'), "profile-owned experience only");
   assert(src.includes("isNewCandidateRepoEnabled"), "flag");
-  assert(src.includes("function liveView"), "overlay helper");
-  assert(src.includes("viewFromLegacy(legacy)"), "SP is live identity");
+  assert(src.includes("return viewFromNew(row)"), "genuine new view");
+  assert(!src.includes("function liveView"), "no SP overlay");
   assert(src.includes("findUserIdByReferralCode"), "referral lookup helper");
+  assert(
+    src.includes("prisma.candidateProfile.findUnique"),
+    "ON lookup is CandidateProfile",
+  );
 });
 
 suite("registration lookup uses findUserIdByReferralCode not CandidateProfile", () => {
@@ -308,10 +314,33 @@ suite("new referral codes are unique on StudentProfile and CandidateProfile", ()
   assert(src.includes("candidateProfile.findUnique"), "CP unique");
 });
 
-suite("dual-write copies StudentProfile.referralCode onto CandidateProfile", () => {
+suite("dual-write copies live StudentProfile.referralCode and submitted fields only", () => {
   const src = source("src/repositories/dual-write.ts");
-  assert(src.includes("shadowReferralCode"), "collision-safe copy");
-  assert(!src.includes("existing?.referralCode ?? sp.referralCode"), "must not keep stale CP code when SP is free");
+  assert(src.includes("referralCode: sp.referralCode"), "copy live SP code");
+  assert(!src.includes("shadowReferralCode"), "no 8-char placeholder");
+  assert(src.includes("submitted ?? submittedAll()"), "field-level merge");
+  assert(src.includes("syncCandidateSkillsFromLegacy"), "skills catch-up path");
+  assert(src.includes("syncProfileOwnedEducation"), "edu_sp_");
+  assert(src.includes("syncProfileOwnedExperience"), "exp_sp_");
+});
+
+suite("profile save dual-writes only form identity fields", () => {
+  const src = source("src/features/profile/update-profile.ts");
+  assert(src.includes("education: true"), "student education");
+  assert(src.includes("experience: true"), "professional experience");
+  assert(src.includes("phone: true"), "phone is submitted");
+  assert(!src.includes("ambassador: true"), "ambassador untouched");
+});
+
+suite("OTP dual-write submits phone only", () => {
+  const src = source("src/app/actions/otp-actions.ts");
+  assert(src.includes("{ phone: true }"), "phone-only submitted map");
+});
+
+suite("admin interview toggle dual-writes isReadyForInterview", () => {
+  const src = source("src/app/actions/admin-actions.ts");
+  assert(src.includes("dualWriteCandidateIdentity"), "identity dual-write");
+  assert(src.includes("isReadyForInterview: true"), "submitted flag");
 });
 
 suite("talent search is not switched in this phase", () => {

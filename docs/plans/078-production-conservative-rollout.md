@@ -1,11 +1,13 @@
 # Plan 078 — conservative production rollout (2026-08-24)
 
 **Current posture (2026-08-27).** Phase 2 backfill is done. Phase 5 is
-**complete**. Phase 6 CREDENTIAL, POINTS, and CANDIDATE are **complete**:
-`ENABLE_NEW_CREDENTIAL=true`, `ENABLE_NEW_POINTS=true`,
+**complete**. Phase 6 CREDENTIAL and POINTS are **complete**. CANDIDATE flag is
+on; genuine new-table reads are in flight per plan 095 (referral repair +
+skills/edu/exp catch-up). `ENABLE_NEW_CREDENTIAL=true`, `ENABLE_NEW_POINTS=true`,
 `ENABLE_NEW_CANDIDATE=true`. Keep `ENABLE_DUAL_WRITE=true` and **legacy
-writes**. Next flag is `ENABLE_NEW_LEARNING`. Other `ENABLE_NEW_*` remain
-off. Runbook: `docs/plans/095-phase6-read-switches.md`.
+writes**. Do **not** start `ENABLE_NEW_LEARNING` until CANDIDATE verification
+is clean. Other `ENABLE_NEW_*` remain off. Runbook:
+`docs/plans/095-phase6-read-switches.md`.
 
 Gate checklist **before** any production write. Phase 6 **read switches** are
 plan 095 (not this file). Phase 7 / new-only writes / drop legacy are **not**

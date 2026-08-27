@@ -10,7 +10,7 @@ import { getCurrentDayNumber } from "@/lib/date-utils";
 import { computeStreakStats } from "@/features/submission/streak-utils";
 import { sendChallengeResetEmail } from "@/features/email/challenge-reset-email";
 import { studentProfile } from "@/repositories/legacy/student-profile";
-import { dualWritePoints } from "@/repositories/dual-write";
+import { dualWriteCandidateIdentity, dualWritePoints } from "@/repositories/dual-write";
 
 const baseInput = z.object({
   targetUserId: z.string().min(1),
@@ -155,6 +155,9 @@ export async function resetProgressAction(input: {
         where: { userId: targetUserId },
         data: { isReadyForInterview: false },
       });
+      await dualWriteCandidateIdentity(tx, targetUserId, {
+        isReadyForInterview: true,
+      });
 
       await tx.adminAction.create({
         data: {
@@ -230,6 +233,9 @@ export async function toggleReadyForInterviewAction(input: {
       await tx.studentProfile.update({
         where: { userId: targetUserId },
         data: { isReadyForInterview: newValue },
+      });
+      await dualWriteCandidateIdentity(tx, targetUserId, {
+        isReadyForInterview: true,
       });
 
       await tx.adminAction.create({
