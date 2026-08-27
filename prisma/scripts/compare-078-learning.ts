@@ -317,20 +317,15 @@ async function main() {
       WHERE a.id LIKE 'act_quiz_%'
         AND (SELECT COUNT(*) FROM "QuestionOption" o WHERE o."questionId" = nq.id) <> 4
     `),
-    programDayMissionTypeGap: await count(`
-      SELECT pd.id
-      FROM "ProgramDay" pd
-      JOIN "Activity" a ON a.id = 'act_pd_' || pd.id
-      LEFT JOIN "CodingActivityConfig" cac ON cac."activityId" = a.id
-      WHERE pd."missionType"::text <> CASE
-        WHEN a.type::text = 'PROJECT' THEN 'BOSS_BUILD'
-        WHEN a.type::text = 'EXTERNAL_SUBMISSION' THEN 'SHIP_IT'
-        WHEN a.type::text = 'CODING' AND cac.language = 'SQL' THEN 'DATA_ROOM'
-        WHEN a.type::text = 'CODING' THEN 'CODE_SPRINT'
-        ELSE 'PROMPT_FORGE'
-      END
-    `),
   };
+
+  const programDayMissionTypeDrift = await count(`
+    SELECT pd.id
+    FROM "ProgramDay" pd
+    JOIN "Activity" a ON a.id = 'act_pd_' || pd.id
+    LEFT JOIN "ContentActivityConfig" c ON c."activityId" = a.id
+    WHERE c."missionType" IS DISTINCT FROM pd."missionType"
+  `);
 
   const unexpected = {
     challengeVsProgram,
@@ -352,6 +347,7 @@ async function main() {
     extraMemberPe,
     memberStatusDrift,
     memberCohortMismatch,
+    programDayMissionTypeDrift,
   };
   const bad = Object.entries(unexpected).filter(([, n]) => n !== 0);
 

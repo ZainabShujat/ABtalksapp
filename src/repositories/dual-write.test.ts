@@ -523,5 +523,29 @@ suite("ENABLE_NEW_LEARNING is not flipped in app code", () => {
   assert(flags.includes('process.env.ENABLE_NEW_LEARNING === "true"'), "still env-gated");
 });
 
+suite("ProgramDay missionType is stored exactly on ContentActivityConfig", () => {
+  const schema = source("prisma/schema.prisma");
+  const dw = source("src/repositories/dual-write.ts");
+  const seed = source("prisma/seed-program.ts");
+  const learning = source("src/repositories/learning.ts");
+  const compare = source("prisma/scripts/compare-078-learning.ts");
+  const admin = source("src/features/program/admin.ts");
+  assert(schema.includes("model ContentActivityConfig"), "config model");
+  assert(schema.includes("missionType      ProgramMissionType?"), "typed enum field");
+  assert(dw.includes("dualWriteProgramDayMissionType"), "dual-write helper");
+  assert(dw.includes("missionType: day.missionType"), "copies exact enum");
+  assert(seed.includes("dualWriteProgramDayMissionType"), "seed writer");
+  assert(admin.includes("getProgramContentTree"), "admin reads content");
+  assert(!admin.includes("programDay.update"), "admin does not update ProgramDay");
+  assert(learning.includes("contentConfig?.missionType"), "ON path reads stored type");
+  assert(!learning.includes('language === "SQL"'), "no SQL inference");
+  assert(!learning.includes("programMissionFromActivity"), "lossy mapper removed");
+  assert(compare.includes("programDayMissionTypeDrift"), "exact compare");
+  assert(
+    !compare.includes("WHEN a.type::text = 'CODING' THEN 'CODE_SPRINT'"),
+    "no inferred compare",
+  );
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

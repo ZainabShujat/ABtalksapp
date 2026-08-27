@@ -360,32 +360,6 @@ function asProgramLanguage(value: string | null | undefined): ProgramLanguage | 
   return null;
 }
 
-/**
- * Reverse of 2d missionActivityType. CODE_SPRINT vs DATA_ROOM both stored as
- * CODING; SQL language is the only recoverable discriminator.
- */
-export function programMissionFromActivity(
-  type: ActivityType,
-  language: string | null | undefined,
-): { missionType: ProgramMissionType; isProjectDay: boolean } {
-  if (type === ActivityType.PROJECT) {
-    return { missionType: ProgramMissionType.BOSS_BUILD, isProjectDay: true };
-  }
-  if (type === ActivityType.EXTERNAL_SUBMISSION) {
-    return { missionType: ProgramMissionType.SHIP_IT, isProjectDay: false };
-  }
-  if (type === ActivityType.CODING) {
-    return {
-      missionType:
-        language === "SQL"
-          ? ProgramMissionType.DATA_ROOM
-          : ProgramMissionType.CODE_SPRINT,
-      isProjectDay: false,
-    };
-  }
-  return { missionType: ProgramMissionType.PROMPT_FORGE, isProjectDay: false };
-}
-
 function optionLetter(position: number): "A" | "B" | "C" | "D" | null {
   if (position === 1) return "A";
   if (position === 2) return "B";
@@ -1179,7 +1153,12 @@ async function programDayActivities() {
       estimatedMinutes: true,
       tags: true,
       contentConfig: {
-        select: { bodyMarkdown: true, assetsJson: true, objectives: true },
+        select: {
+          bodyMarkdown: true,
+          assetsJson: true,
+          objectives: true,
+          missionType: true,
+        },
       },
       codingConfig: { select: { language: true, starterCode: true } },
       module: {
@@ -1216,16 +1195,16 @@ export async function listProgramDayCatalog(): Promise<ProgramDayCatalog[]> {
   const activities = await programDayActivities();
   return activities.flatMap((a) => {
     if (a.dayNumber == null) return [];
-    const mapped = programMissionFromActivity(
-      a.type,
-      a.codingConfig?.language,
-    );
+    const missionType = a.contentConfig?.missionType;
+    if (!missionType) return [];
     return [
       {
         dayNumber: a.dayNumber,
         title: a.title,
-        missionType: mapped.missionType,
-        isProjectDay: mapped.isProjectDay,
+        missionType,
+        isProjectDay:
+          missionType === ProgramMissionType.BOSS_BUILD ||
+          a.type === ActivityType.PROJECT,
         moduleNumber: a.module.position,
       },
     ];
@@ -1316,7 +1295,12 @@ export async function getProgramDayShell(
       estimatedMinutes: true,
       tags: true,
       contentConfig: {
-        select: { bodyMarkdown: true, assetsJson: true, objectives: true },
+        select: {
+          bodyMarkdown: true,
+          assetsJson: true,
+          objectives: true,
+          missionType: true,
+        },
       },
       codingConfig: { select: { language: true, starterCode: true } },
       module: {
@@ -1326,16 +1310,14 @@ export async function getProgramDayShell(
   });
   const id = activity ? programDayIdFromActivity(activity.id) : null;
   if (!activity || activity.dayNumber == null || !id) return null;
-  const mapped = programMissionFromActivity(
-    activity.type,
-    activity.codingConfig?.language,
-  );
+  const missionType = activity.contentConfig?.missionType;
+  if (!missionType) return null;
   const videos = await videosForDay(activity.dayNumber);
   return {
     id,
     dayNumber: activity.dayNumber,
     title: activity.title,
-    missionType: mapped.missionType,
+    missionType,
     briefMd: activity.contentConfig?.bodyMarkdown ?? "",
     assetsJson: activity.contentConfig?.assetsJson ?? null,
     starterCode: activity.codingConfig?.starterCode ?? null,
@@ -1344,7 +1326,9 @@ export async function getProgramDayShell(
     tools: activity.tags,
     estimatedMin: activity.estimatedMinutes ?? 60,
     missionPoints: activity.points,
-    isProjectDay: mapped.isProjectDay,
+    isProjectDay:
+      missionType === ProgramMissionType.BOSS_BUILD ||
+      activity.type === ActivityType.PROJECT,
     module: {
       number: activity.module.position,
       title: activity.module.title,

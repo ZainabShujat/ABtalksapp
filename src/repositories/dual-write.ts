@@ -13,6 +13,7 @@ import {
   PointsSourceType,
   Prisma,
   ProgramMemberStatus,
+  ProgramMissionType,
   UserType,
 } from "@prisma/client";
 import { logger } from "@/lib/logger";
@@ -220,6 +221,27 @@ export async function dualWriteProgramMember(
       },
     });
     await ensureCandidateVisibility(tx, member.userId);
+  });
+}
+
+export async function dualWriteProgramDayMissionType(
+  tx: Tx,
+  day: { id: string; missionType: ProgramMissionType },
+): Promise<void> {
+  await runDualWrite(tx, "programDayMission", async () => {
+    const activityId = activityIdForProgramDay(day.id);
+    const activity = await tx.activity.findUnique({
+      where: { id: activityId },
+      select: { id: true },
+    });
+    if (!activity) {
+      throw new Error(`Missing Activity ${activityId} for ProgramDay ${day.id}`);
+    }
+    await tx.contentActivityConfig.upsert({
+      where: { activityId },
+      create: { activityId, missionType: day.missionType },
+      update: { missionType: day.missionType },
+    });
   });
 }
 

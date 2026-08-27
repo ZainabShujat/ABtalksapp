@@ -70,3 +70,4 @@ rather than deleted without authorization. Cursor appends new lines below.)_
 - 2026-08-27 [convention] Phase 6 CANDIDATE genuine reads complete after referral repair + skills/edu/exp catch-up; ENABLE_NEW_LEARNING stays off; admin list/CSV/campus-ambassador remain StudentProfile until Phase 7
 - 2026-08-27 [rule] Phase 6 LEARNING read-switch is in the repo behind ENABLE_NEW_LEARNING=false: student catalog/enrollment/membership/quiz definitions go through repositories/learning.ts; completion/progress stay legacy; StudentProfile.domain is pre-StudentProfile-retirement debt and is unchanged
 - 2026-08-27 [convention] Program dashboard continue card previews the next locked day with an unlock date; VIEW STATS shows cleared/31 progress instead of a second cohort-day /31
+- 2026-08-27 [schema] ContentActivityConfig.missionType stores the exact ProgramDay.missionType (CODE_SPRINT/DATA_ROOM kept distinct); LEARNING stays off

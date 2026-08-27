@@ -511,11 +511,13 @@ async function migrate2d() {
             bodyMarkdown: day.briefMd,
             assetsJson: (day.assetsJson as Prisma.InputJsonValue) ?? Prisma.JsonNull,
             objectives: day.objectives,
+            missionType: day.missionType,
           },
           update: {
             bodyMarkdown: day.briefMd,
             assetsJson: (day.assetsJson as Prisma.InputJsonValue) ?? Prisma.JsonNull,
             objectives: day.objectives,
+            missionType: day.missionType,
           },
         });
         if (day.starterCode || day.language) {
