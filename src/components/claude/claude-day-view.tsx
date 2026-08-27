@@ -1,15 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import Link from "next/link";
 import {
+  BookOpen,
   Check,
+  ChevronDown,
   Clock,
   Copy,
   ExternalLink,
+  FileCode,
+  FileOutput,
+  Lightbulb,
+  ListChecks,
   PlayCircle,
   Send,
+  Share2,
   Tag,
+  type LucideIcon,
+  Wrench,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -24,11 +33,59 @@ import {
   type ClaudeMilestoneDay,
 } from "@/lib/claude-linkedin-prompts";
 import type { DayContent } from "@/components/challenge/day-page";
-import {
-  DaySectionCard,
-  ToolChip,
-} from "@/components/program/day-section-card";
+import { ToolChip } from "@/components/program/day-section-card";
 import { dsButtonVariants } from "@/components/design/ds-button";
+
+function ClaudeDaySection({
+  title,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  icon: LucideIcon;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+
+  return (
+    <section className="overflow-hidden rounded-[12px] border border-[#E0E0E0] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+      <h2>
+        <button
+          type="button"
+          onClick={() => setOpen((current) => !current)}
+          aria-expanded={open}
+          aria-controls={panelId}
+          className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition-colors hover:bg-[#FBF9F7] focus-visible:ring-2 focus-visible:ring-[#E05226] focus-visible:ring-inset md:px-5 md:py-5"
+        >
+          <span className="flex min-w-0 items-center gap-2.5">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-[#FFECE3]">
+              <Icon className="size-4 text-[#E05226]" aria-hidden />
+            </span>
+            <span className="font-heading text-base font-semibold text-[#111111] md:text-lg">
+              {title}
+            </span>
+          </span>
+          <ChevronDown
+            className={cn(
+              "size-5 shrink-0 text-[#8F8F8F] transition-transform",
+              open && "rotate-180",
+            )}
+            aria-hidden
+          />
+        </button>
+      </h2>
+      {open ? (
+        <div
+          id={panelId}
+          className="border-t border-[#E0E0E0] px-4 py-4 md:px-5 md:py-5"
+        >
+          {children}
+        </div>
+      ) : null}
+    </section>
+  );
+}
 
 function getYoutubeVideoId(url: string): string | null {
   try {
@@ -209,7 +266,7 @@ export function ClaudeDayView({
           </div>
         </header>
 
-        <DaySectionCard title="Prompt Template" iconPlaceholder={false}>
+        <ClaudeDaySection title="Prompt Template" icon={FileCode}>
           <div className="mb-3">
             <button
               type="button"
@@ -232,10 +289,10 @@ export function ClaudeDayView({
           <pre className="overflow-x-auto rounded-lg border border-[#E0E0E0] bg-[#FBF9F7] p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap text-[#4B4B4B] md:text-sm">
             {content.promptTemplate}
           </pre>
-        </DaySectionCard>
+        </ClaudeDaySection>
 
         {solutionVideoUrl ? (
-          <DaySectionCard title="Tutorial Video" iconPlaceholder={false}>
+          <ClaudeDaySection title="Tutorial Video" icon={PlayCircle}>
             <p className="mb-3 text-xs text-[#8F8F8F]">
               Step-by-step video guide
             </p>
@@ -274,11 +331,11 @@ export function ClaudeDayView({
                 </a>
               </div>
             )}
-          </DaySectionCard>
+          </ClaudeDaySection>
         ) : null}
 
         {content.tool ? (
-          <DaySectionCard title="Tool of the Day" iconPlaceholder={false}>
+          <ClaudeDaySection title="Tool of the Day" icon={Wrench}>
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <span className="font-semibold text-[#111111]">
                 {content.tool.name}
@@ -312,10 +369,10 @@ export function ClaudeDayView({
               {content.tool.linkLabel}
               <ExternalLink className="h-3 w-3" />
             </a>
-          </DaySectionCard>
+          </ClaudeDaySection>
         ) : null}
 
-        <DaySectionCard title={content.task.title} iconPlaceholder={false}>
+        <ClaudeDaySection title={content.task.title} icon={ListChecks}>
           <ol className="space-y-3">
             {content.task.steps.map((step, i) => (
               <li key={i} className="flex items-start gap-3">
@@ -328,9 +385,9 @@ export function ClaudeDayView({
               </li>
             ))}
           </ol>
-        </DaySectionCard>
+        </ClaudeDaySection>
 
-        <DaySectionCard title="What You'll Learn" iconPlaceholder={false}>
+        <ClaudeDaySection title="What You'll Learn" icon={Lightbulb}>
           <p className="mb-4 text-sm leading-relaxed text-[#4B4B4B]">
             {content.learning.summary}
           </p>
@@ -349,10 +406,10 @@ export function ClaudeDayView({
               </li>
             ))}
           </ol>
-        </DaySectionCard>
+        </ClaudeDaySection>
 
         {resources.length > 0 ? (
-          <DaySectionCard title="Resources" iconPlaceholder={false}>
+          <ClaudeDaySection title="Resources" icon={BookOpen}>
             <ul className="space-y-2">
               {resources.map((url, i) => {
                 let label = url;
@@ -377,13 +434,10 @@ export function ClaudeDayView({
                 );
               })}
             </ul>
-          </DaySectionCard>
+          </ClaudeDaySection>
         ) : null}
 
-        <DaySectionCard
-          title="LinkedIn Post Guidelines"
-          iconPlaceholder={false}
-        >
+        <ClaudeDaySection title="LinkedIn Post Guidelines" icon={Share2}>
           <p className="mb-2 text-xs text-[#8F8F8F]">{content.engagement.type}</p>
           <p className="mb-3 text-sm leading-relaxed text-[#4B4B4B]">
             {content.engagement.description}
@@ -421,16 +475,16 @@ export function ClaudeDayView({
               </a>
             ))}
           </div>
-        </DaySectionCard>
+        </ClaudeDaySection>
 
-        <DaySectionCard title="Your Deliverable" iconPlaceholder={false}>
+        <ClaudeDaySection title="Your Deliverable" icon={FileOutput}>
           <p className="text-sm text-[#4B4B4B]">
             {content.deliverable.description}
           </p>
           <span className="mt-2 inline-block font-mono text-xs font-semibold text-[#8F8F8F]">
             Format: {content.deliverable.format}
           </span>
-        </DaySectionCard>
+        </ClaudeDaySection>
 
         {canSubmit ? (
           <section className="rounded-[12px] border border-[#E0E0E0] bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] md:p-5">
