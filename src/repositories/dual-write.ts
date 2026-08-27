@@ -484,6 +484,47 @@ export function mapCertificateToCredential(cert: {
   };
 }
 
+const REFERRAL_PLACEHOLDER_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+function randomReferralPlaceholder(): string {
+  let out = "";
+  for (let i = 0; i < 8; i++) {
+    out +=
+      REFERRAL_PLACEHOLDER_CHARS[
+        Math.floor(Math.random() * REFERRAL_PLACEHOLDER_CHARS.length)
+      ]!;
+  }
+  return out;
+}
+
+/**
+ * CandidateProfile.referralCode must copy StudentProfile when that code is
+ * free on CP. If 2a already gave the SP code to a different CP row, keep the
+ * existing placeholder — live display/lookup stay on StudentProfile.
+ */
+async function shadowReferralCode(
+  tx: Tx,
+  userId: string,
+  spCode: string,
+  existingCode: string | null,
+): Promise<string> {
+  const taken = await tx.candidateProfile.findUnique({
+    where: { referralCode: spCode },
+    select: { userId: true },
+  });
+  if (!taken || taken.userId === userId) return spCode;
+  if (existingCode) return existingCode;
+  for (let i = 0; i < 10; i++) {
+    const code = randomReferralPlaceholder();
+    const hit = await tx.candidateProfile.findUnique({
+      where: { referralCode: code },
+      select: { userId: true },
+    });
+    if (!hit) return code;
+  }
+  throw new Error("Could not allocate CandidateProfile.referralCode");
+}
+
 /**
  * Upsert CandidateProfile (+ registration-owned education/experience) from the
  * legacy StudentProfile already written in this transaction. Does not touch
@@ -532,7 +573,12 @@ export async function dualWriteCandidateIdentity(
       sp.phoneVerifiedAt ??
       existing?.phoneVerifiedAt ??
       (sp.phoneVerified ? new Date() : null);
-    const referralCode = existing?.referralCode ?? sp.referralCode;
+    const referralCode = await shadowReferralCode(
+      tx,
+      userId,
+      sp.referralCode,
+      existing?.referralCode ?? null,
+    );
     const persona = personaFromUserType(sp.userType);
 
     await tx.candidateProfile.upsert({
@@ -563,6 +609,7 @@ export async function dualWriteCandidateIdentity(
         linkedinUrl: sp.linkedinUrl,
         githubUsername: sp.githubUsername,
         resumeUrl: sp.resumeUrl,
+        referralCode,
         isReadyForInterview: sp.isReadyForInterview,
         isCampusAmbassadorCandidate: sp.isCampusAmbassadorCandidate,
         ambassadorAppliedAt: sp.ambassadorAppliedAt,

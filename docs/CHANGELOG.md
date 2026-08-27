@@ -63,3 +63,4 @@ rather than deleted without authorization. Cursor appends new lines below.)_
 - 2026-08-26 [convention] Phase 6 CREDENTIAL complete: /verify /achievements /download read via credential repository; ENABLE_NEW_POINTS is next; dual-write and legacy Certificate writes stay
 - 2026-08-26 [env] ENABLE_NEW_POINTS=true on production after clean smoke + recon
 - 2026-08-26 [convention] Phase 6 POINTS complete: header chip /marketplace /admin SP display read via points repository; ENABLE_NEW_CANDIDATE is next; dual-write and legacy User.synergyPoints writes stay
+- 2026-08-26 [env] ENABLE_NEW_CANDIDATE rolled back to false on production: CandidateProfile.referralCode differed from StudentProfile for 6 users (including a post-launch registration); profile display vs registration lookup would split-brain

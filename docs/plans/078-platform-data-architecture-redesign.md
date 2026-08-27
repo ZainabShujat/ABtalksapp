@@ -2881,9 +2881,10 @@ apart.
 `ENABLE_NEW_CREDENTIAL=true` and `ENABLE_NEW_POINTS=true` on production; live
 `/verify` / `/achievements` / download read `Credential`, and live SP display
 (`getBalance`) reads `PointsAccount`. Keep `ENABLE_DUAL_WRITE=true`. Do
-**not** change legacy writes. Remaining order in
-`docs/plans/095-phase6-read-switches.md` (next: CANDIDATE → LEARNING →
-PROGRESS → TALENT last).
+**not** change legacy writes. `ENABLE_NEW_CANDIDATE` was rolled back (6
+referral-code mismatches vs `StudentProfile`). Remaining order in
+`docs/plans/095-phase6-read-switches.md` (CANDIDATE → LEARNING → PROGRESS →
+TALENT last).
 
 Flip the repository layer from legacy to new tables, **one repository at a time**,
 behind per-repository flags, in this order (least → most risky):

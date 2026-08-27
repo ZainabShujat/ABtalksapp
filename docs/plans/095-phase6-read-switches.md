@@ -21,10 +21,17 @@ start Phase 7 in this plan.
   `ENABLE_NEW_POINTS=true` on Production. Signed-in smoke: header chip 1070,
   marketplace redeem shortfalls imply 1070, admin grant +1 dual-wrote
   (`User` / `PointsAccount` / ledger all 16). Recon 0.
-- **Phase 6 CANDIDATE wiring (2026-08-26).** Live identity reads go through
-  `getCandidateProfile` / `listCandidateProfiles`. Flag still off until the
-  production env flip + smoke in this step. Do **not** enable LEARNING /
-  PROGRESS / TALENT.
+- **Phase 6 CANDIDATE not complete (2026-08-27).** Live identity reads go
+  through `getCandidateProfile` / `listCandidateProfiles`. Production ran
+  `ENABLE_NEW_CANDIDATE=true` on 2026-08-26 and rolled back: 6 users have a
+  different `CandidateProfile.referralCode` than `StudentProfile` (2a /
+  `ensureCandidateProfile` minted an 8-char placeholder when the 6-char SP
+  code was already taken on CP). Dual-write `update` did not overwrite that
+  placeholder. `/profile` would have shown the CP code while registration
+  looked up SP. The live owner is **StudentProfile.referralCode**. Display
+  overlays SP when the flag is on; lookup is `findUserIdByReferralCode` (SP
+  only). Dual-write now copies SP→CP when the SP code is free on CP. Do
+  **not** enable LEARNING / PROGRESS / TALENT.
 - Production: `ENABLE_DUAL_WRITE=true` (keep it). `ENABLE_NEW_CREDENTIAL=true`
   and `ENABLE_NEW_POINTS=true`. CANDIDATE / LEARNING / PROGRESS / TALENT stay
   unset/false. Dual-write still writes new tables inside `SAVEPOINT`. Do **not**
@@ -128,12 +135,28 @@ Credential path; smoke + V6 + drift clean 2026-08-26 (`48125d5` /
 eligibility read `PointsAccount`. Admin grant +1 dual-wrote. Recon 0.
 
 **CANDIDATE:** live identity call sites wired through `getCandidateProfile`.
-**Not complete** until Production `ENABLE_NEW_CANDIDATE=true` plus signed-in
-`/profile` smoke. Skills stay on `StudentProfile` (`CandidateSkill` has 0
-rows). Do not start LEARNING.
+Production flip on 2026-08-26 **rolled back** (`dpl_5XUVPZBZ8PWoD5kkP9FPn7JJNJPs`)
+because `CandidateProfile.referralCode` is not the live shareable code for 6
+users. Contract after that split:
 
-**Next operator action:** set `ENABLE_NEW_CANDIDATE=true` on Production only,
-redeploy, smoke `/profile`. Leave LEARNING / PROGRESS / TALENT unset/false.
+- Canonical live identity (name, phone, LinkedIn, GitHub, resume, persona,
+  SP-owned education/experience, referral, skills) is **StudentProfile** while
+  dual-write and legacy writes stay on. `ENABLE_NEW_CANDIDATE` requires a
+  `CandidateProfile` row, then returns that SP view so 2a-merged ProgramMember
+  extras cannot change `/profile`.
+- `referralCode` owner is StudentProfile. Registration uses
+  `findUserIdByReferralCode`. Dual-write copies SP→CP when unique.
+- Not in this switch: domain, enrollment, streak, progress, talent search.
+  Skills stay on SP (`CandidateSkill` = 0). ProgramMember/hackathon/certificate
+  names stay snapshots.
+
+Repo OFF vs ON identity views match on the representative set. V7 = 0. Raw
+table `referralCode` still differs for 6 users (`spCodeOwnedByOtherCandidateProfile`
+= 0, so a later profile save can copy SP→CP). Do not start LEARNING.
+
+**Next operator action:** set `ENABLE_NEW_CANDIDATE=true` on Production,
+redeploy this contract, smoke `/profile`. Leave LEARNING / PROGRESS / TALENT
+unset/false.
 
 Order (do not reorder):
 

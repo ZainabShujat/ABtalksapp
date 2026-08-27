@@ -286,12 +286,32 @@ suite("program apply prefill through getCandidateProfile", () => {
   assert(entry.includes('select: { id: true }'), "existence still SP");
 });
 
-suite("candidate new branch prefers StudentProfile-owned child ids", () => {
+suite("candidate new branch requires CandidateProfile then uses live StudentProfile identity", () => {
   const src = source("src/repositories/candidate.ts");
   assert(src.includes("educationIdForStudentProfile"), "edu_sp_");
   assert(src.includes("experienceIdForStudentProfile"), "exp_sp_");
   assert(src.includes("isNewCandidateRepoEnabled"), "flag");
-  assert(src.includes("legacy?.skills"), "skills stay on StudentProfile while CandidateSkill is empty");
+  assert(src.includes("function liveView"), "overlay helper");
+  assert(src.includes("viewFromLegacy(legacy)"), "SP is live identity");
+  assert(src.includes("findUserIdByReferralCode"), "referral lookup helper");
+});
+
+suite("registration lookup uses findUserIdByReferralCode not CandidateProfile", () => {
+  const src = source("src/features/registration/complete-registration.ts");
+  assert(src.includes("findUserIdByReferralCode"), "repo lookup");
+  assert(!src.includes("candidateProfile.findUnique"), "no CP lookup");
+});
+
+suite("new referral codes are unique on StudentProfile and CandidateProfile", () => {
+  const src = source("src/features/registration/generate-referral-code.ts");
+  assert(src.includes("studentProfile.findUnique"), "SP unique");
+  assert(src.includes("candidateProfile.findUnique"), "CP unique");
+});
+
+suite("dual-write copies StudentProfile.referralCode onto CandidateProfile", () => {
+  const src = source("src/repositories/dual-write.ts");
+  assert(src.includes("shadowReferralCode"), "collision-safe copy");
+  assert(!src.includes("existing?.referralCode ?? sp.referralCode"), "must not keep stale CP code when SP is free");
 });
 
 suite("talent search is not switched in this phase", () => {

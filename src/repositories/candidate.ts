@@ -183,6 +183,31 @@ function unspecifiedToNull(value: string | undefined): string | null {
   return value;
 }
 
+/**
+ * Live challenge identity while dual-write is on: StudentProfile is still the
+ * write and the user-visible contract. ENABLE_NEW_CANDIDATE requires a
+ * CandidateProfile row, then returns that StudentProfile view so /profile
+ * cannot show 2a-merged ProgramMember extras or a second referral code.
+ *
+ * referralCode owner is StudentProfile (6-char shareable / registration
+ * lookup). CandidateProfile.referralCode is a dual-write shadow. 2a and
+ * ensureCandidateProfile minted an 8-char code when the SP code was already
+ * taken on CandidateProfile — that is why ENABLE_NEW_CANDIDATE was rolled
+ * back. Display and lookup both stay on the SP code.
+ *
+ * CandidateSkill is empty (never dual-written). Skills stay on StudentProfile.
+ * Domain / enrollment / streak / talent search are not this repository.
+ */
+function liveView(
+  candidate: Parameters<typeof viewFromNew>[0],
+  legacy: Parameters<typeof viewFromLegacy>[0] | null,
+): CandidateProfileView {
+  if (legacy) return viewFromLegacy(legacy);
+  const view = viewFromNew(candidate);
+  view.skills = [];
+  return view;
+}
+
 export async function getCandidateProfile(
   userId: string,
 ): Promise<CandidateProfileView | null> {
@@ -194,16 +219,11 @@ export async function getCandidateProfile(
       }),
       studentProfile.findUnique({
         where: { userId },
-        select: { skills: true },
+        select: legacyIdentitySelect,
       }),
     ]);
     if (!row) return null;
-    const view = viewFromNew(row);
-    // CandidateSkill is empty in production (Phase 2a/dual-write never
-    // linked StudentProfile.skills). Keep the live skill list on the
-    // legacy column until that write path exists.
-    view.skills = legacy?.skills ?? view.skills;
-    return view;
+    return liveView(row, legacy);
   }
 
   const row = await studentProfile.findUnique({
@@ -228,16 +248,15 @@ export async function listCandidateProfiles(
       }),
       studentProfile.findMany({
         where: { userId: { in: ids } },
-        select: { userId: true, skills: true },
+        select: legacyIdentitySelect,
       }),
     ]);
-    const skillsByUser = new Map(legacy.map((r) => [r.userId, r.skills]));
+    const legacyByUser = new Map(legacy.map((r) => [r.userId, r]));
     return new Map(
-      rows.map((row) => {
-        const view = viewFromNew(row);
-        view.skills = skillsByUser.get(row.userId) ?? view.skills;
-        return [row.userId, view];
-      }),
+      rows.map((row) => [
+        row.userId,
+        liveView(row, legacyByUser.get(row.userId) ?? null),
+      ]),
     );
   }
 
@@ -255,6 +274,21 @@ export async function getProfileSummary(userId: string): Promise<{
   const profile = await getCandidateProfile(userId);
   if (!profile) return null;
   return { fullName: profile.fullName, referralCode: profile.referralCode };
+}
+
+/**
+ * Resolve a pasted/shared referral code to a user. Always StudentProfile —
+ * that is the live unique shareable code. Do not look up CandidateProfile
+ * here: some CP rows still hold an 8-char placeholder from 2a / ensure.
+ */
+export async function findUserIdByReferralCode(
+  code: string,
+): Promise<string | null> {
+  const row = await studentProfile.findUnique({
+    where: { referralCode: code },
+    select: { userId: true },
+  });
+  return row?.userId ?? null;
 }
 
 export async function updateStudentFields(
@@ -411,7 +445,11 @@ async function ensureCandidateProfile(
     where: { referralCode },
     select: { userId: true },
   });
-  if (taken) referralCode = randomReferralCode();
+  // If the live SP code is already on another CandidateProfile, mint a
+  // placeholder. Live display/lookup never use this column while SP exists.
+  if (taken && taken.userId !== userId) {
+    referralCode = randomReferralCode();
+  }
 
   await tx.candidateProfile.create({
     data: {
