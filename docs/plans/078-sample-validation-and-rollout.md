@@ -5,10 +5,11 @@
 - Production **Phase 5 is complete** (pass #1 `2026-08-24T15:57:57Z`, pass #2
   clean 2026-08-26: V1–V10, drift, extras, 200-user shadow, interval checks).
 - Production **Phase 6 CREDENTIAL is complete**. `ENABLE_NEW_CREDENTIAL=true`.
-- Production **Phase 6 POINTS is complete**. `ENABLE_NEW_POINTS=true`. Keep
-  `ENABLE_DUAL_WRITE=true`. Do not change legacy writes. `ENABLE_NEW_CANDIDATE`
-  was rolled back after a referral-code mismatch; remaining flags one at a
-  time per `docs/plans/095-phase6-read-switches.md`.
+- Production **Phase 6 POINTS is complete**. `ENABLE_NEW_POINTS=true`.
+- Production **Phase 6 CANDIDATE is complete**. `ENABLE_NEW_CANDIDATE=true`.
+  Keep `ENABLE_DUAL_WRITE=true`. Do not change legacy writes. Remaining flags
+  one at a time per `docs/plans/095-phase6-read-switches.md` (next:
+  `ENABLE_NEW_LEARNING`).
 - `plan-078-phase1` remains the **sample-validation test bed**. Do not
   full-backfill it. Do not run Phase 6 there.
 - Production is never written as part of rehearsal.

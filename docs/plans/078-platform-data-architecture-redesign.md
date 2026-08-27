@@ -2877,14 +2877,11 @@ apart.
 
 ## Phase 6 — Switch reads
 
-**Status (2026-08-26).** Phase 6 CREDENTIAL and POINTS are **complete**.
-`ENABLE_NEW_CREDENTIAL=true` and `ENABLE_NEW_POINTS=true` on production; live
-`/verify` / `/achievements` / download read `Credential`, and live SP display
-(`getBalance`) reads `PointsAccount`. Keep `ENABLE_DUAL_WRITE=true`. Do
-**not** change legacy writes. `ENABLE_NEW_CANDIDATE` was rolled back (6
-referral-code mismatches vs `StudentProfile`). Remaining order in
-`docs/plans/095-phase6-read-switches.md` (CANDIDATE → LEARNING → PROGRESS →
-TALENT last).
+**Status (2026-08-27).** Phase 6 CREDENTIAL, POINTS, and CANDIDATE are
+**complete**. `ENABLE_NEW_CREDENTIAL=true`, `ENABLE_NEW_POINTS=true`, and
+`ENABLE_NEW_CANDIDATE=true` on production. Keep `ENABLE_DUAL_WRITE=true`. Do
+**not** change legacy writes. Remaining order in
+`docs/plans/095-phase6-read-switches.md` (LEARNING → PROGRESS → TALENT last).
 
 Flip the repository layer from legacy to new tables, **one repository at a time**,
 behind per-repository flags, in this order (least → most risky):
