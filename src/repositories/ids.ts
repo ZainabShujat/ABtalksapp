@@ -69,6 +69,10 @@ export function attemptIdForMission(id: string): string {
   return `aa_ms_${id}`;
 }
 
+export function attemptIdForQuizAttempt(id: string): string {
+  return `aa_qa_${id}`;
+}
+
 export function cohortSlugForDomain(domain: string): string {
   return `legacy-${domain.toLowerCase()}`;
 }

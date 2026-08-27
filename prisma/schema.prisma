@@ -2283,6 +2283,8 @@ model ContentActivityConfig {
   videoDurationMin Int?
   resources        String[] @default([])
   objectives       String[] @default([])
+  /// Exact ProgramDay.missionType. Null on non-program-day content configs.
+  missionType      ProgramMissionType?
 
   activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
 }

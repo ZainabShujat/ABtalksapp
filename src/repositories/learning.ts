@@ -13,6 +13,10 @@ import { prisma } from "@/lib/db";
 import { isNewLearningRepoEnabled } from "@/lib/feature-flags";
 import { programMember } from "@/repositories/legacy/program-member";
 import {
+  getProgramUnlockFloor,
+  overlayChallengeProgressFields,
+} from "@/repositories/progress";
+import {
   cohortSlugForDomain,
   dailyTaskIdFromActivity,
   enrollmentIdFromPe,
@@ -360,32 +364,6 @@ function asProgramLanguage(value: string | null | undefined): ProgramLanguage | 
   return null;
 }
 
-/**
- * Reverse of 2d missionActivityType. CODE_SPRINT vs DATA_ROOM both stored as
- * CODING; SQL language is the only recoverable discriminator.
- */
-export function programMissionFromActivity(
-  type: ActivityType,
-  language: string | null | undefined,
-): { missionType: ProgramMissionType; isProjectDay: boolean } {
-  if (type === ActivityType.PROJECT) {
-    return { missionType: ProgramMissionType.BOSS_BUILD, isProjectDay: true };
-  }
-  if (type === ActivityType.EXTERNAL_SUBMISSION) {
-    return { missionType: ProgramMissionType.SHIP_IT, isProjectDay: false };
-  }
-  if (type === ActivityType.CODING) {
-    return {
-      missionType:
-        language === "SQL"
-          ? ProgramMissionType.DATA_ROOM
-          : ProgramMissionType.CODE_SPRINT,
-      isProjectDay: false,
-    };
-  }
-  return { missionType: ProgramMissionType.PROMPT_FORGE, isProjectDay: false };
-}
-
 function optionLetter(position: number): "A" | "B" | "C" | "D" | null {
   if (position === 1) return "A";
   if (position === 2) return "B";
@@ -404,9 +382,10 @@ async function overlayEnrollment(
   challengeId: string;
   startedAt: Date;
 } | null> {
-  return prisma.enrollment.findUnique({
+  const row = await prisma.enrollment.findUnique({
     where: { id },
     select: {
+      id: true,
       daysCompleted: true,
       currentStreak: true,
       longestStreak: true,
@@ -415,6 +394,9 @@ async function overlayEnrollment(
       startedAt: true,
     },
   });
+  if (!row) return null;
+  const [overlaid] = await overlayChallengeProgressFields([row]);
+  return overlaid ?? row;
 }
 
 async function challengeIdForDomain(domain: Domain): Promise<string | null> {
@@ -492,11 +474,13 @@ export async function listChallengeEnrollments(
         daysCompleted: true,
         currentStreak: true,
         longestStreak: true,
+        lastSubmittedDay: true,
         startedAt: true,
         challenge: { select: { title: true, totalDays: true } },
       },
     });
-    return rows.map((r) => ({
+    const overlaid = await overlayChallengeProgressFields(rows);
+    return overlaid.map((r) => ({
       id: r.id,
       domain: r.domain,
       status: r.status,
@@ -563,7 +547,7 @@ export async function findChallengeEnrollment(
   } = {},
 ): Promise<SessionEnrollment | null> {
   if (!isNewLearningRepoEnabled()) {
-    return prisma.enrollment.findFirst({
+    const row = await prisma.enrollment.findFirst({
       where: {
         userId,
         ...(opts.id ? { id: opts.id } : {}),
@@ -575,6 +559,9 @@ export async function findChallengeEnrollment(
       orderBy: { startedAt: "desc" },
       select: SESSION_ENROLLMENT_SELECT,
     });
+    if (!row) return null;
+    const [overlaid] = await overlayChallengeProgressFields([row]);
+    return overlaid ?? row;
   }
 
   const pes = await prisma.programEnrollment.findMany({
@@ -726,7 +713,10 @@ async function membershipFromPe(
       id: memberId,
       status: mapPeToMemberStatus(pe.status),
       fullName: overlay.fullName,
-      highestUnlockedDay: overlay.highestUnlockedDay,
+      highestUnlockedDay: await getProgramUnlockFloor(
+        memberId,
+        overlay.highestUnlockedDay,
+      ),
       cohortId,
     },
     cohort: {
@@ -809,7 +799,10 @@ export async function findActiveMembership(
       id: member.id,
       status: member.status,
       fullName: member.fullName,
-      highestUnlockedDay: member.highestUnlockedDay,
+      highestUnlockedDay: await getProgramUnlockFloor(
+        member.id,
+        member.highestUnlockedDay,
+      ),
       cohortId: member.cohortId,
     },
     cohort: member.cohort,
@@ -1179,7 +1172,12 @@ async function programDayActivities() {
       estimatedMinutes: true,
       tags: true,
       contentConfig: {
-        select: { bodyMarkdown: true, assetsJson: true, objectives: true },
+        select: {
+          bodyMarkdown: true,
+          assetsJson: true,
+          objectives: true,
+          missionType: true,
+        },
       },
       codingConfig: { select: { language: true, starterCode: true } },
       module: {
@@ -1216,16 +1214,16 @@ export async function listProgramDayCatalog(): Promise<ProgramDayCatalog[]> {
   const activities = await programDayActivities();
   return activities.flatMap((a) => {
     if (a.dayNumber == null) return [];
-    const mapped = programMissionFromActivity(
-      a.type,
-      a.codingConfig?.language,
-    );
+    const missionType = a.contentConfig?.missionType;
+    if (!missionType) return [];
     return [
       {
         dayNumber: a.dayNumber,
         title: a.title,
-        missionType: mapped.missionType,
-        isProjectDay: mapped.isProjectDay,
+        missionType,
+        isProjectDay:
+          missionType === ProgramMissionType.BOSS_BUILD ||
+          a.type === ActivityType.PROJECT,
         moduleNumber: a.module.position,
       },
     ];
@@ -1316,7 +1314,12 @@ export async function getProgramDayShell(
       estimatedMinutes: true,
       tags: true,
       contentConfig: {
-        select: { bodyMarkdown: true, assetsJson: true, objectives: true },
+        select: {
+          bodyMarkdown: true,
+          assetsJson: true,
+          objectives: true,
+          missionType: true,
+        },
       },
       codingConfig: { select: { language: true, starterCode: true } },
       module: {
@@ -1326,16 +1329,14 @@ export async function getProgramDayShell(
   });
   const id = activity ? programDayIdFromActivity(activity.id) : null;
   if (!activity || activity.dayNumber == null || !id) return null;
-  const mapped = programMissionFromActivity(
-    activity.type,
-    activity.codingConfig?.language,
-  );
+  const missionType = activity.contentConfig?.missionType;
+  if (!missionType) return null;
   const videos = await videosForDay(activity.dayNumber);
   return {
     id,
     dayNumber: activity.dayNumber,
     title: activity.title,
-    missionType: mapped.missionType,
+    missionType,
     briefMd: activity.contentConfig?.bodyMarkdown ?? "",
     assetsJson: activity.contentConfig?.assetsJson ?? null,
     starterCode: activity.codingConfig?.starterCode ?? null,
@@ -1344,7 +1345,9 @@ export async function getProgramDayShell(
     tools: activity.tags,
     estimatedMin: activity.estimatedMinutes ?? 60,
     missionPoints: activity.points,
-    isProjectDay: mapped.isProjectDay,
+    isProjectDay:
+      missionType === ProgramMissionType.BOSS_BUILD ||
+      activity.type === ActivityType.PROJECT,
     module: {
       number: activity.module.position,
       title: activity.module.title,

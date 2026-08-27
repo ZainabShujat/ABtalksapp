@@ -8,6 +8,7 @@ import {
   getDailyTaskByChallengeDay,
   type DailyTaskRow,
 } from "@/repositories/learning";
+import { getChallengeDaySubmission } from "@/repositories/progress";
 
 export type DayData = {
   task: DailyTaskRow;
@@ -49,20 +50,7 @@ export async function getDayData(
     return null;
   }
 
-  const submission = await prisma.submission.findUnique({
-    where: {
-      enrollmentId_dayNumber: {
-        enrollmentId: enrollment.id,
-        dayNumber,
-      },
-    },
-    select: {
-      githubUrl: true,
-      linkedinUrl: true,
-      status: true,
-      submittedAt: true,
-    },
-  });
+  const submission = await getChallengeDaySubmission(enrollment.id, dayNumber);
 
   const rejectActions = await prisma.adminAction.findMany({
     where: {

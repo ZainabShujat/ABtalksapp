@@ -8,7 +8,8 @@ import {
   ProgramLanguage,
   ProgramMissionType,
 } from "@prisma/client";
-import { prisma } from "../src/lib/db";
+import { prisma, writeClient } from "../src/lib/db";
+import { dualWriteProgramDayMissionType } from "../src/repositories/dual-write";
 
 const CONTENT_DIR = path.join(process.cwd(), "prisma", "content", "program");
 
@@ -158,6 +159,18 @@ async function seedDays() {
     });
     count += 1;
   }
+
+  const seededDays = await prisma.programDay.findMany({
+    select: { id: true, missionType: true },
+  });
+  await writeClient().$transaction(
+    async (tx) => {
+      for (const day of seededDays) {
+        await dualWriteProgramDayMissionType(tx, day);
+      }
+    },
+    { maxWait: 10_000, timeout: 20_000 },
+  );
   console.log(`[program-seed] days: ${count} upserted`);
 }
 

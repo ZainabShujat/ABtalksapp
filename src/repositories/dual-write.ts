@@ -7,12 +7,14 @@ import {
   CredentialSourceType,
   CredentialStatus,
   CredentialType,
+  DayActivitySource,
   EnrollmentStatus,
   EnrollmentStatusV2,
   EvaluatorType,
   PointsSourceType,
   Prisma,
   ProgramMemberStatus,
+  ProgramMissionType,
   UserType,
 } from "@prisma/client";
 import { logger } from "@/lib/logger";
@@ -20,7 +22,9 @@ import { isDualWriteEnabled } from "@/lib/feature-flags";
 import {
   activityIdForDailyTask,
   activityIdForProgramDay,
+  activityIdForQuiz,
   attemptIdForMission,
+  attemptIdForQuizAttempt,
   attemptIdForSubmission,
   cohortSlugForDomain,
   cohortSlugForProgramCohort,
@@ -223,6 +227,27 @@ export async function dualWriteProgramMember(
   });
 }
 
+export async function dualWriteProgramDayMissionType(
+  tx: Tx,
+  day: { id: string; missionType: ProgramMissionType },
+): Promise<void> {
+  await runDualWrite(tx, "programDayMission", async () => {
+    const activityId = activityIdForProgramDay(day.id);
+    const activity = await tx.activity.findUnique({
+      where: { id: activityId },
+      select: { id: true },
+    });
+    if (!activity) {
+      throw new Error(`Missing Activity ${activityId} for ProgramDay ${day.id}`);
+    }
+    await tx.contentActivityConfig.upsert({
+      where: { activityId },
+      create: { activityId, missionType: day.missionType },
+      update: { missionType: day.missionType },
+    });
+  });
+}
+
 export async function dualWriteSubmissionAttempt(
   tx: Tx,
   submission: {
@@ -267,6 +292,12 @@ export async function dualWriteSubmissionAttempt(
           legacySubmissionId: submission.id,
         },
         submittedAt: submission.submittedAt,
+        passed: true,
+        status: AttemptStatus.EVALUATED,
+        lateness:
+          submission.status === "LATE"
+            ? AttemptLateness.LATE
+            : AttemptLateness.ON_TIME,
         ...(submission.pointsAwarded > 0
           ? { pointsAwarded: submission.pointsAwarded }
           : {}),
@@ -328,6 +359,7 @@ export async function dualWriteMissionAttempt(
       update: {
         passed: row.passed,
         pointsAwarded: row.pointsAwarded,
+        submittedAt: row.createdAt,
       },
     });
     await tx.activityEvaluation.upsert({
@@ -344,6 +376,138 @@ export async function dualWriteMissionAttempt(
         createdAt: row.createdAt,
       },
       update: { passed: row.passed, detailJson: row.verdict },
+    });
+  });
+}
+
+export async function dualWriteQuizAttempt(
+  tx: Tx,
+  row: {
+    id: string;
+    enrollmentId: string;
+    quizId: string;
+    score: number;
+    answers: Prisma.InputJsonValue;
+    attemptedAt: Date;
+  },
+): Promise<void> {
+  await runDualWrite(tx, "submitQuiz", async () => {
+    const attemptId = attemptIdForQuizAttempt(row.id);
+    const passed = row.score >= 60;
+    await tx.activityAttempt.upsert({
+      where: { id: attemptId },
+      create: {
+        id: attemptId,
+        enrollmentId: peIdForEnrollment(row.enrollmentId),
+        activityId: activityIdForQuiz(row.quizId),
+        attemptNumber: 1,
+        status: AttemptStatus.EVALUATED,
+        lateness: AttemptLateness.NOT_APPLICABLE,
+        payload: {
+          answers: row.answers,
+          legacyQuizAttemptId: row.id,
+        },
+        passed,
+        score: row.score,
+        pointsAwarded: row.score,
+        startedAt: row.attemptedAt,
+        submittedAt: row.attemptedAt,
+      },
+      update: {
+        payload: {
+          answers: row.answers,
+          legacyQuizAttemptId: row.id,
+        },
+        passed,
+        score: row.score,
+        pointsAwarded: row.score,
+        submittedAt: row.attemptedAt,
+        status: AttemptStatus.EVALUATED,
+      },
+    });
+    await tx.activityEvaluation.upsert({
+      where: { id: `ev_qa_${row.id}` },
+      create: {
+        id: `ev_qa_${row.id}`,
+        attemptId,
+        evaluatorType: EvaluatorType.AUTO,
+        passed,
+        score: row.score,
+        maxScore: 100,
+        isAuthoritative: true,
+        createdAt: row.attemptedAt,
+      },
+      update: { passed, score: row.score },
+    });
+  });
+}
+
+export async function dualWriteDeleteSubmissionAttempt(
+  tx: Tx,
+  submissionId: string,
+): Promise<void> {
+  await runDualWrite(tx, "deleteSubmission", async () => {
+    await tx.activityAttempt.deleteMany({
+      where: { id: attemptIdForSubmission(submissionId) },
+    });
+  });
+}
+
+export async function dualWriteDeleteEnrollmentSubmissions(
+  tx: Tx,
+  enrollmentId: string,
+): Promise<void> {
+  await runDualWrite(tx, "resetSubmissions", async () => {
+    await tx.activityAttempt.deleteMany({
+      where: {
+        enrollmentId: peIdForEnrollment(enrollmentId),
+        id: { startsWith: "aa_sub_" },
+      },
+    });
+  });
+}
+
+export async function dualWriteDeleteMissionAttempt(
+  tx: Tx,
+  missionSubmissionId: string,
+): Promise<void> {
+  await runDualWrite(tx, "deleteMission", async () => {
+    await tx.activityAttempt.deleteMany({
+      where: { id: attemptIdForMission(missionSubmissionId) },
+    });
+  });
+}
+
+export async function dualWriteCommitDay(
+  tx: Tx,
+  row: {
+    id: string;
+    memberId: string;
+    date: Date;
+    commitCount: number;
+  },
+): Promise<void> {
+  await runDualWrite(tx, "commitDay", async () => {
+    await tx.enrollmentDayActivity.upsert({
+      where: {
+        enrollmentId_activityDate_source: {
+          enrollmentId: peIdForMember(row.memberId),
+          activityDate: row.date,
+          source: DayActivitySource.GITHUB_COMMIT,
+        },
+      },
+      create: {
+        id: `eda_${row.id}`,
+        enrollmentId: peIdForMember(row.memberId),
+        activityDate: row.date,
+        source: DayActivitySource.GITHUB_COMMIT,
+        activityCount: row.commitCount,
+        pointsEarned: row.commitCount > 0 ? 5 : 0,
+      },
+      update: {
+        activityCount: row.commitCount,
+        pointsEarned: row.commitCount > 0 ? 5 : 0,
+      },
     });
   });
 }

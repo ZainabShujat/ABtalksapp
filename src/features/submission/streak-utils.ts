@@ -1,25 +1,12 @@
 import { SubmissionStatus, type Prisma } from "@prisma/client";
 
-export async function computeStreakStats(
-  tx: Prisma.TransactionClient,
-  input: {
-    enrollmentId: string;
-    endDay: number;
-  },
-): Promise<{ currentStreak: number; longestStreak: number }> {
-  const endDay = Math.max(1, Math.min(input.endDay, 60));
-  const submissions = await tx.submission.findMany({
-    where: {
-      enrollmentId: input.enrollmentId,
-      dayNumber: { gte: 1, lte: endDay },
-      status: SubmissionStatus.ON_TIME,
-    },
-    select: { dayNumber: true },
-  });
-  const onTimeDays = new Set<number>(submissions.map((s) => s.dayNumber));
+export function computeTrackStreakFromOnTimeDays(
+  onTimeDays: Set<number>,
+  endDay: number,
+): { currentStreak: number; longestStreak: number } {
+  const cappedEnd = Math.max(1, Math.min(endDay, 60));
 
-  // Streak ends on today when submitted, otherwise yesterday (grace until today's task is due).
-  let streakAnchor = endDay;
+  let streakAnchor = cappedEnd;
   if (!onTimeDays.has(streakAnchor) && streakAnchor > 1) {
     streakAnchor -= 1;
   }
@@ -35,7 +22,7 @@ export async function computeStreakStats(
 
   let longestStreak = 0;
   let running = 0;
-  for (let day = 1; day <= endDay; day++) {
+  for (let day = 1; day <= cappedEnd; day++) {
     if (onTimeDays.has(day)) {
       running += 1;
       if (running > longestStreak) longestStreak = running;
@@ -45,4 +32,25 @@ export async function computeStreakStats(
   }
 
   return { currentStreak, longestStreak };
+}
+
+export async function computeStreakStats(
+  tx: Prisma.TransactionClient,
+  input: {
+    enrollmentId: string;
+    endDay: number;
+  },
+): Promise<{ currentStreak: number; longestStreak: number }> {
+  const submissions = await tx.submission.findMany({
+    where: {
+      enrollmentId: input.enrollmentId,
+      dayNumber: { gte: 1, lte: Math.max(1, Math.min(input.endDay, 60)) },
+      status: SubmissionStatus.ON_TIME,
+    },
+    select: { dayNumber: true },
+  });
+  return computeTrackStreakFromOnTimeDays(
+    new Set<number>(submissions.map((s) => s.dayNumber)),
+    input.endDay,
+  );
 }

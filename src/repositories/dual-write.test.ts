@@ -523,5 +523,148 @@ suite("ENABLE_NEW_LEARNING is not flipped in app code", () => {
   assert(flags.includes('process.env.ENABLE_NEW_LEARNING === "true"'), "still env-gated");
 });
 
+suite("ProgramDay missionType is stored exactly on ContentActivityConfig", () => {
+  const schema = source("prisma/schema.prisma");
+  const dw = source("src/repositories/dual-write.ts");
+  const seed = source("prisma/seed-program.ts");
+  const learning = source("src/repositories/learning.ts");
+  const compare = source("prisma/scripts/compare-078-learning.ts");
+  const admin = source("src/features/program/admin.ts");
+  assert(schema.includes("model ContentActivityConfig"), "config model");
+  assert(schema.includes("missionType      ProgramMissionType?"), "typed enum field");
+  assert(dw.includes("dualWriteProgramDayMissionType"), "dual-write helper");
+  assert(dw.includes("missionType: day.missionType"), "copies exact enum");
+  assert(seed.includes("dualWriteProgramDayMissionType"), "seed writer");
+  assert(admin.includes("getProgramContentTree"), "admin reads content");
+  assert(!admin.includes("programDay.update"), "admin does not update ProgramDay");
+  assert(learning.includes("contentConfig?.missionType"), "ON path reads stored type");
+  assert(!learning.includes('language === "SQL"'), "no SQL inference");
+  assert(!learning.includes("programMissionFromActivity"), "lossy mapper removed");
+  assert(compare.includes("programDayMissionTypeDrift"), "exact compare");
+  assert(
+    !compare.includes("WHEN a.type::text = 'CODING' THEN 'CODE_SPRINT'"),
+    "no inferred compare",
+  );
+});
+
+suite("quiz submit dual-writes ActivityAttempt", () => {
+  const src = source("src/features/quiz/submit-quiz.ts");
+  assert(src.includes("dualWriteQuizAttempt"), "helper called");
+  assert(src.includes("quizAttempt.create"), "legacy still written");
+  assert(src.includes("writeClient()"), "direct client for SAVEPOINT");
+});
+
+suite("admin reset/reject delete 078 submission attempts", () => {
+  const src = source("src/app/actions/admin-actions.ts");
+  assert(src.includes("dualWriteDeleteEnrollmentSubmissions"), "reset");
+  assert(src.includes("dualWriteDeleteSubmissionAttempt"), "reject");
+  assert(src.includes("submission.deleteMany"), "legacy reset still deletes");
+  assert(src.includes("submission.delete"), "legacy reject still deletes");
+});
+
+suite("bootstrap waivers and commits dual-write 078 state", () => {
+  const src = source("src/features/program/bootstrap-start-day.ts");
+  assert(src.includes("dualWriteMissionAttempt"), "waiver attempts");
+  assert(src.includes("dualWriteDeleteMissionAttempt"), "stale waiver delete");
+  assert(src.includes("dualWriteCommitDay"), "early commit days");
+  assert(src.includes("programMissionSubmission.createMany"), "legacy waivers");
+});
+
+suite("adminUnlockDay and grantSkipToken dual-write ProgramEnrollment", () => {
+  const src = source("src/features/program/admin.ts");
+  assert(src.includes("PROGRAM_UNLOCK_DAY"), "unlock action");
+  assert(src.includes("PROGRAM_GRANT_SKIP_TOKEN"), "skip action");
+  const unlockIdx = src.indexOf("export async function adminUnlockDay");
+  const skipIdx = src.indexOf("export async function grantSkipToken");
+  assert(unlockIdx >= 0 && skipIdx >= 0, "both functions exist");
+  assert(
+    src.slice(unlockIdx, skipIdx).includes("dualWriteProgramMember"),
+    "unlock dual-writes PE",
+  );
+  assert(
+    src.slice(skipIdx).includes("dualWriteProgramMember"),
+    "skip dual-writes PE",
+  );
+});
+
+suite("programCommitDay dual-writes EnrollmentDayActivity", () => {
+  const commits = source("src/features/program/commits.ts");
+  assert(commits.includes("dualWriteCommitDay"), "credit path");
+  assert(commits.includes("writeClient()"), "cron upsert uses direct client");
+});
+
+suite("submission resubmit keeps lateness and submittedAt in sync", () => {
+  const src = source("src/repositories/dual-write.ts");
+  const fn = src.slice(src.indexOf("export async function dualWriteSubmissionAttempt"));
+  const update = fn.slice(fn.indexOf("update:"), fn.indexOf("await tx.activityEvaluation"));
+  assert(update.includes("submittedAt: submission.submittedAt"), "timestamp");
+  assert(update.includes("passed: true"), "pass state");
+  assert(update.includes("AttemptLateness.LATE"), "lateness");
+});
+
+suite("progress repo derives from attempts, not EnrollmentProgress", () => {
+  const src = source("src/repositories/progress.ts");
+  assert(src.includes("isNewProgressRepoEnabled"), "flag");
+  assert(src.includes("listHubSubmissionTimes"), "hub heatmap");
+  assert(src.includes('startsWith: "aa_sub_"'), "challenge attempts only");
+  assert(
+    !src.includes("computeTrackStreakFromOnTimeDays"),
+    "Phase 6 keeps Enrollment streak snapshot",
+  );
+  assert(src.includes("snapshot?.currentStreak"), "compat currentStreak");
+  assert(src.includes("snapshot?.longestStreak"), "compat longestStreak");
+  assert(src.includes("getProgramUnlockFloor"), "program unlock");
+  assert(!src.includes("enrollmentProgress"), "no EnrollmentProgress reads");
+  assert(!src.includes("getDashboardPrograms"), "unused card helper removed");
+});
+
+suite("student progress surfaces go through the progress repo", () => {
+  assert(
+    source("src/features/dashboard/get-hub-data.ts").includes(
+      "listHubSubmissionTimes",
+    ),
+    "hub heatmap",
+  );
+  assert(
+    source("src/features/dashboard/get-heatmap-data.ts").includes(
+      "listChallengeSubmissions",
+    ),
+    "track heatmap",
+  );
+  assert(
+    source("src/features/challenge/get-day-data.ts").includes(
+      "getChallengeDaySubmission",
+    ),
+    "day submission",
+  );
+  assert(
+    source("src/features/quiz/get-available-quiz.ts").includes(
+      "listQuizAttemptsForUser",
+    ),
+    "quiz availability",
+  );
+  assert(
+    source("src/features/quiz/get-quiz-with-questions.ts").includes(
+      "answersDetailAvailable",
+    ),
+    "quiz mapping state",
+  );
+  assert(
+    source("src/features/program/progression.ts").includes(
+      "listProgramMissionProgress",
+    ),
+    "program day states",
+  );
+  const adminAnalytics = source("src/features/admin/get-analytics-data.ts");
+  assert(adminAnalytics.includes("prisma.submission"), "admin analytics stay legacy");
+});
+
+suite("learning repo still has no ActivityAttempt reads", () => {
+  const src = source("src/repositories/learning.ts");
+  assert(src.includes("overlayChallengeProgressFields"), "progress overlay");
+  assert(!src.includes("activityAttempt"), "no ActivityAttempt");
+  assert(!src.includes("enrollmentProgress"), "no EnrollmentProgress");
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

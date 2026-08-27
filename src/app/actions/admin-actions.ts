@@ -13,6 +13,8 @@ import { studentProfile } from "@/repositories/legacy/student-profile";
 import {
   dualWriteCandidateIdentity,
   dualWriteChallengeEnrollmentById,
+  dualWriteDeleteEnrollmentSubmissions,
+  dualWriteDeleteSubmissionAttempt,
   dualWritePoints,
 } from "@/repositories/dual-write";
 
@@ -135,6 +137,7 @@ export async function resetProgressAction(input: {
       await tx.submission.deleteMany({
         where: { enrollmentId: enrollment.id },
       });
+      await dualWriteDeleteEnrollmentSubmissions(tx, enrollment.id);
       await recordSpentSynergyClamp(
         tx,
         targetUserId,
@@ -365,6 +368,7 @@ export async function rejectSubmissionAction(input: {
           : 0;
 
       await tx.submission.delete({ where: { id: submissionId } });
+      await dualWriteDeleteSubmissionAttempt(tx, submissionId);
       await recordSpentSynergyClamp(
         tx,
         submission.userId,

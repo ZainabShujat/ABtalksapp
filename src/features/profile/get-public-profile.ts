@@ -2,6 +2,7 @@ import { EnrollmentStatus, type UserType } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getCandidateProfile } from "@/repositories/candidate";
 import { studentProfile } from "@/repositories/legacy/student-profile";
+import { overlayChallengeProgressFields } from "@/repositories/progress";
 
 export type PublicProfile = {
   fullName: string;
@@ -56,6 +57,7 @@ async function resolvePublicProfileEnrollment(
       daysCompleted: true,
       currentStreak: true,
       longestStreak: true,
+      lastSubmittedDay: true,
     },
   });
 
@@ -63,8 +65,9 @@ async function resolvePublicProfileEnrollment(
     return null;
   }
 
-  const active = enrollments.find((e) => e.status === EnrollmentStatus.ACTIVE);
-  return active ?? enrollments[0]!;
+  const overlaid = await overlayChallengeProgressFields(enrollments);
+  const active = overlaid.find((e) => e.status === EnrollmentStatus.ACTIVE);
+  return active ?? overlaid[0]!;
 }
 
 export async function getPublicProfile(

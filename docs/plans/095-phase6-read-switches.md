@@ -26,14 +26,22 @@ start Phase 7 in this plan.
   `getCandidateProfile` reads only `CandidateProfile` + profile-owned `edu_sp_*`
   / `exp_sp_*` + `CandidateSkill`. Referral lookup follows the flag. Six CP
   placeholder codes repaired from SP (mismatch 0, cross-table collision 0).
-  CandidateSkill catch-up done. Do **not** start LEARNING. Admin student
-  list/search, admin CSV, and campus-ambassador admin still read
-  `StudentProfile` identity — pre-Phase-7 retirement, not a blocker for this
-  slice. PROGRESS / TALENT stay off.
+  CandidateSkill catch-up done. Admin student list/search, admin CSV, and
+  campus-ambassador admin still read `StudentProfile` identity — pre-Phase-7
+  retirement, not a blocker for this slice.
+- **Phase 6 LEARNING complete (2026-08-27).** `ENABLE_NEW_LEARNING=true` on
+  Production after signed-in smoke + recon (env-pickup redeploy of `760c9e0`,
+  aliased to www.abtalks.in). Student catalog, enrollment/membership, day/
+  module/video shells, and quiz **definitions** read via
+  `repositories/learning.ts`. Completion/progress stays on legacy `Enrollment`
+  overlay, `Submission`, `ProgramMissionSubmission`, and `QuizAttempt`. No
+  `ActivityAttempt` / `EnrollmentProgress` reads. Do **not** start PROGRESS /
+  TALENT.
 - Production: `ENABLE_DUAL_WRITE=true` (keep it). `ENABLE_NEW_CREDENTIAL=true`,
-  `ENABLE_NEW_POINTS=true`, and `ENABLE_NEW_CANDIDATE=true`. LEARNING /
-  PROGRESS / TALENT stay unset/false. Dual-write still writes new tables
-  inside `SAVEPOINT`. Do **not** remove or change legacy writes.
+  `ENABLE_NEW_POINTS=true`, `ENABLE_NEW_CANDIDATE=true`, and
+  `ENABLE_NEW_LEARNING=true`. PROGRESS / TALENT stay unset/false. Dual-write
+  still writes new tables inside `SAVEPOINT`. Do **not** remove or change
+  legacy writes.
 - Continuous-write `885d37a` is production (`dpl_9j4fFnhcNHEdAzdJgXc7LvHbCM6y`).
   Live registration/profile dual-writes `CandidateProfile`; certificate
   issuance dual-writes `Credential`.

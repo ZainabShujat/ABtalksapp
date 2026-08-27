@@ -1,6 +1,6 @@
 import type { Domain } from "@prisma/client";
-import { prisma } from "@/lib/db";
 import { listQuizCatalog } from "@/repositories/learning";
+import { listQuizAttemptsForUser } from "@/repositories/progress";
 
 export type QuizHistoryRow = {
   attemptId: string;
@@ -19,11 +19,7 @@ export async function getQuizAttemptHistory(
   if (quizIds.length === 0) return [];
 
   const byId = new Map(catalog.map((q) => [q.id, q]));
-  const attempts = await prisma.quizAttempt.findMany({
-    where: { userId, quizId: { in: quizIds } },
-    select: { id: true, score: true, quizId: true, attemptedAt: true },
-    orderBy: { attemptedAt: "desc" },
-  });
+  const attempts = await listQuizAttemptsForUser(userId, quizIds);
 
   return attempts.flatMap((a) => {
     const quiz = byId.get(a.quizId);
