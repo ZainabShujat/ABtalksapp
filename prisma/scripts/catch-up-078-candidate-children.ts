@@ -18,7 +18,7 @@ config({ path: ".env.local" });
 config();
 
 const prisma = new PrismaClient();
-const BATCH = 25;
+const BATCH = 1;
 
 async function verify(): Promise<{
   referralMismatch: number;
@@ -123,11 +123,11 @@ async function main() {
             processed += 1;
           }
         },
-        { maxWait: 15000, timeout: 120000 },
+        { maxWait: 10000, timeout: 30000 },
       );
 
       cursor = batch[batch.length - 1]?.userId;
-      if (processed % 250 === 0) {
+      if (processed % 100 === 0 || processed === 1) {
         console.log(JSON.stringify({ processed, skippedNoCp, cursor }));
       }
     }
