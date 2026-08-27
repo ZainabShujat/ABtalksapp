@@ -67,3 +67,4 @@ rather than deleted without authorization. Cursor appends new lines below.)_
 - 2026-08-27 [env] ENABLE_NEW_CANDIDATE=true on production after referral-owner contract + clean smoke + recon
 - 2026-08-27 [convention] Phase 6 CANDIDATE complete: live identity reads require CandidateProfile then return StudentProfile view; referral lookup stays on StudentProfile; ENABLE_NEW_LEARNING is next; dual-write and legacy StudentProfile writes stay
 - 2026-08-27 [rule] ENABLE_NEW_CANDIDATE reads CandidateProfile + profile-owned edu_sp_/exp_sp_ + CandidateSkill without StudentProfile overlay; referral lookup follows the flag; dual-write copies the live SP referral code and only submitted identity fields; LEARNING stays off
+- 2026-08-27 [convention] Phase 6 CANDIDATE genuine reads complete after referral repair + skills/edu/exp catch-up; ENABLE_NEW_LEARNING stays off; admin list/CSV/campus-ambassador remain StudentProfile until Phase 7
