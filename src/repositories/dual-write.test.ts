@@ -620,7 +620,7 @@ suite("progress repo derives from attempts, not EnrollmentProgress", () => {
 
 suite("student progress surfaces go through the progress repo", () => {
   assert(
-    source("src/features/dashboard/get-activity-heatmap.ts").includes(
+    source("src/features/dashboard/get-hub-data.ts").includes(
       "listHubSubmissionTimes",
     ),
     "hub heatmap",
