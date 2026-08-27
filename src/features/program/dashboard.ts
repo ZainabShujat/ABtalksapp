@@ -13,6 +13,7 @@ import {
 import { getMemberRank } from "@/features/program/leaderboard";
 import type { VerdictLine } from "@/features/program/verify-mission";
 import { programMember } from "@/repositories/legacy/program-member";
+import { getProgramDayShell } from "@/repositories/learning";
 
 export type MemberDashboard = {
   totalScore: number;
@@ -131,15 +132,7 @@ export async function getMemberDashboard(
   const availableDay = days.find((d) => d.state === "AVAILABLE");
   let currentDay: MemberDashboard["currentDay"] = null;
   if (availableDay) {
-    const dayRow = await prisma.programDay.findUnique({
-      where: { dayNumber: availableDay.dayNumber },
-      select: {
-        dayNumber: true,
-        title: true,
-        missionType: true,
-        module: { select: { color: true } },
-      },
-    });
+    const dayRow = await getProgramDayShell(availableDay.dayNumber);
     if (dayRow) {
       currentDay = {
         dayNumber: dayRow.dayNumber,

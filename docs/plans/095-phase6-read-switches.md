@@ -9,10 +9,34 @@ start Phase 7 in this plan.
 
 ## 2. Current behavior
 
-- Phase 2 backfill is complete. Unscoped pass #1 finished
-  `2026-08-24T15:57:57.897Z` with V1–V10 all zero.
-- Production: `ENABLE_DUAL_WRITE=true`. Every `ENABLE_NEW_*` is unset/false.
-  App reads legacy tables. Dual-write writes new tables inside `SAVEPOINT`.
+- **Phase 5 is complete (2026-08-26).** Pass #1 `2026-08-24T15:57:57.897Z`;
+  pass #2 unscoped pack clean (V1–V10, full drift, Phase 5 extras, 200-user
+  shadow, points/credentials/visibility/new-user interval).
+- **Phase 6 CREDENTIAL complete (2026-08-26).** `ENABLE_NEW_CREDENTIAL=true`.
+  Live `/verify`, `/achievements`, and download lookup go through
+  `getByPublicId` / `listForUser`. Issuance still writes `Certificate` then
+  `dualWriteCredential`.
+- **Phase 6 POINTS complete (2026-08-26).** Live SP display paths go through
+  `getBalance` (`d199b19` / `dpl_CRGkwsQxwnx3HZGvJ5ntwEFQCJkC`).
+  `ENABLE_NEW_POINTS=true` on Production. Signed-in smoke: header chip 1070,
+  marketplace redeem shortfalls imply 1070, admin grant +1 dual-wrote
+  (`User` / `PointsAccount` / ledger all 16). Recon 0.
+- **Phase 6 CANDIDATE genuine reads complete (2026-08-27).**
+  `ENABLE_NEW_CANDIDATE=true` (`4614edb` / `dpl_H8tMmg8UkQx8WWcBQCevVHEYYPbC`).
+  `getCandidateProfile` reads only `CandidateProfile` + profile-owned `edu_sp_*`
+  / `exp_sp_*` + `CandidateSkill`. Referral lookup follows the flag. Six CP
+  placeholder codes repaired from SP (mismatch 0, cross-table collision 0).
+  CandidateSkill catch-up done. Do **not** start LEARNING. Admin student
+  list/search, admin CSV, and campus-ambassador admin still read
+  `StudentProfile` identity — pre-Phase-7 retirement, not a blocker for this
+  slice. PROGRESS / TALENT stay off.
+- Production: `ENABLE_DUAL_WRITE=true` (keep it). `ENABLE_NEW_CREDENTIAL=true`,
+  `ENABLE_NEW_POINTS=true`, and `ENABLE_NEW_CANDIDATE=true`. LEARNING /
+  PROGRESS / TALENT stay unset/false. Dual-write still writes new tables
+  inside `SAVEPOINT`. Do **not** remove or change legacy writes.
+- Continuous-write `885d37a` is production (`dpl_9j4fFnhcNHEdAzdJgXc7LvHbCM6y`).
+  Live registration/profile dual-writes `CandidateProfile`; certificate
+  issuance dual-writes `Credential`.
 - Recruiter-visible set is every `ProgramMember` plus searchable
   `consentSource = platform_default` post-launch users — not consent-only.
 - `src/repositories/hire.ts` additionally hard-gates the 078 hire pool on
@@ -20,11 +44,6 @@ start Phase 7 in this plan.
   `/hire`.
 - `listChallengeEnrollments` always reads `Enrollment`; `ENABLE_NEW_LEARNING`
   only switches `findActiveMembership`.
-- Registration (`complete-registration.ts`) dual-writes `CandidateProfile` (+
-  `CandidateEducation` / `CandidateExperience` owned by that form) when
-  `ENABLE_DUAL_WRITE=true`. Certificate issuance dual-writes `Credential`.
-  `ENABLE_NEW_*` stay off. Pass #2 must still prove the live path, not only
-  catch-up.
 
 ## 3. Files to touch
 
@@ -51,12 +70,10 @@ calling the new branch. No client flag reads.
 
 ## 5. Steps
 
-### A. Remaining Phase 5 interval (now)
+### A. Remaining Phase 5 interval — complete
 
-1. Do **not** set any `ENABLE_NEW_*`. Do **not** start Phase 6.
-2. Leave `ENABLE_DUAL_WRITE=true` and `DIRECT_URL` on the non-pooler host.
-3. Wait until **at least** `2026-08-25T15:57:57Z` (24h after pass #1). Dual-write
-   going live earlier does not shorten this gate.
+The original 24h wait after pass #1 elapsed at `2026-08-25T15:57:57Z`. Pass #2
+ran clean on 2026-08-26. Do not wait another 24h after `885d37a`.
 
 ### B. Pass #2 — complete unscoped pack (production, direct URL, reads only)
 
@@ -99,13 +116,35 @@ If the pack is clean: append to `docs/CHANGELOG.md` under Pending reconcile:
 - YYYY-MM-DD [rule] Phase 5 complete: second unscoped pack clean after 24h dual-write; ENABLE_NEW_* still off until Phase 6 switches
 ```
 
-That line is the Phase 5 complete mark. Then continue to C.
+That line is the Phase 5 complete mark. **Done 2026-08-26.** Continue to C.
 
-### C. Phase 6 — one flag at a time
+### C. Phase 6 — one flag at a time (**in progress, 2026-08-26**)
 
-Keep `ENABLE_DUAL_WRITE=true` on every step. Enable **only** the listed flag.
-Do not enable the next flag until the current one has been clean on production
-and left on.
+Keep `ENABLE_DUAL_WRITE=true` on every step. Do **not** change legacy writes.
+Enable **only** the listed flag. Do not enable the next flag until the current
+one has been clean on production and left on.
+
+**CREDENTIAL:** complete (`ENABLE_NEW_CREDENTIAL=true`). Live surfaces on the
+Credential path; smoke + V6 + drift clean 2026-08-26 (`48125d5` /
+`dpl_EDwHb1j8jXHN5fYRHx5D5n7aaP87`).
+
+**POINTS:** complete (`ENABLE_NEW_POINTS=true`, `d199b19` /
+`dpl_CRGkwsQxwnx3HZGvJ5ntwEFQCJkC`). Header chip and marketplace redeem
+eligibility read `PointsAccount`. Admin grant +1 dual-wrote. Recon 0.
+
+**CANDIDATE:** genuine new-table reads complete (`ENABLE_NEW_CANDIDATE=true`,
+`4614edb` / `dpl_H8tMmg8UkQx8WWcBQCevVHEYYPbC`). Referral repair copied the
+six live SP codes onto CP (preflight collisions 0). Dual-write copies the live
+SP code, syncs `CandidateSkill` + `edu_sp_*` / `exp_sp_*`, and only overwrites
+submitted identity fields. Flag ON reads CandidateProfile without overlay.
+Smoke: `/profile` referral `X26L7G`, dashboard greeting, admin student
+identity. V7 0. Drift clean. V4b (searchable ProgramMember count) is 1 and is
+visibility, not this slice. Do not start LEARNING / PROGRESS / TALENT. Admin
+list/search, admin CSV, and campus-ambassador admin remain on StudentProfile
+until Phase 7 retirement.
+
+**Next operator action:** do **not** set `ENABLE_NEW_LEARNING` until you
+explicitly start Phase 7 LEARNING. Leave PROGRESS / TALENT unset/false.
 
 Order (do not reorder):
 

@@ -1,338 +1,228 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import type { LucideIcon } from "lucide-react";
+import { motion } from "framer-motion";
+import { EVENTS } from "@/components/workshop/events-data";
+import { useCanvasScale } from "@/components/workshop/use-canvas-scale";
 import {
-  BadgeCheck,
-  CalendarClock,
-  Clock,
-  Lightbulb,
-  MapPin,
-  MessagesSquare,
-  PenLine,
-  Sparkles,
-  Tag,
-  TrendingUp,
-  UserRound,
-} from "lucide-react";
+  CANVAS_H,
+  CANVAS_W,
+  CAP_H,
+  layoutTopics,
+} from "@/components/workshop/topic-layout";
 
-const TOPICS = [
-  {
-    title: "LinkedIn Fundamentals & Personal Branding",
-    desc: "Understand how LinkedIn works, why personal branding matters, and how to use your profile to showcase your skills, achievements, projects, and career goals.",
-    Icon: UserRound,
-    accent: "#6366f1",
-  },
-  {
-    title: "Building a Strong LinkedIn Profile",
-    desc: "Optimize your profile photo, banner, headline, About section, experience, projects, skills, and featured section to create a professional and opportunity-ready profile.",
-    Icon: BadgeCheck,
-    accent: "#818cf8",
-  },
-  {
-    title: "LinkedIn Content Strategy",
-    desc: "Learn what to post, discover effective content pillars, understand different post formats, and turn your experiences, knowledge, projects, and opinions into valuable content.",
-    Icon: Lightbulb,
-    accent: "#8b5cf6",
-  },
-  {
-    title: "Creating Engaging LinkedIn Posts",
-    desc: "Learn how to write powerful hooks, structure posts, tell stories, create strong CTAs, and make your content more authentic, readable, and engaging.",
-    Icon: PenLine,
-    accent: "#a855f7",
-  },
-  {
-    title: "AI-Powered Content Creation",
-    desc: "Explore AI tools like ChatGPT, Claude, and Perplexity for research, content ideas, hooks, post writing, repurposing, and building a consistent LinkedIn content workflow.",
-    Icon: Sparkles,
-    accent: "#7c3aed",
-  },
-  {
-    title: "Design, Scheduling & Automation",
-    desc: "Discover tools like Canva, Buffer, and Make to create visuals, plan content, schedule posts, track workflows, and automate repetitive tasks while keeping your content authentic.",
-    Icon: CalendarClock,
-    accent: "#4f46e5",
-  },
-  {
-    title: "LinkedIn Growth & Analytics",
-    desc: "Learn practical networking strategies, meaningful commenting, profile discovery, audience building, and how to use LinkedIn analytics to understand what content actually works.",
-    Icon: TrendingUp,
-    accent: "#c084fc",
-  },
-  {
-    title: "Live Q&A & LinkedIn Growth Roadmap",
-    desc: "Get your LinkedIn questions answered, explore practical tips and tricks, avoid common mistakes, and build a simple 30-day strategy for consistent LinkedIn growth.",
-    Icon: MessagesSquare,
-    accent: "#a78bfa",
-  },
+/**
+ * The damped-spring curve Figma authored on the drop (node 1:169 y-track),
+ * transcribed exactly. framer-motion accepts a raw easing function, so the
+ * overshoot-and-settle matches the prototype rather than approximating it
+ * with a stock spring.
+ */
+const SPRING = (t: number) =>
+  1 - Math.exp(-t * 7.5258) * (Math.cos(t * 8.7987) + 0.8553 * Math.sin(t * 8.7987));
+
+/** Drop distance, in the design's canvas units. */
+const DROP = -900;
+
+/**
+ * Used when the promoted workshop carries no `topics` of its own, so this
+ * section can never render empty mid-swap between weeks.
+ */
+const DEFAULT_TOPICS = [
+  "Prompt Engineering Fundamentals",
+  "Role, Context & Task",
+  "Style, Constraints & Output",
+  "AI Image Generation",
+  "AI Video Generation",
+  "AI Voice & Audio Creation",
+  "AI Avatar & Digital Presenters",
+  "Script → Avatar → Voice → Video",
+  "AI + MCP Workflows",
+  "Canva AI & Content Publishing",
 ];
 
-function useInView(threshold = 0.12) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          obs.disconnect();
-        }
-      },
-      { threshold },
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [threshold]);
-  return { ref, visible };
-}
+/**
+ * Read off the `register && registrationOpen` flags rather than today's date:
+ * those are manual switches, so this resolves identically on the server and
+ * the client and cannot produce a hydration mismatch or a swap-in flash.
+ */
+const activeTopics =
+  EVENTS.find((e) => e.register && e.registrationOpen)?.topics ?? DEFAULT_TOPICS;
+
+/** Solved once at module load — pure function of constant input. */
+const PLACED = layoutTopics(activeTopics);
 
 export default function TopicsSection() {
-  const heading = useInView(0.3);
-  const infoRow = useInView(0.2);
+  const { ref: canvasRef, scale: canvasScale } = useCanvasScale(CANVAS_W);
 
+  // No section padding: the design stacks sections edge to edge (hero
+  // 78→884, this 884→1584, community 1584→2402), with the breathing room
+  // built into each canvas rather than added between them.
   return (
-    <section className="mx-auto w-full max-w-5xl px-4 pb-16 md:pb-24">
+    <section className="w-full">
       <style>{`
-        @keyframes wk-fade-down {
-          from { opacity: 0; transform: translateY(-20px); }
-          to   { opacity: 1; transform: translateY(0); }
+        .wk-learn-canvas {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: ${CANVAS_W}px;
+          height: ${CANVAS_H}px;
+          transform-origin: top left;
+          /* --wk-scale is a UNITLESS number set from a ResizeObserver below.
+             It cannot be derived in CSS: scale() rejects a length, and
+             calc(100cqw / 1920) divides a length by a number, which yields a
+             length and silently invalidates the whole transform. */
+          transform: scale(var(--wk-scale, 1));
         }
-        @keyframes wk-slide-left {
-          from { opacity: 0; transform: translateX(-40px) translateY(12px); }
-          to   { opacity: 1; transform: translateX(0) translateY(0); }
+        @media (prefers-reduced-motion: reduce) {
+          .wk-learn-canvas * { animation: none !important; transition: none !important; }
         }
-        @keyframes wk-slide-right {
-          from { opacity: 0; transform: translateX(40px) translateY(12px); }
-          to   { opacity: 1; transform: translateX(0) translateY(0); }
-        }
-        @keyframes wk-slide-up {
-          from { opacity: 0; transform: translateY(28px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .wk-anim-down  { animation: wk-fade-down 0.55s cubic-bezier(0.22,1,0.36,1) both; }
-        .wk-anim-left  { animation: wk-slide-left 0.58s cubic-bezier(0.22,1,0.36,1) both; }
-        .wk-anim-right { animation: wk-slide-right 0.58s cubic-bezier(0.22,1,0.36,1) both; }
-        .wk-anim-up    { animation: wk-slide-up 0.5s cubic-bezier(0.22,1,0.36,1) both; }
       `}</style>
 
-      {/* Heading */}
+      {/* ---------- scattered field (lg and up) ----------
+          Heading and subtitle live INSIDE the canvas, at the design's own
+          y-offsets (47 and 117 of 700), so the whole section scales as one
+          composition. Below lg the scale factor would render 24px type at
+          ~5px, so the content reflows instead.
+          `overflow-hidden` clips the capsules while they drop in from above. */}
       <div
-        ref={heading.ref}
-        className={`mb-12 select-none text-center ${heading.visible ? "wk-anim-down" : "opacity-0"}`}
+        ref={canvasRef}
+        className="relative mx-auto hidden w-full max-w-[1920px] overflow-hidden lg:block"
+        style={
+          {
+            aspectRatio: `${CANVAS_W} / ${CANVAS_H}`,
+            "--wk-scale": canvasScale,
+          } as React.CSSProperties
+        }
       >
-        
-        <h2 className="text-3xl font-extrabold tracking-tight text-white md:text-[38px]">
-          What You&apos;ll Learn
-        </h2>
-        <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-white/45 md:text-[15px]">
-          Practical AI skills through live, hands-on demonstrations and step-by-step builds.
-        </p>
-      </div>
-
-      {/* Cards */}
-      <div className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {TOPICS.map((topic, i) => (
-          <AnimatedCard key={topic.title} topic={topic} index={i} />
-        ))}
-      </div>
-
-      {/* Info row */}
-      <div ref={infoRow.ref} className="grid grid-cols-3 gap-3">
-        {(
-          [
-            { Icon: Clock, label: "Duration", value: "1 Hour", subtext: "Live Interactive", accent: "#c084fc" },
-            { Icon: MapPin, label: "Platform", value: "YouTube", subtext: "Live stream link sent", accent: "#6366f1" },
-            { Icon: Tag, label: "Price", value: "FREE", subtext: "100% Sponsored", accent: "#8b5cf6", highlight: true },
-          ] as const
-        ).map((data, i) => (
-          <div
-            key={data.label}
-            className={infoRow.visible ? "wk-anim-up" : "opacity-0"}
-            style={{ animationDelay: infoRow.visible ? `${i * 90}ms` : undefined }}
-          >
-            <InfoCard {...data} />
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function AnimatedCard({ topic, index }: { topic: (typeof TOPICS)[0]; index: number }) {
-  const { ref, visible } = useInView(0.08);
-  const isRight = index % 2 === 1;
-
-  return (
-    <div
-      ref={ref}
-      className={visible ? (isRight ? "wk-anim-right" : "wk-anim-left") : "opacity-0"}
-      style={{ animationDelay: visible ? `${isRight ? 90 : 0}ms` : undefined }}
-    >
-      <TiltCard topic={topic} num={index + 1} />
-    </div>
-  );
-}
-
-function TiltCard({ topic, num }: { topic: (typeof TOPICS)[0]; num: number }) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [rotateX, setRotateX] = useState(0);
-  const [rotateY, setRotateY] = useState(0);
-  const [glowPos, setGlowPos] = useState({ x: 50, y: 50 });
-  const [hovered, setHovered] = useState(false);
-
-  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return;
-    const r = cardRef.current.getBoundingClientRect();
-    const x = e.clientX - r.left;
-    const y = e.clientY - r.top;
-    setRotateX((0.5 - y / r.height) * 10);
-    setRotateY((x / r.width - 0.5) * 10);
-    setGlowPos({ x: (x / r.width) * 100, y: (y / r.height) * 100 });
-  };
-
-  return (
-    <div
-      ref={cardRef}
-      onMouseMove={onMove}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => {
-        setHovered(false);
-        setRotateX(0);
-        setRotateY(0);
-      }}
-      className="relative cursor-pointer select-none overflow-hidden rounded-2xl"
-      style={{
-        background: "rgba(255,255,255,0.025)",
-        border: `1px solid ${hovered ? topic.accent + "55" : "rgba(255,255,255,0.08)"}`,
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-        transform: hovered
-          ? `perspective(900px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px) scale(1.015)`
-          : "perspective(900px) rotateX(0deg) rotateY(0deg)",
-        boxShadow: hovered
-          ? `0 20px 44px -12px ${topic.accent}44, inset 0 1px 0 rgba(255,255,255,0.06)`
-          : "inset 0 1px 0 rgba(255,255,255,0.04)",
-        transition: "box-shadow 0.22s ease, border-color 0.22s ease, transform 0.15s ease",
-        zIndex: hovered ? 10 : 1,
-      }}
-    >
-      {/* top accent bar */}
-      <div
-        className="absolute inset-x-0 top-0 h-px"
-        style={{
-          background: `linear-gradient(to right, transparent, ${topic.accent}, transparent)`,
-          opacity: hovered ? 1 : 0.3,
-          transition: "opacity 0.22s ease",
-        }}
-      />
-
-      {/* mouse-follow glow */}
-      {hovered && (
-        <div
-          className="pointer-events-none absolute rounded-full"
-          style={{
-            width: 220,
-            height: 220,
-            background: `radial-gradient(circle, ${topic.accent}22 0%, transparent 70%)`,
-            left: `calc(${glowPos.x}% - 110px)`,
-            top: `calc(${glowPos.y}% - 110px)`,
-            transition: "left 0.1s linear, top 0.1s linear",
-          }}
-        />
-      )}
-
-      <div className="relative z-10 p-5">
-        <div className="flex items-start gap-4">
-          <div
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+        <div className="wk-learn-canvas">
+          {/* heading — node 1:168 */}
+          <h2
             style={{
-              background: `${topic.accent}18`,
-              border: `1px solid ${topic.accent}30`,
+              position: "absolute",
+              top: 47,
+              left: 0,
+              width: CANVAS_W,
+              margin: 0,
+              textAlign: "center",
+              fontSize: 64,
+              fontWeight: 700,
+              lineHeight: 1.1,
+              letterSpacing: "-0.01em",
+              color: "var(--wk-text)",
             }}
           >
-            <topic.Icon size={20} strokeWidth={1.75} style={{ color: topic.accent }} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <span
-              className="text-[9px] font-extrabold uppercase tracking-widest"
-              style={{ color: topic.accent }}
-            >
-              {String(num).padStart(2, "0")}
-            </span>
-            <h4 className="mt-1 text-[15px] font-bold leading-snug tracking-tight text-white">
-              {topic.title}
-            </h4>
-            <p className="mt-1.5 text-[12.5px] font-medium leading-relaxed text-white/45">
-              {topic.desc}
-            </p>
-          </div>
+            What You&apos;ll Learn
+          </h2>
+
+          {/* subtitle — node 1:191 */}
+          <p
+            style={{
+              position: "absolute",
+              top: 117,
+              left: 0,
+              width: CANVAS_W,
+              margin: 0,
+              textAlign: "center",
+              fontSize: 32,
+              fontWeight: 500,
+              lineHeight: 1.2,
+              color: "var(--wk-text-faint)",
+            }}
+          >
+            Practical AI skills through live, hands-on demonstrations and
+            step-by-step builds.
+          </p>
         </div>
+
+        {/* The trigger lives on the canvas, not on each capsule: a capsule
+            starts at y:-900, outside this box's `overflow-hidden`, and a
+            clipped element never reports as intersecting — so a per-capsule
+            `whileInView` can never fire and they would stay invisible. */}
+        <motion.div
+          className="wk-learn-canvas"
+          initial="hidden"
+          whileInView="shown"
+          viewport={{ once: true, amount: 0.25 }}
+        >
+          {PLACED.map((p) => (
+            <motion.div
+              key={p.text}
+              variants={{
+                hidden: { opacity: 0, y: DROP },
+                shown: {
+                  opacity: 1,
+                  y: 0,
+                  transition: {
+                    y: { duration: 0.7, delay: p.delay, ease: SPRING },
+                    opacity: { duration: 0.15, delay: p.delay, ease: "easeOut" },
+                  },
+                },
+              }}
+              style={{ position: "absolute", left: p.x, top: p.y, width: p.w }}
+            >
+              <div
+                className="flex items-center justify-center rounded-[50px]"
+                style={{
+                  height: CAP_H,
+                  background: p.bg,
+                  color: p.fg,
+                  transform: `rotate(${p.rot}deg) skewX(${p.skew}deg)`,
+                  boxShadow: "0 4px 4px rgba(var(--wk-ink-a),0.25)",
+                }}
+              >
+                <span className="whitespace-nowrap text-[24px] font-medium">
+                  {p.text}
+                </span>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
       </div>
-    </div>
-  );
-}
 
-interface InfoCardProps {
-  Icon: LucideIcon;
-  label: string;
-  value: string;
-  subtext: string;
-  accent: string;
-  highlight?: boolean;
-}
+      {/* ---------- wrapped cluster (below lg) ---------- */}
+      <div className="px-4 py-14 lg:hidden">
+        <h2
+          className="mb-4 text-center text-[34px] font-bold leading-[1.1] tracking-tight sm:text-[48px]"
+          style={{ color: "var(--wk-text)" }}
+        >
+          What You&apos;ll Learn
+        </h2>
+        <p
+          className="mx-auto mb-10 max-w-2xl text-center text-[16px] font-medium leading-snug sm:text-[20px]"
+          style={{ color: "var(--wk-text-faint)" }}
+        >
+          Practical AI skills through live, hands-on demonstrations and
+          step-by-step builds.
+        </p>
 
-function InfoCard({ Icon, label, value, subtext, accent, highlight }: InfoCardProps) {
-  const [hovered, setHovered] = useState(false);
-
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      className="relative flex select-none flex-col items-center overflow-hidden rounded-2xl p-3 text-center sm:p-4"
-      style={{
-        background: "rgba(255,255,255,0.025)",
-        border: `1px solid ${hovered ? accent + "55" : "rgba(255,255,255,0.08)"}`,
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-        boxShadow: hovered
-          ? `0 14px 30px -8px ${accent}44, inset 0 1px 0 rgba(255,255,255,0.05)`
-          : "inset 0 1px 0 rgba(255,255,255,0.04)",
-        transform: hovered ? "translateY(-5px) scale(1.03)" : undefined,
-        transition: "transform 0.22s cubic-bezier(0.22,1,0.36,1), box-shadow 0.22s ease, border-color 0.22s ease",
-        zIndex: hovered ? 5 : 1,
-      }}
-    >
-      <div
-        className="absolute inset-x-0 top-0 h-px"
-        style={{
-          background: `linear-gradient(to right, transparent, ${accent}, transparent)`,
-          opacity: hovered ? 1 : 0,
-          transition: "opacity 0.2s ease",
-        }}
-      />
-      <span
-        className="mb-1.5 block"
-        style={{
-          transform: hovered ? "translateY(-3px) scale(1.15)" : "translateY(0) scale(1)",
-          transition: "transform 0.22s cubic-bezier(0.22,1,0.36,1)",
-        }}
-      >
-        <Icon size={22} strokeWidth={1.75} style={{ color: accent }} />
-      </span>
-      <span className="mb-1.5 text-[8px] font-extrabold uppercase tracking-widest text-white/40 sm:text-[9px]">
-        {label}
-      </span>
-      <span
-        className="text-sm font-extrabold leading-none sm:text-[17px]"
-        style={{ color: highlight ? accent : "#ffffff" }}
-      >
-        {value}
-      </span>
-      <span className="mt-1.5 text-[8.5px] font-medium tracking-wide text-white/35 sm:text-[10px]">
-        {subtext}
-      </span>
-    </div>
+        <motion.div
+          className="mx-auto flex max-w-2xl flex-wrap justify-center gap-2.5"
+          initial="hidden"
+          whileInView="shown"
+          viewport={{ once: true, amount: 0.25 }}
+        >
+        {PLACED.map((p) => (
+          <motion.span
+            key={p.text}
+            variants={{
+              hidden: { opacity: 0, y: -24 },
+              shown: {
+                opacity: 1,
+                y: 0,
+                transition: { duration: 0.5, delay: p.delay * 0.5, ease: SPRING },
+              },
+            }}
+            className="rounded-[50px] px-5 py-2.5 text-[14px] font-medium"
+            style={{
+              background: p.bg,
+              color: p.fg,
+              boxShadow: "0 4px 4px rgba(var(--wk-ink-a),0.12)",
+            }}
+          >
+            {p.text}
+          </motion.span>
+          ))}
+        </motion.div>
+      </div>
+    </section>
   );
 }

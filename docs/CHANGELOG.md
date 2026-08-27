@@ -63,3 +63,15 @@ rather than deleted without authorization. Cursor appends new lines below.)_
 - 2026-08-25 [rule] Phase 5 pass #2 waits until 2026-08-25T15:57:57Z; extras treat recruiter-visible as all ProgramMembers plus platform_default (not consent-only); ENABLE_NEW_* stay off until that pack is clean
 - 2026-08-25 [convention] 078 points count-drift ignores Phase 2f User.synergyPoints plug rows (idempotencyKey reconciliation:phase2:*); those txs have no SynergyEvent by design and must not be deleted
 - 2026-08-25 [rule] Dual-write now covers CandidateProfile on registration/profile update and Credential on certificate issuance (legacy still authoritative; ENABLE_NEW_* stay off)
+- 2026-08-26 [rule] Phase 5 24h wait elapsed; 885d37a continuous-write is live; accelerated final gate is unscoped pass #2 now (no extra 24h after this deploy); ENABLE_NEW_* stay off; do not start Phase 6 until that pack is clean
+- 2026-08-26 [rule] Phase 5 complete: second unscoped pack clean after 24h dual-write; ENABLE_NEW_* still off until Phase 6 switches
+- 2026-08-26 [env] ENABLE_NEW_CREDENTIAL=true on production after clean smoke + recon
+- 2026-08-26 [convention] Phase 6 CREDENTIAL complete: /verify /achievements /download read via credential repository; ENABLE_NEW_POINTS is next; dual-write and legacy Certificate writes stay
+- 2026-08-26 [env] ENABLE_NEW_POINTS=true on production after clean smoke + recon
+- 2026-08-26 [convention] Phase 6 POINTS complete: header chip /marketplace /admin SP display read via points repository; ENABLE_NEW_CANDIDATE is next; dual-write and legacy User.synergyPoints writes stay
+- 2026-08-26 [env] ENABLE_NEW_CANDIDATE rolled back to false on production: CandidateProfile.referralCode differed from StudentProfile for 6 users (including a post-launch registration); profile display vs registration lookup would split-brain
+- 2026-08-27 [env] ENABLE_NEW_CANDIDATE=true on production after referral-owner contract + clean smoke + recon
+- 2026-08-27 [convention] Phase 6 CANDIDATE complete: live identity reads require CandidateProfile then return StudentProfile view; referral lookup stays on StudentProfile; ENABLE_NEW_LEARNING is next; dual-write and legacy StudentProfile writes stay
+- 2026-08-27 [rule] ENABLE_NEW_CANDIDATE reads CandidateProfile + profile-owned edu_sp_/exp_sp_ + CandidateSkill without StudentProfile overlay; referral lookup follows the flag; dual-write copies the live SP referral code and only submitted identity fields; LEARNING stays off
+- 2026-08-27 [convention] Phase 6 CANDIDATE genuine reads complete after referral repair + skills/edu/exp catch-up; ENABLE_NEW_LEARNING stays off; admin list/CSV/campus-ambassador remain StudentProfile until Phase 7
+- 2026-08-27 [rule] Phase 6 LEARNING read-switch is in the repo behind ENABLE_NEW_LEARNING=false: student catalog/enrollment/membership/quiz definitions go through repositories/learning.ts; completion/progress stay legacy; StudentProfile.domain is pre-StudentProfile-retirement debt and is unchanged

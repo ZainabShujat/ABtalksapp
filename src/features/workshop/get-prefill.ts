@@ -1,7 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { studentProfile } from "@/repositories/legacy/student-profile";
+import { getCandidateProfile } from "@/repositories/candidate";
 
 export interface WorkshopPrefill {
   name: string | null;
@@ -34,17 +34,7 @@ export async function getWorkshopPrefill(
   };
 
   try {
-    const profile = await studentProfile.findUnique({
-      where: { userId },
-      select: {
-        fullName: true,
-        phone: true,
-        college: true,
-        organization: true,
-        graduationYear: true,
-        userType: true,
-      },
-    });
+    const profile = await getCandidateProfile(userId);
 
     if (profile) {
       const isStudent = profile.userType === "STUDENT";

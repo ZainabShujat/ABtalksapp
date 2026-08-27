@@ -10,7 +10,11 @@ import { getCurrentDayNumber } from "@/lib/date-utils";
 import { computeStreakStats } from "@/features/submission/streak-utils";
 import { sendChallengeResetEmail } from "@/features/email/challenge-reset-email";
 import { studentProfile } from "@/repositories/legacy/student-profile";
-import { dualWritePoints } from "@/repositories/dual-write";
+import {
+  dualWriteCandidateIdentity,
+  dualWriteChallengeEnrollmentById,
+  dualWritePoints,
+} from "@/repositories/dual-write";
 
 const baseInput = z.object({
   targetUserId: z.string().min(1),
@@ -150,10 +154,14 @@ export async function resetProgressAction(input: {
           startedAt: new Date(),
         },
       });
+      await dualWriteChallengeEnrollmentById(tx, enrollment.id);
 
       await tx.studentProfile.updateMany({
         where: { userId: targetUserId },
         data: { isReadyForInterview: false },
+      });
+      await dualWriteCandidateIdentity(tx, targetUserId, {
+        isReadyForInterview: true,
       });
 
       await tx.adminAction.create({
@@ -231,6 +239,9 @@ export async function toggleReadyForInterviewAction(input: {
         where: { userId: targetUserId },
         data: { isReadyForInterview: newValue },
       });
+      await dualWriteCandidateIdentity(tx, targetUserId, {
+        isReadyForInterview: true,
+      });
 
       await tx.adminAction.create({
         data: {
@@ -278,6 +289,7 @@ export async function removeFromChallengeAction(input: {
         where: { id: enrollment.id },
         data: { status: "ABANDONED" },
       });
+      await dualWriteChallengeEnrollmentById(tx, enrollment.id);
 
       await tx.adminAction.create({
         data: {
@@ -395,6 +407,7 @@ export async function rejectSubmissionAction(input: {
           longestStreak,
         },
       });
+      await dualWriteChallengeEnrollmentById(tx, submission.enrollmentId);
 
       await tx.adminAction.create({
         data: {

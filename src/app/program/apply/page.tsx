@@ -12,7 +12,8 @@ import {
 import { ApplyForm } from "@/components/program/apply-form";
 import { JoinCodeGate } from "@/components/program/join-code-gate";
 import { getEntryState } from "@/features/program/entry";
-import { prisma } from "@/lib/db";
+import { getCandidateProfile } from "@/repositories/candidate";
+import { studentProfile } from "@/repositories/legacy/student-profile";
 import { cn } from "@/lib/utils";
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -47,10 +48,14 @@ export default async function ProgramApplyPage({ searchParams }: Props) {
   // legacy cohort members have no StudentProfile and keep full access (D5).
   const profile =
     state.screen === "form"
-      ? await prisma.studentProfile.findUnique({
+      ? await studentProfile.findUnique({
           where: { userId: session.user.id },
-          select: { linkedinUrl: true, skills: true },
+          select: { id: true },
         })
+      : null;
+  const candidate =
+    state.screen === "form" && profile
+      ? await getCandidateProfile(session.user.id)
       : null;
 
   if (state.screen === "form" && !profile) {
@@ -185,8 +190,8 @@ export default async function ProgramApplyPage({ searchParams }: Props) {
       </div>
       <ApplyForm
         joinCode={state.joinCode}
-        initialLinkedinUrl={profile?.linkedinUrl ?? ""}
-        initialSkills={profile?.skills ?? []}
+        initialLinkedinUrl={candidate?.linkedinUrl ?? ""}
+        initialSkills={candidate?.skills ?? []}
       />
     </Shell>
   );

@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { RegistrationForm } from "./registration-form";
 import { studentProfile } from "@/repositories/legacy/student-profile";
+import { findChallengeEnrollment } from "@/repositories/learning";
 
 type PageProps = {
   searchParams: Promise<{ ref?: string; domain?: string }>;
@@ -48,9 +49,8 @@ export default async function RegisterPage({ searchParams }: PageProps) {
   // Registered = has a StudentProfile (registration no longer creates an enrollment).
   if (profile) {
     if (isCoreDomain(requestedDomain)) {
-      const existing = await prisma.enrollment.findFirst({
-        where: { userId: session.user.id, domain: requestedDomain },
-        select: { id: true, status: true },
+      const existing = await findChallengeEnrollment(session.user.id, {
+        domain: requestedDomain,
       });
 
       // ABANDONED blocks this track only — other tracks stay joinable.

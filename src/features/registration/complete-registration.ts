@@ -9,6 +9,7 @@ import { recordLegalConsents } from "@/features/legal/record-consent";
 import { recordNewsletterOptIn } from "@/features/legal/record-newsletter-optin";
 import { generateUniqueReferralCode } from "./generate-referral-code";
 import { studentProfile } from "@/repositories/legacy/student-profile";
+import { findUserIdByReferralCode } from "@/repositories/candidate";
 import { dualWriteCandidateIdentity } from "@/repositories/dual-write";
 
 export type CompleteRegistrationResult =
@@ -49,13 +50,10 @@ export async function completeRegistration(
 
   let referrerId: string | null = null;
   if (input.referralCode) {
-    const matchingReferrer = await studentProfile.findUnique({
-      where: { referralCode: input.referralCode },
-      select: { userId: true },
-    });
-    if (matchingReferrer && matchingReferrer.userId !== userId) {
-      referrerId = matchingReferrer.userId;
-    } else if (!matchingReferrer) {
+    const matchingUserId = await findUserIdByReferralCode(input.referralCode);
+    if (matchingUserId && matchingUserId !== userId) {
+      referrerId = matchingUserId;
+    } else if (!matchingUserId) {
       console.warn(
         "[registration] invalid referral code skipped:",
         input.referralCode,

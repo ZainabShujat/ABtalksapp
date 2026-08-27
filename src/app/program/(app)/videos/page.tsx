@@ -1,46 +1,20 @@
-import { prisma } from "@/lib/db";
 import { requireProgramMember } from "@/lib/program-auth";
 import { getCohortCalendarDay } from "@/features/program/progression";
 import { VideoLibraryFilters } from "@/components/program/video-library-filters";
+import { listProgramVideos, listProgramModules } from "@/repositories/learning";
 
 export default async function ProgramVideosPage() {
   const { cohort } = await requireProgramMember();
   const cohortDay = getCohortCalendarDay(cohort);
 
-  const modules = await prisma.programModule.findMany({
-    orderBy: { number: "asc" },
-    select: { number: true, title: true, color: true },
-  });
-
-  const days = await prisma.programDay.findMany({
-    orderBy: { dayNumber: "asc" },
-    select: {
-      dayNumber: true,
-      module: { select: { number: true } },
-      videos: {
-        select: {
-          id: true,
-          title: true,
-          youtubeId: true,
-          durationMin: true,
-          order: true,
-        },
-        orderBy: { order: "asc" },
-      },
-    },
-  });
-
-  const videos = days.flatMap((d) =>
-    d.videos.map((v) => ({
-      id: v.id,
-      dayNumber: d.dayNumber,
-      moduleNumber: d.module.number,
-      title: v.title,
-      youtubeId: v.youtubeId,
-      durationMin: v.durationMin,
-      locked: d.dayNumber > cohortDay,
-    })),
-  );
+  const [catalog, modules] = await Promise.all([
+    listProgramVideos(),
+    listProgramModules(),
+  ]);
+  const videos = catalog.map((v) => ({
+    ...v,
+    locked: v.dayNumber > cohortDay,
+  }));
 
   return (
     <div className="-mx-4 -my-6 min-h-[calc(100svh-4.25rem)] bg-[#040A12] px-4 py-6 text-white md:px-6">

@@ -89,13 +89,13 @@ async function ensureCandidateVisibility(tx: Tx, userId: string): Promise<void> 
   });
 }
 
-function mapChallengeStatus(status: EnrollmentStatus): EnrollmentStatusV2 {
+export function mapChallengeStatus(status: EnrollmentStatus): EnrollmentStatusV2 {
   if (status === EnrollmentStatus.COMPLETED) return EnrollmentStatusV2.COMPLETED;
   if (status === EnrollmentStatus.ABANDONED) return EnrollmentStatusV2.DROPPED;
   return EnrollmentStatusV2.ACTIVE;
 }
 
-function mapMemberStatus(status: ProgramMemberStatus): EnrollmentStatusV2 {
+export function mapMemberStatus(status: ProgramMemberStatus): EnrollmentStatusV2 {
   switch (status) {
     case ProgramMemberStatus.APPLIED:
       return EnrollmentStatusV2.APPLIED;
@@ -147,6 +147,25 @@ export async function dualWriteChallengeEnrollment(
     });
     await ensureCandidateVisibility(tx, enrollment.userId);
   });
+}
+
+export async function dualWriteChallengeEnrollmentById(
+  tx: Tx,
+  enrollmentId: string,
+): Promise<void> {
+  const enrollment = await tx.enrollment.findUnique({
+    where: { id: enrollmentId },
+    select: {
+      id: true,
+      userId: true,
+      domain: true,
+      status: true,
+      startedAt: true,
+      completedAt: true,
+    },
+  });
+  if (!enrollment) return;
+  await dualWriteChallengeEnrollment(tx, enrollment);
 }
 
 export async function dualWriteProgramMember(
@@ -484,14 +503,205 @@ export function mapCertificateToCredential(cert: {
   };
 }
 
+function skillSlug(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
+
+async function resolveOrCreateSkillId(
+  tx: Tx,
+  raw: string,
+): Promise<string | null> {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const slug = skillSlug(trimmed);
+  if (!slug) return null;
+  const key = trimmed.toLowerCase();
+
+  const bySlug = await tx.skill.findUnique({
+    where: { slug },
+    select: { id: true },
+  });
+  if (bySlug) return bySlug.id;
+
+  const byNameOrAlias = await tx.skill.findFirst({
+    where: {
+      OR: [
+        { name: { equals: trimmed, mode: "insensitive" } },
+        { aliases: { has: key } },
+        { aliases: { has: trimmed } },
+      ],
+    },
+    select: { id: true },
+  });
+  if (byNameOrAlias) return byNameOrAlias.id;
+
+  try {
+    const created = await tx.skill.create({
+      data: { slug, name: trimmed },
+      select: { id: true },
+    });
+    return created.id;
+  } catch (e) {
+    if (
+      e instanceof Prisma.PrismaClientKnownRequestError &&
+      e.code === "P2002"
+    ) {
+      const again = await tx.skill.findUnique({
+        where: { slug },
+        select: { id: true },
+      });
+      if (again) return again.id;
+    }
+    throw e;
+  }
+}
+
+export async function syncCandidateSkillsFromLegacy(
+  tx: Tx,
+  userId: string,
+  declared: string[],
+): Promise<void> {
+  const declaredIds = new Set<string>();
+  for (const raw of declared) {
+    const skillId = await resolveOrCreateSkillId(tx, raw);
+    if (!skillId) continue;
+    declaredIds.add(skillId);
+    await tx.candidateSkill.upsert({
+      where: { userId_skillId: { userId, skillId } },
+      create: { userId, skillId },
+      update: {},
+    });
+  }
+
+  const existing = await tx.candidateSkill.findMany({
+    where: { userId },
+    select: {
+      id: true,
+      skillId: true,
+      evidenceCount: true,
+      _count: { select: { evidence: true } },
+    },
+  });
+  for (const row of existing) {
+    if (declaredIds.has(row.skillId)) continue;
+    if (row.evidenceCount > 0 || row._count.evidence > 0) continue;
+    await tx.candidateSkill.delete({ where: { id: row.id } });
+  }
+}
+
+export async function syncProfileOwnedEducation(
+  tx: Tx,
+  userId: string,
+  sp: {
+    college: string | null;
+    collegeId: string | null;
+    graduationYear: number | null;
+  },
+): Promise<void> {
+  if (!sp.college && !sp.collegeId && sp.graduationYear == null) return;
+  await tx.candidateEducation.upsert({
+    where: { id: educationIdForStudentProfile(userId) },
+    create: {
+      id: educationIdForStudentProfile(userId),
+      userId,
+      institutionName: sp.college?.trim() || "Not specified",
+      collegeId: sp.collegeId,
+      graduationYear: sp.graduationYear,
+      sortOrder: 0,
+    },
+    update: {
+      institutionName: sp.college?.trim() || "Not specified",
+      collegeId: sp.collegeId,
+      graduationYear: sp.graduationYear,
+    },
+  });
+}
+
+export async function syncProfileOwnedExperience(
+  tx: Tx,
+  userId: string,
+  sp: {
+    organization: string | null;
+    role: string | null;
+    yearsExperience: number | null;
+  },
+): Promise<void> {
+  if (!sp.organization && !sp.role && sp.yearsExperience == null) return;
+  const years = sp.yearsExperience ?? 0;
+  await tx.candidateExperience.upsert({
+    where: { id: experienceIdForStudentProfile(userId) },
+    create: {
+      id: experienceIdForStudentProfile(userId),
+      userId,
+      companyName: sp.organization?.trim() || "Not specified",
+      title: sp.role?.trim() || "Not specified",
+      startedOn: new Date(
+        Date.UTC(new Date().getUTCFullYear() - Math.max(years, 0), 0, 1),
+      ),
+      isCurrent: true,
+      totalMonths: Math.max(0, years) * 12,
+    },
+    update: {
+      companyName: sp.organization?.trim() || "Not specified",
+      title: sp.role?.trim() || "Not specified",
+      startedOn: new Date(
+        Date.UTC(new Date().getUTCFullYear() - Math.max(years, 0), 0, 1),
+      ),
+      isCurrent: true,
+      totalMonths: Math.max(0, years) * 12,
+    },
+  });
+}
+
+/** Fields this call wrote on StudentProfile. Omitted = full identity (registration). */
+export type CandidateIdentitySubmitted = {
+  fullName?: boolean;
+  phone?: boolean;
+  linkedinUrl?: boolean;
+  githubUsername?: boolean;
+  resumeUrl?: boolean;
+  userType?: boolean;
+  education?: boolean;
+  experience?: boolean;
+  skills?: boolean;
+  isReadyForInterview?: boolean;
+  ambassador?: boolean;
+};
+
+function submittedAll(): Required<CandidateIdentitySubmitted> {
+  return {
+    fullName: true,
+    phone: true,
+    linkedinUrl: true,
+    githubUsername: true,
+    resumeUrl: true,
+    userType: true,
+    education: true,
+    experience: true,
+    skills: true,
+    isReadyForInterview: true,
+    ambassador: true,
+  };
+}
+
 /**
- * Upsert CandidateProfile (+ registration-owned education/experience) from the
- * legacy StudentProfile already written in this transaction. Does not touch
- * CandidateVisibility. Does not copy challenge domain.
+ * Upsert CandidateProfile (+ profile-owned education/experience/skills) from
+ * the legacy StudentProfile already written in this transaction. Does not
+ * touch CandidateVisibility or challenge domain.
+ *
+ * On update, only submitted fields overwrite CandidateProfile. Untouched
+ * scalars keep richer CP values (e.g. 2a ProgramMember LinkedIn). Referral
+ * code always copies StudentProfile so both tables stay the same live code.
  */
 export async function dualWriteCandidateIdentity(
   tx: Tx,
   userId: string,
+  submitted?: CandidateIdentitySubmitted,
 ): Promise<void> {
   await runDualWrite(tx, "candidateIdentity", async () => {
     const sp = await tx.studentProfile.findUnique({
@@ -513,6 +723,7 @@ export async function dualWriteCandidateIdentity(
         githubUsername: true,
         resumeUrl: true,
         referralCode: true,
+        skills: true,
         isReadyForInterview: true,
         isCampusAmbassadorCandidate: true,
         ambassadorAppliedAt: true,
@@ -525,15 +736,37 @@ export async function dualWriteCandidateIdentity(
 
     const existing = await tx.candidateProfile.findUnique({
       where: { userId },
-      select: { referralCode: true, phoneVerifiedAt: true },
+      select: { phoneVerifiedAt: true },
     });
 
+    const fields = submitted ?? submittedAll();
+    const persona = personaFromUserType(sp.userType);
     const phoneVerifiedAt =
       sp.phoneVerifiedAt ??
       existing?.phoneVerifiedAt ??
       (sp.phoneVerified ? new Date() : null);
-    const referralCode = existing?.referralCode ?? sp.referralCode;
-    const persona = personaFromUserType(sp.userType);
+
+    const update: Prisma.CandidateProfileUpdateInput = {
+      referralCode: sp.referralCode,
+    };
+    if (fields.fullName) update.fullName = sp.fullName;
+    if (fields.userType) update.primaryPersona = persona;
+    if (fields.phone) {
+      update.phone = sp.phone;
+      update.phoneVerified = sp.phoneVerified;
+      update.phoneVerifiedAt = phoneVerifiedAt;
+    }
+    if (fields.linkedinUrl) update.linkedinUrl = sp.linkedinUrl;
+    if (fields.githubUsername) update.githubUsername = sp.githubUsername;
+    if (fields.resumeUrl) update.resumeUrl = sp.resumeUrl;
+    if (fields.isReadyForInterview) {
+      update.isReadyForInterview = sp.isReadyForInterview;
+    }
+    if (fields.ambassador) {
+      update.isCampusAmbassadorCandidate = sp.isCampusAmbassadorCandidate;
+      update.ambassadorAppliedAt = sp.ambassadorAppliedAt;
+      update.ambassadorDismissedAt = sp.ambassadorDismissedAt;
+    }
 
     await tx.candidateProfile.upsert({
       where: { userId },
@@ -548,72 +781,23 @@ export async function dualWriteCandidateIdentity(
         linkedinUrl: sp.linkedinUrl,
         githubUsername: sp.githubUsername,
         resumeUrl: sp.resumeUrl,
-        referralCode,
+        referralCode: sp.referralCode,
         isReadyForInterview: sp.isReadyForInterview,
         isCampusAmbassadorCandidate: sp.isCampusAmbassadorCandidate,
         ambassadorAppliedAt: sp.ambassadorAppliedAt,
         ambassadorDismissedAt: sp.ambassadorDismissedAt,
       },
-      update: {
-        fullName: sp.fullName,
-        primaryPersona: persona,
-        phone: sp.phone,
-        phoneVerified: sp.phoneVerified,
-        phoneVerifiedAt,
-        linkedinUrl: sp.linkedinUrl,
-        githubUsername: sp.githubUsername,
-        resumeUrl: sp.resumeUrl,
-        isReadyForInterview: sp.isReadyForInterview,
-        isCampusAmbassadorCandidate: sp.isCampusAmbassadorCandidate,
-        ambassadorAppliedAt: sp.ambassadorAppliedAt,
-        ambassadorDismissedAt: sp.ambassadorDismissedAt,
-      },
+      update,
     });
 
-    if (sp.college || sp.collegeId || sp.graduationYear != null) {
-      await tx.candidateEducation.upsert({
-        where: { id: educationIdForStudentProfile(userId) },
-        create: {
-          id: educationIdForStudentProfile(userId),
-          userId,
-          institutionName: sp.college?.trim() || "Not specified",
-          collegeId: sp.collegeId,
-          graduationYear: sp.graduationYear,
-          sortOrder: 0,
-        },
-        update: {
-          institutionName: sp.college?.trim() || "Not specified",
-          collegeId: sp.collegeId,
-          graduationYear: sp.graduationYear,
-        },
-      });
+    if (fields.education) {
+      await syncProfileOwnedEducation(tx, userId, sp);
     }
-
-    if (sp.organization || sp.role || sp.yearsExperience != null) {
-      const years = sp.yearsExperience ?? 0;
-      await tx.candidateExperience.upsert({
-        where: { id: experienceIdForStudentProfile(userId) },
-        create: {
-          id: experienceIdForStudentProfile(userId),
-          userId,
-          companyName: sp.organization?.trim() || "Not specified",
-          title: sp.role?.trim() || "Not specified",
-          startedOn: new Date(
-            Date.UTC(new Date().getUTCFullYear() - Math.max(years, 0), 0, 1),
-          ),
-          isCurrent: true,
-          totalMonths: Math.max(0, years) * 12,
-        },
-        update: {
-          companyName: sp.organization?.trim() || "Not specified",
-          title: sp.role?.trim() || "Not specified",
-          startedOn: new Date(
-            Date.UTC(new Date().getUTCFullYear() - Math.max(years, 0), 0, 1),
-          ),
-          isCurrent: true,
-          totalMonths: Math.max(0, years) * 12,
-        },
-      });
+    if (fields.experience) {
+      await syncProfileOwnedExperience(tx, userId, sp);
+    }
+    if (fields.skills) {
+      await syncCandidateSkillsFromLegacy(tx, userId, sp.skills);
     }
   });
 }
