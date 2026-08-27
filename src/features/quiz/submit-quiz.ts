@@ -1,9 +1,10 @@
 import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
 import {
   findChallengeEnrollment,
   getQuizDefinition,
 } from "@/repositories/learning";
+import { dualWriteQuizAttempt } from "@/repositories/dual-write";
 
 export type QuizSubmitResultRow = {
   questionId: string;
@@ -83,13 +84,24 @@ export async function submitQuiz(input: {
     };
   });
 
-  await prisma.quizAttempt.create({
-    data: {
-      userId,
+  await writeClient().$transaction(async (tx) => {
+    const created = await tx.quizAttempt.create({
+      data: {
+        userId,
+        quizId,
+        score,
+        answers: answers as Prisma.InputJsonValue,
+      },
+      select: { id: true, attemptedAt: true },
+    });
+    await dualWriteQuizAttempt(tx, {
+      id: created.id,
+      enrollmentId: enrollment.id,
       quizId,
       score,
       answers: answers as Prisma.InputJsonValue,
-    },
+      attemptedAt: created.attemptedAt,
+    });
   });
 
   return { ok: true, score, results };

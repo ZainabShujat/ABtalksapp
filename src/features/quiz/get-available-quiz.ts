@@ -1,7 +1,7 @@
 import type { Domain } from "@prisma/client";
 import { EnrollmentStatus } from "@prisma/client";
-import { prisma } from "@/lib/db";
 import { listQuizCatalog } from "@/repositories/learning";
+import { listQuizAttemptsForUser } from "@/repositories/progress";
 
 export type QuizAvailabilityReason =
   | "none_available"
@@ -66,10 +66,7 @@ export async function getAvailableQuiz(
   const attempts =
     quizIds.length === 0
       ? []
-      : await prisma.quizAttempt.findMany({
-          where: { userId, quizId: { in: quizIds } },
-          select: { score: true, quizId: true },
-        });
+      : await listQuizAttemptsForUser(userId, quizIds);
 
   const quizByWeek = new Map(quizzes.map((q) => [q.weekNumber, q]));
   const quizById = new Map(quizzes.map((q) => [q.id, q]));

@@ -5,11 +5,11 @@ import {
   addCalendarDaysToKey,
   parseCalendarKeyToUtcDate,
 } from "@/lib/date-utils";
-import { prisma } from "@/lib/db";
 import {
   computeActivityStreak,
   type ActivityStreak,
 } from "@/features/dashboard/compute-activity-streak";
+import { listHubSubmissionTimes } from "@/repositories/progress";
 
 export type ActivityCell = {
   date: string;
@@ -55,13 +55,10 @@ function countToLevel(count: number, maxCount: number): 0 | 1 | 2 | 3 | 4 {
 export async function getActivityHeatmap(
   userId: string,
 ): Promise<ActivityHeatmap> {
-  const submissions = await prisma.submission.findMany({
-    where: { enrollment: { userId } },
-    select: { submittedAt: true },
-  });
+  const submissions = await listHubSubmissionTimes(userId);
 
   const countByDate = new Map<string, number>();
-  for (const { submittedAt } of submissions) {
+  for (const submittedAt of submissions) {
     const key = formatInTimeZone(submittedAt, IST, "yyyy-MM-dd");
     countByDate.set(key, (countByDate.get(key) ?? 0) + 1);
   }

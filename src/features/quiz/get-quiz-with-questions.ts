@@ -3,6 +3,7 @@ import {
   findChallengeEnrollment,
   getQuizDefinition,
 } from "@/repositories/learning";
+import { getQuizAttemptForUser } from "@/repositories/progress";
 
 export type QuizQuestionPublic = {
   id: string;
@@ -29,30 +30,65 @@ export type QuizWithQuestionsPayload = {
     score: number;
     answers: Record<string, string>;
     attemptedAt: Date;
+    answersDetailAvailable: boolean;
   } | null;
 };
+
+export function mapQuizAttemptAnswers(input: {
+  currentQuestionIds: Set<string>;
+  answers: Record<string, string>;
+  legacyByOrder: Array<{ id: string; questionOrder: number }>;
+  currentIdByOrder: Map<number, string>;
+}): { answers: Record<string, string>; answersDetailAvailable: boolean } {
+  const keys = Object.keys(input.answers);
+  if (keys.length === 0) {
+    return { answers: {}, answersDetailAvailable: false };
+  }
+  if (keys.every((key) => input.currentQuestionIds.has(key))) {
+    return { answers: input.answers, answersDetailAvailable: true };
+  }
+
+  const remapped: Record<string, string> = {};
+  for (const row of input.legacyByOrder) {
+    const nextId = input.currentIdByOrder.get(row.questionOrder);
+    const value = input.answers[row.id];
+    if (nextId && value) remapped[nextId] = value;
+  }
+  const remappedKeys = Object.keys(remapped);
+  const fullyMapped =
+    remappedKeys.length === keys.length &&
+    remappedKeys.every((key) => input.currentQuestionIds.has(key));
+  if (fullyMapped) {
+    return { answers: remapped, answersDetailAvailable: true };
+  }
+  return { answers: {}, answersDetailAvailable: false };
+}
 
 async function remapAttemptAnswers(
   quizId: string,
   questions: QuizQuestionPublic[],
   answers: Record<string, string>,
-): Promise<Record<string, string>> {
-  const ids = new Set(questions.map((q) => q.id));
-  const alreadyAligned = Object.keys(answers).every((key) => ids.has(key));
-  if (alreadyAligned) return answers;
+): Promise<{ answers: Record<string, string>; answersDetailAvailable: boolean }> {
+  const currentQuestionIds = new Set(questions.map((q) => q.id));
+  const currentIdByOrder = new Map(questions.map((q) => [q.questionOrder, q.id]));
+  const already = mapQuizAttemptAnswers({
+    currentQuestionIds,
+    answers,
+    legacyByOrder: [],
+    currentIdByOrder,
+  });
+  if (already.answersDetailAvailable) return already;
 
   const legacy = await prisma.quizQuestion.findMany({
     where: { quizId },
     select: { id: true, questionOrder: true },
   });
-  const byOrder = new Map(questions.map((q) => [q.questionOrder, q.id]));
-  const remapped: Record<string, string> = {};
-  for (const row of legacy) {
-    const nextId = byOrder.get(row.questionOrder);
-    const value = answers[row.id];
-    if (nextId && value) remapped[nextId] = value;
-  }
-  return Object.keys(remapped).length > 0 ? remapped : answers;
+  return mapQuizAttemptAnswers({
+    currentQuestionIds,
+    answers,
+    legacyByOrder: legacy,
+    currentIdByOrder,
+  });
 }
 
 export async function getQuizWithQuestions(
@@ -68,17 +104,7 @@ export async function getQuizWithQuestions(
   });
   if (!enrollment) return null;
 
-  const existingAttempt = await prisma.quizAttempt.findUnique({
-    where: {
-      userId_quizId: { userId, quizId },
-    },
-    select: {
-      id: true,
-      score: true,
-      answers: true,
-      attemptedAt: true,
-    },
-  });
+  const existingAttempt = await getQuizAttemptForUser(userId, quizId);
 
   const revealSolutions = existingAttempt !== null;
   const questions: QuizQuestionPublic[] = quiz.questions.map((q) => ({
@@ -94,12 +120,8 @@ export async function getQuizWithQuestions(
       : {}),
   }));
 
-  const remappedAnswers = existingAttempt
-    ? await remapAttemptAnswers(
-        quizId,
-        questions,
-        existingAttempt.answers as Record<string, string>,
-      )
+  const mapped = existingAttempt
+    ? await remapAttemptAnswers(quizId, questions, existingAttempt.answers)
     : null;
 
   return {
@@ -114,8 +136,9 @@ export async function getQuizWithQuestions(
       ? {
           id: existingAttempt.id,
           score: existingAttempt.score,
-          answers: remappedAnswers ?? {},
+          answers: mapped?.answers ?? {},
           attemptedAt: existingAttempt.attemptedAt,
+          answersDetailAvailable: mapped?.answersDetailAvailable ?? false,
         }
       : null,
   };

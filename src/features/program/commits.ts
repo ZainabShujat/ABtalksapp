@@ -1,6 +1,6 @@
 import "server-only";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
 import {
   addCalendarDaysToKey,
   parseCalendarKeyToUtcDate,
@@ -23,6 +23,7 @@ import {
 } from "@/features/program/constants";
 import { logger } from "@/lib/logger";
 import type { Prisma } from "@prisma/client";
+import { dualWriteCommitDay } from "@/repositories/dual-write";
 import { programMember } from "@/repositories/legacy/program-member";
 
 const MAX_COMMIT_POINTS = PROGRAM_MAX_COMMIT_POINTS;
@@ -199,7 +200,7 @@ export async function creditCommitDayInTx(
   });
   const nextCount = Math.max(existing?.commitCount ?? 0, 1);
 
-  await tx.programCommitDay.upsert({
+  const row = await tx.programCommitDay.upsert({
     where: { memberId_date: { memberId, date: commitDate } },
     create: {
       memberId,
@@ -207,6 +208,12 @@ export async function creditCommitDayInTx(
       commitCount: nextCount,
     },
     update: { commitCount: nextCount },
+  });
+  await dualWriteCommitDay(tx, {
+    id: row.id,
+    memberId,
+    date: row.date,
+    commitCount: row.commitCount,
   });
   return true;
 }
@@ -327,16 +334,24 @@ export async function processMemberCommitDay(
   });
   const nextCount = Math.max(existing?.commitCount ?? 0, count);
 
-  await prisma.programCommitDay.upsert({
-    where: {
-      memberId_date: { memberId: member.id, date: commitDate },
-    },
-    create: {
+  await writeClient().$transaction(async (tx) => {
+    const row = await tx.programCommitDay.upsert({
+      where: {
+        memberId_date: { memberId: member.id, date: commitDate },
+      },
+      create: {
+        memberId: member.id,
+        date: commitDate,
+        commitCount: nextCount,
+      },
+      update: { commitCount: nextCount },
+    });
+    await dualWriteCommitDay(tx, {
+      id: row.id,
       memberId: member.id,
-      date: commitDate,
-      commitCount: nextCount,
-    },
-    update: { commitCount: nextCount },
+      date: row.date,
+      commitCount: row.commitCount,
+    });
   });
 
   await recomputeCommitPointsForMember(member.id, cohort);

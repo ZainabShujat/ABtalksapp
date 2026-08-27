@@ -1,6 +1,5 @@
 import "server-only";
 import type { ProgramLanguage, ProgramMissionType, Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
 import {
   collectPassSkipSets,
   deriveDayState,
@@ -10,6 +9,10 @@ import {
 import { isDayLockBypassEnabled } from "@/lib/feature-flags";
 import { programMember } from "@/repositories/legacy/program-member";
 import { getProgramDayShell } from "@/repositories/learning";
+import {
+  getProgramUnlockFloor,
+  listProgramMissionProgress,
+} from "@/repositories/progress";
 
 export type { DayState } from "@/features/program/progression";
 
@@ -59,16 +62,13 @@ export async function getDayShell(
   });
   if (!member) return null;
 
-  const submissions = await prisma.programMissionSubmission.findMany({
-    where: { memberId },
-    select: { dayNumber: true, passed: true, payload: true },
-  });
+  const [submissions, unlockFloor] = await Promise.all([
+    listProgramMissionProgress(memberId),
+    getProgramUnlockFloor(memberId, member.highestUnlockedDay),
+  ]);
 
   const { passedDays, skippedDays } = collectPassSkipSets(submissions);
-  const maxContentDay = getMaxContentDay(
-    member.cohort,
-    member.highestUnlockedDay,
-  );
+  const maxContentDay = getMaxContentDay(member.cohort, unlockFloor);
 
   const state = deriveDayState(
     dayNumber,

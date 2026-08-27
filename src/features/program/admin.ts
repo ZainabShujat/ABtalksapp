@@ -757,11 +757,12 @@ export async function adminUnlockDay(
     return { ok: false, message: "Day already unlocked." };
   }
 
-  await prisma.$transaction(async (tx) => {
+  await writeClient().$transaction(async (tx) => {
     await tx.programMember.update({
       where: { id: memberId },
       data: { highestUnlockedDay: next },
     });
+    await dualWriteProgramMember(tx, memberId);
     await tx.adminAction.create({
       data: {
         adminUserId: adminId,
@@ -794,11 +795,12 @@ export async function grantSkipToken(
     return { ok: false, message: "No skip tokens used to restore." };
   }
 
-  await prisma.$transaction(async (tx) => {
+  await writeClient().$transaction(async (tx) => {
     await tx.programMember.update({
       where: { id: memberId },
       data: { skipTokensUsed: { decrement: 1 } },
     });
+    await dualWriteProgramMember(tx, memberId);
     await tx.adminAction.create({
       data: {
         adminUserId: adminId,

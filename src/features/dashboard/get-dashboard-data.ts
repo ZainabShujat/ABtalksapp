@@ -10,6 +10,7 @@ import { getCandidateProfile } from "@/repositories/candidate";
 import { getDailyTasksCached } from "@/features/challenge/get-daily-tasks-cached";
 import { prisma } from "@/lib/db";
 import { getDailyTaskByChallengeDay } from "@/repositories/learning";
+import { listChallengeSubmissions } from "@/repositories/progress";
 
 /** User row missing (deleted) — the page should sign the session out. */
 export type DashboardDataNoUser = {
@@ -154,18 +155,7 @@ export async function getDashboardData(
   const totalDays = enrollment.challenge.totalDays;
 
   // Single submissions fetch — derives today-completed, recent-7, and the heatmap day map.
-  const allSubmissions = await prisma.submission.findMany({
-    where: { enrollmentId: enrollment.id },
-    orderBy: { submittedAt: "desc" },
-    select: {
-      id: true,
-      dayNumber: true,
-      status: true,
-      submittedAt: true,
-      githubUrl: true,
-      linkedinUrl: true,
-    },
-  });
+  const allSubmissions = await listChallengeSubmissions(enrollment.id);
 
   const isTodayCompleted =
     currentDay >= 1 && allSubmissions.some((s) => s.dayNumber === currentDay);

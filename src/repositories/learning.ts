@@ -13,6 +13,10 @@ import { prisma } from "@/lib/db";
 import { isNewLearningRepoEnabled } from "@/lib/feature-flags";
 import { programMember } from "@/repositories/legacy/program-member";
 import {
+  getProgramUnlockFloor,
+  overlayChallengeProgressFields,
+} from "@/repositories/progress";
+import {
   cohortSlugForDomain,
   dailyTaskIdFromActivity,
   enrollmentIdFromPe,
@@ -378,9 +382,10 @@ async function overlayEnrollment(
   challengeId: string;
   startedAt: Date;
 } | null> {
-  return prisma.enrollment.findUnique({
+  const row = await prisma.enrollment.findUnique({
     where: { id },
     select: {
+      id: true,
       daysCompleted: true,
       currentStreak: true,
       longestStreak: true,
@@ -389,6 +394,9 @@ async function overlayEnrollment(
       startedAt: true,
     },
   });
+  if (!row) return null;
+  const [overlaid] = await overlayChallengeProgressFields([row]);
+  return overlaid ?? row;
 }
 
 async function challengeIdForDomain(domain: Domain): Promise<string | null> {
@@ -466,11 +474,13 @@ export async function listChallengeEnrollments(
         daysCompleted: true,
         currentStreak: true,
         longestStreak: true,
+        lastSubmittedDay: true,
         startedAt: true,
         challenge: { select: { title: true, totalDays: true } },
       },
     });
-    return rows.map((r) => ({
+    const overlaid = await overlayChallengeProgressFields(rows);
+    return overlaid.map((r) => ({
       id: r.id,
       domain: r.domain,
       status: r.status,
@@ -537,7 +547,7 @@ export async function findChallengeEnrollment(
   } = {},
 ): Promise<SessionEnrollment | null> {
   if (!isNewLearningRepoEnabled()) {
-    return prisma.enrollment.findFirst({
+    const row = await prisma.enrollment.findFirst({
       where: {
         userId,
         ...(opts.id ? { id: opts.id } : {}),
@@ -549,6 +559,9 @@ export async function findChallengeEnrollment(
       orderBy: { startedAt: "desc" },
       select: SESSION_ENROLLMENT_SELECT,
     });
+    if (!row) return null;
+    const [overlaid] = await overlayChallengeProgressFields([row]);
+    return overlaid ?? row;
   }
 
   const pes = await prisma.programEnrollment.findMany({
@@ -700,7 +713,10 @@ async function membershipFromPe(
       id: memberId,
       status: mapPeToMemberStatus(pe.status),
       fullName: overlay.fullName,
-      highestUnlockedDay: overlay.highestUnlockedDay,
+      highestUnlockedDay: await getProgramUnlockFloor(
+        memberId,
+        overlay.highestUnlockedDay,
+      ),
       cohortId,
     },
     cohort: {
@@ -783,7 +799,10 @@ export async function findActiveMembership(
       id: member.id,
       status: member.status,
       fullName: member.fullName,
-      highestUnlockedDay: member.highestUnlockedDay,
+      highestUnlockedDay: await getProgramUnlockFloor(
+        member.id,
+        member.highestUnlockedDay,
+      ),
       cohortId: member.cohortId,
     },
     cohort: member.cohort,

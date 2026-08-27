@@ -5,7 +5,16 @@ export {
   findUserIdByReferralCode,
 } from "./candidate";
 export { listChallengeEnrollments, findActiveMembership } from "./learning";
-export { getDashboardPrograms } from "./progress";
+export {
+  getChallengeProgressStats,
+  listChallengeSubmissions,
+  listHubSubmissionTimes,
+  getChallengeDaySubmission,
+  listProgramMissionProgress,
+  getProgramUnlockFloor,
+  listQuizAttemptsForUser,
+  getQuizAttemptForUser,
+} from "./progress";
 export {
   searchCandidates,
   searchableUserWhere,

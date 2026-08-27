@@ -15,6 +15,7 @@ type Props = {
   questions: QuestionWithSolution[];
   userAnswers: Record<string, string>;
   score: number;
+  answersDetailAvailable?: boolean;
 };
 
 function feedbackMessage(score: number, max: number): string {
@@ -31,7 +32,13 @@ function feedbackMessage(score: number, max: number): string {
   return "Keep learning. Review the explanations below.";
 }
 
-export function QuizResultsDisplay({ quiz, questions, userAnswers, score }: Props) {
+export function QuizResultsDisplay({
+  quiz,
+  questions,
+  userAnswers,
+  score,
+  answersDetailAvailable = true,
+}: Props) {
   const max = questions.length;
   const pct = max > 0 ? Math.round((score / max) * 100) : 0;
 
@@ -44,6 +51,12 @@ export function QuizResultsDisplay({ quiz, questions, userAnswers, score }: Prop
         </p>
         <p className="mt-1 text-sm text-muted-foreground">{pct}%</p>
         <p className="mt-4 text-base font-medium">{feedbackMessage(score, max)}</p>
+        {!answersDetailAvailable && (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Your score is saved. Per-question answer highlights are unavailable
+            for this older attempt.
+          </p>
+        )}
       </div>
 
       <div className="space-y-6">

@@ -18,6 +18,11 @@ import type { VerdictLine } from "@/features/program/verify-mission";
 import { parseCalendarKeyToUtcDate } from "@/lib/date-utils";
 import { programMember } from "@/repositories/legacy/program-member";
 import { getProgramDayShell } from "@/repositories/learning";
+import {
+  getProgramUnlockFloor,
+  listProgramMissionProgress,
+  listProgramRecentMissionAttempts,
+} from "@/repositories/progress";
 
 export type MemberDashboard = {
   totalScore: number;
@@ -105,22 +110,10 @@ export async function getMemberDashboard(
       }),
       getMemberDayStates(memberId),
       getMemberRank(cohortId, memberId),
-      prisma.programMissionSubmission.findMany({
-        where: { memberId },
-        select: {
-          dayNumber: true,
-          passed: true,
-          verdict: true,
-          createdAt: true,
-          payload: true,
-        },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-      }),
-      prisma.programMissionSubmission.findMany({
-        where: { memberId, passed: true },
-        select: { dayNumber: true, payload: true },
-      }),
+      listProgramRecentMissionAttempts(memberId, 5),
+      listProgramMissionProgress(memberId).then((rows) =>
+        rows.filter((r) => r.passed),
+      ),
     ]);
 
   if (!member || !cohort) return null;
@@ -149,7 +142,11 @@ export async function getMemberDashboard(
   );
   const waivedCount = [...waivedDaySet].filter((d) => passedDays.has(d)).length;
   const earnedCount = clearedCount - waivedCount;
-  const maxContentDay = getMaxContentDay(cohort, member.highestUnlockedDay);
+  const unlockFloor = await getProgramUnlockFloor(
+    memberId,
+    member.highestUnlockedDay,
+  );
+  const maxContentDay = getMaxContentDay(cohort, unlockFloor);
   const nextUnlockDateLabel =
     nextLockedDay !== null && nextLockedDay > maxContentDay
       ? formatInTimeZone(
