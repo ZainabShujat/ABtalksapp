@@ -95,8 +95,8 @@ export function ProgramStatsPanel({ data, atRisk, projects, aiRec }: Props) {
           value={`${data.scoreBreakdown.commitPoints}/${PROGRAM_MAX_COMMIT_POINTS}`}
         />
         <StatCard
-          label="Cohort day"
-          value={`${data.cohortDay}/${PROGRAM_TOTAL_DAYS}`}
+          label="Your progress"
+          value={`${data.clearedCount}/${PROGRAM_TOTAL_DAYS}`}
         />
         <StatCard label="Clean passes" value={String(data.cleanPassCount)} />
       </div>

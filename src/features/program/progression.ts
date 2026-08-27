@@ -3,7 +3,10 @@ import type { ProgramCohortStatus, ProgramMissionType } from "@prisma/client";
 import { differenceInCalendarDays } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "@/lib/db";
-import { parseCalendarKeyToUtcDate } from "@/lib/date-utils";
+import {
+  addCalendarDaysToKey,
+  parseCalendarKeyToUtcDate,
+} from "@/lib/date-utils";
 import { isDayLockBypassEnabled } from "@/lib/feature-flags";
 import { programMember } from "@/repositories/legacy/program-member";
 import {
@@ -65,6 +68,16 @@ export function getCalendarDerivedMaxContentDay(
     PROGRAM_TOTAL_DAYS,
     PROGRAM_MEMBER_START_DAY - 1 + cohortCalendarDay,
   );
+}
+
+/** PROGRAM_TZ calendar key (`yyyy-MM-dd`) on which `dayNumber` becomes unlockable. */
+export function getContentDayUnlockKey(
+  cohort: { startsAt: Date },
+  dayNumber: number,
+): string {
+  const startKey = formatInTimeZone(cohort.startsAt, PROGRAM_TZ, "yyyy-MM-dd");
+  const offset = dayNumber - PROGRAM_MEMBER_START_DAY;
+  return addCalendarDaysToKey(startKey, Math.max(0, offset));
 }
 
 /**
