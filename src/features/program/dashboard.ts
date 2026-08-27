@@ -1,8 +1,11 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { formatInTimeZone } from "date-fns-tz";
 import {
   getBehindByDays,
   getCohortCalendarDay,
+  getContentDayUnlockKey,
+  getMaxContentDay,
   getMemberDayStates,
   getMemberProgressDay,
   isWaivedPayload,
@@ -12,6 +15,7 @@ import {
 } from "@/features/program/progression";
 import { getMemberRank } from "@/features/program/leaderboard";
 import type { VerdictLine } from "@/features/program/verify-mission";
+import { parseCalendarKeyToUtcDate } from "@/lib/date-utils";
 import { programMember } from "@/repositories/legacy/program-member";
 import { getProgramDayShell } from "@/repositories/learning";
 
@@ -56,6 +60,14 @@ export type MemberDashboard = {
   hasStarted: boolean;
   /** Lowest LOCKED day number, or null when nothing is locked. */
   nextLockedDay: number | null;
+  /** Passed days counting leftover start waivers that still count as PASSED. */
+  clearedCount: number;
+  /** Passed days the member actually completed. */
+  earnedCount: number;
+  /** Start-waiver days that still count toward clearedCount. */
+  waivedCount: number;
+  /** `d MMM` unlock date when nextLockedDay is calendar-gated; otherwise null. */
+  nextUnlockDateLabel: string | null;
 };
 
 function parseVerdict(json: unknown): VerdictLine[] {
@@ -84,6 +96,7 @@ export async function getMemberDashboard(
           commitPoints: true,
           projectPoints: true,
           cleanPassCount: true,
+          highestUnlockedDay: true,
         },
       }),
       prisma.programCohort.findUnique({
@@ -106,7 +119,7 @@ export async function getMemberDashboard(
       }),
       prisma.programMissionSubmission.findMany({
         where: { memberId, passed: true },
-        select: { payload: true },
+        select: { dayNumber: true, payload: true },
       }),
     ]);
 
@@ -128,6 +141,25 @@ export async function getMemberDashboard(
   const hasStarted = passedRows.some((r) => !isWaivedPayload(r.payload));
   const nextLockedDay =
     days.find((d) => d.state === "LOCKED")?.dayNumber ?? null;
+  const clearedCount = passedDays.size;
+  const waivedDaySet = new Set(
+    passedRows
+      .filter((r) => isWaivedPayload(r.payload))
+      .map((r) => r.dayNumber),
+  );
+  const waivedCount = [...waivedDaySet].filter((d) => passedDays.has(d)).length;
+  const earnedCount = clearedCount - waivedCount;
+  const maxContentDay = getMaxContentDay(cohort, member.highestUnlockedDay);
+  const nextUnlockDateLabel =
+    nextLockedDay !== null && nextLockedDay > maxContentDay
+      ? formatInTimeZone(
+          parseCalendarKeyToUtcDate(
+            getContentDayUnlockKey(cohort, nextLockedDay),
+          ),
+          "UTC",
+          "d MMM",
+        )
+      : null;
 
   const availableDay = days.find((d) => d.state === "AVAILABLE");
   let currentDay: MemberDashboard["currentDay"] = null;
@@ -192,5 +224,9 @@ export async function getMemberDashboard(
     days,
     hasStarted,
     nextLockedDay,
+    clearedCount,
+    earnedCount,
+    waivedCount,
+    nextUnlockDateLabel,
   };
 }
