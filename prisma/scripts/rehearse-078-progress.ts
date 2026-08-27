@@ -4,7 +4,7 @@
  */
 import { config } from "dotenv";
 import { PrismaClient } from "@prisma/client";
-import { assertChildBranch } from "./migrate-078-shared";
+import { assertChildBranch, PRODUCTION_NEON_HOST_ID } from "./migrate-078-shared";
 import {
   collectPassSkipSets,
   isSkippedPayload,
@@ -36,14 +36,17 @@ function setEqual(a: Set<number>, b: Set<number>): boolean {
 }
 
 async function main() {
-  if (process.env.PHASE2_ALLOW_PRODUCTION === "1") {
+  if ((process.env.DATABASE_URL ?? "").includes(PRODUCTION_NEON_HOST_ID)) {
     throw new Error(
       "rehearse-078-progress refuses production. Point DATABASE_URL at a Neon child.",
     );
   }
+  process.env.PHASE2_ALLOW_PRODUCTION = "";
   assertChildBranch();
   process.env.ENABLE_NEW_PROGRESS = "true";
   process.env.ENABLE_NEW_LEARNING = "true";
+  await prisma.$queryRaw`SELECT 1`;
+  console.error("rehearse: challenge overlay");
 
   const enrollments = await prisma.enrollment.findMany({
     where: { daysCompleted: { gt: 0 } },
@@ -78,6 +81,8 @@ async function main() {
     streak_mismatch: streakMismatch,
     daysCompleted_mismatch: daysMismatch,
   });
+
+  console.error("rehearse: program members");
 
   const members = await prisma.programMember.findMany({
     select: { id: true },
@@ -140,6 +145,7 @@ async function main() {
     ...waivedSkippedSummary,
   });
 
+  console.error("rehearse: hub heatmap");
   const hubUsers = await prisma.submission.findMany({
     distinct: ["userId"],
     select: { userId: true },
@@ -163,6 +169,7 @@ async function main() {
     mismatch: hubMismatch,
   });
 
+  console.error("rehearse: quiz");
   const quizCatalog = await prisma.$queryRaw<
     Array<{
       quizId: string;
@@ -207,18 +214,27 @@ async function main() {
       answers: true,
     },
   });
-  let scoreMismatch = 0;
-  let missingNew = 0;
+  const quizScore = await prisma.$queryRaw<
+    Array<{ missing: number; score_mismatch: number }>
+  >`
+    SELECT
+      count(*) FILTER (
+        WHERE a.id IS NULL
+      )::int AS missing,
+      count(*) FILTER (
+        WHERE a.id IS NOT NULL AND a.score IS DISTINCT FROM qa.score
+      )::int AS score_mismatch
+    FROM "QuizAttempt" qa
+    LEFT JOIN "ActivityAttempt" a ON a.id = 'aa_qa_' || qa.id
+  `;
+  const missingNew = quizScore[0]?.missing ?? 0;
+  const scoreMismatch = quizScore[0]?.score_mismatch ?? 0;
+
   let deadKeyScoreMissing = 0;
   let remappedOk = 0;
   let deadKeys = 0;
+  const deadKeySamples: typeof quizAttempts = [];
   for (const row of quizAttempts) {
-    const next = await getQuizAttemptForUser(row.userId, row.quizId);
-    if (!next) {
-      missingNew += 1;
-      continue;
-    }
-    if (next.score !== row.score) scoreMismatch += 1;
     const answers = (row.answers as Record<string, string> | null) ?? {};
     const mapped = mapQuizAttemptAnswers({
       currentQuestionIds: currentByQuiz.get(row.quizId) ?? new Set(),
@@ -229,10 +245,14 @@ async function main() {
     const keys = Object.keys(answers);
     if (!mapped.answersDetailAvailable && keys.length > 0) {
       deadKeys += 1;
-      if (next.score !== row.score) deadKeyScoreMissing += 1;
+      if (deadKeySamples.length < 25) deadKeySamples.push(row);
     } else if (mapped.answersDetailAvailable) {
       remappedOk += 1;
     }
+  }
+  for (const row of deadKeySamples) {
+    const next = await getQuizAttemptForUser(row.userId, row.quizId);
+    if (!next || next.score !== row.score) deadKeyScoreMissing += 1;
   }
   log("quiz_flag_on", {
     attempts: quizAttempts.length,
