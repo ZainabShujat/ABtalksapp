@@ -6,13 +6,21 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 config();
 
-import { PointsSourceType, PrismaClient } from "@prisma/client";
+import { PointsSourceType } from "@prisma/client";
 import {
   assertChildBranch,
   PRODUCTION_NEON_HOST_ID,
 } from "./migrate-078-shared";
 
-const prisma = new PrismaClient();
+const TX_OPTS = { maxWait: 20000, timeout: 20000 } as const;
+
+async function db() {
+  const { writeClient } = await import("../../src/lib/db");
+  return writeClient();
+}
+
+type Db = Awaited<ReturnType<typeof db>>;
+let prisma: Db;
 
 function log(label: string, value: unknown): void {
   process.stdout.write(
@@ -80,7 +88,8 @@ async function applyViaRepo(
     "../../src/repositories/points"
   );
   return withLegacyPointsMirrorFlush(() =>
-    prisma.$transaction((tx) =>
+    prisma.$transaction(
+      (tx) =>
       applyPointsChange(tx, {
         userId,
         amount: input.amount,
@@ -99,6 +108,7 @@ async function applyViaRepo(
                 ? { type: "REDEEM_REFUND" }
                 : undefined,
       }),
+      TX_OPTS,
     ),
   );
 }
@@ -117,6 +127,7 @@ async function main() {
     );
   }
   process.env.PHASE2_ALLOW_PRODUCTION = "";
+  prisma = await db();
   assertChildBranch();
 
   const phase2Before = await phase2Count();
@@ -354,5 +365,5 @@ main()
     process.exitCode = 1;
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    if (prisma) await prisma.$disconnect();
   });

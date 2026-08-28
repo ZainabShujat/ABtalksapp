@@ -63,9 +63,12 @@ async function flushLegacyMirror(job: LegacyMirrorJob): Promise<void> {
     if (shouldInjectLegacyMirrorFailure()) {
       throw new Error("POINTS_FAIL_LEGACY_MIRROR");
     }
-    await writeClient().$transaction(async (tx) => {
-      await writeLegacyWalletAndEvent(tx, job.input, job.amount);
-    });
+    await writeClient().$transaction(
+      async (tx) => {
+        await writeLegacyWalletAndEvent(tx, job.input, job.amount);
+      },
+      { maxWait: 20000, timeout: 20000 },
+    );
   } catch (err) {
     logger.error("[points] legacy mirror failed; new wallet kept", {
       userId: job.input.userId,
