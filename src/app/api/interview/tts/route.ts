@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 import { resolveInterviewMemberId } from "@/features/interview/provider";
 import {
   isTtsConfigured,
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
     );
   }
 
+  const ttsStartedMs = Date.now();
   const line = await resolveSpeakableLine(
     parsed.data.interviewId,
     memberId,
@@ -75,16 +77,30 @@ export async function POST(request: Request) {
     );
   }
 
+  const resolveMs = Date.now() - ttsStartedMs;
+  const synthStartedMs = Date.now();
   const audio = await synthesizeLine(
     line.data.text,
     safetyIdentifierFor(memberId),
   );
+  const synthMs = Date.now() - synthStartedMs;
   if (!audio.ok) {
     return NextResponse.json(
       { ok: false, message: audio.message },
       { status: audio.status },
     );
   }
+
+  // The last of the three legs. `resolveMs` separates the database read from
+  // the synthesis call, so a slow turn can be attributed to one or the other
+  // instead of being reported as a single opaque number.
+  logger.info("[interview/tts] spoken", {
+    line: parsed.data.line,
+    chars: line.data.text.length,
+    bytes: audio.data.audio.byteLength,
+    resolveMs,
+    synthMs,
+  });
 
   return new NextResponse(audio.data.audio, {
     status: 200,

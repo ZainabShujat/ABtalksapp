@@ -95,7 +95,13 @@ export function beginInterview(
 
   const firstPrompt = `${intro}\n\n${first.text}`;
 
-  const started = startInterview(state);
+  // The opening question counts as asked. Without this the planner would see it
+  // as an unassessed target and could route straight back to it on the first
+  // advance — the one question we know for certain has already been put.
+  const started = {
+    ...startInterview(state),
+    askedQuestionIds: [first.id],
+  };
   return {
     ok: true,
     data: {

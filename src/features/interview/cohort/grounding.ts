@@ -1,5 +1,3 @@
-import { formatInTimeZone } from "date-fns-tz";
-import { PROGRAM_TZ } from "@/features/program/constants";
 import type {
   CohortCandidateContext,
   SubmittedDay,
@@ -57,10 +55,6 @@ function findProject(
   return facts.projects.find((p) => p.moduleNumber === moduleNumber) ?? null;
 }
 
-function spokenDate(date: Date): string {
-  return formatInTimeZone(date, PROGRAM_TZ, "d MMMM");
-}
-
 /**
  * Builds the clause for one grounding slot, or null when the artifact is absent.
  *
@@ -84,15 +78,27 @@ function buildClause(
   const submission = findSubmission(facts, day);
   if (!submission) return null;
 
+  // THE DAY IS A LOOKUP KEY, NEVER A SPOKEN FACT.
+  //
+  // These clauses used to read "You pushed rag.py for Day 11 —" and "You
+  // submitted Day 11 (RAG End-to-End) on 14 August —", which made the calendar
+  // the subject of the question: the candidate heard themselves being examined
+  // on when they learned something rather than on whether they understand it.
+  //
+  // `submission.title` is the CURRICULUM TITLE for that day ("Building the
+  // Knowledge Base", "Retrieval Engine"), so naming the topic instead of the
+  // number keeps the clause just as concrete and just as verifiable — it is
+  // still a template over a database row, and still cannot invent anything —
+  // while pointing at the work rather than at the schedule. `groundsOn.day`
+  // stays exactly as it was for provenance and for finding the artifact.
   if (groundsOn.artifact === "repo") {
     if (!submission.repoRef) return null;
-    return `You pushed ${submission.repoRef} for Day ${day} —`;
+    return `In your ${submission.title} work you pushed ${submission.repoRef} —`;
   }
 
   // "submission": the always-available form, since the day is known to exist.
-  return `You submitted Day ${day} (${submission.title}) on ${spokenDate(
-    submission.submittedAt,
-  )} —`;
+  // The date goes with the day number, for the same reason.
+  return `When you worked through ${submission.title} —`;
 }
 
 /**

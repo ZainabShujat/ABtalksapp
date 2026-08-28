@@ -322,9 +322,15 @@ export async function resolveSpeakableLine(
     return { ok: true, data: { text: roomLineFor("waiting", variant) } };
   }
 
+  // `plan` is ~17 KB of JSON (every question with its probes and evidence) and
+  // ONLY the "repeat" branch below reads it. Selecting it unconditionally
+  // pulled that payload out of the database on every single spoken line, to be
+  // discarded — one avoidable transfer per turn, on the leg the candidate is
+  // actively waiting through. The state read stays: every branch needs it.
+  const needsPlan = kind === "repeat";
   const row = await prisma.generalInterview.findFirst({
     where: { id: interviewId, memberId, status: "IN_PROGRESS" },
-    select: { plan: true, state: true },
+    select: { plan: needsPlan, state: true },
   });
 
   if (!row?.state) {

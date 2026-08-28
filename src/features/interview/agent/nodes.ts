@@ -407,6 +407,10 @@ export function updateState(state: InterviewAgentState): NodeUpdate {
     state.decision.evidence,
     proposed,
     view.evidenceKey,
+    // The candidate's own words, handed to the conversation planner inside
+    // `advanceTurn`. This is the connection that lets what someone just said
+    // decide what they are asked next.
+    state.candidateAnswer,
   );
 
   let nextState: InterviewState = prior

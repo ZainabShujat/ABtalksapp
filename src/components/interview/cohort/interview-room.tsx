@@ -722,6 +722,7 @@ export function InterviewRoom({
       setPhase("processing");
       setError(null);
 
+      const actionStartedMs = Date.now();
       const turn = await submitInterviewAnswerAction({
         interviewId,
         questionId: question.id,
@@ -769,8 +770,22 @@ export function InterviewRoom({
 
       if (turn.data.prompt) {
         setReveal({ text: turn.data.prompt, chars: 0 });
+        // Not awaited, and deliberately the LAST thing done: every state
+        // update above is synchronous, so speech begins the moment the
+        // decision is in rather than after a render.
         void speak(turn.data.prompt);
       } else setPhase("idle");
+
+      if (process.env.NODE_ENV !== "production") {
+        // The candidate-visible half of the gap: how long the decision leg took
+        // from the room's side. Pair it with the server's `turn latency` line
+        // to separate model time from network time.
+        console.info("[turn] decision leg", {
+          actionMs: Date.now() - actionStartedMs,
+          action: turn.data.action,
+          spoke: Boolean(turn.data.prompt),
+        });
+      }
     },
     [interviewId, question, onFinishedAction, speak],
   );

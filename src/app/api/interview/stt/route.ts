@@ -112,11 +112,13 @@ export async function POST(request: Request) {
     looksWebm: head.startsWith("1a45dfa3"),
   });
 
+  const sttStartedMs = Date.now();
   const result = await transcribeAnswer(
     file,
     filename,
     safetyIdentifierFor(memberId),
   );
+  const sttMs = Date.now() - sttStartedMs;
 
   if (!result.ok) {
     return NextResponse.json(
@@ -129,6 +131,9 @@ export async function POST(request: Request) {
     memberId,
     bytes: file.size,
     chars: result.data.text.length,
+    // The first of the three sequential legs in a turn. Logged so the slow one
+    // can be identified from a real interview rather than guessed at.
+    sttMs,
   });
 
   // The English-only gate sits HERE: after transcription, before the text is

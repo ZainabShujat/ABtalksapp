@@ -202,7 +202,7 @@ const DAY_15_QUESTIONS: readonly CoreQuestion[] = [
     id: "d15-q09",
     competency: "PRACTICAL",
     difficulty: "medium",
-    text: "You logged 10 full-pipeline results on Day 11 and compared them to your Day 10 retrieval baseline. What changed once generation was added?",
+    text: "You logged 10 full-pipeline results and compared them to your retrieval-only baseline. What changed once generation was added?",
     sourceDays: [10, 11],
     sourceLabel: "Day 10 Retrieval Engine · Day 11 RAG End-to-End & LLM API Basics",
     expectedEvidence: [
@@ -476,7 +476,7 @@ const DAY_15_QUESTIONS: readonly CoreQuestion[] = [
     id: "d15-q02",
     competency: "PRACTICAL",
     difficulty: "hard",
-    text: "On Day 10 you classified questions as structured, unstructured, or both. Give me a question from your test harness that needed both paths.",
+    text: "You classified questions as structured, unstructured, or both. Give me a question from your test harness that needed both paths.",
     sourceDays: [4, 5, 10],
     sourceLabel:
       "Day 4 Structured Data · Day 5 Unstructured Data · Day 10 Retrieval / Matching Engine",

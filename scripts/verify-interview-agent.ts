@@ -139,14 +139,31 @@ async function main() {
     );
 
     assert.equal(out.action, "NEXT_QUESTION");
-    assert.equal(out.questionId, plan.questions[1]!.id);
-    // The next question is now spoken after a short acknowledgement.
-    assert.ok(out.prompt?.endsWith(plan.questions[1]!.text));
+
+    // UPDATED FOR THE CONVERSATION PLANNER. This used to assert
+    // `plan.questions[1].id` — the next entry in the array. That assertion
+    // encoded the behaviour the planner replaces: the answer above is about
+    // running a model locally with Ollama, and the interview now follows that
+    // rather than walking to whatever was authored next. The contract asserted
+    // here is the new one, and it is stricter in the ways that matter: a real,
+    // unasked, in-scope target, actually put to the candidate.
+    const chosen = plan.questions.find((q) => q.id === out.questionId);
+    assert.ok(chosen, "the chosen target is a real question in the plan");
+    assert.notEqual(chosen.id, OPENER.id, "never re-asks the question just answered");
+    assert.ok(out.prompt?.endsWith(chosen.spokenText ?? chosen.text));
     assert.ok(
-      (out.prompt?.length ?? 0) > plan.questions[1]!.text.length,
+      (out.prompt?.length ?? 0) > (chosen.spokenText ?? chosen.text).length,
       "an acknowledgement precedes the question",
     );
-    assert.equal(out.state.currentQuestionIndex, 1);
+    assert.equal(
+      out.state.currentQuestionIndex,
+      plan.questions.findIndex((q) => q.id === chosen.id),
+      "the index points at the selected target, not at a cursor",
+    );
+    assert.ok(
+      (out.state.askedQuestionIds ?? []).includes(chosen.id),
+      "the selected target is recorded as asked",
+    );
     assert.equal(out.state.followUpsAsked, 0);
     assert.ok(out.state.evidenceByQuestionId[OPENER.id]?.conceptualFound);
     assert.equal(out.finished, false);

@@ -1,4 +1,8 @@
 import {
+  askedIds,
+  selectNextTarget,
+} from "@/features/interview/agent/target-planner";
+import {
   MAX_ESCALATIONS_PER_QUESTION,
   MAX_FOLLOW_UPS_PER_QUESTION,
   STUCK_ANSWERS_BEFORE_EARLY_END,
@@ -21,6 +25,7 @@ export function createInitialState(): InterviewState {
   return {
     status: "NOT_STARTED",
     currentQuestionIndex: 0,
+    askedQuestionIds: [],
     followUpsAsked: 0,
     consecutiveStuckAnswers: 0,
     redirectsAsked: 0,
@@ -96,6 +101,13 @@ export function advanceTurn(
    * two are separate parameters rather than one.
    */
   evidenceKey: string = questionId,
+  /**
+   * What the candidate just said. The conversation planner routes on it: an
+   * answer that raises a curriculum concept pulls the interview toward the
+   * target that assesses it. Empty is normal and simply means authored order
+   * governs.
+   */
+  answerText: string = "",
 ): { state: InterviewState; action: TurnAction } {
   const stuck = evidence.flaggedIssues.includes("stuck_or_evasive");
   const consecutiveStuckAnswers = stuck ? state.consecutiveStuckAnswers + 1 : 0;
@@ -149,13 +161,30 @@ export function advanceTurn(
     };
   }
 
-  const nextIndex = next.currentQuestionIndex + 1;
-  if (nextIndex >= plan.questions.length) {
+  // THE CONVERSATION PLANNER, replacing `currentQuestionIndex + 1`.
+  //
+  // This single line is what turns a bounded question list into a conversation:
+  // the next target is chosen from everything still unassessed, weighing what
+  // the candidate just talked about against what the interview still needs to
+  // find out. `selectNextTarget` is pure, so the choice is reproducible and the
+  // interview stays bounded — targets are only ever removed from the pool.
+  const target = selectNextTarget(plan, next, answerText);
+
+  const asked = askedIds(plan, next);
+
+  if (target.questionId === null) {
     return {
-      state: { ...next, currentQuestionIndex: nextIndex, status: "COMPLETED" },
+      state: {
+        ...next,
+        currentQuestionIndex: plan.questions.length,
+        askedQuestionIds: asked,
+        status: "COMPLETED",
+      },
       action: "END_INTERVIEW",
     };
   }
+
+  const nextIndex = target.index;
 
   // Per-question counters all reset together: the budgets belong to the
   // question, not to the interview.
@@ -163,6 +192,7 @@ export function advanceTurn(
     state: {
       ...next,
       currentQuestionIndex: nextIndex,
+      askedQuestionIds: [...asked, target.questionId],
       followUpsAsked: 0,
       redirectsAsked: 0,
       repeatsAsked: 0,

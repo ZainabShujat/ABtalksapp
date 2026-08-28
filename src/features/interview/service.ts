@@ -257,6 +257,16 @@ export async function recordCohortAnswer(
   }
 
   const startedMs = Date.now();
+
+  // Started BEFORE the model call and awaited after it. The next turn index
+  // depends only on the interview id, never on the answer or the decision, so
+  // waiting for the model before asking the database for it added a full round
+  // trip to the gap the candidate hears as silence. A duplicate index remains
+  // impossible in practice (one candidate, one open turn) and is already
+  // handled idempotently by `saveTurn`.
+  const turnIndexPromise = nextTurnIndex(interviewId);
+
+  const llmStartedMs = Date.now();
   const turn = await submitAnswer(
     attempt.plan,
     attempt.state,
@@ -286,10 +296,12 @@ export async function recordCohortAnswer(
   // graph is transport-agnostic and holds no notion of storage — and because
   // the turn index must come from the database, which is the only thing that
   // knows how many turns actually landed.
+  const llmMs = Date.now() - llmStartedMs;
+
   const asked = attempt.plan.questions.find((q) => q.id === questionId);
   const depthLevel = attempt.state.depthLevel ?? 1;
   const record: TurnRecord = {
-    turnIndex: await nextTurnIndex(interviewId),
+    turnIndex: await turnIndexPromise,
     questionId,
     tier: (asked?.tier ?? "CORE") as "CORE" | "EXTENSION",
     depthLevel,
@@ -308,7 +320,19 @@ export async function recordCohortAnswer(
     latencyMs: Date.now() - startedMs,
   };
 
+  const persistStartedMs = Date.now();
   await saveTurn(interviewId, memberId, turn.data.state, record);
+
+  // The middle leg of the turn, split into the part spent waiting on the model
+  // and the part spent persisting. Both happen before the room can start
+  // speaking, so both belong in any latency conversation.
+  logger.info("[interview] turn latency", {
+    interviewId,
+    action: turn.data.action,
+    llmMs,
+    persistMs: Date.now() - persistStartedMs,
+    serverMs: Date.now() - startedMs,
+  });
 
   return {
     ok: true,

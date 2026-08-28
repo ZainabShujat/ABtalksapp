@@ -50,6 +50,7 @@
     "test:scout": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/scout-agent.test.ts",
     "test:sample": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/sample-card.test.ts",
     "test:visibility": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/visibility.test.ts",
+    "test:interview:planner": "tsx --conditions=react-server scripts/verify-interview-planner.ts",
     "test:interview:grounding": "tsx --conditions=react-server scripts/verify-interview-grounding.ts",
     "test:078-dual-write": "NODE_OPTIONS=--conditions=react-server tsx src/repositories/dual-write.test.ts",
     "test:078-points-writes": "NODE_OPTIONS=--conditions=react-server tsx src/repositories/points-writes.test.ts",

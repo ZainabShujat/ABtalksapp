@@ -338,3 +338,29 @@ export const MAX_CHALLENGE_TASKS_IN_CONTEXT = 24;
 
 /** An IN_PROGRESS general session older than this is treated as abandoned. */
 export const INTERVIEW_STALE_MS = 30 * 60 * 1000;
+
+/* ------------------------------------------------- conversation planning */
+
+/**
+ * How much the planner weighs "this is what the candidate was just talking
+ * about" against "this is what we still need to find out".
+ *
+ * Continuity is weighted higher because that is what makes the interview feel
+ * like a conversation: a person who mentions chunking expects the next question
+ * to be about chunking, not about whatever came next on a list. Coverage still
+ * matters, and wins whenever the candidate said nothing topical.
+ */
+export const CONTINUITY_WEIGHT = 1;
+export const COVERAGE_WEIGHT = 0.6;
+
+/**
+ * How much better a rival target must score before the interview leaves
+ * authored order.
+ *
+ * Authored order is the default, and reordering is the exception that has to be
+ * earned. Set too low, the interview reshuffles on noise and feels erratic; set
+ * too high, a candidate can raise a topic and never be followed. This is tuned
+ * so a real topical match (a shared curriculum concept in the answer) clears it
+ * and incidental word overlap does not.
+ */
+export const REORDER_MARGIN = 0.15;

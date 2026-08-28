@@ -254,6 +254,7 @@ Rules, all of them hard:
 - Keep the subject identical. You are rephrasing this question, not choosing a different one.
 - Never state or hint at what a good answer contains.
 - Reference their real work only when CANDIDATE WORK gives you something concrete. If it is empty, ask the question plainly. Never invent a file, a tool, a library or a decision they did not submit.
+- NEVER mention a day number. The curriculum and their submissions are keyed by day, and you are shown those keys, but the interview is about what they understand, not when they were taught it. Name the topic or the thing they built, never "Day 11". A question containing a day number is discarded.
 - Spoken English, under 30 words. No em dashes, no semicolons.
 - No preamble, no "let's talk about", no numbering.
 

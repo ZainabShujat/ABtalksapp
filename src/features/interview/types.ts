@@ -319,7 +319,24 @@ export type InterviewStatus =
 
 export type InterviewState = {
   status: InterviewStatus;
+  /**
+   * Index of the question ON THE FLOOR — no longer a cursor that only moves
+   * forward. The conversation planner picks the next target by id and this is
+   * set to wherever that target sits, so everything that reads the plan by
+   * index keeps working while the ORDER of assessment became adaptive.
+   */
   currentQuestionIndex: number;
+  /**
+   * Targets already put to the candidate, in the order they were asked.
+   *
+   * This is what makes non-sequential selection safe: with an index cursor,
+   * "already asked" was implied by being behind the cursor, and that stops
+   * being true the moment the interview can jump. Optional because attempts
+   * persisted before the planner shipped have no such field — read it through
+   * `askedIds()`, which backfills from `currentQuestionIndex` so an interview
+   * resumed mid-flight does not re-ask its opening questions.
+   */
+  askedQuestionIds?: string[];
   followUpsAsked: number;
   consecutiveStuckAnswers: number;
   /**

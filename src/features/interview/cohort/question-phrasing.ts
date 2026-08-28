@@ -133,7 +133,21 @@ export type PhrasingRejection =
   | "MULTIPLE_QUESTIONS"
   | "LEAKS_EVIDENCE"
   | "OFF_TARGET"
+  | "DAY_REFERENCE"
   | null;
+
+/**
+ * "Day 11", "day 3", "on day 12".
+ *
+ * The generator is handed curriculum and submission context that carries day
+ * numbers, because that is how the cohort content is keyed. It must not put
+ * them in the candidate's ear: the interview assesses what someone knows, not
+ * when they were taught it, and "what did you do on Day 11" turns a technical
+ * interview into a quiz about the calendar. Enforced here rather than trusted
+ * to the prompt, because a rejected phrasing falls back to the authored
+ * question, which is always safe.
+ */
+const DAY_REFERENCE = /(^|[^a-z])days?[ ]*[0-9]/i;
 
 /**
  * Decides whether a generated question may be asked in place of the authored one.
@@ -165,6 +179,8 @@ export function rejectPhrasing(
   // is a question in every sense that matters, and two of the authored bank
   // questions are phrased exactly that way.
   const asks = countAsks(text);
+
+  if (DAY_REFERENCE.test(text)) return "DAY_REFERENCE";
 
   if (asks === 0) return "NOT_A_QUESTION";
   // Two asks is two questions wearing one sentence, whether that is "why? and
