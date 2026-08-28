@@ -165,6 +165,17 @@ function decodeSpokenLine(header: string | null): string | null {
 // Turn-taking thresholds live in features/interview/constants.ts so the
 // analyser, the tests and any future transport all read the same numbers.
 
+/**
+ * How long the room waits when the candidate has said NOTHING at all before
+ * prompting them.
+ *
+ * Different from `SILENCE_MS`, which ends an answer that has already happened.
+ * This is the awkward case: the microphone is live and nobody is talking. A
+ * human interviewer would not sit in silence indefinitely; they would re-ask,
+ * and then offer a way out.
+ */
+const NO_ANSWER_MS = 10_000;
+
 function formatClock(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
@@ -343,10 +354,17 @@ export function InterviewRoom({
    * Kept out of `turns` for that reason: it is never a transcript entry, only
    * on-screen feedback that the room is hearing them.
    */
+<<<<<<< Updated upstream
   /** How many times we have prompted an unanswered question. Resets per turn. */
   /** Language corrections used on the question currently on the floor. */
   const languageRetriesRef = useRef(0);
   const nudgeCountRef = useRef(0);
+=======
+  const [livePreview, setLivePreview] = useState("");
+  /** How many times we have prompted an unanswered question. Resets per turn. */
+  const nudgeCountRef = useRef(0);
+  const nudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+>>>>>>> Stashed changes
   const recognitionRef = useRef<{ stop: () => void; abort: () => void } | null>(
     null,
   );
@@ -392,6 +410,7 @@ export function InterviewRoom({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+<<<<<<< Updated upstream
   /**
    * The line currently BEING spoken, cleared the moment playback ends.
    *
@@ -439,6 +458,9 @@ export function InterviewRoom({
    */
   const analyserActiveRef = useRef(false);
   const recognitionActiveRef = useRef(false);
+=======
+  const spokenRef = useRef<string | null>(null);
+>>>>>>> Stashed changes
 
   /* ------------------------------------------------------------- timing */
 
@@ -655,6 +677,28 @@ export function InterviewRoom({
     [interviewId, startReveal, stopReveal],
   );
 
+<<<<<<< Updated upstream
+=======
+  /**
+   * Hands the floor back automatically when the interviewer stops talking.
+   *
+   * Previously the candidate had to notice that speech had ended and press a
+   * button, which is not how a conversation works: the other person stops, and
+   * it is your turn. The microphone control stays, so anyone who wants to stop
+   * or restart still can.
+   *
+   * Guarded on `question` so it never opens the microphone after the closing
+   * line, and on `micUnavailable` so a denied permission is not retried on a
+   * loop.
+   */
+  useEffect(() => {
+    if (phase !== "idle" || !question || micUnavailable || closing) return;
+    if (recorderRef.current) return;
+    const id = setTimeout(() => void startRecording(), 350);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, question, micUnavailable, closing]);
+>>>>>>> Stashed changes
 
   // Speak the opening question once the room mounts.
   //
@@ -745,9 +789,12 @@ export function InterviewRoom({
       }
       setQuestion(turn.data.question);
       nudgeCountRef.current = 0;
+<<<<<<< Updated upstream
       setMuted(false);
       mutedRef.current = false;
       languageRetriesRef.current = 0;
+=======
+>>>>>>> Stashed changes
       setProgress(turn.data.progress);
 
       if (turn.data.finished) {
@@ -995,6 +1042,7 @@ export function InterviewRoom({
       // as one growing buffer released only at stop. Long answers were the
       // failure case: a single large final chunk is both more memory and more
       // to lose if anything interrupts the recording.
+<<<<<<< Updated upstream
       // NO TIMESLICE. `start(1000)` emits a chunk every second, and ONLY the
       // first carries the EBML header that makes the bytes a WebM file. Any
       // path that lost or replaced that first chunk produced a headless
@@ -1046,6 +1094,15 @@ export function InterviewRoom({
         }, MAX_ANSWER_MS);
       };
       armAnswerCap();
+=======
+      recorder.start(1000);
+      recorderRef.current = recorder;
+      // Same stream, one analyser. Auto-stop runs the normal stop path, so the
+      // captured audio goes through the existing STT pipeline unchanged.
+      attachAnalyser(stream, () => stopRecording());
+      startLivePreview();
+      scheduleNoAnswerNudge();
+>>>>>>> Stashed changes
       setPhase("listening");
     } catch {
       setMicUnavailable(true);
@@ -1238,9 +1295,12 @@ export function InterviewRoom({
       rec.lang = "en-IN";
 
       let settled = "";
+<<<<<<< Updated upstream
       // Initialize the timer so the 5-second rule applies immediately.
       lastWordAtRef.current = performance.now();
       
+=======
+>>>>>>> Stashed changes
       rec.onresult = (event: unknown) => {
         const e = event as {
           resultIndex: number;
@@ -1255,6 +1315,7 @@ export function InterviewRoom({
           if (result.isFinal) settled += text;
           else interim += text;
         }
+<<<<<<< Updated upstream
         const preview = (settled + interim).trim();
         // Recognised words are proof of speech, independent of the analyser.
         // With one signal only, a microphone whose level never crossed the
@@ -1268,6 +1329,9 @@ export function InterviewRoom({
           hasSpokenRef.current = true;
           lastWordAtRef.current = performance.now();
         }
+=======
+        setLivePreview((settled + interim).trim());
+>>>>>>> Stashed changes
       };
       rec.onerror = () => {
         // No-speech, network, aborted: all harmless for a preview.
@@ -1275,10 +1339,15 @@ export function InterviewRoom({
 
       rec.start();
       recognitionRef.current = rec;
+<<<<<<< Updated upstream
       recognitionActiveRef.current = true;
     } catch {
       // Unsupported or blocked. The interview is unaffected.
       recognitionActiveRef.current = false;
+=======
+    } catch {
+      // Unsupported or blocked. The interview is unaffected.
+>>>>>>> Stashed changes
     }
   }
 
@@ -1289,6 +1358,7 @@ export function InterviewRoom({
       // Already stopped.
     }
     recognitionRef.current = null;
+<<<<<<< Updated upstream
     recognitionActiveRef.current = false;
   }
 
@@ -1360,6 +1430,13 @@ export function InterviewRoom({
   /** Ends the turn and SUBMITS what was captured. */
   function stopRecording() {
     clearAnswerCap();
+=======
+    setLivePreview("");
+  }
+
+  function stopRecording() {
+    clearNoAnswerNudge();
+>>>>>>> Stashed changes
     stopLivePreview();
     detachAnalyser();
     recorderRef.current?.stop();
@@ -1367,6 +1444,7 @@ export function InterviewRoom({
   }
 
   /**
+<<<<<<< Updated upstream
    * Ends the turn and THROWS AWAY what was captured.
    *
    * Used when the room takes the floor back rather than the candidate handing it
@@ -1376,6 +1454,53 @@ export function InterviewRoom({
    */
   function cancelRecording() {
     discardRecordingRef.current = true;
+=======
+   * Prompts a candidate who has not said anything since the microphone opened.
+   *
+   * First time: re-ask. Silence usually means the question was missed, not
+   * refused, and repeating costs nothing.
+   *
+   * Second time: say it is fine and move on. Sitting in silence is worse than
+   * an unanswered question, and the transcript records "(no response)" rather
+   * than words the candidate never said — an assessment must never attribute
+   * speech to someone.
+   */
+  function scheduleNoAnswerNudge() {
+    clearNoAnswerNudge();
+    nudgeTimerRef.current = setTimeout(() => {
+      // Only fires if they genuinely have not spoken. `hasSpokenRef` is set by
+      // the analyser the moment their level crosses the speech threshold.
+      if (hasSpokenRef.current || phaseRef.current !== "listening") return;
+
+      nudgeCountRef.current += 1;
+
+      if (nudgeCountRef.current === 1) {
+        stopRecording();
+        const line = question
+          ? `Sorry, you might not have caught that. ${question.text}`
+          : "Sorry, you might not have caught that.";
+        setTurns((prev) => [...prev, { role: "interviewer", text: line }]);
+        void speak(line);
+        return;
+      }
+
+      stopRecording();
+      const line =
+        "That's completely fine. If you can't answer this one we'll move on.";
+      setTurns((prev) => [...prev, { role: "interviewer", text: line }]);
+      void send("(no response)");
+    }, NO_ANSWER_MS);
+  }
+
+  function clearNoAnswerNudge() {
+    if (nudgeTimerRef.current !== null) {
+      clearTimeout(nudgeTimerRef.current);
+      nudgeTimerRef.current = null;
+    }
+  }
+
+  async function endInterview() {
+>>>>>>> Stashed changes
     stopRecording();
   }
 
@@ -1498,6 +1623,7 @@ export function InterviewRoom({
   // The orb is the candidate's turn made visible. It appears only while the
   // microphone is actually live — not while the interviewer talks, and not in
   // the brief gap before recording starts.
+<<<<<<< Updated upstream
   // Visibility follows the TURN STATE, not `phase`.
   //
   // The two disagree after a nudge. The nudge speaks over a still-open
@@ -1512,6 +1638,9 @@ export function InterviewRoom({
     turnState === "CANDIDATE_SPEAKING" ||
     turnState === "CANDIDATE_PAUSED" ||
     phase === "listening";
+=======
+  const orbVisible = phase === "listening";
+>>>>>>> Stashed changes
   const thinking = phase === "processing" || closing;
 
   const orbMode: OrbMode =
@@ -1815,12 +1944,26 @@ export function InterviewRoom({
             </p>
           ) : null}
 
+<<<<<<< Updated upstream
           {/* The candidate's turn is signalled by the orb and one quiet line,
               not by their transcript scrolling past them. */}
           {phase === "listening" ? (
             <p className="text-[13px] text-[var(--iv-text-faint)]">
               Interviewer is listening…
             </p>
+=======
+          {phase === "listening" && livePreview ? (
+            <div className="iv-enter">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--iv-text-faint)]">
+                {candidateName}
+              </p>
+              <div className="rounded-[12px] border border-dashed border-[var(--iv-border)] bg-[var(--iv-surface-raised)] px-4 py-3">
+                <p className="text-[15px] leading-relaxed text-[var(--iv-text-muted)]">
+                  {livePreview}
+                </p>
+              </div>
+            </div>
+>>>>>>> Stashed changes
           ) : null}
 
           <div ref={bottomRef} />
@@ -1828,7 +1971,11 @@ export function InterviewRoom({
       </div>
 
       {/* ----------------------------------------------------- controls */}
+<<<<<<< Updated upstream
       <div className="sticky bottom-0 border-t border-[var(--iv-border)] bg-[var(--iv-page)]/80 pt-2 pb-3 backdrop-blur-md">
+=======
+      <div className="sticky bottom-0 border-t border-[var(--iv-border)] bg-[#FBF9F7]/95 pt-2 pb-3 backdrop-blur">
+>>>>>>> Stashed changes
         <div className="mx-auto w-full max-w-2xl">
           {error ? (
             <p className="mb-4 text-[13px] text-[#C9282B]" role="status">
@@ -1836,6 +1983,7 @@ export function InterviewRoom({
             </p>
           ) : null}
 
+<<<<<<< Updated upstream
           {/*
             The orb is the room's centre of attention and the microphone is a
             CONTROL, so they no longer occupy the same pixels. The button used to
@@ -1850,6 +1998,78 @@ export function InterviewRoom({
             <div className="flex flex-col items-center gap-1.5">
               {/*
                 One slot, two states, so nothing below it ever shifts:
+=======
+          <div className="flex flex-col items-center gap-1.5">
+            {/*
+              One slot, three states, so nothing below it ever shifts:
+
+                interviewer speaking -> empty. The orb belongs to the CANDIDATE's
+                  turn; showing it while the interviewer talks made it look like
+                  the room was listening when it was not. The bars beside the
+                  "Interviewer speaking" label already carry that state.
+                your turn / listening -> the orb, reacting to their voice.
+                transcribing + evaluating -> three wiggling dots.
+
+              The orb stays MOUNTED and fades, rather than unmounting: tearing
+              down and rebuilding a WebGL context on every turn costs a visible
+              flash and a context churn for no benefit.
+            */}
+            {/* The mic sits INSIDE the orb: one object to look at and one place
+                to click, rather than a decorative shape with a separate button
+                underneath it. The wrapper stays pointer-events-none so only the
+                button itself is clickable. */}
+            <div className="pointer-events-none relative size-[104px] shrink-0 sm:size-[116px]">
+              <div
+                className={cn(
+                  "absolute inset-0 transition-opacity duration-500",
+                  orbVisible ? "opacity-100" : "opacity-0",
+                )}
+                aria-hidden={!orbVisible}
+              >
+                <VoicePoweredOrb mode={orbMode} levelRef={levelRef} />
+              </div>
+
+              {thinking ? (
+                <div className="absolute inset-0 flex items-center justify-center gap-2">
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      className="iv-think-dot size-2.5 rounded-full bg-[var(--iv-accent)]"
+                      style={{ animationDelay: `${i * 0.16}s` }}
+                    />
+                  ))}
+                </div>
+              ) : null}
+
+              {!micUnavailable ? (
+                <div className="pointer-events-auto absolute inset-0 flex items-center justify-center">
+                  <button
+                    type="button"
+                    disabled={busy || !question}
+                    onClick={
+                      phase === "listening" ? stopRecording : startRecording
+                    }
+                    aria-label={
+                      phase === "listening" ? "Stop recording" : "Record answer"
+                    }
+                    className={cn(
+                      "relative flex size-12 items-center justify-center rounded-full border backdrop-blur transition-all duration-200",
+                      phase === "listening"
+                        ? "border-[#1A7F37]/60 bg-[#FBF9F7]/85 text-[#1A7F37]"
+                        : "border-[var(--iv-border)] bg-[var(--iv-surface)]/85 text-[var(--iv-text)] hover:border-[var(--iv-accent)]/60",
+                      (busy || !question) && "cursor-not-allowed opacity-40",
+                    )}
+                  >
+                    {phase === "listening" ? (
+                      <Square className="size-4 fill-current" />
+                    ) : (
+                      <Mic className="size-4" strokeWidth={1.75} />
+                    )}
+                  </button>
+                </div>
+              ) : null}
+            </div>
+>>>>>>> Stashed changes
 
                   interviewer speaking -> empty. The orb belongs to the
                     CANDIDATE's turn; showing it while the interviewer talks made
@@ -1896,6 +2116,7 @@ export function InterviewRoom({
                     ))}
                   </div>
                 ) : null}
+<<<<<<< Updated upstream
               </div>
 
               <div className="text-center">
@@ -1912,6 +2133,12 @@ export function InterviewRoom({
                       ))}
                     </span>
                   ) : null}
+=======
+              </p>
+              {copy.hint ? (
+                <p className="text-[12px] text-[var(--iv-text-faint)]">
+                  {copy.hint}
+>>>>>>> Stashed changes
                 </p>
                 {copy.hint ? (
                   <p className="text-[12px] text-[var(--iv-text-faint)]">
@@ -1921,6 +2148,7 @@ export function InterviewRoom({
               </div>
             </div>
 
+<<<<<<< Updated upstream
             {audioDebug ? (
               <div className="pointer-events-none absolute inset-x-0 -top-6 text-center font-mono text-[10px] text-[var(--iv-text-faint)]">
                 rms {audioDebug.rms.toFixed(4)} · on {audioDebug.on.toFixed(3)} ·
@@ -1965,6 +2193,8 @@ export function InterviewRoom({
                 </span>
               </div>
             ) : null}
+=======
+>>>>>>> Stashed changes
           </div>
 
         </div>

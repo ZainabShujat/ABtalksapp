@@ -19,6 +19,7 @@ import { createHash } from "node:crypto";
  * is the only ceiling with a real reason behind it, so that is the one used.
  */
 export const MAX_AUDIO_BYTES = 24 * 1024 * 1024;
+<<<<<<< Updated upstream
 
 /**
  * Smallest upload that could possibly contain speech.
@@ -30,6 +31,8 @@ export const MAX_AUDIO_BYTES = 24 * 1024 * 1024;
  * is roughly 3 KB, so anything under 2 KB is a header and nothing else.
  */
 export const MIN_AUDIO_BYTES = 2048;
+=======
+>>>>>>> Stashed changes
 
 export const ALLOWED_AUDIO_TYPES = [
   "audio/webm",
