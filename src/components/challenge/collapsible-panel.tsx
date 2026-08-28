@@ -13,7 +13,7 @@ type Props = {
   className?: string;
 };
 
-export function ClaudeCollapsiblePanel({
+export function CollapsiblePanel({
   id,
   title,
   icon: Icon,

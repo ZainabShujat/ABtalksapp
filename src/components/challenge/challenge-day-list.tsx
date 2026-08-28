@@ -5,19 +5,17 @@ import { CheckCircle2, Lock, Monitor } from "lucide-react";
 import { dsButtonVariants } from "@/components/design/ds-button";
 import type { HeatmapCell } from "@/features/dashboard/get-heatmap-data";
 import { mapHeatmapCellToUiState } from "@/features/claude/map-day-ui-state";
+import { dayHref, type TrackConfig } from "@/components/challenge/track-config";
 import { cn } from "@/lib/utils";
 
 type Props = {
   cells: HeatmapCell[];
   currentDay: number;
   enrollmentId: string;
+  track: TrackConfig;
 };
 
 const startClass = dsButtonVariants({ size: "sm" });
-
-function dayHref(enrollmentId: string, dayNumber: number) {
-  return `/claude/day/${dayNumber}?challenge=${encodeURIComponent(enrollmentId)}`;
-}
 
 function DayRowContent({
   cell,
@@ -74,10 +72,15 @@ function DayRowContent({
   );
 }
 
-export function ClaudeDayList({ cells, currentDay, enrollmentId }: Props) {
+export function ChallengeDayList({
+  cells,
+  currentDay,
+  enrollmentId,
+  track,
+}: Props) {
   return (
     <div
-      id="claude-days"
+      id="challenge-days"
       className="scroll-mt-24 overflow-hidden rounded-[12px] border border-[#E0E0E0] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
     >
       <div className="flex items-center gap-2.5 px-6 py-5">
@@ -90,7 +93,7 @@ export function ClaudeDayList({ cells, currentDay, enrollmentId }: Props) {
         {cells.map((cell) => {
           const state = mapHeatmapCellToUiState(cell, currentDay);
           const title = cell.taskTitle?.trim() || `Day ${cell.dayNumber}`;
-          const href = dayHref(enrollmentId, cell.dayNumber);
+          const href = dayHref(track, cell.dayNumber, enrollmentId);
           const locked = state === "locked";
           const rowClass = cn(
             "flex flex-col gap-3 rounded-[12px] border border-transparent bg-[#FBF9F7] px-5 py-4 transition-colors sm:flex-row sm:items-center sm:justify-between",
