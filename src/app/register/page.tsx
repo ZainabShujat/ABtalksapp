@@ -97,7 +97,7 @@ export default async function RegisterPage({ searchParams }: PageProps) {
   const initialName = session.user.name?.trim() ?? "";
 
   return (
-    <div className="theme-abtalks-orange flex min-h-svh flex-col bg-[#FBF9F7]">
+    <div className="theme-abtalks-light theme-abtalks-orange flex min-h-svh flex-col bg-[#FBF9F7]">
       <div className="flex flex-1 flex-col items-center justify-center p-6">
         <Card className="w-full max-w-2xl border-border/60 shadow-md">
           <CardHeader className="space-y-2">
