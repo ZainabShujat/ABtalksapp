@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is(.dark:not(:has(.theme-abtalks-light)) *));
 
 @theme inline {
   --color-background: hsl(var(--background));
@@ -258,13 +258,6 @@
   --sidebar-ring: 14 75% 51%;
 }
 
-/* Keep rich light Sonner toasts light even when `html.dark` is present. */
-[data-sonner-toaster][data-sonner-theme="light"] [data-rich-colors="true"][data-sonner-toast][data-type="success"] {
-  background: var(--success-bg) !important;
-  border-color: var(--success-border) !important;
-  color: var(--success-text) !important;
-}
-
 @layer components {
   .focus-spark:focus-visible {
     outline: 2px solid hsl(var(--primary));
@@ -410,7 +403,7 @@
     object-position: left center;
     filter: invert(1);
   }
-  .dark .logo-image {
+  html.dark:not(:has(.theme-abtalks-light)) .logo-image {
     filter: none;
   }
   .logo-image-no-invert {

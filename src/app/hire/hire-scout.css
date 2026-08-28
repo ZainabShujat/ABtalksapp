@@ -40,7 +40,7 @@
   color: var(--h-ink);
 }
 
-html.dark .hire-app {
+html.dark:not(:has(.theme-abtalks-light)) .hire-app {
   --h-toolbar: #c45c32;
   --h-toolbar-2: #a94420;
   --h-peach: #3d241c;
@@ -72,8 +72,8 @@ html.dark .hire-app {
   color-scheme: dark;
 }
 
-html.dark .hire-app__logo img,
-html.dark .hire-hbtn__icon img {
+html.dark:not(:has(.theme-abtalks-light)) .hire-app__logo img,
+html.dark:not(:has(.theme-abtalks-light)) .hire-hbtn__icon img {
   filter: invert(1);
   mix-blend-mode: screen;
 }
@@ -146,7 +146,7 @@ html.dark .hire-hbtn__icon img {
   white-space: nowrap;
 }
 
-html.dark .hire-app__badge {
+html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
   background: #4a2a1f;
   border-color: rgba(255, 176, 140, 0.55);
   color: #ffb08c;
@@ -615,7 +615,7 @@ html.dark .hire-app__badge {
   color: #fff;
 }
 
-html.dark .hire-node--off {
+html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
   background: #4a2a1f;
   color: #ffb08c;
 }
@@ -1179,7 +1179,7 @@ html.dark .hire-node--off {
     );
 }
 
-html.dark .hire-app .desk-card::before {
+html.dark:not(:has(.theme-abtalks-light)) .hire-app .desk-card::before {
   background:
     radial-gradient(
       110% 85% at -5% -15%,
@@ -1224,7 +1224,7 @@ html.dark .hire-app .desk-card::before {
     );
 }
 
-html.dark .hire-app .desk-card.desk-card--top::before {
+html.dark:not(:has(.theme-abtalks-light)) .hire-app .desk-card.desk-card--top::before {
   background:
     radial-gradient(
       120% 90% at -8% -20%,
@@ -1453,14 +1453,14 @@ html.dark .hire-app .desk-card.desk-card--top::before {
 
 /* The tints are light-mode inks on light-mode grounds; on dark they would sit
    at roughly 2:1. Same hue family, inverted, so a skill keeps its identity. */
-html.dark .desk-pill--c0 { background: #4a2418; color: #ffd2bf; }
-html.dark .desk-pill--c1 { background: #1b3757; color: #cfe2ff; }
-html.dark .desk-pill--c2 { background: #16413b; color: #c3f0e6; }
-html.dark .desk-pill--c3 { background: #2e2860; color: #ddd6ff; }
-html.dark .desk-pill--c4 { background: #4a3612; color: #ffe6b8; }
-html.dark .desk-pill--c5 { background: #4d1f33; color: #ffd0e2; }
+html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c0 { background: #4a2418; color: #ffd2bf; }
+html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c1 { background: #1b3757; color: #cfe2ff; }
+html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c2 { background: #16413b; color: #c3f0e6; }
+html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c3 { background: #2e2860; color: #ddd6ff; }
+html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c4 { background: #4a3612; color: #ffe6b8; }
+html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c5 { background: #4d1f33; color: #ffd0e2; }
 
-html.dark .desk-pill--warn {
+html.dark:not(:has(.theme-abtalks-light)) .desk-pill--warn {
   background: #4a3612;
   color: #ffe6b8;
 }
@@ -1472,23 +1472,23 @@ html.dark .desk-pill--warn {
   font-weight: 700;
 }
 
-html.dark .desk-pill--hit {
+html.dark:not(:has(.theme-abtalks-light)) .desk-pill--hit {
   background: #ffb08c;
   color: #18181b;
   border-color: transparent;
 }
 
-html.dark .desk-pill--good {
+html.dark:not(:has(.theme-abtalks-light)) .desk-pill--good {
   background: #1f6a43;
   color: #d8ffe8;
 }
 
-html.dark .desk-card__top {
+html.dark:not(:has(.theme-abtalks-light)) .desk-card__top {
   background: #ffb08c;
   color: #18181b;
 }
 
-html.dark .desk-card__partial {
+html.dark:not(:has(.theme-abtalks-light)) .desk-card__partial {
   background: rgba(255, 255, 255, 0.14);
   color: #f4f4f5;
 }
@@ -1610,11 +1610,11 @@ html.dark .desk-card__partial {
   opacity: 1;
 }
 
-html.dark .desk-shortlist {
+html.dark:not(:has(.theme-abtalks-light)) .desk-shortlist {
   background: transparent;
 }
 
-html.dark .desk-shortlist.is-on {
+html.dark:not(:has(.theme-abtalks-light)) .desk-shortlist.is-on {
   background: var(--h-primary);
   color: #fff;
 }
@@ -1774,8 +1774,8 @@ html.dark .desk-shortlist.is-on {
   text-decoration: none;
 }
 
-html.dark .hire-app a.hire-detail__resume,
-html.dark .hire-detail__resume {
+html.dark:not(:has(.theme-abtalks-light)) .hire-app a.hire-detail__resume,
+html.dark:not(:has(.theme-abtalks-light)) .hire-detail__resume {
   background: #4a2a1f;
   color: #ffb08c;
   border-color: rgba(255, 176, 140, 0.4);
@@ -1816,7 +1816,7 @@ html.dark .hire-detail__resume {
   font-weight: 600;
 }
 
-html.dark .hire-podbar {
+html.dark:not(:has(.theme-abtalks-light)) .hire-podbar {
   background: #27272a;
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -2398,13 +2398,13 @@ body:has(.hire-app--desk) button.fixed.bottom-4.right-4 {
   color: #1d4ed8;
 }
 
-html.dark .hire-pod__privacy {
+html.dark:not(:has(.theme-abtalks-light)) .hire-pod__privacy {
   background: #152238;
   border-color: #1e3a5f;
   color: #cbd5e1;
 }
 
-html.dark .hire-pod__privacy strong {
+html.dark:not(:has(.theme-abtalks-light)) .hire-pod__privacy strong {
   color: #93c5fd;
 }
 
@@ -2498,7 +2498,7 @@ html.dark .hire-pod__privacy strong {
   font-weight: 700;
 }
 
-html.dark .hire-pod__status {
+html.dark:not(:has(.theme-abtalks-light)) .hire-pod__status {
   background: #1f6a43;
   color: #d8ffe8;
 }
@@ -2564,7 +2564,7 @@ html.dark .hire-pod__status {
   stroke-width: 2;
 }
 
-html.dark .pe__paper rect {
+html.dark:not(:has(.theme-abtalks-light)) .pe__paper rect {
   stroke: #5a5a62;
 }
 
@@ -2776,13 +2776,13 @@ html.dark .pe__paper rect {
   z-index: 1;
 }
 
-html.dark .hire-pod__request {
+html.dark:not(:has(.theme-abtalks-light)) .hire-pod__request {
   background: #241814;
   border-color: rgba(255, 176, 140, 0.32);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
 }
 
-html.dark .hire-pod__request::before {
+html.dark:not(:has(.theme-abtalks-light)) .hire-pod__request::before {
   background:
     radial-gradient(
       90% 70% at 100% -10%,
@@ -2845,7 +2845,7 @@ html.dark .hire-pod__request::before {
   color: var(--h-gray-400);
 }
 
-html.dark .hire-pod__request textarea {
+html.dark:not(:has(.theme-abtalks-light)) .hire-pod__request textarea {
   background: #1a1412;
   border-color: rgba(255, 176, 140, 0.22);
   box-shadow: none;
@@ -2861,7 +2861,7 @@ html.dark .hire-pod__request textarea {
   color: var(--h-gray-600);
 }
 
-html.dark .hire-pod__note {
+html.dark:not(:has(.theme-abtalks-light)) .hire-pod__note {
   background: rgba(255, 255, 255, 0.04);
   color: var(--h-gray-500);
 }
@@ -2929,7 +2929,7 @@ html.dark .hire-pod__note {
   cursor: pointer;
 }
 
-html.dark .hire-app .hire-podbar button:not(.hire-podbar__close) {
+html.dark:not(:has(.theme-abtalks-light)) .hire-app .hire-podbar button:not(.hire-podbar__close) {
   background: #e05226;
   color: #fff;
 }
@@ -3119,7 +3119,7 @@ html.dark .hire-app .hire-podbar button:not(.hire-podbar__close) {
   color: var(--h-gray-500);
 }
 
-html.dark .hire-sheet {
+html.dark:not(:has(.theme-abtalks-light)) .hire-sheet {
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
 }
 
@@ -3138,7 +3138,7 @@ html.dark .hire-sheet {
   background: rgba(24, 24, 27, 0.4);
 }
 
-html.dark [data-slot="dialog-overlay"]:has(+ .hire-auth) {
+html.dark:not(:has(.theme-abtalks-light)) [data-slot="dialog-overlay"]:has(+ .hire-auth) {
   background: rgba(9, 9, 11, 0.62);
 }
 
@@ -3156,7 +3156,7 @@ html.dark [data-slot="dialog-overlay"]:has(+ .hire-auth) {
   box-shadow: 0 18px 48px rgba(224, 82, 38, 0.14);
 }
 
-html.dark .hire-app.hire-auth {
+html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-auth {
   background: #1c1614;
   border-color: rgba(255, 176, 140, 0.28);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
@@ -3209,7 +3209,7 @@ html.dark .hire-app.hire-auth {
   box-shadow: none;
 }
 
-html.dark .hire-app.hire-auth .bg-card {
+html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-auth .bg-card {
   background: #241814;
   border-color: rgba(255, 176, 140, 0.22);
 }
@@ -3235,7 +3235,7 @@ html.dark .hire-app.hire-auth .bg-card {
   box-shadow: 0 0 0 3px rgba(224, 82, 38, 0.18);
 }
 
-html.dark .hire-app.hire-auth [data-slot="input"] {
+html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-auth [data-slot="input"] {
   background: #14110f;
   border-color: #3f322c;
 }
@@ -3549,22 +3549,22 @@ html.dark .hire-app.hire-auth [data-slot="input"] {
   color: #5b4bc4;
 }
 
-html.dark .hire-meta--exp {
+html.dark:not(:has(.theme-abtalks-light)) .hire-meta--exp {
   background: #1b3757;
   color: #cfe2ff;
 }
 
-html.dark .hire-meta--location {
+html.dark:not(:has(.theme-abtalks-light)) .hire-meta--location {
   background: #16413b;
   color: #c3f0e6;
 }
 
-html.dark .hire-meta--employment {
+html.dark:not(:has(.theme-abtalks-light)) .hire-meta--employment {
   background: #4a2418;
   color: #ffd2bf;
 }
 
-html.dark .hire-meta--education {
+html.dark:not(:has(.theme-abtalks-light)) .hire-meta--education {
   background: #2e2860;
   color: #ddd6ff;
 }
@@ -3637,7 +3637,7 @@ html.dark .hire-meta--education {
   box-shadow: 0 12px 32px rgba(224, 82, 38, 0.12);
 }
 
-html.dark .hire-app.hire-menu {
+html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
   background: #1c1614;
   border-color: rgba(255, 176, 140, 0.28);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);

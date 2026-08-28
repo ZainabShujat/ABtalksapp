@@ -20,7 +20,6 @@ import {
   readDeskShortlist,
 } from "@/components/hire/desk-shortlist";
 import { signOutAction } from "@/app/actions/auth-actions";
-import { ThemeToggle } from "@/components/theme-toggle";
 import type { RecruiterAccountSnapshot } from "@/features/hire/recruiter-account-types";
 import { cn } from "@/lib/utils";
 
@@ -157,9 +156,6 @@ export function HireChrome({
               </button>
             </>
           ) : null}
-          <div className="hire-theme">
-            <ThemeToggle />
-          </div>
         </nav>
       </header>
 
