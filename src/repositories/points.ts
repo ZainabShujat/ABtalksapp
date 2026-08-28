@@ -140,14 +140,13 @@ export async function lockWalletBalance(
       where: { userId },
       select: { id: true },
     });
-    if (pa) {
-      const locked = await tx.pointsAccount.update({
-        where: { userId },
-        data: { version: { increment: 0 } },
-        select: { balance: true },
-      });
-      return locked.balance;
-    }
+    if (!pa) return 0;
+    const locked = await tx.pointsAccount.update({
+      where: { userId },
+      data: { version: { increment: 0 } },
+      select: { balance: true },
+    });
+    return locked.balance;
   }
   const user = await tx.user.update({
     where: { id: userId },
