@@ -47,9 +47,9 @@ const KEYCAPS: KeycapConfig[] = [
   {
     href: "/ai-workshop",
     label: "Workshops",
-    stem: "bg-[#633092]",
+    stem: "bg-[#C9411C]",
     faceClassName:
-      "bg-gradient-to-b from-[#e7d8f5] to-[#935cc7] text-[#503577] uppercase",
+      "bg-gradient-to-b from-[#FFECE3] to-[#E05226] text-[#C9411C] uppercase",
     heightClassName: "h-[88px] md:h-[110px]",
   },
 ];

@@ -49,7 +49,7 @@ export function DaySidebar({
         </p>
       </div>
       <nav
-        className="scrollbar-program-purple min-h-0 flex-1 space-y-4 overflow-y-auto p-3 pr-2"
+        className="scrollbar-program-orange min-h-0 flex-1 space-y-4 overflow-y-auto p-3 pr-2"
         aria-label="Course modules and days"
       >
         {modules.map((mod) => {

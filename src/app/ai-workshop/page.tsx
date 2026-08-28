@@ -59,25 +59,24 @@ export default async function AIWorkshopPage() {
       }}
     >
       <style>{`
-        /* Brand palette — mirrors --primary (#6366f1) / AI-domain violet (#8b5cf6)
-           from globals.css. Scoped to this page; the app theme is untouched. */
+        /* ABTalks orange palette, scoped to the workshop's authored dark surface. */
         .wk-root {
           --wk-bg: #050a17;
           --wk-surface: #0b1120;
           --wk-text: #f5f6fa;
           --wk-text-dim: #c7cbda;
 
-          --wk-a1: #6366f1;
-          --wk-a1-rgb: 99, 102, 241;
-          --wk-a1-light: #818cf8;
-          --wk-a1-light-rgb: 129, 140, 248;
-          --wk-a1-deep: #4f46e5;
+          --wk-a1: #e05226;
+          --wk-a1-rgb: 224, 82, 38;
+          --wk-a1-light: #ffece3;
+          --wk-a1-light-rgb: 255, 236, 227;
+          --wk-a1-deep: #c9411c;
 
-          --wk-a2: #8b5cf6;
-          --wk-a2-rgb: 139, 92, 246;
-          --wk-a3: #a855f7;
-          --wk-a3-light: #c084fc;
-          --wk-a4: #a78bfa;
+          --wk-a2: #e05226;
+          --wk-a2-rgb: 224, 82, 38;
+          --wk-a3: #c9411c;
+          --wk-a3-light: #ffece3;
+          --wk-a4: #ffece3;
 
           --wk-grad: linear-gradient(135deg, var(--wk-a1) 0%, var(--wk-a2) 100%);
         }
@@ -199,13 +198,13 @@ export default async function AIWorkshopPage() {
         {/* floating particles (top / hero region) */}
         <div className="absolute inset-x-0 top-0 h-[720px]">
           {[
-            { l: "12%", t: "22%", s: 4, c: "#6366f1", d: 9, delay: 0 },
-            { l: "24%", t: "58%", s: 3, c: "#8b5cf6", d: 12, delay: 1.5 },
-            { l: "40%", t: "16%", s: 5, c: "#a855f7", d: 11, delay: 0.8 },
-            { l: "58%", t: "48%", s: 3, c: "#818cf8", d: 10, delay: 2.2 },
-            { l: "72%", t: "26%", s: 4, c: "#4f46e5", d: 13, delay: 0.4 },
-            { l: "86%", t: "60%", s: 3, c: "#8b5cf6", d: 9.5, delay: 1.1 },
-            { l: "50%", t: "70%", s: 4, c: "#6366f1", d: 12.5, delay: 2.8 },
+            { l: "12%", t: "22%", s: 4, c: "#e05226", d: 9, delay: 0 },
+            { l: "24%", t: "58%", s: 3, c: "#ffece3", d: 12, delay: 1.5 },
+            { l: "40%", t: "16%", s: 5, c: "#c9411c", d: 11, delay: 0.8 },
+            { l: "58%", t: "48%", s: 3, c: "#ffece3", d: 10, delay: 2.2 },
+            { l: "72%", t: "26%", s: 4, c: "#c9411c", d: 13, delay: 0.4 },
+            { l: "86%", t: "60%", s: 3, c: "#e05226", d: 9.5, delay: 1.1 },
+            { l: "50%", t: "70%", s: 4, c: "#e05226", d: 12.5, delay: 2.8 },
             { l: "32%", t: "38%", s: 2, c: "#ffffff", d: 8, delay: 1.9 },
           ].map((p, i) => (
             <span

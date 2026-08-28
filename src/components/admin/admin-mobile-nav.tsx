@@ -140,7 +140,7 @@ export function AdminMobileNav({ navItems }: AdminMobileNavProps) {
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
                       isActive
-                        ? "bg-gradient-to-r from-primary to-violet-500 text-primary-foreground shadow-[var(--shadow-card)]"
+                        ? "bg-[#E05226] text-primary-foreground shadow-[var(--shadow-card)]"
                         : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
                     )}
                   >

@@ -32,8 +32,8 @@ export const ROADMAP_PHASES: RoadmapPhase[] = [
     days: "Days 1–3",
     startDay: 1,
     endDay: 3,
-    accent: "#A855F7",
-    accentRgb: "168, 85, 247",
+    accent: "#E05226",
+    accentRgb: "224, 82, 38",
     icon: Cpu,
   },
   {
@@ -68,8 +68,8 @@ export const ROADMAP_PHASES: RoadmapPhase[] = [
     days: "Days 11–15",
     startDay: 11,
     endDay: 15,
-    accent: "#7C3AED",
-    accentRgb: "124, 58, 237",
+    accent: "#C9411C",
+    accentRgb: "201, 65, 28",
     icon: BrainCircuit,
   },
   {
@@ -104,8 +104,8 @@ export const ROADMAP_PHASES: RoadmapPhase[] = [
     days: "Days 25–27",
     startDay: 25,
     endDay: 27,
-    accent: "#6366F1",
-    accentRgb: "99, 102, 241",
+    accent: "#E05226",
+    accentRgb: "224, 82, 38",
     icon: Scale,
   },
   {

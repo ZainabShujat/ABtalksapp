@@ -117,7 +117,7 @@ export function MobileSidebar({ user }: Props) {
                   <Link
                     href="/marketplace"
                     onClick={() => setOpen(false)}
-                    className="focus-spark flex items-center justify-between rounded-lg border border-primary/20 bg-linear-to-r from-primary/15 to-violet-500/15 px-3 py-2.5 text-sm font-semibold text-primary transition-colors hover:from-primary/25 hover:to-violet-500/25"
+                    className="focus-spark flex items-center justify-between rounded-lg border border-primary/20 bg-primary/15 px-3 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/25"
                   >
                     <span className="inline-flex items-center gap-2">
                       <Flame className="size-4" aria-hidden />

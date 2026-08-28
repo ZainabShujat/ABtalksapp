@@ -21,49 +21,49 @@ const TOPICS = [
     title: "LinkedIn Fundamentals & Personal Branding",
     desc: "Understand how LinkedIn works, why personal branding matters, and how to use your profile to showcase your skills, achievements, projects, and career goals.",
     Icon: UserRound,
-    accent: "#6366f1",
+    accent: "#E05226",
   },
   {
     title: "Building a Strong LinkedIn Profile",
     desc: "Optimize your profile photo, banner, headline, About section, experience, projects, skills, and featured section to create a professional and opportunity-ready profile.",
     Icon: BadgeCheck,
-    accent: "#818cf8",
+    accent: "#FFECE3",
   },
   {
     title: "LinkedIn Content Strategy",
     desc: "Learn what to post, discover effective content pillars, understand different post formats, and turn your experiences, knowledge, projects, and opinions into valuable content.",
     Icon: Lightbulb,
-    accent: "#8b5cf6",
+    accent: "#E05226",
   },
   {
     title: "Creating Engaging LinkedIn Posts",
     desc: "Learn how to write powerful hooks, structure posts, tell stories, create strong CTAs, and make your content more authentic, readable, and engaging.",
     Icon: PenLine,
-    accent: "#a855f7",
+    accent: "#C9411C",
   },
   {
     title: "AI-Powered Content Creation",
     desc: "Explore AI tools like ChatGPT, Claude, and Perplexity for research, content ideas, hooks, post writing, repurposing, and building a consistent LinkedIn content workflow.",
     Icon: Sparkles,
-    accent: "#7c3aed",
+    accent: "#C9411C",
   },
   {
     title: "Design, Scheduling & Automation",
     desc: "Discover tools like Canva, Buffer, and Make to create visuals, plan content, schedule posts, track workflows, and automate repetitive tasks while keeping your content authentic.",
     Icon: CalendarClock,
-    accent: "#4f46e5",
+    accent: "#E05226",
   },
   {
     title: "LinkedIn Growth & Analytics",
     desc: "Learn practical networking strategies, meaningful commenting, profile discovery, audience building, and how to use LinkedIn analytics to understand what content actually works.",
     Icon: TrendingUp,
-    accent: "#c084fc",
+    accent: "#FFECE3",
   },
   {
     title: "Live Q&A & LinkedIn Growth Roadmap",
     desc: "Get your LinkedIn questions answered, explore practical tips and tricks, avoid common mistakes, and build a simple 30-day strategy for consistent LinkedIn growth.",
     Icon: MessagesSquare,
-    accent: "#a78bfa",
+    accent: "#FFECE3",
   },
 ];
 
@@ -142,9 +142,9 @@ export default function TopicsSection() {
       <div ref={infoRow.ref} className="grid grid-cols-3 gap-3">
         {(
           [
-            { Icon: Clock, label: "Duration", value: "1 Hour", subtext: "Live Interactive", accent: "#c084fc" },
-            { Icon: MapPin, label: "Platform", value: "YouTube", subtext: "Live stream link sent", accent: "#6366f1" },
-            { Icon: Tag, label: "Price", value: "FREE", subtext: "100% Sponsored", accent: "#8b5cf6", highlight: true },
+            { Icon: Clock, label: "Duration", value: "1 Hour", subtext: "Live Interactive", accent: "#FFECE3" },
+            { Icon: MapPin, label: "Platform", value: "YouTube", subtext: "Live stream link sent", accent: "#E05226" },
+            { Icon: Tag, label: "Price", value: "FREE", subtext: "100% Sponsored", accent: "#E05226", highlight: true },
           ] as const
         ).map((data, i) => (
           <div

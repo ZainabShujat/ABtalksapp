@@ -153,7 +153,7 @@ export function AppFooter() {
   // inline — anything here would duplicate their copyright line.
   if (isWorkshop) return null;
 
-  if (pathname === "/dashboard") return null;
+  if (pathname === "/dashboard" || pathname === "/profile") return null;
   if (pathname === "/claude" || pathname.startsWith("/claude/day")) return null;
   if (pathname === "/") return null;
 

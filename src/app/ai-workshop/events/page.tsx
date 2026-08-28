@@ -20,25 +20,24 @@ export default function WorkshopEventsPage() {
       }}
     >
       <style>{`
-        /* Brand palette — mirrors --primary (#6366f1) / AI-domain violet (#8b5cf6)
-           from globals.css. Scoped to this page; the app theme is untouched. */
+        /* ABTalks orange palette, scoped to the workshop's authored dark surface. */
         .wk-root {
           --wk-bg: #050a17;
           --wk-surface: #0b1120;
           --wk-text: #f5f6fa;
           --wk-text-dim: #c7cbda;
 
-          --wk-a1: #6366f1;
-          --wk-a1-rgb: 99, 102, 241;
-          --wk-a1-light: #818cf8;
-          --wk-a1-light-rgb: 129, 140, 248;
-          --wk-a1-deep: #4f46e5;
+          --wk-a1: #e05226;
+          --wk-a1-rgb: 224, 82, 38;
+          --wk-a1-light: #ffece3;
+          --wk-a1-light-rgb: 255, 236, 227;
+          --wk-a1-deep: #c9411c;
 
-          --wk-a2: #8b5cf6;
-          --wk-a2-rgb: 139, 92, 246;
-          --wk-a3: #a855f7;
-          --wk-a3-light: #c084fc;
-          --wk-a4: #a78bfa;
+          --wk-a2: #e05226;
+          --wk-a2-rgb: 224, 82, 38;
+          --wk-a3: #c9411c;
+          --wk-a3-light: #ffece3;
+          --wk-a4: #ffece3;
 
           --wk-grad: linear-gradient(135deg, var(--wk-a1) 0%, var(--wk-a2) 100%);
         }

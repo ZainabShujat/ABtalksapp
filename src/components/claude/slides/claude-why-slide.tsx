@@ -46,8 +46,8 @@ export function ClaudeWhySlide({ totalCount }: Props) {
       stat: "0→1",
       label: "zero to hero",
       sub: "no prior AI needed",
-      color: "text-violet-500",
-      bg: "bg-violet-500/10",
+      color: "text-[#E05226]",
+      bg: "bg-[#FFECE3]",
     },
   ] as const;
 

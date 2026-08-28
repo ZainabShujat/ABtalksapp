@@ -34,7 +34,7 @@ function statusBadgeClass(status: string): string {
   if (s === "rejected")
     return "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400";
   if (s === "reviewed" || s === "shortlisted")
-    return "bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400";
+    return "bg-[#FFECE3] text-[#C9411C]";
   return "bg-muted text-muted-foreground";
 }
 

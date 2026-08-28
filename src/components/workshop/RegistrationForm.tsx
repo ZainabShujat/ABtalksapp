@@ -8,7 +8,7 @@ import {
   type LegalConsentValues,
 } from "@/components/legal/legal-consent-fields";
 
-const CONFETTI_COLORS = ["#6366f1", "#8b5cf6", "#a855f7", "#c084fc", "#818cf8", "#4f46e5"];
+const CONFETTI_COLORS = ["#E05226", "#C9411C", "#FFECE3"];
 
 function buildConfetti() {
   return Array.from({ length: 44 }, (_, i) => ({
@@ -431,7 +431,7 @@ export default function RegistrationForm({
             <LegalConsentFields
               values={legalConsent}
               onChange={setLegalConsent}
-              className="border-white/15 bg-white/5 text-white/90 [&_a]:text-indigo-300"
+              className="border-white/15 bg-white/5 text-white/90 [&_a]:text-[#FFECE3]"
             />
           </div>
 

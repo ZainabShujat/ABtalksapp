@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 
 const STATS = [
-  { value: 11000, suffix: "+", label: "AI Learners", sub: "From 25+ Countries", accent: "#6366f1" },
-  { value: 550, suffix: "+", label: "Institutions", sub: "Students enrolled", accent: "#a855f7" },
-  { value: 300, suffix: "+", label: "Organisations", sub: "Working professionals", accent: "#818cf8" },
+  { value: 11000, suffix: "+", label: "AI Learners", sub: "From 25+ Countries", accent: "#E05226" },
+  { value: 550, suffix: "+", label: "Institutions", sub: "Students enrolled", accent: "#C9411C" },
+  { value: 300, suffix: "+", label: "Organisations", sub: "Working professionals", accent: "#FFECE3" },
 ];
 
 const CLAUDE_SIGNUP = "https://www.abtalks.in/?ref=N2VD2X";

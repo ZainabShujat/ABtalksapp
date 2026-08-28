@@ -88,7 +88,7 @@ export default function ChallengesPage() {
           </span>
           <h1 className="mt-5 max-w-3xl font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-foreground sm:text-5xl md:text-6xl">
             60 Days. One task a day.
-            <span className="mt-1 block bg-gradient-to-r from-primary to-violet-500 bg-clip-text text-transparent">
+            <span className="mt-1 block text-primary">
               A portfolio that speaks.
             </span>
           </h1>
@@ -100,7 +100,7 @@ export default function ChallengesPage() {
               href="#choose-domain"
               className={cn(
                 buttonVariants({ size: "lg" }),
-                "h-12 rounded-xl bg-gradient-to-r from-primary to-violet-500 px-6 text-primary-foreground hover:from-primary/90 hover:to-violet-500/90",
+                "h-12 rounded-xl bg-[#E05226] px-6 text-primary-foreground hover:bg-[#C9411C]",
               )}
             >
               Start the challenge
@@ -264,7 +264,7 @@ function BackgroundBlobs() {
   return (
     <div className="pointer-events-none absolute inset-0" aria-hidden>
       <div className="absolute -right-32 top-12 h-96 w-96 rounded-full bg-primary/15 blur-3xl" />
-      <div className="absolute -left-40 top-[46rem] h-96 w-96 rounded-full bg-violet-500/10 blur-3xl" />
+      <div className="absolute -left-40 top-[46rem] h-96 w-96 rounded-full bg-[#FFECE3] blur-3xl" />
     </div>
   );
 }
