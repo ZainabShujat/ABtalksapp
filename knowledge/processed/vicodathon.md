@@ -46,6 +46,11 @@ historical/completed status — do not present any of it as upcoming:
   Pro free; Breeth offers an MCP server that plugs into Claude Code and
   Cursor; sponsor track prize was "Best use of Breeth"
 
-## Sourcing gap
+## Sourcing gap — RESOLVED
 
-Detailed rules, submission requirements, and judging/verification criteria (knowledge areas 13–15 in `src/components/chatbot/implementation.md`) were expected to come from the ViCodathon 2026 Official Event Notice and the ViCodathon Influencer Brief. Neither source document is present in this repository — only the summary above (already captured in `events.md`) is currently available. If richer hackathon-rules detail is needed (team size limits, judging criteria, prize structure), the original notice/brief must be located and supplied; this file should not be filled in with invented detail.
+The detailed rules, submission requirements, judging criteria, timeline,
+sponsor detail and FAQ are now taken directly from the live public
+`/hackathon` page and are recorded in **`hackathon.md`**. Prefer
+`hackathon.md` over this file for anything a participant asks about rules,
+deliverables, judging, team size, eligibility or the FAQ. This file remains
+the record of edition history and naming.
