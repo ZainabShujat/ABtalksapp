@@ -17,6 +17,10 @@ import {
   getMemberProgressDay,
 } from "@/features/program/progression";
 import { askClaudeJson } from "@/lib/anthropic";
+import {
+  getInterviewSignal,
+  getInterviewSignals,
+} from "@/features/interview/read-model";
 import { generateProgramJoinCode } from "@/lib/program-auth";
 import { programMember } from "@/repositories/legacy/program-member";
 import { dualWriteProgramMember } from "@/repositories/dual-write";
@@ -584,14 +588,13 @@ export async function getCohortMembers(
       totalScore: true,
       highestUnlockedDay: true,
       userId: true,
-      interview: {
-        select: { status: true, overallScore: true },
-      },
     },
   });
 
   const userIds = members.map((m) => m.userId);
   const memberIds = members.map((m) => m.id);
+  // Resolved via the interview read model (DAY_31 → DAY_15 → legacy).
+  const interviewSignals = await getInterviewSignals(memberIds);
   const [entryAttempts, missionSubs] = await Promise.all([
     prisma.programEntryAttempt.findMany({
       where: { userId: { in: userIds }, cohortId },
@@ -643,8 +646,8 @@ export async function getCohortMembers(
       highestUnlockedDay: Math.max(m.highestUnlockedDay, progressDay),
       behindBy: getBehindByDays(cohort, progressDay),
       entryTotalScore: entryByUser.get(m.userId) ?? null,
-      interviewStatus: m.interview?.status ?? null,
-      interviewOverall: m.interview?.overallScore ?? null,
+      interviewStatus: interviewSignals.get(m.id)?.status ?? null,
+      interviewOverall: interviewSignals.get(m.id)?.overallScore ?? null,
     };
   });
 }
@@ -959,17 +962,6 @@ export async function getMemberAdminDetail(memberId: string) {
         },
         orderBy: { moduleNumber: "asc" },
       },
-      interview: {
-        select: {
-          status: true,
-          overallScore: true,
-          commScore: true,
-          techScore: true,
-          problemScore: true,
-          summary: true,
-          durationSec: true,
-        },
-      },
     },
   });
   if (!member) return null;
@@ -988,6 +980,21 @@ export async function getMemberAdminDetail(memberId: string) {
     }),
     getMemberAtRiskStatus(member.id, member.cohortId),
   ]);
+
+  // Resolved via the interview read model (DAY_31 -> DAY_15 -> legacy) rather
+  // than the raw ProgramInterview relation.
+  const signal = await getInterviewSignal(member.id);
+  const interview = signal
+    ? {
+        status: signal.status,
+        overallScore: signal.overallScore,
+        commScore: signal.communicationScore,
+        techScore: signal.technicalDepthScore,
+        problemScore: signal.problemSolvingScore,
+        summary: signal.summary,
+        durationSec: signal.durationSec,
+      }
+    : null;
 
   const { passedDays, skippedDays } = collectPassSkipSets(
     member.missionSubmissions,
@@ -1014,6 +1021,7 @@ export async function getMemberAdminDetail(memberId: string) {
 
   return {
     ...member,
+    interview,
     entryAttempts,
     atRiskReasons: atRisk.reasons,
     behindBy,

@@ -311,151 +311,151 @@ export default function RegistrationForm({
           )}
 
           {state === "form" && (
-          <div className="space-y-4">
-            <Field label="Full Name" required error={errors.name}>
-              <input
-                type="text"
-                placeholder="Enter your full name"
-                value={form.name}
-                onChange={(e) => set("name", e.target.value)}
-                className={`wk-input ${errors.name ? "err" : ""}`}
-              />
-            </Field>
-
-            <Field label="Email Address">
-              <input
-                type="email"
-                value={sessionEmail ?? ""}
-                readOnly
-                disabled
-                className="wk-input cursor-not-allowed opacity-60"
-              />
-              <p className="wk-faint mt-1.5 text-xs">
-                Signed in as {sessionEmail} — your seat is confirmed to this address.
-              </p>
-            </Field>
-
-            <Field label="Phone Number" required error={errors.phone}>
-              <div className="flex gap-2">
-                <select
-                  value={form.countryCode}
-                  onChange={(e) => {
-                    // Trim on switch: +1 allows 15 digits, +91 only 10, so a
-                    // number typed under the looser code would otherwise stay
-                    // over-long and fail validation with no visible cause.
-                    const code = e.target.value;
-                    const cap = PHONE_EXACT_LEN[code] ?? 15;
-                    setForm((prev) => ({
-                      ...prev,
-                      countryCode: code,
-                      phone: prev.phone.slice(0, cap),
-                    }));
-                  }}
-                  className="wk-input wk-select shrink-0 cursor-pointer"
-                  style={{ width: "104px", paddingRight: "8px" }}
-                >
-                  <option value="+91">🇮🇳 +91</option>
-                  <option value="+1">🇺🇸 +1</option>
-                  <option value="+44">🇬🇧 +44</option>
-                  <option value="+971">🇦🇪 +971</option>
-                  <option value="+966">🇸🇦 +966</option>
-                  <option value="+65">🇸🇬 +65</option>
-                  <option value="+60">🇲🇾 +60</option>
-                  <option value="+92">🇵🇰 +92</option>
-                  <option value="+880">🇧🇩 +880</option>
-                  <option value="+977">🇳🇵 +977</option>
-                  <option value="+94">🇱🇰 +94</option>
-                  <option value="+61">🇦🇺 +61</option>
-                  <option value="+64">🇳🇿 +64</option>
-                  <option value="+33">🇫🇷 +33</option>
-                  <option value="+49">🇩🇪 +49</option>
-                  <option value="+27">🇿🇦 +27</option>
-                  <option value="+234">🇳🇬 +234</option>
-                  <option value="+55">🇧🇷 +55</option>
-                  <option value="+353">🇮🇪 +353</option>
-                  <option value="+86">🇨🇳 +86</option>
-                  <option value="+82">🇰🇷 +82</option>
-                  <option value="+62">🇮🇩 +62</option>
-                  <option value="+66">🇹🇭 +66</option>
-                  <option value="+63">🇵🇭 +63</option>
-                  <option value="+84">🇻🇳 +84</option>
-                  <option value="+90">🇹🇷 +90</option>
-                  <option value="+20">🇪🇬 +20</option>
-                </select>
+            <div className="space-y-4">
+              <Field label="Full Name" required error={errors.name}>
                 <input
-                  type="tel"
-                  placeholder="Enter your phone number"
-                  value={form.phone}
-                  inputMode="numeric"
-                  autoComplete="tel-national"
-                  maxLength={PHONE_EXACT_LEN[form.countryCode] ?? 15}
-                  onChange={(e) => {
-                    const cap = PHONE_EXACT_LEN[form.countryCode] ?? 15;
-                    set("phone", e.target.value.replace(/[^0-9]/g, "").slice(0, cap));
-                  }}
-                  className={`wk-input ${errors.phone ? "err" : ""}`}
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={form.name}
+                  onChange={(e) => set("name", e.target.value)}
+                  className={`wk-input ${errors.name ? "err" : ""}`}
                 />
-              </div>
-            </Field>
+              </Field>
 
-            <Field label="I am a" required error={errors.role}>
-              <select
-                value={form.role}
-                onChange={(e) => set("role", e.target.value)}
-                className={`wk-input wk-select cursor-pointer ${errors.role ? "err" : ""}`}
-                style={{ color: form.role ? "var(--wk-text)" : "var(--wk-placeholder)" }}
-              >
-                <option value="" disabled>Select an option</option>
-                <option value="Student">Student</option>
-                <option value="Professional">Professional</option>
-              </select>
-            </Field>
+              <Field label="Email Address">
+                <input
+                  type="email"
+                  value={sessionEmail ?? ""}
+                  readOnly
+                  disabled
+                  className="wk-input cursor-not-allowed opacity-60"
+                />
+                <p className="wk-faint mt-1.5 text-xs">
+                  Signed in as {sessionEmail} — your seat is confirmed to this address.
+                </p>
+              </Field>
 
-            <Field
-              label={form.role === "Professional" ? "Company" : "College / Company"}
-            >
-              <input
-                type="text"
-                placeholder={
-                  form.role === "Professional"
-                    ? "Your company (optional)"
-                    : "Your college or company (optional)"
-                }
-                value={form.organization}
-                onChange={(e) => set("organization", e.target.value)}
-                className="wk-input"
-              />
-            </Field>
+              <Field label="Phone Number" required error={errors.phone}>
+                <div className="flex gap-2">
+                  <select
+                    value={form.countryCode}
+                    onChange={(e) => {
+                      // Trim on switch: +1 allows 15 digits, +91 only 10, so a
+                      // number typed under the looser code would otherwise stay
+                      // over-long and fail validation with no visible cause.
+                      const code = e.target.value;
+                      const cap = PHONE_EXACT_LEN[code] ?? 15;
+                      setForm((prev) => ({
+                        ...prev,
+                        countryCode: code,
+                        phone: prev.phone.slice(0, cap),
+                      }));
+                    }}
+                    className="wk-input wk-select shrink-0 cursor-pointer"
+                    style={{ width: "104px", paddingRight: "8px" }}
+                  >
+                    <option value="+91">🇮🇳 +91</option>
+                    <option value="+1">🇺🇸 +1</option>
+                    <option value="+44">🇬🇧 +44</option>
+                    <option value="+971">🇦🇪 +971</option>
+                    <option value="+966">🇸🇦 +966</option>
+                    <option value="+65">🇸🇬 +65</option>
+                    <option value="+60">🇲🇾 +60</option>
+                    <option value="+92">🇵🇰 +92</option>
+                    <option value="+880">🇧🇩 +880</option>
+                    <option value="+977">🇳🇵 +977</option>
+                    <option value="+94">🇱🇰 +94</option>
+                    <option value="+61">🇦🇺 +61</option>
+                    <option value="+64">🇳🇿 +64</option>
+                    <option value="+33">🇫🇷 +33</option>
+                    <option value="+49">🇩🇪 +49</option>
+                    <option value="+27">🇿🇦 +27</option>
+                    <option value="+234">🇳🇬 +234</option>
+                    <option value="+55">🇧🇷 +55</option>
+                    <option value="+353">🇮🇪 +353</option>
+                    <option value="+86">🇨🇳 +86</option>
+                    <option value="+82">🇰🇷 +82</option>
+                    <option value="+62">🇮🇩 +62</option>
+                    <option value="+66">🇹🇭 +66</option>
+                    <option value="+63">🇵🇭 +63</option>
+                    <option value="+84">🇻🇳 +84</option>
+                    <option value="+90">🇹🇷 +90</option>
+                    <option value="+20">🇪🇬 +20</option>
+                  </select>
+                  <input
+                    type="tel"
+                    placeholder="Enter your phone number"
+                    value={form.phone}
+                    inputMode="numeric"
+                    autoComplete="tel-national"
+                    maxLength={PHONE_EXACT_LEN[form.countryCode] ?? 15}
+                    onChange={(e) => {
+                      const cap = PHONE_EXACT_LEN[form.countryCode] ?? 15;
+                      set("phone", e.target.value.replace(/[^0-9]/g, "").slice(0, cap));
+                    }}
+                    className={`wk-input ${errors.phone ? "err" : ""}`}
+                  />
+                </div>
+              </Field>
 
-            {/* Students only — a professional has no graduation year to give. */}
-            {form.role !== "Professional" && (
-              <Field label="Graduation Year">
+              <Field label="I am a" required error={errors.role}>
                 <select
-                  value={form.graduationYear}
-                  onChange={(e) => set("graduationYear", e.target.value)}
-                  className="wk-input wk-select cursor-pointer"
-                  style={{
-                    color: form.graduationYear
-                      ? "var(--wk-text)"
-                      : "var(--wk-placeholder)",
-                  }}
+                  value={form.role}
+                  onChange={(e) => set("role", e.target.value)}
+                  className={`wk-input wk-select cursor-pointer ${errors.role ? "err" : ""}`}
+                  style={{ color: form.role ? "var(--wk-text)" : "var(--wk-placeholder)" }}
                 >
-                  <option value="">Select year (optional)</option>
-                  {GRAD_YEARS.map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
+                  <option value="" disabled>Select an option</option>
+                  <option value="Student">Student</option>
+                  <option value="Professional">Professional</option>
                 </select>
               </Field>
-            )}
 
-            {isExistingMember && (
-              <p className="wk-faint text-xs">
-                Prefilled from your ABTalks profile — any changes here update it.
-              </p>
-            )}
-          </div>
+              <Field
+                label={form.role === "Professional" ? "Company" : "College / Company"}
+              >
+                <input
+                  type="text"
+                  placeholder={
+                    form.role === "Professional"
+                      ? "Your company (optional)"
+                      : "Your college or company (optional)"
+                  }
+                  value={form.organization}
+                  onChange={(e) => set("organization", e.target.value)}
+                  className="wk-input"
+                />
+              </Field>
+
+              {/* Students only — a professional has no graduation year to give. */}
+              {form.role !== "Professional" && (
+                <Field label="Graduation Year">
+                  <select
+                    value={form.graduationYear}
+                    onChange={(e) => set("graduationYear", e.target.value)}
+                    className="wk-input wk-select cursor-pointer"
+                    style={{
+                      color: form.graduationYear
+                        ? "var(--wk-text)"
+                        : "var(--wk-placeholder)",
+                    }}
+                  >
+                    <option value="">Select year (optional)</option>
+                    {GRAD_YEARS.map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              )}
+
+              {isExistingMember && (
+                <p className="wk-faint text-xs">
+                  Prefilled from your ABTalks profile — any changes here update it.
+                </p>
+              )}
+            </div>
           )}
 
           <div className="mt-5">

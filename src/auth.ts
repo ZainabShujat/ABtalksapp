@@ -69,34 +69,45 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     ...(process.env.ENABLE_DEV_AUTH === "true"
       ? [
           Credentials({
+            id: "dev-credentials",
             name: "Dev Login",
             credentials: {
               email: { label: "Email", type: "email" },
               password: { label: "Password", type: "password" },
             },
             async authorize(credentials) {
-              if (!credentials?.email || !credentials?.password) return null;
+              try {
+                if (!credentials?.email || !credentials?.password) return null;
 
-              const user = await prisma.user.findUnique({
-                where: { email: String(credentials.email) },
-              });
+                const user = await prisma.user.findUnique({
+                  where: { email: String(credentials.email) },
+                });
 
-              if (!user || !user.password) return null;
-              if (user.password !== String(credentials.password)) return null;
+                if (!user || !user.password) return null;
+                if (user.password !== String(credentials.password)) return null;
 
-              return {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                role: user.role,
-              };
+                return {
+                  id: user.id,
+                  email: user.email,
+                  name: user.name,
+                  role: user.role,
+                };
+              } catch (error) {
+                console.error("DEV LOGIN AUTHORIZE ERROR:", error);
+                throw error;
+              }
             },
           }),
         ]
       : []),
-    ...(authConfig.providers.filter(
-      (p) => p.id !== "credentials" && p.id !== "recruiter-otp",
-    ) ?? []),
+    ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET
+      ? [
+          require("next-auth/providers/google").default({
+            clientId: process.env.AUTH_GOOGLE_ID,
+            clientSecret: process.env.AUTH_GOOGLE_SECRET,
+          }),
+        ]
+      : []),
   ],
   events: {
     /**

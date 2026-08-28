@@ -107,7 +107,7 @@ export function LoginClient({
     writeNewsletterPrefCookie(legalConsent.newsletterOptIn);
     setPending(true);
     try {
-      const result = await signIn("credentials", {
+      const result = await signIn("dev-credentials", {
         email,
         password,
         redirect: false,
@@ -116,10 +116,13 @@ export function LoginClient({
         callbackUrl: target,
       });
       if (result?.error) {
+        if (result.error !== "CredentialsSignin") {
+          console.error("NextAuth SignIn Error:", result.error);
+        }
         toast.error(
           result.error === "CredentialsSignin"
             ? "Invalid email or password."
-            : `Sign-in failed (${result.error}). If you're on a phone/LAN URL, unset AUTH_URL or set it to this host.`,
+            : "Sign-in failed. Please try again."
         );
         setPending(false);
         return;

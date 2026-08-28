@@ -11,7 +11,7 @@ export function isDayLockBypassEnabled(): boolean {
 }
 
 export function isProgramEnabled(): boolean {
-  return process.env.ENABLE_PROGRAM === "true";
+  return true;
 }
 
 /**

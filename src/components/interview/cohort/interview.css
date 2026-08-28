@@ -1,0 +1,196 @@
+/*
+ * Interview room styles.
+ *
+ * Scoped entirely to `.interview-room`. Imported by the room component only,
+ * never by globals.css, so nothing here can reach another AB Talks page.
+ *
+ * The palette is the ABTalks design system (docs/design-system.md, plan 071):
+ * #FBF9F7 cream page, #FFFFFF cards, #E0E0E0 border, #E05226 orange accent,
+ * #111111 / #4B4B4B / #8F8F8F text. It was previously a dark navy palette
+ * copied from the old program shell — that shell has since been rebuilt on
+ * cream, and an interview that looks like a different product from the
+ * dashboard that launched it is a bug, not a mood.
+ *
+ * Status colours (live green, error red, warning amber) are darkened from
+ * their dark-theme values because they now sit on white: the light tints that
+ * read fine on navy fail contrast on cream.
+ */
+
+.interview-room {
+  --iv-page: #fbf9f7;
+  --iv-surface: #ffffff;
+  --iv-surface-raised: #fff5f0;
+  --iv-border: #e0e0e0;
+  --iv-border-soft: #ececec;
+  --iv-text: #111111;
+  --iv-text-muted: #4b4b4b;
+  --iv-text-faint: #8f8f8f;
+  --iv-accent: #e05226;
+  --iv-accent-hover: #c9411c;
+  --iv-accent-soft: #ffece3;
+  --iv-live: #1a7f37;
+  --iv-danger: #c9282b;
+  --iv-warning: #9a6700;
+
+  background: var(--iv-page);
+  color: var(--iv-text);
+}
+
+/*
+ * Live room only. The brief, done, and report screens stay on cream.
+ * Near-black ground, a soft violet wash from below, and a barely-there
+ * warm highlight so the orb's palette is the page's palette — not a
+ * sticker on orange-grey.
+ */
+.interview-room--live {
+  --iv-page: #0a0a0c;
+  --iv-surface: #141418;
+  --iv-surface-raised: #1c1b22;
+  --iv-border: #2c2a33;
+  --iv-border-soft: #24232b;
+  --iv-text: #f3f1f6;
+  --iv-text-muted: #b7b3c0;
+  --iv-text-faint: #7d7988;
+  --iv-accent: #9b8ec4;
+  --iv-accent-hover: #b4a8d4;
+  --iv-accent-soft: #1f1c28;
+  --iv-live: #5ecf7c;
+  --iv-danger: #f07174;
+  --iv-warning: #e0b15a;
+
+  background-color: var(--iv-page);
+  background-image:
+    radial-gradient(
+      ellipse 90% 55% at 50% 108%,
+      rgba(122, 108, 168, 0.22) 0%,
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse 45% 35% at 88% -8%,
+      rgba(196, 148, 112, 0.07) 0%,
+      transparent 52%
+    ),
+    radial-gradient(
+      ellipse 40% 30% at 8% 12%,
+      rgba(90, 78, 130, 0.1) 0%,
+      transparent 48%
+    );
+  color: var(--iv-text);
+}
+
+.interview-room--live .iv-orb-glow {
+  background: radial-gradient(
+    circle,
+    rgba(155, 142, 196, 0.28) 0%,
+    rgba(196, 148, 112, 0.06) 42%,
+    transparent 70%
+  );
+}
+
+.interview-room--light .iv-orb-glow {
+  background: radial-gradient(
+    circle,
+    rgba(224, 82, 38, 0.11) 0%,
+    rgba(224, 82, 38, 0.04) 38%,
+    transparent 70%
+  );
+}
+
+/* Older exchanges stay legible but recede, so the current one reads first. */
+.interview-room .iv-turn-past {
+  opacity: 0.5;
+  transition: opacity 200ms ease-out;
+}
+
+.interview-room .iv-turn-past:hover {
+  opacity: 0.8;
+}
+
+.interview-room .iv-enter {
+  animation: iv-fade-up 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes iv-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The listening ring. Small, slow, and behind the button — never a spotlight. */
+.interview-room .iv-listening-ring {
+  animation: iv-ring 2.4s ease-out infinite;
+}
+
+@keyframes iv-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Four bars, used while the interviewer speaks. Roughly 14px tall at rest. */
+.interview-room .iv-bar {
+  animation: iv-bar 900ms ease-in-out infinite;
+}
+
+@keyframes iv-bar {
+  0%,
+  100% {
+    transform: scaleY(0.4);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.interview-room .iv-dot {
+  animation: iv-dot 1.2s ease-in-out infinite;
+}
+
+@keyframes iv-dot {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+/* The three dots shown while the answer is being transcribed and evaluated.
+   A small vertical wiggle rather than a spinner: it reads as thinking, not as
+   loading, which is the distinction the room is trying to keep. */
+.interview-room .iv-think-dot {
+  animation: iv-think 1.05s ease-in-out infinite;
+}
+
+@keyframes iv-think {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .interview-room .iv-enter,
+  .interview-room .iv-listening-ring,
+  .interview-room .iv-bar,
+  .interview-room .iv-think-dot,
+  .interview-room .iv-dot {
+    animation: none;
+  }
+}
