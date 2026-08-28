@@ -48,7 +48,7 @@ function statusBadgeClass(status: string): string {
   if (status === "ACTIVE")
     return "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400";
   if (status === "COMPLETED")
-    return "bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400";
+    return "bg-[#FFECE3] text-[#C9411C]";
   if (status === "SOLO" || status === "TEAM")
     return "bg-sky-100 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400";
   return "bg-muted text-muted-foreground";

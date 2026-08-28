@@ -70,7 +70,7 @@ export function SubmissionFlow({
 
   useEffect(() => {
     if (step !== "success") return;
-    const colors = ["#6366f1", "#818cf8", "#34d399", "#fbbf24", "#f472b6"];
+    const colors = ["#E05226", "#C9411C", "#FFECE3", "#34d399", "#fbbf24"];
     void confetti({
       particleCount: 72,
       spread: 70,

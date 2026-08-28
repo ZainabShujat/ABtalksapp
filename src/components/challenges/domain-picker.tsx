@@ -110,7 +110,7 @@ export function DomainPicker() {
         href={registrationHref}
         className={cn(
           buttonVariants({ size: "lg" }),
-          "mt-6 h-12 rounded-xl bg-gradient-to-r from-primary to-violet-500 px-6 text-primary-foreground hover:from-primary/90 hover:to-violet-500/90",
+          "mt-6 h-12 rounded-xl bg-[#E05226] px-6 text-primary-foreground hover:bg-[#C9411C]",
         )}
       >
         Start the challenge
@@ -121,7 +121,7 @@ export function DomainPicker() {
           href={registrationHref}
           className={cn(
             buttonVariants({ size: "lg" }),
-            "mx-auto flex h-12 w-full max-w-lg rounded-xl bg-gradient-to-r from-primary to-violet-500 text-primary-foreground",
+            "mx-auto flex h-12 w-full max-w-lg rounded-xl bg-[#E05226] text-primary-foreground",
           )}
         >
           Start the challenge

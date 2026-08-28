@@ -1,5 +1,4 @@
-/* Hire Scout desk — visual language from abtalksv17, scoped so the rest of
-   the product keeps its indigo tokens. */
+/* Hire Scout desk — orange/cream visual language scoped to the recruiter UI. */
 .hire-app {
   --h-primary: #e05226;
   --h-primary-hover: #c9411c;
@@ -32,7 +31,7 @@
   --h-pill-ink: #3f3f46;
   --h-on-orange: #18181b;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  /* Hire desk spends orange, not product indigo, for primary actions. */
+  /* Hire desk uses the shared ABTalks orange primary actions. */
   --primary: 14 76% 51%;
   --color-primary: #e05226;
   min-height: 100dvh;

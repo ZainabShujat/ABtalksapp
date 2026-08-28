@@ -8,7 +8,7 @@ const PHASES = [
     title: "Foundations & Productivity",
     days: "Days 1–15",
     desc: "Claude setup · Prompt engineering · Graphify · Caveman Method · Claude Counter · Business communication",
-    color: "border-violet-500/30 bg-violet-500/5",
+    color: "border-[#E05226]/30 bg-[#FFF5F0]",
   },
   {
     number: "02",

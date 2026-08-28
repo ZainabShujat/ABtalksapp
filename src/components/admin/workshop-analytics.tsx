@@ -54,7 +54,7 @@ export function WorkshopAnalyticsPanel({ analytics, eventLabels }: Props) {
         <StatCard
           label="Unique attendees"
           value={uniqueAttendees}
-          accent="purple"
+          accent="orange"
           icon={<Users className="h-4 w-4" />}
         />
         <StatCard
@@ -164,7 +164,7 @@ export function WorkshopAnalyticsPanel({ analytics, eventLabels }: Props) {
                       {newPct}%
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-violet-500">
+                  <td className="px-4 py-3 text-right tabular-nums text-[#E05226]">
                     {e.returning}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">

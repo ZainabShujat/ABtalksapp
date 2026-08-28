@@ -403,8 +403,8 @@ export function DayPage({
         </motion.div>
 
         <CollapsibleSection
-          icon={<FileCode className="h-5 w-5 text-violet-500" />}
-          iconBg="bg-violet-500/10"
+          icon={<FileCode className="h-5 w-5 text-[#E05226]" />}
+          iconBg="bg-[#FFECE3]"
           title="Prompt Template"
           open={promptOpen}
           onOpenChange={handlePromptOpenChange}

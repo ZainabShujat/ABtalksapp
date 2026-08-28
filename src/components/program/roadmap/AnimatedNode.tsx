@@ -30,9 +30,9 @@ export function AnimatedNode({
       }
     >
       <motion.div
-        className="flex size-full items-center justify-center rounded-full border-[3px] bg-[radial-gradient(circle,rgba(62,34,111,1)_0%,rgba(0,0,0,1)_100%)]"
+        className="flex size-full items-center justify-center rounded-full border-[3px] bg-[radial-gradient(circle,rgba(224,82,38,1)_0%,rgba(0,0,0,1)_100%)]"
         animate={{
-          borderColor: active ? accent : "#1E1B37",
+          borderColor: active ? accent : "#111111",
         }}
         transition={{ duration: reduceMotion ? 0 : 0.18, ease }}
         style={

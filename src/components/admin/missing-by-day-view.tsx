@@ -38,7 +38,7 @@ function domainBadgeClass(domain: string): string {
 
 function statusBadgeClass(status: string): string {
   if (status === "ACTIVE") return "bg-emerald-100 text-emerald-700";
-  if (status === "COMPLETED") return "bg-violet-100 text-violet-700";
+  if (status === "COMPLETED") return "bg-[#FFECE3] text-[#C9411C]";
   return "bg-muted text-muted-foreground";
 }
 

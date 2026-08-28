@@ -172,7 +172,7 @@ function StepActiveArrow() {
   );
 }
 
-/** Figma 246:14 — purple dotted connector (`stroke-dasharray: 6 6`). */
+/** Figma 246:14 — orange dotted connector (`stroke-dasharray: 6 6`). */
 function StepDottedLine() {
   return (
     <svg

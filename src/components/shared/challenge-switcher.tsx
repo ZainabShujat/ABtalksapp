@@ -36,7 +36,7 @@ const DOMAIN_COLORS: Record<string, string> = {
   DS: "border-domains-ds/50 bg-domains-ds-bg text-domains-ds",
   AI: "border-domains-ai/50 bg-domains-ai-bg text-domains-ai",
   CLAUDE:
-    "border-violet-500/50 bg-violet-50 text-violet-800 dark:bg-violet-950/40 dark:text-violet-200",
+    "border-[#E05226]/50 bg-[#FFECE3] text-[#C9411C]",
 };
 
 const HACK_BADGE_COLOR =

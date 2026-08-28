@@ -28,7 +28,7 @@ import type { TimeRange } from "@/features/admin/get-analytics-data";
 const domainColors: Record<string, string> = {
   SE: "#10B981",
   DS: "#0891B2",
-  AI: "#8B5CF6",
+  AI: "#E05226",
   CLAUDE: "#F97316",
   Hackathon: "#EF4444",
 };

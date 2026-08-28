@@ -2,19 +2,17 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { AdminSparkline } from "@/components/admin/admin-sparkline";
 
-type Accent = "green" | "purple" | "orange" | "blue";
+type Accent = "green" | "orange" | "blue";
 
 const accentBorder: Record<Accent, string> = {
   green: "border-t-emerald-500",
-  purple: "border-t-violet-500",
-  orange: "border-t-amber-500",
+  orange: "border-t-[#E05226]",
   blue: "border-t-blue-500",
 };
 
 const accentIconBg: Record<Accent, string> = {
   green: "bg-emerald-500/10 text-emerald-500",
-  purple: "bg-violet-500/10 text-violet-500",
-  orange: "bg-amber-500/10 text-amber-500",
+  orange: "bg-[#FFECE3] text-[#E05226]",
   blue: "bg-blue-500/10 text-blue-500",
 };
 

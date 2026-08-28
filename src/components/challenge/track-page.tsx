@@ -182,7 +182,7 @@ export async function TrackPage({ domain, searchParams }: TrackPageProps) {
       <div className="relative flex min-h-svh flex-col bg-muted/30">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[360px] bg-gradient-to-b from-primary/20 via-violet-500/10 to-transparent sm:h-[440px]"
+          className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[360px] bg-gradient-to-b from-primary/20 to-transparent sm:h-[440px]"
         />
         <AppHeader
           user={headerUser}
@@ -209,7 +209,7 @@ export async function TrackPage({ domain, searchParams }: TrackPageProps) {
       <div className="relative flex min-h-svh flex-col bg-muted/30">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[360px] bg-gradient-to-b from-primary/20 via-violet-500/10 to-transparent sm:h-[440px]"
+          className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[360px] bg-gradient-to-b from-primary/20 to-transparent sm:h-[440px]"
         />
         <AppHeader
           user={headerUser}
@@ -264,7 +264,7 @@ export async function TrackPage({ domain, searchParams }: TrackPageProps) {
     <div className="relative flex min-h-svh flex-col bg-muted/30">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[360px] bg-gradient-to-b from-primary/20 via-violet-500/10 to-transparent sm:h-[440px]"
+        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[360px] bg-gradient-to-b from-primary/20 to-transparent sm:h-[440px]"
       />
       <AppHeader
         user={headerUser}

@@ -44,8 +44,8 @@
   --color-popover: hsl(var(--popover));
   --color-card-foreground: hsl(var(--card-foreground));
   --color-card: hsl(var(--card));
-  --color-domains-ai: #8b5cf6;
-  --color-domains-ai-bg: #f5f3ff;
+  --color-domains-ai: #e05226;
+  --color-domains-ai-bg: #ffece3;
   --color-domains-ds: #0891b2;
   --color-domains-ds-bg: #ecfeff;
   --color-domains-se: #10b981;
@@ -60,15 +60,15 @@
   --color-ink-700: hsl(0 2% 37%);
   --color-ink-800: hsl(0 2% 26%);
   --color-ink-900: hsl(0 2% 17%);
-  --color-accent-100: hsl(252 100% 97%);
-  --color-accent-200: hsl(254 100% 93%);
-  --color-accent-300: hsl(253 100% 88%);
-  --color-accent-400: hsl(252 100% 80%);
-  --color-accent-500: hsl(252 100% 68%);
-  --color-accent-600: hsl(253 77% 58%);
-  --color-accent-700: hsl(253 61% 47%);
-  --color-accent-800: hsl(254 63% 35%);
-  --color-accent-900: hsl(252 57% 24%);
+  --color-accent-100: #fff5f0;
+  --color-accent-200: #ffece3;
+  --color-accent-300: #ffece3;
+  --color-accent-400: #ffece3;
+  --color-accent-500: #e05226;
+  --color-accent-600: #e05226;
+  --color-accent-700: #c9411c;
+  --color-accent-800: #c9411c;
+  --color-accent-900: #c9411c;
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -267,52 +267,52 @@
   }
 
   /* Thin orange scrollbar — day page left curriculum rail */
-  .scrollbar-program-purple {
+  .scrollbar-program-orange {
     scrollbar-width: thin;
     scrollbar-color: #e05226 transparent;
   }
 
-  .scrollbar-program-purple::-webkit-scrollbar {
+  .scrollbar-program-orange::-webkit-scrollbar {
     width: 5px;
   }
 
-  .scrollbar-program-purple::-webkit-scrollbar-track {
+  .scrollbar-program-orange::-webkit-scrollbar-track {
     background: transparent;
     margin-block: 6px;
   }
 
-  .scrollbar-program-purple::-webkit-scrollbar-thumb {
+  .scrollbar-program-orange::-webkit-scrollbar-thumb {
     background: #e05226;
     border-radius: 999px;
   }
 
-  .scrollbar-program-purple::-webkit-scrollbar-thumb:hover {
+  .scrollbar-program-orange::-webkit-scrollbar-thumb:hover {
     background: #c9411c;
   }
 
-  /* Thin ABTalks purple scrollbar — admin desktop panes */
-  .scrollbar-admin-purple {
+  /* Thin ABTalks orange scrollbar — admin desktop panes */
+  .scrollbar-admin-orange {
     scrollbar-width: thin;
-    scrollbar-color: #7c5cff transparent;
+    scrollbar-color: #e05226 transparent;
   }
 
-  .scrollbar-admin-purple::-webkit-scrollbar {
+  .scrollbar-admin-orange::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
 
-  .scrollbar-admin-purple::-webkit-scrollbar-track {
+  .scrollbar-admin-orange::-webkit-scrollbar-track {
     background: transparent;
     margin-block: 6px;
   }
 
-  .scrollbar-admin-purple::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #9a88ff 0%, #6f56f5 100%);
+  .scrollbar-admin-orange::-webkit-scrollbar-thumb {
+    background: #e05226;
     border-radius: 999px;
   }
 
-  .scrollbar-admin-purple::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #b3a6ff 0%, #7c5cff 100%);
+  .scrollbar-admin-orange::-webkit-scrollbar-thumb:hover {
+    background: #c9411c;
   }
 
   @keyframes spark-pulse {
@@ -353,7 +353,7 @@
       transparent 0deg,
       transparent 210deg,
       hsl(var(--primary)) 290deg,
-      #d8b4fe 320deg,
+      #ffece3 320deg,
       transparent 360deg
     );
     -webkit-mask:

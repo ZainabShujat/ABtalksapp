@@ -30,7 +30,7 @@ export function ClaudeEnrollmentBanner({
 
   return (
     <>
-      <div className="border-b bg-gradient-to-r from-orange-500/10 via-pink-500/5 to-violet-500/10">
+      <div className="border-b bg-[#FFF5F0]">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2 md:px-6">
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <Sparkles className="h-4 w-4 shrink-0 text-orange-500" />
