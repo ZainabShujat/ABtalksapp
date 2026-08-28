@@ -74,6 +74,9 @@
     "db:rehearse:078:points-writes": "NODE_OPTIONS=--conditions=react-server tsx prisma/scripts/rehearse-078-points-writes.ts",
     "db:check:078:points-recon": "tsx prisma/scripts/check-078-points-recon.ts",
     "db:check:078:points-recon:production": "cross-env PHASE2_ALLOW_PRODUCTION=1 tsx prisma/scripts/check-078-points-recon.ts",
+    "db:probe:078:w1a-grant:production": "cross-env PHASE2_ALLOW_PRODUCTION=1 NODE_OPTIONS=--conditions=react-server tsx prisma/scripts/probe-078-w1a-production-grant.ts",
+    "db:repair:078:points-legacy-mirror": "tsx prisma/scripts/repair-078-points-legacy-mirror.ts",
+    "db:repair:078:points-legacy-mirror:production": "cross-env PHASE2_ALLOW_PRODUCTION=1 tsx prisma/scripts/repair-078-points-legacy-mirror.ts",
     "verify:hire-pool": "tsx scripts/verify-hire-pool.ts"
   },
   "dependencies": {
