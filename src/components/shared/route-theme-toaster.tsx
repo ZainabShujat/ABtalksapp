@@ -3,30 +3,17 @@
 import { usePathname } from "next/navigation";
 import { Toaster } from "@/components/ui/sonner";
 
-function isFixedLightRoute(pathname: string): boolean {
-  if (
-    pathname === "/login" ||
-    pathname === "/register" ||
-    pathname === "/dashboard" ||
-    pathname === "/claude" ||
-    pathname.startsWith("/claude/day/") ||
-    pathname.startsWith("/r/") ||
-    pathname.startsWith("/program/day/")
-  ) {
-    return true;
-  }
-
-  return [
-    "/program/dashboard",
-    "/program/curriculum",
-    "/program/interview",
-    "/program/leaderboard",
-    "/program/videos",
-  ].includes(pathname);
+function isLightOnlyRoute(pathname: string): boolean {
+  return !(
+    pathname === "/marketplace" ||
+    pathname.startsWith("/marketplace/") ||
+    pathname === "/hackathon" ||
+    pathname.startsWith("/hackathon/")
+  );
 }
 
 export function RouteThemeToaster() {
   const pathname = usePathname();
 
-  return isFixedLightRoute(pathname) ? <Toaster theme="light" /> : <Toaster />;
+  return isLightOnlyRoute(pathname) ? <Toaster theme="light" /> : <Toaster />;
 }
