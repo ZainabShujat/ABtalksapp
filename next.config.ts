@@ -35,6 +35,12 @@ const nextConfig: NextConfig = {
   // Next 16 blocks /_next/* from non-localhost origins unless listed here.
   // Without this, LAN/phone pages never hydrate → login form does a dead GET.
   allowedDevOrigins: localNetworkHosts(),
+  // The talent pool browser was removed — /hire is the recruiter surface now.
+  // Kept as a redirect rather than a 404 because the old path is in bookmarks,
+  // in the footer of older emails, and was the recruiter's door for months.
+  async redirects() {
+    return [{ source: "/talent", destination: "/hire", permanent: true }];
+  },
 };
 
 export default nextConfig;

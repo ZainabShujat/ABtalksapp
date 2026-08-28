@@ -1,6 +1,8 @@
 /**
- * One-shot: waive Days 1..(PROGRAM_MEMBER_START_DAY-1), unlock start day,
- * and seed early commit-activity days for ENROLLED / COMPLETED members.
+ * One-shot: sync ENROLLED / COMPLETED members to PROGRAM_MEMBER_START_DAY.
+ * When START_DAY is 1 this retracts unused Day 1–3 start waivers (members
+ * with a real pass are left alone). When START_DAY is >1 it waives 1..(n-1)
+ * and seeds early commit-activity days.
  *
  * Usage: npm run db:bootstrap:program-start-day
  *

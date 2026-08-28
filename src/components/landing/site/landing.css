@@ -1,0 +1,1783 @@
+/* =========================================================
+   ABTalks — Landing Page
+   Built on the ABTalks Complete UI Design System
+   Tokens: colour, type scale, spacing, radius, shadow, motion
+   ========================================================= */
+
+/* ---------- 1. TOKENS ---------- */
+.abtalks-landing {
+  /* Colour */
+  --lp-color-primary: #E05226;
+  --lp-color-primary-hover: #C9411C;
+  --lp-color-primary-active: #A93617;
+  --lp-color-primary-light: #FFECE3;
+
+  --lp-color-background: #FBF9F7;
+  --lp-color-background-alt: #FFF1E9;
+
+  --lp-color-text-primary: #111111;
+  --lp-color-text-secondary: #4B4B4B;
+  --lp-color-text-muted: #8F8F8F;
+  --lp-color-dark-gray: #353535;
+
+  --lp-color-border: #E0E0E0;
+  --lp-color-white: #FFFFFF;
+
+  --lp-color-error: #C0341A;
+  --lp-color-success: #1E7A4B;
+
+  /* Spacing scale (4px base) */
+  --lp-space-4: 4px;   --lp-space-8: 8px;   --lp-space-12: 12px; --lp-space-16: 16px;
+  --lp-space-20: 20px; --lp-space-24: 24px; --lp-space-32: 32px; --lp-space-40: 40px;
+  --lp-space-48: 48px; --lp-space-64: 64px; --lp-space-80: 80px; --lp-space-96: 96px;
+  --lp-space-120: 120px;
+
+  /* Radius */
+  --lp-radius-xs: 4px;
+  --lp-radius-sm: 8px;
+  --lp-radius-md: 12px;
+  --lp-radius-lg: 16px;
+  --lp-radius-xl: 24px;
+  --lp-radius-pill: 999px;
+
+  /* Shadow */
+  --lp-shadow-sm: 0 2px 8px rgba(0,0,0,.06);
+  --lp-shadow-md: 0 8px 24px rgba(0,0,0,.08);
+  --lp-shadow-lg: 0 12px 32px rgba(0,0,0,.10);
+
+  /* Layout */
+  --lp-container: 1280px;
+  --lp-pad: 10px;          /* global horizontal page padding (was 40px) */
+  --lp-gutter: 24px;
+  --lp-section-gap: 74px;   /* section-to-section rhythm, 22px tighter */
+
+  /* Type */
+  --lp-font-display: var(--font-outfit), system-ui, sans-serif;
+  --lp-font-body: var(--font-inter), system-ui, sans-serif;
+
+  /* Motion language — one curve across the whole site */
+  --lp-ease: cubic-bezier(.22, .61, .36, 1);
+  --lp-ease-inout: cubic-bezier(.65, .05, .36, 1);
+  --lp-ease-soft: cubic-bezier(.16, .84, .44, 1);
+  --lp-dur-fast: .22s;
+  --lp-dur: .45s;
+  --lp-dur-slow: .7s;
+}
+
+/* ---------- 2. RESET ---------- */
+.abtalks-landing *, .abtalks-landing *::before, .abtalks-landing *::after { box-sizing: border-box; }
+.abtalks-landing { -webkit-text-size-adjust: 100%; }
+.abtalks-landing {
+  margin: 0;
+  font-family: var(--lp-font-body);
+  font-size: 17px;
+  line-height: 28px;
+  font-weight: 400;
+  color: var(--lp-color-text-secondary);
+  background: var(--lp-color-background);
+  -webkit-font-smoothing: antialiased;              /* motion system must never cause h-scroll */
+}
+.abtalks-landing img { max-width: 100%; display: block; }
+.abtalks-landing ul, .abtalks-landing ol { margin: 0; padding: 0; list-style: none; }
+.abtalks-landing a { color: inherit; text-decoration: none; }
+.abtalks-landing button { font: inherit; color: inherit; }
+
+.abtalks-landing .skip-link {
+  position: absolute; left: -9999px; top: 0; z-index: 200;
+  background: var(--lp-color-primary); color: #fff;
+  padding: var(--lp-space-12) var(--lp-space-20); border-radius: 0 0 var(--lp-radius-sm) 0;
+}
+.abtalks-landing .skip-link:focus { left: 0; }
+
+/* ---------- 3. LAYOUT PRIMITIVES ---------- */
+.abtalks-landing .container {
+  width: 100%;
+  max-width: calc(var(--lp-container) + var(--lp-pad) * 2);
+  margin-inline: auto;
+  padding-inline: var(--lp-pad);
+}
+.abtalks-landing .section { padding-block: var(--lp-section-gap); }
+
+/* ---------- 4. TYPOGRAPHY ---------- */
+.abtalks-landing .h2 {
+  font-family: var(--lp-font-display);
+  font-size: 40px; line-height: 48px; font-weight: 700;
+  color: var(--lp-color-text-primary);
+  margin: 0 0 var(--lp-space-16);
+  letter-spacing: -0.01em;
+}
+.abtalks-landing .h3 {
+  font-family: var(--lp-font-display);
+  font-size: 24px; line-height: 30px; font-weight: 600;
+  color: var(--lp-color-text-primary);
+  margin: 0 0 var(--lp-space-12);
+}
+.abtalks-landing .p  { font-size: 17px; line-height: 28px; margin: 0; max-width: 65ch; }
+.abtalks-landing .p-sm { font-size: 14px; line-height: 21px; margin: 0; max-width: 60ch; color: var(--lp-color-text-secondary); }
+.abtalks-landing .accent { color: var(--lp-color-primary); }
+
+.abtalks-landing .section-label {
+  font-size: 13px; line-height: 18px; font-weight: 600;
+  letter-spacing: .03em; text-transform: uppercase;
+  color: var(--lp-color-primary);
+  margin: 0 0 var(--lp-space-12);
+  font-family: var(--lp-font-display);
+}
+
+/* ---------- 5. BUTTONS ---------- */
+.abtalks-landing .btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--lp-space-8);
+  height: 44px; padding-inline: 20px;
+  font-family: var(--lp-font-body);
+  font-size: 16px; line-height: 20px; font-weight: 600;
+  border-radius: var(--lp-radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color var(--lp-dur-fast) var(--lp-ease),
+              color var(--lp-dur-fast) var(--lp-ease),
+              border-color var(--lp-dur-fast) var(--lp-ease),
+              transform var(--lp-dur-fast) var(--lp-ease);
+  white-space: nowrap;
+}
+.abtalks-landing .btn:active { transform: translateY(1px); }
+.abtalks-landing .btn:focus-visible { outline: 2px solid var(--lp-color-primary); outline-offset: 4px; }
+
+.abtalks-landing .btn--sm { height: 36px; padding-inline: 16px; font-size: 14px; }
+.abtalks-landing .btn--lg { height: 48px; padding-inline: 24px; }
+.abtalks-landing .btn--nav { height: 40px; padding-inline: 20px; font-size: 14px; }
+.abtalks-landing .btn--block { width: 100%; }
+
+.abtalks-landing .btn--primary { background: var(--lp-color-primary); color: #fff; }
+.abtalks-landing .btn--primary:hover { background: var(--lp-color-primary-hover); }
+.abtalks-landing .btn--primary:active { background: var(--lp-color-primary-active); }
+
+.abtalks-landing .btn--ghost { background: transparent; color: var(--lp-color-text-primary); border-color: var(--lp-color-border); }
+.abtalks-landing .btn--ghost:hover { border-color: var(--lp-color-text-primary); }
+
+.abtalks-landing .btn--ghost-light { background: rgba(255,255,255,.10); color: #fff; border-color: rgba(255,255,255,.55); backdrop-filter: blur(4px); }
+.abtalks-landing .btn--ghost-light:hover { background: rgba(255,255,255,.20); }
+
+.abtalks-landing .btn--white { background: #fff; color: var(--lp-color-primary); }
+.abtalks-landing .btn--white:hover { background: var(--lp-color-primary-light); }
+
+.abtalks-landing .btn--outline-light { background: transparent; color: #fff; border-color: rgba(255,255,255,.75); }
+.abtalks-landing .btn--outline-light:hover { background: rgba(255,255,255,.14); }
+
+.abtalks-landing .btn--whatsapp { background: #25D366; color: #0B2A17; }
+.abtalks-landing .btn--whatsapp:hover { background: #1FBE5B; }
+
+/* =========================================================
+   6. NAVBAR — frosted glass
+   ========================================================= */
+.abtalks-landing .nav-wrap {
+  position: fixed; inset: 0 0 auto 0; z-index: 100;
+  padding-block: var(--lp-space-16);
+  transition: padding-block var(--lp-dur) var(--lp-ease);
+  will-change: padding;
+}
+.abtalks-landing .nav-wrap.is-stuck { padding-block: var(--lp-space-8); }
+
+.abtalks-landing .nav {
+  height: 68px;
+  display: flex; align-items: center; gap: var(--lp-space-24);
+  padding-inline: var(--lp-space-24);
+  border-radius: var(--lp-radius-pill);
+
+  /* Top state: light, translucent, integrated with the hero */
+  background: rgba(255,255,255,.42);
+  border: 1px solid rgba(255,255,255,.42);
+  box-shadow: 0 1px 0 rgba(255,255,255,.28) inset, 0 0 0 rgba(0,0,0,0);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+  backdrop-filter: blur(10px) saturate(150%);
+
+  transition:
+    background-color var(--lp-dur) var(--lp-ease),
+    border-color var(--lp-dur) var(--lp-ease),
+    box-shadow var(--lp-dur) var(--lp-ease),
+    height var(--lp-dur) var(--lp-ease),
+    -webkit-backdrop-filter var(--lp-dur) var(--lp-ease),
+    backdrop-filter var(--lp-dur) var(--lp-ease);
+}
+
+/* Scrolled state: denser glass, stronger blur, subtle shadow */
+.abtalks-landing .nav-wrap.is-stuck .nav {
+  height: 60px;
+  background: rgba(255,255,255,.62);
+  border-color: rgba(255,255,255,.7);
+  box-shadow: 0 1px 0 rgba(255,255,255,.5) inset, 0 6px 22px rgba(17,17,17,.07);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+}
+
+.abtalks-landing .nav__logo {
+  display: flex; align-items: center; flex-shrink: 0;
+}
+.abtalks-landing .nav__logo img {
+  height: 32px; width: auto; object-fit: contain;
+}
+.abtalks-landing .nav-wrap.is-stuck .nav__logo img {
+  height: 28px;
+}
+.abtalks-landing .nav__links {
+  display: flex; align-items: center; gap: var(--lp-space-24);
+  margin-inline: auto;
+}
+.abtalks-landing .nav__links-cta { display: none; }
+.abtalks-landing .nav__link {
+  font-size: 14px; line-height: 20px; font-weight: 500;
+  color: var(--lp-color-text-secondary);
+  padding: var(--lp-space-8) var(--lp-space-16);
+  border-radius: var(--lp-radius-pill);
+  transition: background-color var(--lp-dur-fast) var(--lp-ease), color var(--lp-dur-fast) var(--lp-ease);
+}
+.abtalks-landing .nav__link:hover { color: var(--lp-color-text-primary); background: rgba(255,255,255,.55); }
+.abtalks-landing .nav__link.is-active {
+  color: var(--lp-color-text-primary);
+  background: rgba(255,255,255,.78);
+  box-shadow: 0 1px 4px rgba(17,17,17,.08);
+}
+
+.abtalks-landing .nav__burger {
+  display: none;
+  width: 44px; height: 44px;
+  background: none; border: 0; cursor: pointer;
+  flex-direction: column; justify-content: center; align-items: center; gap: 5px;
+}
+.abtalks-landing .nav__burger span {
+  display: block; width: 20px; height: 2px; border-radius: 2px;
+  background: var(--lp-color-text-primary);
+  transition: transform var(--lp-dur-fast) var(--lp-ease), opacity var(--lp-dur-fast) var(--lp-ease);
+}
+.abtalks-landing .nav__burger[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.abtalks-landing .nav__burger[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+.abtalks-landing .nav__burger[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+.abtalks-landing .nav__cta-menu {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.abtalks-landing .nav__cta-caret {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(-1px);
+  transition: transform var(--lp-dur-fast) var(--lp-ease);
+}
+.abtalks-landing .nav__cta-menu .btn--ghost,
+.abtalks-landing .nav__cta-menu .btn--ghost:hover,
+.abtalks-landing .nav__cta-menu:hover .btn--ghost,
+.abtalks-landing .nav__cta-menu:focus-within .btn--ghost,
+.abtalks-landing .nav__cta-menu.is-open .btn--ghost {
+  border-color: var(--lp-color-primary);
+}
+.abtalks-landing .nav__cta-menu:hover .nav__cta-caret,
+.abtalks-landing .nav__cta-menu:focus-within .nav__cta-caret,
+.abtalks-landing .nav__cta-menu.is-open .nav__cta-caret {
+  transform: rotate(-135deg) translateY(-1px);
+}
+.abtalks-landing .nav__cta-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  z-index: 2;
+  margin: 0;
+  padding: var(--lp-space-4);
+  list-style: none;
+  flex-direction: column;
+  background: rgba(255,255,255,.92);
+  border: 1px solid var(--lp-color-border);
+  border-top: 0;
+  border-radius: 0 0 var(--lp-radius-sm) var(--lp-radius-sm);
+  box-shadow: 0 6px 22px rgba(17, 17, 17, 0.07);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+}
+@media (hover: hover) and (pointer: fine) {
+  .abtalks-landing .nav__cta-menu:hover .nav__cta-dropdown,
+  .abtalks-landing .nav__cta-menu:focus-within .nav__cta-dropdown {
+    display: flex;
+  }
+}
+.abtalks-landing .nav__cta-menu:focus-within .nav__cta-dropdown,
+.abtalks-landing .nav__cta-menu.is-open .nav__cta-dropdown {
+  display: flex;
+}
+.abtalks-landing .nav__cta-item {
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--lp-space-8) var(--lp-space-12);
+  font-size: 14px; line-height: 20px; font-weight: 500;
+  color: var(--lp-color-text-primary);
+  border-radius: var(--lp-radius-xs);
+  text-align: center;
+  transition: background-color var(--lp-dur-fast) var(--lp-ease),
+              color var(--lp-dur-fast) var(--lp-ease);
+}
+.abtalks-landing .nav__cta-item:hover {
+  background: var(--lp-color-primary-light);
+  color: var(--lp-color-primary);
+}
+
+/* =========================================================
+   7. HERO
+   ========================================================= */
+.abtalks-landing .hero {
+  position: relative;
+  /* The hero owns the whole first screen, so the video is never cut short and
+     the Stats band always starts below the fold. svh = smallest viewport
+     height, so mobile browser chrome can never pull Stats into view. */
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex; align-items: flex-end;
+  padding-top: 160px; padding-bottom: var(--lp-space-80);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Gradient fallback — always present, video paints over it */
+.abtalks-landing .hero__bg {
+  position: absolute; inset: 0; z-index: -3;
+  background:
+    radial-gradient(1200px 600px at 78% 30%, rgba(224,82,38,.20), transparent 60%),
+    linear-gradient(180deg, #b9b2a9 0%, #948d85 55%, #6f6a64 100%);
+}
+.abtalks-landing .hero__bg::after {
+  content: ""; position: absolute; inset: 0;
+  background-image:
+    radial-gradient(closest-side at 30% 78%, rgba(20,18,16,.55), transparent 70%),
+    radial-gradient(closest-side at 82% 74%, rgba(20,18,16,.60), transparent 70%);
+}
+
+/* Background video — pure background layer, never affects layout */
+.abtalks-landing .hero__video {
+  position: absolute; inset: 0; z-index: -2;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.2s var(--lp-ease);
+}
+.abtalks-landing .hero.has-video .hero__video { opacity: 1; }
+.abtalks-landing .hero__video::-webkit-media-controls { display: none !important; }
+
+.abtalks-landing .hero__scrim {
+  position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(90deg, rgba(10,9,8,.74) 0%, rgba(10,9,8,.42) 46%, rgba(10,9,8,.12) 72%);
+}
+.abtalks-landing .hero__inner { position: relative; }
+.abtalks-landing .hero__content { max-width: 620px; }
+
+/* --- Eyebrow: "Interview" + hand-drawn strike --- */
+.abtalks-landing .hero__eyebrow { margin: 0 0 var(--lp-space-12); }
+.abtalks-landing .strike {
+  position: relative;
+  display: inline-block;
+  font-family: var(--lp-font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 44px; line-height: 52px;
+  color: rgba(255,255,255,.92);
+}
+.abtalks-landing .strike__word {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(14px);
+}
+.abtalks-landing .strike__line {
+  position: absolute; left: -6px; right: -8px; top: 50%;
+  height: 22px; width: calc(100% + 14px);
+  transform: translateY(-40%) rotate(-2.2deg);
+  overflow: visible;
+  pointer-events: none;
+}
+.abtalks-landing .strike__line path {
+  fill: none;
+  stroke: var(--lp-color-primary);
+  stroke-width: 3.4;
+  stroke-linecap: round;
+  stroke-dasharray: 320;
+  stroke-dashoffset: 320;
+  vector-effect: non-scaling-stroke;
+}
+
+/* --- Title with marker highlight --- */
+.abtalks-landing .hero__title {
+  font-family: var(--lp-font-display);
+  font-size: 64px; line-height: 70px; font-weight: 700;
+  color: var(--lp-color-text-primary);
+  margin: 0 0 var(--lp-space-16);
+  letter-spacing: -0.02em;
+}
+.abtalks-landing .hl {
+  position: relative;
+  display: table;          /* hugs the text so the ink matches the word width */
+  isolation: isolate;
+}
+.abtalks-landing .hl__ink {
+  position: absolute;
+  inset: -2px -12px;
+  background: var(--lp-color-primary-light);
+  transform: scaleX(0);
+  transform-origin: left center;
+  z-index: -1;
+  border-radius: 2px;
+}
+.abtalks-landing .hl__text { position: relative; opacity: 0; }
+
+.abtalks-landing .hero__desc {
+  font-size: 17px; line-height: 28px;
+  color: rgba(255,255,255,.86);
+  max-width: 58ch; margin: 0 0 var(--lp-space-24);
+  opacity: 0; transform: translateY(16px);
+}
+.abtalks-landing .hero__actions { display: flex; flex-wrap: wrap; gap: var(--lp-space-16); }
+.abtalks-landing .hero__actions .btn { opacity: 0; transform: translateY(8px) scale(.92); }
+
+.abtalks-landing .hero__stamp {
+  position: absolute; right: 0; top: -24px;
+  font-family: var(--lp-font-display);
+  font-size: 92px; font-weight: 700; letter-spacing: .04em;
+  color: rgba(224,82,38,.92);
+  border: 6px solid rgba(224,82,38,.92);
+  border-radius: var(--lp-radius-sm);
+  padding: 6px 20px;
+  transform: rotate(-8deg) scale(.9);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* --- Hero choreography ---------------------------------------------------
+   STAGE 1 (.is-playing, on load): "Interview" + its strike-through only.
+   STAGE 2 (.is-headline-ready): added by JS when the hero VIDEO crosses
+   currentTime >= 4s. Every delay below is relative to that moment, so the
+   headline can never appear early no matter how the video buffers.
+   ------------------------------------------------------------------------ */
+
+/* Nothing of the headline block may paint before stage 2 */
+.abtalks-landing .hero__title { visibility: hidden; }
+.abtalks-landing .hero.is-headline-ready .hero__title,
+.abtalks-landing .no-js-hero .hero__title { visibility: visible; }
+
+.abtalks-landing .hero.is-playing .strike__word      { animation: heroRise .62s var(--lp-ease) .10s forwards; }
+.abtalks-landing .hero.is-playing .strike__line path { animation: drawLine .68s var(--lp-ease-inout) .82s forwards; }
+.abtalks-landing .hero.is-playing .hero__stamp       { animation: stampIn .70s var(--lp-ease-soft) 1.05s forwards; }
+
+/* t = 0 is the video's 4.000s mark */
+.abtalks-landing .hero.is-headline-ready .hl[data-hl="1"] .hl__text { animation: heroFade .42s var(--lp-ease) 0s   forwards; }
+.abtalks-landing .hero.is-headline-ready .hl[data-hl="2"] .hl__text { animation: heroFade .42s var(--lp-ease) .14s forwards; }
+.abtalks-landing .hero.is-headline-ready .hl[data-hl="1"] .hl__ink  { animation: marker .72s var(--lp-ease-inout) .34s forwards; }
+.abtalks-landing .hero.is-headline-ready .hl[data-hl="2"] .hl__ink  { animation: marker .72s var(--lp-ease-inout) .52s forwards; }
+.abtalks-landing .hero.is-headline-ready .hero__desc                { animation: heroRise .60s var(--lp-ease) 1.32s forwards; }
+.abtalks-landing .hero.is-headline-ready .hero__actions .btn:nth-child(1) { animation: heroPop .58s var(--lp-ease-soft) 1.90s forwards; }
+.abtalks-landing .hero.is-headline-ready .hero__actions .btn:nth-child(2) { animation: heroPop .58s var(--lp-ease-soft) 2.02s forwards; }
+
+@keyframes heroRise { to { opacity: 1; transform: translateY(0); } }
+@keyframes heroFade { to { opacity: 1; } }
+@keyframes heroPop  { to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes drawLine { to { stroke-dashoffset: 0; } }
+@keyframes marker   { to { transform: scaleX(1); } }
+@keyframes stampIn  { to { opacity: .95; transform: rotate(-8deg) scale(1); } }
+
+/* Static fallback if JS never runs */
+.abtalks-landing .no-js-hero .strike__word,
+.abtalks-landing .no-js-hero .hl__text,
+.abtalks-landing .no-js-hero .hero__desc,
+.abtalks-landing .no-js-hero .hero__actions .btn { opacity: 1; transform: none; }
+
+/* ---------- 8. STATS ---------- */
+.abtalks-landing .stats {
+  background: linear-gradient(180deg, #D8471C 0%, #E05226 45%, #EE8A54 100%);
+  /* Breathing gap so the hero video frame completes before the band starts */
+  margin-top: 0px;
+}
+.abtalks-landing .stats__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--lp-gutter);
+  padding-block: var(--lp-space-48);
+  text-align: center;
+  justify-items: center;
+  align-items: start;
+}
+.abtalks-landing .stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 28ch;
+  width: 100%;
+}
+.abtalks-landing .stat__num {
+  font-family: var(--lp-font-display);
+  font-size: 48px; line-height: 52px; font-weight: 700; color: #fff;
+  margin-bottom: var(--lp-space-8);
+}
+.abtalks-landing .stat__label {
+  font-size: 12px; line-height: 18px; font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase;
+  color: rgba(255,255,255,.88); margin: 0;
+  max-width: 22ch;
+}
+
+/* =========================================================
+   9. THE BRIDGE — scroll-driven, pinned
+   ========================================================= */
+.abtalks-landing .bridge {
+  background: linear-gradient(180deg, #ffffff 0%, #ffffff 100%);
+  --lp-bridge-track: 340vh;
+}
+.abtalks-landing .bridge__track { height: var(--lp-bridge-track); position: relative; }
+.abtalks-landing .bridge__pin {
+  /* 20px tighter top and bottom; the track height (scroll duration) is unchanged */
+  position: sticky; top: -20px;
+  height: calc(100vh - 40px);
+  display: flex; align-items: center;
+  overflow: hidden;
+}
+.abtalks-landing .bridge__grid {
+  position: relative;              /* containing block for the connector overlay */
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: var(--lp-space-64); align-items: center;
+  width: 100%;
+}
+
+/* --- Connector overlay ------------------------------------------------
+   One SVG spanning the whole grid, so a line can run from a platform in the
+   left column to its title in the right column. It sits outside
+   .bridge__visual (which would clip it) and is absolutely positioned with
+   pointer-events off, so it can never affect layout or hit-testing.
+   overflow:visible lets the stroke's round cap sit flush at the edges without
+   widening the page — the svg box itself is exactly the grid box.
+   ---------------------------------------------------------------------- */
+.abtalks-landing .bridge__links {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 3;
+}
+.abtalks-landing .blink { opacity: 0; }
+.abtalks-landing .blink__line {
+  fill: none;
+  stroke: url(#bridgeLinkGrad);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1 1;           /* pathLength="1" — see script.js */
+  stroke-dashoffset: 1;
+}
+
+/* --- Stacked platforms: real thin 3D cuboids ---------------------------
+   Each .slab is an isometric 3D box: a top face lifted to translateZ(T)
+   plus four vertical walls. Back-facing walls are culled automatically,
+   so exactly the two walls facing the viewer render — giving genuine
+   thickness rather than a flat rotated rectangle.
+   ---------------------------------------------------------------------- */
+.abtalks-landing .bridge__visual { position: relative; height: 440px; }
+.abtalks-landing .stack {
+  position: absolute; inset: 0;
+  perspective: 1500px;
+  perspective-origin: 50% 42%;
+  transform-style: preserve-3d;
+}
+.abtalks-landing .slab {
+  --lp-slab-w: 210px;       /* square platform footprint */
+  --lp-slab-t: 16px;        /* thickness — thin, but clearly visible */
+  position: absolute; left: 50%;
+  width: var(--lp-slab-w); height: var(--lp-slab-w);
+  transform-style: preserve-3d;
+  transform:
+    translate3d(calc(-50% + var(--lp-tx, 0px)), var(--lp-ty, 0px), 0)
+    rotateX(58deg) rotateZ(-45deg)
+    scale(var(--lp-sc, 1));
+  will-change: transform;
+}
+
+/* Cast shadow on the ground plane, strengthens as a platform comes forward */
+.abtalks-landing .slab__shadow {
+  position: absolute; inset: 0;
+  background: rgba(38, 28, 22, .30);
+  border-radius: 10px;
+  transform: translateZ(calc(var(--lp-slab-t) * -1)) scale(1.015);
+  filter: blur(calc(9px + var(--lp-lift, 0) * 12px));
+  opacity: calc(.30 + var(--lp-lift, 0) * .30);
+}
+
+.abtalks-landing .slab__face {
+  position: absolute;
+  backface-visibility: hidden;
+  background: var(--lp-face-base);
+}
+/* Tint overlay — fades in with --lift so the active layer picks up its colour */
+.abtalks-landing .slab__face::after {
+  content: ""; position: absolute; inset: 0;
+  background: var(--lp-face-tint, transparent);
+  opacity: var(--lp-lift, 0);
+}
+
+/* Top face */
+.abtalks-landing .slab__face--top {
+  inset: 0;
+  border-radius: 3px;
+  transform: translateZ(var(--lp-slab-t));
+  --lp-face-base: linear-gradient(155deg, #FFFFFF 0%, #F4F0EC 60%, #EAE4DE 100%);
+  --lp-face-tint: var(--lp-tint-top);
+  box-shadow: inset 0 0 0 1px rgba(237, 237, 237, 0.6);
+}
+/* Label printed on the top face. It lives inside .slab__face--top, so it
+   carries the cuboid's whole 3D transform and can never drift from it.
+   No counter-rotation: the text simply runs along the face's own axis, which
+   projects as the tile's ascending diagonal — matching the reference. It stays
+   foreshortened by the 58deg tilt, so it reads as printed on the surface
+   rather than floating over it; scaleY gives back a little of that squash for
+   legibility. Opacity comes from --label, which the scroll engine drives from
+   this platform's own pull-out progress. */
+.abtalks-landing .slab__label {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  z-index: 2;
+  padding: 12%;
+  font-family: var(--lp-font-display);
+  font-size: 28px; line-height: 1; font-weight: 600;
+  letter-spacing: .01em;
+  color: #111111;
+  white-space: wrap;
+  align-items: center;
+  transform: scaleY(1.22);
+  opacity: var(--lp-label, 0);      /* hidden while the platform sits in the stack */
+  backface-visibility: hidden;
+  pointer-events: none;
+}
+
+/* Side walls — each hinges up from the edge it sits on, filling the gap
+   between the ground plane and the raised top face. Only the two walls the
+   isometric camera can actually see are drawn; the far two would sit behind
+   the top face anyway. */
+.abtalks-landing .slab__face--s {
+  top: 100%; left: 0;
+  width: var(--lp-slab-w); height: var(--lp-slab-t);
+  transform-origin: top center; transform: rotateX(90deg);
+  backface-visibility: visible;   /* this wall presents its reverse side to us */
+  --lp-face-base: linear-gradient(180deg, #E6DFD8, #CDC4BB);
+  --lp-face-tint: var(--lp-tint-side-a);
+}
+.abtalks-landing .slab__face--w {
+  top: 0; left: 0;
+  width: var(--lp-slab-t); height: var(--lp-slab-w);
+  transform-origin: left center; transform: rotateY(-90deg);
+  --lp-face-base: linear-gradient(180deg, #D7CFC7, #BAB0A6);
+  --lp-face-tint: var(--lp-tint-side-b);
+}
+
+/* Same three layer colours as before, now split into top / side tones */
+.abtalks-landing .slab--top {
+  top: 30px;
+  --lp-tint-top:    linear-gradient(155deg, #F5B694, #E58256);
+  --lp-tint-side-a: linear-gradient(180deg, #DE8E68, #C86C42);
+  --lp-tint-side-b: linear-gradient(180deg, #CE7D57, #B25E38);
+}
+.abtalks-landing .slab--middle {
+  top: 130px;
+  --lp-tint-top:    linear-gradient(155deg, #B9B6E2, #8480BD);
+  --lp-tint-side-a: linear-gradient(180deg, #9A96CE, #7A76B0);
+  --lp-tint-side-b: linear-gradient(180deg, #8B87BE, #6B6799);
+}
+.abtalks-landing .slab--bottom {
+  top: 230px;
+  --lp-tint-top:    linear-gradient(155deg, #C2D3E6, #8AA6C6);
+  --lp-tint-side-a: linear-gradient(180deg, #A2BAD3, #7E9BBB);
+  --lp-tint-side-b: linear-gradient(180deg, #93AAC4, #6E89A8);
+}
+
+/* --- Panels ---
+   The grid already centres this column against .bridge__visual, but the three
+   platforms do not sit centred inside that box: their combined optical centre
+   is (30 + 230)/2 + 210/2 = 235px down a 440px box, i.e. 15px below the box
+   centre. --stack-offset nudges the whole text column by exactly that much so
+   it reads as centred against the stack taken as one object. Each .bpanel then
+   centres its own content vertically inside the shared box, so all four panels
+   share one alignment system. Horizontal alignment is untouched — text stays
+   flush left. Set to 0 below 1080px, where the grid is a single column and the
+   stack sits above the text rather than beside it. */
+.abtalks-landing .bridge__panels {
+  position: relative; min-height: 300px;
+  --lp-stack-offset: 15px;
+  transform: translateY(var(--lp-stack-offset));
+}
+.abtalks-landing .bpanel {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; justify-content: center;
+  text-align: left;
+  opacity: 0;
+  transform: translateY(18px);
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.abtalks-landing .bpanel.is-current { pointer-events: auto; }
+.abtalks-landing .bpanel__list { display: grid; gap: var(--lp-space-12); margin-top: var(--lp-space-16); }
+.abtalks-landing .bpanel__list li {
+  position: relative; padding-left: 20px;
+  font-size: 14px; line-height: 21px; color: var(--lp-color-text-secondary);
+}
+.abtalks-landing .bpanel__list li::before {
+  content: ""; position: absolute; left: 0; top: 7px;
+  width: 8px; height: 8px; border-radius: 2px;
+  background: var(--lp-color-primary);
+}
+
+/* ---------- 9b. COMPANIES LOGO MARQUEE ---------- */
+.abtalks-landing .companies {
+  background: var(--lp-color-background);
+  overflow: hidden;
+  /* Cancels .how's --lp-tighten-above so the strip isn't covered */
+  margin-bottom: 88px;
+  position: relative;
+  z-index: 2;
+}
+.abtalks-landing .companies__head {
+  text-align: center;
+  margin-bottom: var(--lp-space-32);
+}
+.abtalks-landing .companies__title {
+  margin: 0;
+  font-family: var(--lp-font-body);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lp-color-primary);
+}
+.abtalks-landing .companies__marquee {
+  position: relative;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.abtalks-landing .companies__track {
+  display: flex;
+  width: max-content;
+  animation: companies-marquee 40s linear infinite;
+}
+.abtalks-landing .companies__track:has(.companies__logo:hover) {
+  animation-play-state: paused;
+}
+.abtalks-landing .companies__group {
+  display: flex;
+  align-items: center;
+  gap: var(--lp-space-64);
+  padding-inline-end: var(--lp-space-64);
+  flex: 0 0 auto;
+}
+.abtalks-landing .companies__logo {
+  height: 32px;
+  width: auto;
+  max-width: 140px;
+  object-fit: contain;
+  flex: 0 0 auto;
+  filter: brightness(0) opacity(0.4);
+  transition: filter var(--lp-dur-fast) var(--lp-ease);
+  cursor: default;
+}
+.abtalks-landing .companies__logo:hover {
+  filter: brightness(0) opacity(1);
+}
+@keyframes companies-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* =========================================================
+   10. HOW IT WORKS — rolling 3-face object
+   ========================================================= */
+/* --tighten-above closes the dead whitespace at a pinned-section junction by
+   pulling this section up over the tail of the previous one. It is applied to
+   .how and .keep only, so it affects exactly two junctions:
+   Bridge → How It Works and How It Works → Keep The Three.
+   Deliberately NOT --section-gap (global) and NOT the --*-track values (scroll
+   duration). The pin's own height and its centred content are untouched — the
+   overlap lands entirely in the empty band below the outgoing pin's content. */
+.abtalks-landing .how {
+  background: linear-gradient(180deg, #FFF6F0 0%, #FFF1E9 100%);
+  --lp-how-track: 320vh;
+  --lp-face-h: 380px;
+  --lp-tighten-above: 88px;
+  margin-top: calc(var(--lp-tighten-above) * -1);
+  position: relative; z-index: 1;
+}
+.abtalks-landing .how__track { height: var(--lp-how-track); position: relative; }
+.abtalks-landing .how__pin {
+  position: sticky; top: 20px;
+  height: calc(100vh - 40px);
+  display: flex; align-items: center;
+  overflow: hidden;
+}
+.abtalks-landing .how__label { margin-bottom: var(--lp-space-32); }
+
+.abtalks-landing .roller__stage {
+  perspective: 1600px;
+  perspective-origin: 50% 50%;
+  height: var(--lp-face-h);
+}
+.abtalks-landing .roller__cube {
+  position: relative;
+  width: 100%; height: 100%;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--lp-rot, 0deg));
+  will-change: transform;
+}
+.abtalks-landing .roller__face {
+  position: absolute; inset: 0;
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: var(--lp-space-48); align-items: center;
+  padding: 0;
+  /* No card: the content itself is the 3D object */
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backface-visibility: hidden;
+  /* prism radius = h / (2 * tan(60deg)) */
+  transform: rotateX(calc(var(--lp-i) * 120deg)) translateZ(calc(var(--lp-face-h) / 3.4641));
+  transform-style: preserve-3d;
+}
+.abtalks-landing .roller__face[data-face="0"] { --lp-i: 0; }
+.abtalks-landing .roller__face[data-face="1"] { --lp-i: 1; }
+.abtalks-landing .roller__face[data-face="2"] { --lp-i: 2; }
+
+.abtalks-landing .how__media {
+  height: calc(var(--lp-face-h) - 40px);
+  border-radius: var(--lp-radius-lg);
+  background: linear-gradient(145deg, #E4E1DE, #D3CFCB);
+  box-shadow: var(--lp-shadow-md);
+  /* The gradient stays underneath as a graceful fallback if the asset is
+     missing; overflow clips the image to the existing rounded shape. */
+  overflow: hidden;
+}
+/* The image is plain content inside the face — no transition, no animation of
+   its own, so it simply rides the cube's existing rotation. */
+.abtalks-landing .how__media img {
+  width: 100%; height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+  border-radius: inherit;
+}
+.abtalks-landing .how__media--alt  { background: linear-gradient(145deg, #F3D9CC, #E7BCA6); }
+.abtalks-landing .how__media--alt2 { background: linear-gradient(145deg, #DDE3F0, #C4CFE6); }
+.abtalks-landing .how__num {
+  display: block;
+  font-family: var(--lp-font-display);
+  font-size: 40px; line-height: 48px; font-weight: 700;
+  color: var(--lp-color-primary);
+}
+
+.abtalks-landing .roller__dots {
+  display: flex; gap: var(--lp-space-8);
+  margin-top: var(--lp-space-32);
+}
+.abtalks-landing .roller__dots li {
+  width: 26px; height: 3px; border-radius: var(--lp-radius-pill);
+  background: rgba(17,17,17,.14);
+  transition: background-color var(--lp-dur) var(--lp-ease), width var(--lp-dur) var(--lp-ease);
+}
+.abtalks-landing .roller__dots li.is-active { background: var(--lp-color-primary); width: 44px; }
+
+/* =========================================================
+   11. KEEP THE THREE — scroll-driven pipeline
+   ========================================================= */
+.abtalks-landing .keep {
+  background: #FFFFFF;
+  --lp-keep-track: 460vh;
+  --lp-tighten-above: 88px;
+  margin-top: calc(var(--lp-tighten-above) * -1);
+  position: relative; z-index: 1;
+}
+.abtalks-landing .keep__track { height: var(--lp-keep-track); position: relative; }
+.abtalks-landing .keep__pin {
+  position: sticky; top: 20px;
+  height: calc(100vh - 40px);
+  display: flex; align-items: center;
+  overflow: hidden;
+}
+.abtalks-landing .keep__grid {
+  display: grid; grid-template-columns: 0.85fr 1.15fr;
+  gap: var(--lp-space-64); align-items: center;
+  width: 100%;
+}
+.abtalks-landing .pipeline { margin-top: var(--lp-space-24); display: grid; gap: var(--lp-space-8); }
+.abtalks-landing .pipeline__item {
+  position: relative; padding-left: var(--lp-space-20);
+  font-size: 14px; line-height: 21px; font-weight: 500;
+  color: var(--lp-color-text-muted);
+  transform-origin: left center;
+  transition: color var(--lp-dur) var(--lp-ease), transform var(--lp-dur) var(--lp-ease), opacity var(--lp-dur) var(--lp-ease);
+  opacity: .6;
+}
+.abtalks-landing .pipeline__item > span { display: inline-block; }
+.abtalks-landing .pipeline__item::before {
+  content: ""; position: absolute; left: 0; top: 9px;
+  width: 10px; height: 2px; background: currentColor; border-radius: 2px;
+  transition: width var(--lp-dur) var(--lp-ease);
+}
+.abtalks-landing .pipeline__item.is-done { opacity: .85; color: var(--lp-color-text-secondary); }
+.abtalks-landing .pipeline__item.is-active {
+  color: var(--lp-color-primary);
+  font-weight: 600;
+  opacity: 1;
+  transform: scale(1.06);
+}
+.abtalks-landing .pipeline__item.is-active::before { width: 14px; }
+
+.abtalks-landing .pipeline__note {
+  display: grid; grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows var(--lp-dur) var(--lp-ease), opacity var(--lp-dur) var(--lp-ease);
+}
+.abtalks-landing .pipeline__note > p {
+  overflow: hidden;
+  margin: 0;
+  font-size: 14px; line-height: 21px; font-weight: 400;
+  color: var(--lp-color-text-secondary);
+  max-width: 46ch;
+  transform: translateY(6px);
+  transition: transform var(--lp-dur) var(--lp-ease);
+}
+.abtalks-landing .pipeline__item.is-active .pipeline__note { grid-template-rows: 1fr; opacity: 1; }
+.abtalks-landing .pipeline__item.is-active .pipeline__note > p { transform: translateY(0); padding-top: var(--lp-space-8); }
+
+/* Dashboard mock — light ABTalks product UI ------------------------------
+   White surfaces, dark text, light neutral borders and orange used only as an
+   accent. Structure, markup, sizing and the stage-switching logic are
+   untouched; this block is purely the colour treatment. */
+.abtalks-landing .dash {
+  background: #FFFFFF; border-radius: var(--lp-radius-lg);
+  padding: var(--lp-space-20);
+  border: 1px solid #ECE8E4;
+  box-shadow: 0 10px 30px rgba(17,17,17,.06);
+  color: var(--lp-color-text-secondary);
+  font-size: 12px; line-height: 18px;
+  overflow: hidden;
+}
+.abtalks-landing .dash__bar { display: flex; align-items: center; gap: var(--lp-space-12); margin-bottom: var(--lp-space-16); }
+.abtalks-landing .dash__logo { font-family: var(--lp-font-display); font-weight: 700; font-size: 14px; letter-spacing: .02em; color: var(--lp-color-text-primary); }
+.abtalks-landing .dash__tag {
+  color: var(--lp-color-primary); font-weight: 600;
+  background: var(--lp-color-primary-light);
+  border-radius: var(--lp-radius-pill); padding-inline: 10px;
+}
+.abtalks-landing .dash__spacer { flex: 1; }
+.abtalks-landing .dash__mini { color: var(--lp-color-text-muted); }
+
+.abtalks-landing .dash__body { position: relative; min-height: 380px; }
+.abtalks-landing .dash__stage {
+  position: absolute; inset: 0;
+  opacity: 0;
+  transform: translateY(10px);
+  /* leaving: quick fade so two states never read as one double exposure */
+  transition: opacity .18s var(--lp-ease), transform .18s var(--lp-ease);
+  pointer-events: none;
+}
+.abtalks-landing .dash__stage.is-current {
+  opacity: 1; transform: none; pointer-events: auto;
+  /* arriving: waits for the outgoing state to clear */
+  transition: opacity .38s var(--lp-ease) .16s, transform .44s var(--lp-ease) .16s;
+}
+
+.abtalks-landing .dash__filters { display: grid; grid-template-columns: 2fr 1.6fr 1fr 1fr; gap: var(--lp-space-12); margin-bottom: var(--lp-space-16); }
+.abtalks-landing .dash__filters label { display: grid; gap: var(--lp-space-4); color: var(--lp-color-text-muted); font-size: 11px; }
+.abtalks-landing .dash__filters input {
+  height: 34px; border-radius: var(--lp-radius-sm);
+  border: 1px solid var(--lp-color-border); background: #FBF9F7; color: var(--lp-color-text-primary);
+  padding-inline: var(--lp-space-12); font-size: 12px; width: 100%;
+}
+.abtalks-landing .dash__filters input:focus { outline: none; border-color: var(--lp-color-primary); box-shadow: 0 0 0 2px var(--lp-color-primary-light); }
+.abtalks-landing .dash__meta { display: flex; align-items: center; justify-content: space-between; gap: var(--lp-space-12); color: var(--lp-color-text-secondary); margin-bottom: var(--lp-space-12); }
+.abtalks-landing .dash__pill { background: var(--lp-color-primary-light); color: var(--lp-color-primary-hover); border-radius: var(--lp-radius-pill); padding: 2px 10px; font-weight: 600; }
+.abtalks-landing .dash__pill--ok { background: var(--lp-color-primary); color: #FFFFFF; }
+.abtalks-landing .dash__when { color: var(--lp-color-text-muted); font-size: 11px; }
+.abtalks-landing .dash__card {
+  background: #FFFFFF; border: 1px solid #ECE8E4; border-radius: var(--lp-radius-md);
+  padding: var(--lp-space-16); margin-bottom: var(--lp-space-8);
+  box-shadow: 0 1px 3px rgba(17,17,17,.04);
+}
+.abtalks-landing .dash__card header { display: flex; align-items: center; justify-content: space-between; gap: var(--lp-space-12); }
+.abtalks-landing .dash__card h4 { margin: 0; font-size: 14px; font-weight: 600; color: var(--lp-color-text-primary); }
+.abtalks-landing .dash__card h4 em { font-style: normal; color: var(--lp-color-text-muted); font-weight: 400; font-size: 12px; }
+.abtalks-landing .dash__star {
+  width: 26px; height: 26px; border-radius: var(--lp-radius-sm);
+  background: var(--lp-color-primary-light); color: var(--lp-color-primary); line-height: 26px; text-align: center;
+  display: inline-block; font-size: 13px;
+}
+.abtalks-landing .dash__role { margin: var(--lp-space-4) 0 var(--lp-space-12); color: var(--lp-color-text-secondary); }
+.abtalks-landing .dash__chips { display: flex; flex-wrap: wrap; gap: var(--lp-space-4); margin-bottom: var(--lp-space-12); }
+.abtalks-landing .dash__chips span { border: 1px solid var(--lp-color-border); background: #FBF9F7; border-radius: var(--lp-radius-xs); padding: 2px 8px; color: var(--lp-color-text-secondary); font-size: 11px; }
+.abtalks-landing .dash__row { display: flex; align-items: center; justify-content: space-between; gap: var(--lp-space-16); }
+.abtalks-landing .dash__bars { flex: 1; display: grid; gap: var(--lp-space-8); }
+.abtalks-landing .dash__meter { height: 5px; background: #F0ECE8; border-radius: var(--lp-radius-pill); overflow: hidden; }
+.abtalks-landing .dash__meter i { display: block; height: 100%; background: linear-gradient(90deg, #E05226, #EE8A54); border-radius: inherit; }
+.abtalks-landing .dash__score { text-align: right; }
+.abtalks-landing .dash__score strong { display: block; font-family: var(--lp-font-display); font-size: 24px; line-height: 30px; color: var(--lp-color-text-primary); }
+.abtalks-landing .dash__score span { color: var(--lp-color-text-muted); font-size: 11px; }
+.abtalks-landing .dash__card--fade { opacity: .5; }
+
+/* Search "scanning" rows */
+.abtalks-landing .dash__scan { display: grid; gap: var(--lp-space-8); }
+.abtalks-landing .dash__scan i {
+  display: block; height: 34px; border-radius: var(--lp-radius-sm);
+  background: linear-gradient(90deg, #F6F3F0 0%, #EDE8E3 40%, #F6F3F0 80%);
+  background-size: 220% 100%;
+  animation: scanSweep 1.8s linear infinite;
+}
+.abtalks-landing .dash__scan i:nth-child(2) { animation-delay: .12s; }
+.abtalks-landing .dash__scan i:nth-child(3) { animation-delay: .24s; }
+.abtalks-landing .dash__scan i:nth-child(4) { animation-delay: .36s; }
+.abtalks-landing .dash__scan i:nth-child(5) { animation-delay: .48s; }
+@keyframes scanSweep { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+
+/* =========================================================
+   12. OPEN RIGHT NOW
+   ========================================================= */
+/* -20px top and bottom versus the standard section rhythm */
+.abtalks-landing .section.open { padding-block: calc(var(--lp-section-gap) - 20px); }
+.abtalks-landing .open { background: #F7F4F1; }
+.abtalks-landing .open__grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--lp-gutter);
+  margin-top: var(--lp-space-32);
+}
+.abtalks-landing .challenge {
+  position: relative; display: block;
+  background: var(--lp-color-white);
+  border: 1px solid var(--lp-color-border);
+  border-radius: var(--lp-radius-md);
+  padding: var(--lp-space-20);
+  box-shadow: var(--lp-shadow-sm);
+
+  /* entrance state — sequence comes from data-order via --order (1 → 3 → 2 → 4) */
+  opacity: 0;
+  transform: translateY(90px) scale(.90) rotate(var(--lp-tilt, -3deg));
+  box-shadow: 0 1px 4px rgba(0,0,0,.03);
+  transition:
+    opacity .55s var(--lp-ease) calc(var(--lp-order, 0) * .22s),
+    transform .95s var(--lp-ease-soft) calc(var(--lp-order, 0) * .22s),
+    box-shadow .95s var(--lp-ease) calc(var(--lp-order, 0) * .22s),
+    border-color var(--lp-dur) var(--lp-ease);
+}
+.abtalks-landing .challenge:nth-child(even) { --lp-tilt: 3deg; }
+.abtalks-landing .open__grid.is-in .challenge {
+  opacity: 1;
+  transform: translateY(0) scale(1) rotate(0deg);
+  box-shadow: var(--lp-shadow-sm);
+}
+.abtalks-landing .challenge:hover { box-shadow: var(--lp-shadow-md); border-color: #F0C7B5; }
+
+.abtalks-landing .challenge__badge {
+  display: inline-block;
+  font-size: 12px; line-height: 16px; font-weight: 600;
+  color: #d83bbe;
+  border: 1px solid #ffc0ff; background: #ffefff;
+  border-radius: var(--lp-radius-pill);
+  padding: 2px 10px;
+  margin-bottom: var(--lp-space-16);
+}
+.abtalks-landing .challenge__arrow { position: absolute; top: var(--lp-space-20); right: var(--lp-space-20); color: var(--lp-color-text-muted); }
+.abtalks-landing .challenge__title {
+  font-family: var(--lp-font-display);
+  font-size: 16px; line-height: 22px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .01em;
+  color: var(--lp-color-text-primary);
+  margin: 0 0 var(--lp-space-12);
+}
+.abtalks-landing .challenge__list { display: grid; gap: var(--lp-space-4); font-size: 14px; line-height: 20px; color: var(--lp-color-text-secondary); }
+
+/* ---------- 13. TESTIMONIALS (unchanged) ---------- */
+.abtalks-landing .testimonials { background: var(--lp-color-background); overflow: hidden; }
+.abtalks-landing .testimonials__head { text-align: center; margin-bottom: var(--lp-space-40); }
+.abtalks-landing .testimonials__head .h2 { text-transform: uppercase; letter-spacing: .01em; }
+.abtalks-landing .testimonials__head .p { margin-inline: auto; font-size: 14px; line-height: 21px; }
+
+.abtalks-landing .marquee { position: relative; -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
+.abtalks-landing .marquee__track { display: flex; gap: var(--lp-gutter); width: max-content; animation: marquee 42s linear infinite; }
+.abtalks-landing .marquee:hover .marquee__track { animation-play-state: paused; }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+.abtalks-landing .quote {
+  width: 340px; flex: 0 0 340px;
+  border-radius: var(--lp-radius-md);
+  padding: var(--lp-space-24);
+  border: 1px solid var(--lp-color-border);
+  display: flex; flex-direction: column; justify-content: space-between; gap: var(--lp-space-24);
+}
+.abtalks-landing .quote p { margin: 0; font-size: 16px; line-height: 25px; color: var(--lp-color-dark-gray); }
+.abtalks-landing .quote footer { display: flex; align-items: center; gap: var(--lp-space-12); }
+.abtalks-landing .quote footer > span:last-child { display: grid; }
+.abtalks-landing .quote strong { font-size: 14px; line-height: 20px; font-weight: 600; color: var(--lp-color-text-primary); }
+.abtalks-landing .quote small { font-size: 13px; line-height: 18px; color: var(--lp-color-text-muted); }
+.abtalks-landing .avatar {
+  width: 40px; height: 40px; flex: 0 0 40px; border-radius: 50%;
+  background: var(--lp-color-primary); color: #fff;
+  display: grid; place-items: center;
+  font-size: 13px; font-weight: 600; letter-spacing: .02em;
+}
+.abtalks-landing .quote--pink   { background: #FDEFF2; border-color: #ffb4c3; }
+.abtalks-landing .quote--violet { background: #fbefef; border-color: #ffacac; }
+.abtalks-landing .quote--cream  { background: #FEFBEB; border-color: #ffd52e; }
+.abtalks-landing .quote--peach  { background: #FFF3E9; border-color: #ffba82; }
+
+/* ---------- 14. FAQ (unchanged) ---------- */
+.abtalks-landing .section.faq { padding-block: calc(var(--lp-section-gap) - 20px); }
+.abtalks-landing .faq { background: linear-gradient(180deg, #FBF9F7 0%, #F7F4F1 100%); }
+.abtalks-landing .faq__grid { display: grid; grid-template-columns: 1fr 1.15fr; gap: var(--lp-space-64); align-items: center; }
+.abtalks-landing .faq__list { display: grid; gap: var(--lp-space-8); }
+.abtalks-landing .faq__item {
+  background: #F2EFEC;
+  border: 1px solid transparent;
+  border-radius: var(--lp-radius-md);
+  transition: background-color .2s ease, border-color .2s ease;
+}
+.abtalks-landing .faq__item.is-open { background: #EFEBE8; border-color: var(--lp-color-border); }
+.abtalks-landing .faq__q {
+  width: 100%; min-height: 56px;
+  display: flex; align-items: center; justify-content: space-between; gap: var(--lp-space-12);
+  padding: 16px 20px;
+  background: none; border: 0; cursor: pointer; text-align: left;
+  font-size: 18px; line-height: 27px; font-weight: 600;
+  color: var(--lp-color-text-primary);
+}
+.abtalks-landing .faq__q:focus-visible { outline: 2px solid var(--lp-color-primary); outline-offset: 4px; border-radius: var(--lp-radius-md); }
+.abtalks-landing .faq__icon {
+  position: relative; flex: 0 0 20px; width: 20px; height: 20px;
+  border-radius: 50%; background: var(--lp-color-primary);
+}
+.abtalks-landing .faq__icon::before, .abtalks-landing .faq__icon::after {
+  content: ""; position: absolute; left: 50%; top: 50%;
+  background: #fff; border-radius: 2px; transform: translate(-50%, -50%);
+  transition: transform .22s ease, opacity .22s ease;
+}
+.abtalks-landing .faq__icon::before { width: 10px; height: 2px; }
+.abtalks-landing .faq__icon::after  { width: 2px; height: 10px; }
+.abtalks-landing .faq__item.is-open .faq__icon::after { transform: translate(-50%, -50%) rotate(90deg); opacity: 0; }
+.abtalks-landing .faq__a { overflow: hidden; height: 0; transition: height .28s ease; }
+.abtalks-landing .faq__a p { margin: 0; padding: 0 20px 16px; font-size: 16px; line-height: 25px; color: var(--lp-color-text-secondary); }
+
+/* =========================================================
+   15. COMMUNITY — film-reel gallery
+   ========================================================= */
+.abtalks-landing .community {
+  background: var(--lp-color-background);
+  /* Lets a hovered tile grow sideways inside the section without ever
+     widening the page. Vertical overflow stays visible for the badge. */
+  overflow-x: clip;
+}
+.abtalks-landing .community__grid { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: var(--lp-space-48); align-items: center; }
+.abtalks-landing .community__text .h2 { text-transform: uppercase; }
+.abtalks-landing .ticks { display: grid; gap: var(--lp-space-12); margin: var(--lp-space-24) 0; }
+.abtalks-landing .ticks li { position: relative; padding-left: 26px; font-size: 14px; line-height: 21px; color: var(--lp-color-text-secondary); }
+.abtalks-landing .ticks li::before {
+  content: "✓"; position: absolute; left: 0; top: 0;
+  color: #4F3BD8; font-weight: 700; font-size: 13px;
+}
+.abtalks-landing .community__actions { display: flex; flex-wrap: wrap; gap: var(--lp-space-12); }
+
+.abtalks-landing .community__gallery { position: relative; }
+.abtalks-landing .community__reel {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--lp-space-12);
+  align-items: center;
+  /* `clip` + clip-margin still hides the off-stage entrance frames, but lets a
+     hovered tile grow past the box. Falls back to plain hidden if unsupported. */
+  overflow: hidden;
+  overflow: clip;
+  overflow-clip-margin: 56px;
+  padding-block: var(--lp-space-8);
+}
+.abtalks-landing .tile {
+  display: block; border-radius: var(--lp-radius-md);
+  background: linear-gradient(160deg, #6E6E6E, #2C2C2C);
+  box-shadow: var(--lp-shadow-sm);
+  position: relative; z-index: 0;
+  /* Clips the image to the existing radius; the gradient remains as fallback */
+  overflow: hidden;
+
+  /* film-reel entrance */
+  opacity: 0;
+  transform: translateX(110%) scale(.94);
+  transition:
+    transform .85s var(--lp-ease-soft) calc(var(--lp-frame, 0) * .15s),
+    opacity .55s var(--lp-ease) calc(var(--lp-frame, 0) * .15s);
+}
+.abtalks-landing .community__gallery.is-rolling .tile { opacity: 1; transform: translateX(0) scale(1); }
+
+/* The image fills whatever height the tile already has and carries no motion of
+   its own — the tile stays the only animated / interactive element, so the reel
+   entrance and the hover scale behave exactly as before. */
+.abtalks-landing .tile img {
+  width: 100%; height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Hover enlargement — only armed once the reel entrance has finished, so the
+   staggered entrance timing is never applied to a hover. */
+.abtalks-landing .community__gallery.reel-ready .tile {
+  transition:
+    transform .38s var(--lp-ease-soft),
+    box-shadow .38s var(--lp-ease),
+    opacity .38s var(--lp-ease);
+}
+.abtalks-landing .community__gallery.reel-ready .tile:hover {
+  transform: scale(1.4);       /* grows about its own centre — no positional shift */
+  z-index: 5;
+  box-shadow: var(--lp-shadow-lg);
+}
+.abtalks-landing .tile--1 { height: 210px; }
+.abtalks-landing .tile--2 { height: 250px; }
+.abtalks-landing .tile--3 { height: 210px; }
+.abtalks-landing .tile--4 { height: 250px; }
+.abtalks-landing .tile--5 { height: 210px; }
+
+.abtalks-landing .community__badge {
+  position: absolute; right: -12px; bottom: -20px;
+  background: #fff; border-radius: var(--lp-radius-md);
+  box-shadow: var(--lp-shadow-lg);
+  padding: var(--lp-space-12) var(--lp-space-20);
+  display: grid;
+  opacity: 0;
+  transform: translateX(40px) scale(.96);
+  transition: transform .7s var(--lp-ease-soft) .95s, opacity .5s var(--lp-ease) .95s;
+}
+.abtalks-landing .community__gallery.is-rolling .community__badge { opacity: 1; transform: translateX(0) scale(1); }
+.abtalks-landing .community__badge strong { font-family: var(--lp-font-display); font-size: 20px; line-height: 26px; color: #4F3BD8; }
+.abtalks-landing .community__badge small { font-size: 12px; line-height: 16px; color: var(--lp-color-text-muted); }
+
+/* ---------- 16. CONTACT ---------- */
+.abtalks-landing .section.contact { padding-block: calc(var(--lp-section-gap) - 20px); }
+.abtalks-landing .contact { background: var(--lp-color-background-alt); }
+.abtalks-landing .contact__grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--lp-space-64); align-items: center; }
+
+.abtalks-landing .form {
+  background: var(--lp-color-white);
+  border-radius: var(--lp-radius-lg);
+  padding: var(--lp-space-32);
+  box-shadow: var(--lp-shadow-md);
+}
+.abtalks-landing .field { margin-bottom: var(--lp-space-24); }
+.abtalks-landing .label {
+  display: block; margin-bottom: var(--lp-space-8);
+  font-size: 14px; line-height: 20px; font-weight: 500;
+  color: var(--lp-color-text-primary);
+}
+.abtalks-landing .input {
+  width: 100%; height: 48px;
+  padding: 0 16px;
+  font-family: inherit; font-size: 16px; line-height: 24px;
+  color: var(--lp-color-text-primary);
+  background: var(--lp-color-white);
+  border: 1px solid var(--lp-color-border);
+  border-radius: var(--lp-radius-sm);
+  transition: border-color var(--lp-dur-fast) var(--lp-ease), box-shadow var(--lp-dur-fast) var(--lp-ease);
+}
+.abtalks-landing .input::placeholder { color: var(--lp-color-text-muted); }
+.abtalks-landing .input:hover { border-color: #C9C9C9; }
+.abtalks-landing .input:focus { outline: none; border-color: var(--lp-color-primary); box-shadow: 0 0 0 2px var(--lp-color-primary); }
+.abtalks-landing .textarea { min-height: 120px; padding: 16px; resize: vertical; }
+.abtalks-landing .input.is-error { border-color: var(--lp-color-error); }
+.abtalks-landing .error { margin: var(--lp-space-8) 0 0; font-size: 12px; line-height: 16px; color: var(--lp-color-error); min-height: 0; }
+.abtalks-landing .form__success {
+  margin: var(--lp-space-16) 0 0; font-size: 14px; line-height: 21px;
+  color: var(--lp-color-success); font-weight: 500;
+}
+
+/* ---------- 17. CTA BAND ---------- */
+.abtalks-landing .cta-band {
+  position: relative; overflow: hidden;
+  background: linear-gradient(90deg, #D8471C 0%, #E05226 50%, #EE8A54 100%);
+  padding-block: var(--lp-space-80);
+}
+.abtalks-landing .cta-band__rings {
+  position: absolute; left: -300px; top: 50%; transform: translateY(-50%);
+  width: 760px; height: 760px;
+  --lp-sphere-r: 380px;
+  perspective: 1600px;
+  pointer-events: none;
+  /* Densest at the cropped left edge, dissolved well before the CTA copy */
+  -webkit-mask-image: linear-gradient(96deg, #000 0%, #000 52%, rgba(0,0,0,.4) 78%, transparent 96%);
+  mask-image: linear-gradient(96deg, #000 0%, #000 52%, rgba(0,0,0,.4) 78%, transparent 96%);
+}
+/* Rotating shell. The polar axis is tilted almost straight at the viewer, so
+   the latitude rings project as nested arcs; the slow turn about that axis
+   walks the dots continuously around every ring. */
+.abtalks-landing .globe {
+  position: absolute; inset: 0;
+  transform-style: preserve-3d;
+  animation: globeSpin 26s linear infinite;
+}
+@keyframes globeSpin {
+  from { transform: rotateZ(-14deg) rotateX(76deg) rotateY(0deg); }
+  to   { transform: rotateZ(-14deg) rotateX(76deg) rotateY(360deg); }
+}
+/* Every ring is one SVG circle stroked as a fine, evenly spaced dot run —
+   roughly 2px dots, no solid segments anywhere. */
+.abtalks-landing .globe__lat {
+  position: absolute; left: 50%; top: 50%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Ccircle cx='50' cy='50' r='49.5' fill='none' stroke='%23ffffff' stroke-width='0.5' stroke-dasharray='0.01 1.15' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  backface-visibility: visible;
+}
+/* Latitudes: rings stacked along the polar axis. --r is sqrt(1 - h²), chosen so
+   the projected radii step evenly and the arcs nest like the reference. */
+.abtalks-landing .globe__lat {
+  width: calc(100% * var(--lp-r)); height: calc(100% * var(--lp-r));
+  transform:
+    translate(-50%, -50%)
+    translateY(calc(var(--lp-h) * var(--lp-sphere-r)))
+    rotateX(90deg);
+  opacity: calc(.98 - var(--lp-h) * .18);
+}
+.abtalks-landing .cta-band__inner { position: relative; text-align: right; }
+.abtalks-landing .cta-band__title {
+  font-family: var(--lp-font-display);
+  font-size: 40px; line-height: 48px; font-weight: 700;
+  color: #fff; margin: 0 0 var(--lp-space-24);
+  letter-spacing: -0.01em;
+}
+.abtalks-landing .cta-band__actions { display: flex; gap: var(--lp-space-16); justify-content: flex-end; flex-wrap: wrap; }
+
+/* ---------- 18. FOOTER ---------- */
+.abtalks-landing .footer { background: var(--lp-color-background-alt); padding-block: var(--lp-space-64) var(--lp-space-32); }
+.abtalks-landing .footer__grid {
+  display: grid; grid-template-columns: 1.2fr repeat(4, 1fr);
+  gap: var(--lp-space-32);
+}
+.abtalks-landing .footer__logo { font-family: var(--lp-font-display); font-size: 24px; font-weight: 700; color: var(--lp-color-text-primary); letter-spacing: .02em; }
+.abtalks-landing .footer__head {
+  font-size: 12px; line-height: 16px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .06em;
+  color: var(--lp-color-text-primary);
+  margin: 0 0 var(--lp-space-16);
+}
+.abtalks-landing .footer__col ul { display: grid; gap: var(--lp-space-12); }
+.abtalks-landing .footer__col a, .abtalks-landing .footer__col li { font-size: 14px; line-height: 20px; color: var(--lp-color-text-secondary); }
+.abtalks-landing .footer__col a:hover { color: var(--lp-color-primary); }
+.abtalks-landing .footer__legal {
+  display: flex; justify-content: space-between; gap: var(--lp-space-16); flex-wrap: wrap;
+  margin-top: var(--lp-space-48); padding-top: var(--lp-space-24);
+  border-top: 1px solid rgba(0,0,0,.06);
+  font-size: 12px; line-height: 18px; color: var(--lp-color-text-muted);
+}
+
+/* ---------- 19. REVEAL ANIMATION ---------- */
+.abtalks-landing .reveal { opacity: 0; transform: translateY(16px); transition: opacity .6s var(--lp-ease), transform .6s var(--lp-ease); }
+.abtalks-landing .reveal.is-visible { opacity: 1; transform: none; }
+
+/* =========================================================
+   20. RESPONSIVE
+   -----------------------------------------------------------------
+   Everything below 1080px only. Nothing above this point is touched,
+   so the desktop rendering (> 1080px) is bit-for-bit unchanged.
+
+   Ranges:  DESKTOP > 1080px  |  TABLET 721–1080px  |  MOBILE <= 720px
+   Mobile values come from the ABTalks design system:
+     container pad 20px · major section rhythm 64px · subsection 40px
+     H1 40/44 · H2 32/36 · H3 22/28 · P 17/28 · small 14/21
+     label 13/18 · button 16/20 · FAQ 18/27
+   ========================================================= */
+@media (max-width: 1080px) {
+  .abtalks-landing { --lp-pad: 10px; --lp-section-gap: 58px; }
+
+  .abtalks-landing .bridge { --lp-bridge-track: 300vh; }
+  .abtalks-landing .how    { --lp-how-track: 280vh; --lp-face-h: 460px; }
+  .abtalks-landing .keep   { --lp-keep-track: 400vh; }
+
+  /* Single-column pins leave far less empty band below their content, so the
+     junction overlap is scaled back to stay clear of it. */
+  .abtalks-landing .how, .abtalks-landing .keep { --lp-tighten-above: 24px; }
+  .abtalks-landing .companies { margin-bottom: 24px; }
+
+  /* Stack sits above the copy here, not beside it — no offset, no connectors */
+  .abtalks-landing .bridge__panels { --lp-stack-offset: 0px; }
+  .abtalks-landing .bridge__links { display: none; }
+
+  .abtalks-landing .bridge__grid,
+  .abtalks-landing .keep__grid,
+  .abtalks-landing .faq__grid,
+  .abtalks-landing .contact__grid,
+  .abtalks-landing .community__grid { grid-template-columns: 1fr; gap: var(--lp-space-40); }
+
+  /* Pinned content clears the fixed header on shorter viewports */
+  .abtalks-landing .bridge__pin, .abtalks-landing .how__pin, .abtalks-landing .keep__pin { align-items: center; padding-top: 88px; }
+  .abtalks-landing .bridge__visual { height: 330px; }
+  .abtalks-landing .slab { --lp-slab-w: 170px; --lp-slab-t: 13px; }
+  .abtalks-landing .slab__label { font-size: 16px; transform: scaleY(1.22); }
+  .abtalks-landing .slab--top { top: 18px; } .abtalks-landing .slab--middle { top: 100px; } .abtalks-landing .slab--bottom { top: 182px; }
+  .abtalks-landing .bridge__panels { min-height: 260px; }
+
+  /* A prism face sits at translateZ(face-h / 3.4641), so perspective scales it
+     up by P / (P - z) — roughly 9-13%. On wide desktop the container is far
+     narrower than the viewport and the overscale has room; from tablet down the
+     container nearly fills the screen, so the face needs a proportional inset
+     to keep its content off the edge. Percentage padding scales with the face,
+     so one value holds at every width in this range. */
+  .abtalks-landing .roller__face { grid-template-columns: 1fr; gap: var(--lp-space-20); padding-inline: 6%; }
+  .abtalks-landing .how__media { height: 200px; }
+
+  .abtalks-landing .open__grid { grid-template-columns: repeat(2, 1fr); }
+  .abtalks-landing .community__badge { right: 0; bottom: -12px; }
+  .abtalks-landing .footer__grid { grid-template-columns: 1fr 1fr 1fr; }
+  .abtalks-landing .hero__stamp { font-size: 64px; top: 8px; }
+  .abtalks-landing .dash__body { min-height: 340px; }
+}
+
+/* ---------- Burger menu range ---------- */
+@media (max-width: 860px) {
+  .abtalks-landing .nav__links {
+    position: absolute; left: var(--lp-pad); right: var(--lp-pad); top: calc(100% + 8px);
+    flex-direction: column; align-items: stretch; gap: var(--lp-space-4);
+    background: rgba(255,255,255,.82);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid rgba(255,255,255,.7);
+    border-radius: var(--lp-radius-lg); box-shadow: 0 10px 30px rgba(17,17,17,.10);
+    padding: var(--lp-space-12);
+    display: none;
+    /* Never taller than the screen, and never wider than the viewport */
+    max-height: calc(100svh - 140px);
+    overflow-y: auto;
+    max-width: 100%;
+  }
+  .abtalks-landing .nav__links.is-open { display: flex; }
+  .abtalks-landing .nav__links-cta { display: block; margin-top: var(--lp-space-8); }
+  .abtalks-landing .nav__links-cta .btn { width: 100%; height: 44px; font-size: 16px; line-height: 20px; }
+  .abtalks-landing .nav__links-cta .nav__cta-menu { width: 100%; }
+  .abtalks-landing .nav__links-cta .nav__cta-dropdown {
+    position: static;
+    width: 100%;
+    border-top: 1px solid var(--lp-color-border);
+    border-radius: var(--lp-radius-sm);
+  }
+  .abtalks-landing .nav__links-cta .nav__cta-item {
+    min-height: 44px;
+    font-size: 16px; line-height: 20px;
+  }
+  /* 44px minimum tap target, design-system body size */
+  .abtalks-landing .nav__link { padding: var(--lp-space-12) var(--lp-space-16); font-size: 16px; line-height: 20px; }
+  .abtalks-landing .nav__cta { display: none; }
+  .abtalks-landing .nav__burger { display: flex; margin-left: auto; }
+  .abtalks-landing .nav { position: relative; }
+}
+
+/* =========================================================
+   MOBILE — <= 720px
+   ========================================================= */
+@media (max-width: 720px) {
+  /* Design-system mobile container padding and section rhythm */
+  .abtalks-landing { --lp-pad: 20px; --lp-gutter: 16px; --lp-section-gap: 64px; }
+
+  /* Design-system mobile type scale, applied once and inherited everywhere */
+  .abtalks-landing .h2 { font-size: 32px; line-height: 36px; }
+  .abtalks-landing .h3 { font-size: 22px; line-height: 28px; }
+  .abtalks-landing .p  { font-size: 17px; line-height: 28px; }
+
+  /* The three sections that trim 20px off the desktop rhythm return to the
+     flat 64px mobile major-section spacing. */
+  .abtalks-landing .section.open, .abtalks-landing .section.faq, .abtalks-landing .section.contact { padding-block: var(--lp-section-gap); }
+
+  /* ---------- HERO ---------- */
+  /* Content sits toward the TOP of the hero on mobile instead of the bottom.
+     The desktop `align-items: flex-end` base rule is untouched. 112px clears
+     the fixed glass header (68px bar + 16px wrap padding) with breathing room. */
+  /* Content sits toward the TOP of the hero on mobile instead of the bottom.
+     The desktop `align-items: flex-end` base rule is untouched. 112px clears
+     the fixed glass header (68px bar + 16px wrap padding) with breathing room.
+     `stretch` lets the content column span the hero so the CTA group can be
+     pushed to the bottom edge while everything above it stays top-aligned. */
+  .abtalks-landing .hero { min-height: 100vh; min-height: 100svh; align-items: stretch; padding-top: 112px; padding-bottom: var(--lp-space-48); }
+  .abtalks-landing .hero__inner { display: flex; }
+  .abtalks-landing .hero__content { display: flex; flex-direction: column; flex: 1 1 auto; }
+  /* Copy stays at the top; the buttons sink to the bottom of the hero. */
+  .abtalks-landing .hero__actions { margin-top: auto; }
+  /* Single tuning point for the mobile video's crop — the mobile file has its
+     own composition, so it is framed independently of the desktop one. */
+  .abtalks-landing .hero__video { object-fit: cover; object-position: center center; }
+  /* Copy runs full width on mobile, so the scrim reads top-to-bottom instead
+     of left-to-right and stays legible over any frame. */
+  .abtalks-landing .hero__scrim {
+    background: linear-gradient(180deg, rgba(10,9,8,.30) 0%, rgba(10,9,8,.52) 42%, rgba(10,9,8,.84) 100%);
+  }
+  .abtalks-landing .hero__content { max-width: 100%; }
+  .abtalks-landing .hero__title { font-size: 40px; line-height: 44px; }
+  .abtalks-landing .strike { font-size: 30px; line-height: 38px; }
+  .abtalks-landing .hero__desc { font-size: 17px; line-height: 28px; max-width: 100%; }
+  /* The two CTAs read as one group: a single row, sharing the width evenly.
+     Tighter inline padding keeps "Post a requirement" on one line without
+     touching the button height or the 16/20/600 label. */
+  .abtalks-landing .hero__actions { flex-direction: row; flex-wrap: nowrap; gap: var(--lp-space-12); }
+  /* flex-basis: auto so each button starts from its own label width and the
+     longer "Post a requirement" keeps the room it needs — free space is then
+     shared equally, so both end up the same height and neither label wraps. */
+  .abtalks-landing .hero__actions .btn { flex: 1 1 auto; min-width: 0; padding-inline: var(--lp-space-12); }
+  .abtalks-landing .hero__stamp { position: static; display: inline-block; margin-top: var(--lp-space-24); font-size: 40px; border-width: 4px; }
+
+  /* ---------- STATS — centred vertical stack ---------- */
+  .abtalks-landing .stats__grid {
+    grid-template-columns: 1fr;
+    gap: var(--lp-space-32);
+    padding-block: var(--lp-space-40);
+  }
+  .abtalks-landing .stat { max-width: 32ch; }
+  .abtalks-landing .stat__num { margin-bottom: var(--lp-space-8); }
+  .abtalks-landing .stat__label { max-width: 28ch; }
+
+  /* ---------- BRIDGE — vertical mobile composition ----------
+     Stack becomes the primary object, centred and sized against the viewport;
+     the active platform's information sits clearly below it. Cuboids keep
+     their perspective, side walls, shadows and pull-out labels. */
+  .abtalks-landing .bridge { --lp-bridge-track: 240vh; --lp-slab-mobile: clamp(112px, 33vw, 148px); }
+  /* ---------- Pinned junctions ----------
+     On mobile the pins were a full viewport tall with their content centred, so
+     every junction had ~180px of dead band above the incoming section plus ~75px
+     below the outgoing one. Here each pin HUGS its own content instead, and the
+     header clearance moves from internal padding onto the sticky `top` offset —
+     so the clearance only applies while the scene is stuck, not at the junction.
+
+     Visible junction gap = outgoing pin's bottom padding (32)
+                          + incoming pin's top padding (32)
+                          - the overlap (--tighten-above: 32)
+                          = 32px.
+     The overlap never exceeds the outgoing pin's bottom padding, so it can only
+     ever land on empty space — no section can cover another's content.
+
+     Track heights (scroll duration) are untouched, so the Bridge platforms, the
+     How It Works roll and the Keep The Three pipeline all run exactly as before. */
+  .abtalks-landing .bridge__pin, .abtalks-landing .how__pin, .abtalks-landing .keep__pin {
+    top: 64px;                 /* + 32px padding = 96px clear of the header */
+    height: auto;
+    align-items: flex-start;
+    padding-top: var(--lp-space-32);
+    padding-bottom: var(--lp-space-32);
+    /* The box hugs its content now, so vertical clipping is no longer needed —
+       but the 3D roller faces and slab shadows still project sideways, so the
+       horizontal axis stays clipped to keep the page free of overflow. */
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+  /* Applies to .how and .keep only, so exactly two junctions change:
+     Bridge -> How It Works and How It Works -> Keep The Three. */
+  .abtalks-landing .how, .abtalks-landing .keep { --lp-tighten-above: 32px; }
+  .abtalks-landing .companies { margin-bottom: 32px; }
+  .abtalks-landing .bridge__grid { gap: var(--lp-space-24); }
+
+  .abtalks-landing .bridge__visual { height: calc(var(--lp-slab-mobile) * 2 + var(--lp-space-48)); }
+  .abtalks-landing .slab {
+    --lp-slab-w: var(--lp-slab-mobile);
+    --lp-slab-t: calc(var(--lp-slab-mobile) * .08);
+  }
+  .abtalks-landing .slab__label { font-size: 13px; line-height: 18px; transform: scaleY(1.22); }
+  .abtalks-landing .slab--top    { top: 0; }
+  .abtalks-landing .slab--middle { top: calc(var(--lp-slab-mobile) * .5); }
+  .abtalks-landing .slab--bottom { top: calc(var(--lp-slab-mobile) * 1); }
+
+  /* Label + heading centre under the stack, matching the reference's compact
+     centred header; paragraphs and bullet lists stay left-aligned inside a
+     centred column so they remain readable. */
+  .abtalks-landing .bridge__panels { min-height: 250px; }
+  .abtalks-landing .bpanel { align-items: center; text-align: center; }
+  .abtalks-landing .bpanel .section-label,
+  .abtalks-landing .bpanel .h2 { width: 100%; }
+  .abtalks-landing .bpanel .h2 { font-size: 26px; line-height: 32px; margin-bottom: var(--lp-space-16); }
+  .abtalks-landing .bpanel .p,
+  .abtalks-landing .bpanel__list { text-align: left; max-width: 46ch; margin-inline: auto; }
+
+  /* ---------- HOW IT WORKS — vertical face, responsive media ----------
+     Face height is bounded by BOTH viewport width and height, so the whole
+     composition (image → number → heading → paragraph) always fits inside the
+     pin without clipping. The 3-face roll itself is untouched. */
+  .abtalks-landing .how {
+    --lp-how-track: 220vh;
+    --lp-face-h: clamp(340px, min(116vw, 54vh), 500px);
+  }
+  .abtalks-landing .roller__stage { perspective: 1200px; }
+  .abtalks-landing .roller__face { padding-inline: 7%; padding-block: 0; gap: var(--lp-space-16); align-content: center; }
+  .abtalks-landing .how__media { height: clamp(150px, min(46vw, 26vh), 240px); }
+  .abtalks-landing .how__num { font-size: 32px; line-height: 38px; }
+  .abtalks-landing .how__body .h3 { margin-bottom: var(--lp-space-16); }
+  .abtalks-landing .how__label { margin-bottom: var(--lp-space-20); }
+  .abtalks-landing .roller__dots { margin-top: var(--lp-space-20); }
+
+  /* ---------- KEEP THE THREE ---------- */
+  .abtalks-landing .keep { --lp-keep-track: 320vh; }
+  .abtalks-landing .keep__grid { gap: var(--lp-space-24); }
+  .abtalks-landing .keep__text .h2 { margin-bottom: var(--lp-space-12); }
+  .abtalks-landing .pipeline { margin-top: var(--lp-space-16); gap: var(--lp-space-8); }
+  /* Readable at the design-system paragraph size, not shrunk to fit */
+  .abtalks-landing .pipeline__item { font-size: 17px; line-height: 28px; padding-left: var(--lp-space-20); }
+  .abtalks-landing .pipeline__item::before { top: 13px; }
+  .abtalks-landing .pipeline__note > p { font-size: 14px; line-height: 21px; max-width: 100%; }
+
+  .abtalks-landing .dash { padding: var(--lp-space-12); }
+  .abtalks-landing .dash__body { min-height: clamp(190px, 30vh, 260px); }
+  .abtalks-landing .dash__stage { overflow: hidden; }
+  .abtalks-landing .dash__bar { flex-wrap: wrap; gap: var(--lp-space-8); }
+  .abtalks-landing .dash__filters { grid-template-columns: 1fr 1fr; gap: var(--lp-space-8); margin-bottom: var(--lp-space-12); }
+  .abtalks-landing .dash__card { padding: var(--lp-space-12); }
+  .abtalks-landing .dash__meta { flex-wrap: wrap; gap: var(--lp-space-8); }
+  .abtalks-landing .dash__chips { gap: 3px; }
+  .abtalks-landing .dash__row { gap: var(--lp-space-12); }
+
+  /* ---------- OPEN RIGHT NOW ---------- */
+  .abtalks-landing .open__grid { grid-template-columns: 1fr; gap: var(--lp-space-16); margin-top: var(--lp-space-24); }
+
+  /* ---------- TESTIMONIALS ---------- */
+  .abtalks-landing .quote { width: min(280px, calc(100vw - var(--lp-pad) * 2)); flex-basis: auto; padding: var(--lp-space-20); gap: var(--lp-space-20); }
+
+  /* ---------- FAQ — design-system sizes, full-width accordion ---------- */
+  .abtalks-landing .faq__q { font-size: 18px; line-height: 27px; padding: var(--lp-space-16) var(--lp-space-20); min-height: 56px; }
+  .abtalks-landing .faq__a p { font-size: 16px; line-height: 25px; padding: 0 var(--lp-space-20) var(--lp-space-16); }
+
+  /* ---------- COMMUNITY — 2-up editorial reel ----------
+     Fewer, larger tiles instead of five microscopic ones; the alternating
+     heights of the desktop gallery are preserved, as is the reel entrance. */
+  .abtalks-landing .community__reel { grid-template-columns: repeat(2, 1fr); gap: var(--lp-space-12); overflow-clip-margin: 24px; }
+  .abtalks-landing .tile--1 { height: 200px; }
+  .abtalks-landing .tile--2 { height: 240px; }
+  .abtalks-landing .tile--3 { height: 240px; }
+  .abtalks-landing .tile--4 { height: 200px; }
+  .abtalks-landing .tile--5 { display: none; }
+  .abtalks-landing .community__badge { position: static; margin-top: var(--lp-space-16); justify-self: start; }
+
+  /* ---------- CONTACT ---------- */
+  .abtalks-landing .form { padding: var(--lp-space-20); }
+
+  /* ---------- CTA BAND ---------- */
+  .abtalks-landing .cta-band { padding-block: var(--lp-space-48); }
+  /* Pushed further off-edge and softened so it never competes with the
+     left-aligned CTA copy on phones */
+  .abtalks-landing .cta-band__rings { left: -330px; width: 520px; height: 520px; --lp-sphere-r: 260px; opacity: .5; }
+  .abtalks-landing .cta-band__inner { text-align: left; }
+  .abtalks-landing .cta-band__title { font-size: 28px; line-height: 34px; }
+  .abtalks-landing .cta-band__actions { justify-content: flex-start; }
+  .abtalks-landing .cta-band__actions .btn { flex: 1 1 100%; }
+
+  /* ---------- FOOTER ---------- */
+  .abtalks-landing .footer__grid { grid-template-columns: 1fr 1fr; gap: var(--lp-space-32); }
+}
+
+/* ---------- Touch devices: hover must never be load-bearing ---------- */
+@media (hover: none) {
+  .abtalks-landing .community__gallery.reel-ready .tile:hover { transform: translateX(0) scale(1); z-index: 0; box-shadow: var(--lp-shadow-sm); }
+  .abtalks-landing .marquee:hover .marquee__track { animation-play-state: running; }
+}
+
+/* ---------- Small phones ---------- */
+@media (max-width: 480px) {
+  .abtalks-landing .footer__grid { grid-template-columns: 1fr; gap: var(--lp-space-24); }
+  .abtalks-landing .footer__legal { margin-top: var(--lp-space-32); }
+  .abtalks-landing .community__reel { gap: var(--lp-space-8); }
+  .abtalks-landing .cta-band__rings { left: -300px; width: 440px; height: 440px; --lp-sphere-r: 220px; }
+}
+
+/* ---------- Short viewports: keep every pin's content inside the fold ----------
+   On a short phone the fixed header eats a large share of the screen, so the
+   three pinned scenes tighten their internal rhythm rather than clipping.
+   Every value here is still a design-system token or type step. */
+@media (max-width: 720px) and (max-height: 760px) {
+  .abtalks-landing .bridge__pin, .abtalks-landing .how__pin, .abtalks-landing .keep__pin { top: 64px; padding-block: var(--lp-space-24); }
+  .abtalks-landing .how, .abtalks-landing .keep { --lp-tighten-above: 24px; }   /* 24 + 24 - 24 = 24px junction */
+  .abtalks-landing .companies { margin-bottom: 24px; }
+
+  .abtalks-landing .bridge__grid { gap: var(--lp-space-16); }
+  .abtalks-landing .bridge__visual { height: calc(var(--lp-slab-mobile) * 2 + var(--lp-space-24)); }
+  .abtalks-landing .bridge__panels { min-height: 176px; }
+  .abtalks-landing .bpanel .h2 { font-size: 22px; line-height: 28px; margin-bottom: var(--lp-space-12); }
+  .abtalks-landing .bpanel .p, .abtalks-landing .bpanel__list li { font-size: 14px; line-height: 21px; }
+
+  .abtalks-landing .keep__grid { gap: var(--lp-space-16); }
+  .abtalks-landing .keep__text .h2 { font-size: 22px; line-height: 28px; margin-bottom: var(--lp-space-8); }
+  .abtalks-landing .pipeline { margin-top: var(--lp-space-12); gap: var(--lp-space-4); }
+  .abtalks-landing .pipeline__item { font-size: 14px; line-height: 21px; }
+  .abtalks-landing .pipeline__item::before { top: 9px; }
+  .abtalks-landing .pipeline__note > p { font-size: 12px; line-height: 16px; }
+  .abtalks-landing .pipeline__item.is-active .pipeline__note > p { padding-top: var(--lp-space-4); }
+  .abtalks-landing .dash { padding: var(--lp-space-8); }
+  .abtalks-landing .dash__bar { margin-bottom: var(--lp-space-8); }
+  .abtalks-landing .dash__body { min-height: 96px; }
+  .abtalks-landing .dash__filters { margin-bottom: var(--lp-space-8); }
+  .abtalks-landing .dash__card { padding: var(--lp-space-8); }
+}
+
+/* ---------- Narrow phones: keep the two CTAs on one row ----------
+   Only the button's own inline padding and the group gap tighten; the 16/20/600
+   label and the 48px button height are untouched. */
+@media (max-width: 374px) {
+  .abtalks-landing .hero__actions { gap: var(--lp-space-8); }
+  .abtalks-landing .hero__actions .btn { padding-inline: var(--lp-space-8); }
+}
+
+/* At 320px the two labels genuinely do not fit on one row at 16/20/600 without
+   either clipping "Post a requirement" or shrinking the type below the design
+   system. Both are worse than stacking, so the group falls back to full-width
+   buttons at this one width. Every phone from 360px up keeps them side by side. */
+@media (max-width: 339px) {
+  .abtalks-landing .hero__actions { flex-wrap: wrap; }
+  .abtalks-landing .hero__actions .btn { flex: 1 1 100%; padding-inline: var(--lp-space-20); }
+}
+
+/* =========================================================
+   21. REDUCED MOTION — keep everything readable & static
+   ========================================================= */
+@media (prefers-reduced-motion: reduce) {
+  .abtalks-landing { scroll-behavior: auto; }
+  .abtalks-landing .marquee__track { animation: none; }
+  .abtalks-landing .companies__track { animation: none; }
+  .abtalks-landing .reveal { opacity: 1; transform: none; transition: none; }
+
+  /* Hero: no choreography, everything visible */
+  .abtalks-landing .strike__word, .abtalks-landing .hl__text, .abtalks-landing .hero__desc, .abtalks-landing .hero__actions .btn { opacity: 1 !important; transform: none !important; animation: none !important; }
+  .abtalks-landing .hl__ink { transform: scaleX(1) !important; animation: none !important; }
+  .abtalks-landing .strike__line path { stroke-dashoffset: 0 !important; animation: none !important; }
+  .abtalks-landing .hero__stamp { opacity: .95 !important; transform: rotate(-8deg) !important; animation: none !important; }
+  .abtalks-landing .hero__video { display: none; }
+  .abtalks-landing .hero__title { visibility: visible !important; }
+
+  /* Pinned scroll scenes become plain stacked sections */
+  .abtalks-landing .bridge, .abtalks-landing .how, .abtalks-landing .keep { --lp-bridge-track: auto; --lp-how-track: auto; --lp-keep-track: auto; }
+  .abtalks-landing .how, .abtalks-landing .keep { margin-top: 0; }
+  .abtalks-landing .bridge__links { display: none; }
+  .abtalks-landing .bridge__panels { transform: none; }
+  .abtalks-landing .bridge__track, .abtalks-landing .how__track, .abtalks-landing .keep__track { height: auto; }
+  .abtalks-landing .bridge__pin, .abtalks-landing .how__pin, .abtalks-landing .keep__pin {
+    position: static; height: auto; overflow: visible;
+    padding-block: var(--lp-section-gap);
+  }
+  .abtalks-landing .bridge__panels { min-height: 0; display: grid; gap: var(--lp-space-40); }
+  .abtalks-landing .bpanel { position: static; opacity: 1; transform: none; pointer-events: auto; }
+  .abtalks-landing .slab { transform: translate(-50%, 0) rotateX(58deg) rotateZ(-45deg) !important; }
+  .abtalks-landing .slab__shadow { filter: blur(9px); }
+  .abtalks-landing .slab__label { opacity: 1 !important; }
+
+  .abtalks-landing .roller__stage { perspective: none; height: auto; }
+  .abtalks-landing .roller__cube { transform: none !important; transform-style: flat; display: grid; gap: var(--lp-space-32); }
+  .abtalks-landing .roller__face {
+    position: static; transform: none !important; opacity: 1 !important;
+    backface-visibility: visible;
+  }
+  .abtalks-landing .how__media { height: 220px; }
+  .abtalks-landing .roller__dots { display: none; }
+
+  .abtalks-landing .pipeline__item { opacity: 1; transform: none !important; }
+  .abtalks-landing .pipeline__note { grid-template-rows: 1fr; opacity: 1; }
+  .abtalks-landing .pipeline__note > p { transform: none; padding-top: var(--lp-space-8); }
+  .abtalks-landing .dash__body { min-height: 0; display: grid; gap: var(--lp-space-16); }
+  .abtalks-landing .dash__stage { position: static; opacity: 1; transform: none; pointer-events: auto; }
+  .abtalks-landing .dash__scan i { animation: none; }
+
+  .abtalks-landing .challenge { opacity: 1 !important; transform: none !important; transition: none; }
+  .abtalks-landing .tile, .abtalks-landing .community__badge { opacity: 1 !important; transform: none !important; transition: none; }
+
+  .abtalks-landing * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

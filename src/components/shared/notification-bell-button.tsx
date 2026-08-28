@@ -38,7 +38,7 @@ export function NotificationBellButton({ className }: Props) {
         {unread > 0 ? (
           <span
             aria-hidden
-            className="absolute -right-1.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-4 text-primary-foreground"
+            className="absolute -right-1.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-[#E05226] px-1 text-[10px] font-semibold leading-4 text-white"
           >
             {unread > 9 ? "9+" : unread}
           </span>

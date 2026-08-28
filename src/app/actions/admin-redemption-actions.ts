@@ -1,9 +1,10 @@
 "use server";
 
-import { RedemptionStatus } from "@prisma/client";
+import { RedemptionStatus, PointsSourceType } from "@prisma/client";
 import { requireAdmin } from "@/lib/admin-auth";
-import { prisma } from "@/lib/db";
+import { writeClient } from "@/lib/db";
 import { updateRedemptionStatusSchema } from "@/lib/validations/marketplace";
+import { dualWritePoints } from "@/repositories/dual-write";
 
 export async function updateRedemptionStatusAction(formData: FormData) {
   await requireAdmin();
@@ -20,7 +21,7 @@ export async function updateRedemptionStatusAction(formData: FormData) {
   }
   const { redemptionId, nextStatus, trackingNote } = parsed.data;
 
-  return prisma.$transaction(async (tx) => {
+  return writeClient().$transaction(async (tx) => {
     const current = await tx.redemption.findUnique({
       where: { id: redemptionId },
       select: { status: true, userId: true, costSP: true },
@@ -71,6 +72,14 @@ export async function updateRedemptionStatusAction(formData: FormData) {
           type: "REDEEM_REFUND",
           reason: `Refund for cancelled redemption ${redemptionId}`,
         },
+      });
+      await dualWritePoints(tx, {
+        userId: current.userId,
+        amount: current.costSP,
+        sourceType: PointsSourceType.REDEMPTION_REFUND,
+        sourceId: redemptionId,
+        idempotencyKey: `redeem-refund:${redemptionId}`,
+        reason: `Refund for cancelled redemption ${redemptionId}`,
       });
     }
 

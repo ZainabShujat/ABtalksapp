@@ -19,6 +19,7 @@ import {
 } from "@/components/program/day-section-card";
 import { programMdComponents } from "@/components/program/markdown-code";
 import { cn } from "@/lib/utils";
+import { programMember } from "@/repositories/legacy/program-member";
 
 type Props = { params: Promise<{ day: string }> };
 
@@ -43,7 +44,7 @@ export default async function ProgramDayPage({ params }: Props) {
 
   const [missionState, memberProfile, curriculum] = await Promise.all([
     getMissionState(member.id, dayNumber),
-    prisma.programMember.findUnique({
+    programMember.findUnique({
       where: { id: member.id },
       select: { githubRepoUrl: true },
     }),
@@ -60,7 +61,6 @@ export default async function ProgramDayPage({ params }: Props) {
   const brief = parseBriefMd(day.briefMd);
   const hasObjectives =
     day.objectives.length > 0 || day.tools.length > 0;
-  const hasRepo = !!brief.repoLayoutMd;
 
   return (
     <ProgramDayClient
@@ -73,65 +73,61 @@ export default async function ProgramDayPage({ params }: Props) {
       estimatedMin={day.estimatedMin}
       missionPoints={day.missionPoints}
     >
-      <DaySectionCard title="Mission" icon="mission">
-        {(brief.missionTitle || day.title) && (
-          <h3 className="mb-2 text-base font-semibold text-white md:text-lg">
-            {brief.missionTitle ?? day.title}
-          </h3>
+      <div
+        className={cn(
+          "grid min-w-0 gap-6",
+          hasObjectives ? "md:grid-cols-2" : "grid-cols-1",
         )}
-        <div className={dayMdClassName}>
-          <ReactMarkdown components={programMdComponents}>
-            {brief.missionBodyMd}
-          </ReactMarkdown>
-        </div>
-      </DaySectionCard>
-
-      {(hasRepo || hasObjectives) && (
-        <div
-          className={cn(
-            "grid gap-6",
-            hasRepo && hasObjectives
-              ? "lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]"
-              : "grid-cols-1",
+      >
+        <DaySectionCard title="Mission" icon="mission" className="min-w-0">
+          {(brief.missionTitle || day.title) && (
+            <h3 className="mb-2 font-heading text-base font-semibold text-[#111111] md:text-lg">
+              {brief.missionTitle ?? day.title}
+            </h3>
           )}
-        >
-          {brief.repoLayoutMd && (
-            <DaySectionCard title="Your Repo Layout (set this up first!)" icon="repo">
-              <div
-                className={cn(
-                  dayMdClassName,
-                  "rounded-[20px] border border-[#8365E3] bg-[#110528] p-5 [&_pre]:border-0 [&_pre]:bg-transparent [&_pre]:p-0",
-                )}
-              >
-                <ReactMarkdown components={programMdComponents}>
-                  {brief.repoLayoutMd}
-                </ReactMarkdown>
+          <div className={dayMdClassName}>
+            <ReactMarkdown components={programMdComponents}>
+              {brief.missionBodyMd}
+            </ReactMarkdown>
+          </div>
+        </DaySectionCard>
+
+        {hasObjectives && (
+          <DaySectionCard title="Objectives" icon="objectives" className="min-w-0">
+            {day.objectives.length > 0 && (
+              <ul className={cn(dayMdClassName, "mb-4 space-y-1.5")}>
+                {day.objectives.map((o, i) => (
+                  <li key={i} className="flex gap-2">
+                    <span className="text-[#E05226]">-</span>
+                    <span>{o}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {day.tools.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {day.tools.map((t) => (
+                  <ToolChip key={t} label={t} />
+                ))}
               </div>
-            </DaySectionCard>
-          )}
+            )}
+          </DaySectionCard>
+        )}
+      </div>
 
-          {hasObjectives && (
-            <DaySectionCard title="Objectives" icon="objectives">
-              {day.objectives.length > 0 && (
-                <ul className={cn(dayMdClassName, "mb-4 space-y-1.5")}>
-                  {day.objectives.map((o, i) => (
-                    <li key={i} className="flex gap-2">
-                      <span className="text-[#968BEC]">-</span>
-                      <span>{o}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {day.tools.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {day.tools.map((t) => (
-                    <ToolChip key={t} label={t} />
-                  ))}
-                </div>
-              )}
-            </DaySectionCard>
-          )}
-        </div>
+      {brief.repoLayoutMd && (
+        <DaySectionCard title="Your Repo Layout (set this up first!)" icon="repo">
+          <div
+            className={cn(
+              dayMdClassName,
+              "min-w-0 overflow-x-auto rounded-[12px] border border-[#E0E0E0] bg-[#FBF9F7] p-5 [&_pre]:border-0 [&_pre]:bg-transparent [&_pre]:p-0",
+            )}
+          >
+            <ReactMarkdown components={programMdComponents}>
+              {brief.repoLayoutMd}
+            </ReactMarkdown>
+          </div>
+        </DaySectionCard>
       )}
 
       {brief.buildSteps.length > 0 && (
@@ -145,10 +141,10 @@ export default async function ProgramDayPage({ params }: Props) {
               <div key={video.id} className="max-w-md space-y-2">
                 <div className="flex items-center gap-2">
                   <span
-                    className="inline-block size-0 shrink-0 border-y-[6px] border-l-[9px] border-y-transparent border-l-[#970000]"
+                    className="inline-block size-0 shrink-0 border-y-[6px] border-l-[9px] border-y-transparent border-l-[#E05226]"
                     aria-hidden
                   />
-                  <p className="text-sm font-medium text-white">
+                  <p className="text-sm font-medium text-[#111111]">
                     {video.title}
                   </p>
                 </div>
@@ -156,7 +152,7 @@ export default async function ProgramDayPage({ params }: Props) {
                   youtubeId={video.youtubeId}
                   title={video.title}
                   compact
-                  className="border-[#8365E3]/40"
+                  className="border-[#E0E0E0]"
                 />
               </div>
             ))}

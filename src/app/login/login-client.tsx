@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { HUB_BUTTON_CLASS } from "@/components/dashboard-hub/nav-items";
+import { cn } from "@/lib/utils";
 
 /** Cookie read by auth createUser so newsletter opt-out survives OAuth redirect. */
 const NEWSLETTER_PREF_COOKIE = "abtalks_newsletter_pref";
@@ -165,7 +167,10 @@ export function LoginClient({
           <Button
             type="button"
             variant="outline"
-            className="h-11 w-full gap-3 font-medium"
+            className={cn(
+              HUB_BUTTON_CLASS,
+              "h-11 w-full gap-3 bg-white hover:bg-white dark:bg-white dark:text-black dark:hover:bg-white dark:hover:text-[#E05226]",
+            )}
             disabled={pending || !canSignIn}
             onClick={handleGoogleSignIn}
           >
@@ -222,7 +227,11 @@ export function LoginClient({
           </div>
           <Button
             type="submit"
-            className="w-full"
+            variant="outline"
+            className={cn(
+              HUB_BUTTON_CLASS,
+              "h-11 w-full bg-white hover:bg-white dark:bg-white dark:text-black dark:hover:bg-white dark:hover:text-[#E05226]",
+            )}
             disabled={pending || !canSignIn}
           >
             Sign in

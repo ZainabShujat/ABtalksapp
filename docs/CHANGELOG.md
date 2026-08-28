@@ -1,6 +1,6 @@
-## Pending reconcile
+- 2026-08-19 [convention] /program/day restyled to cream/orange design system (behavior unchanged)
 
-<!-- Reconciled through 2026-08-05 (commit 519cc34) into docs/project-context.md. -->
+- 2026-08-19 [convention] Program /dashboard rebuilt as collapsible module view on cream/orange design system; /program (app) shell is light; Curriculum nav hidden (route kept); heatmap kept for talent
 
 - 2026-08-20 [rule] Campus Ambassador onboarding is off-site (abtalksca.netlify.app); dashboard apply stopped; challenge-enrolled students get banner + derived bell notice
 - 2026-08-20 [convention] Reverted PR #153 chatbot-knowledge-base from master (old modernist UI and extra KB ingest that landed with it)
@@ -37,3 +37,23 @@
 - 2026-08-09 [rule] Adjusted hackathon submission deadline to Sun 9 Aug 8:45 PM IST
 - 2026-08-10 [convention] /admin/submissions gains Hackathon sub-tab for HackathonSubmission feed + CSV
 - 2026-08-10 — `/` now renders the landing hub for signed-in users too (no more redirect to /dashboard); track cards show "Open dashboard" per-track via `features/landing/get-landing-state.ts`; `/login` bounces signed-in users to `/` instead of `/dashboard`.
+
+## Pending reconcile
+
+_(Cleared 2026-08-24 — the 17 entries that were under this heading were folded into `docs/project-context.md`,
+reconciled against `3b040d8`. The un-headed block above (2026-08-06 → 2026-08-20) was logged outside this
+heading and was never reconciled; its facts were folded into the same pass, but the lines were left in place
+rather than deleted without authorization. Cursor appends new lines below.)_
+- 2026-08-26 [convention] Claude Challenge (/claude + /claude/day/[day]) restyled onto hub DashboardShell (Claude-only desktop collapse) and cream/orange AI Cohort language; heatmap/stats/AppHeader removed from Claude UI; no schema change
+- 2026-08-25 [convention] Campus Ambassador onboarding banner and derived notification-bell item removed from student surfaces.
+- 2026-08-25 [convention] Campus Ambassador onboarding banner unmounted from dashboard hub and challenge track pages.
+- 2026-08-25 [convention] AUTH_SECRET + session cookie v2 to stop JWTSessionError; login/register use scoped orange outline CTAs.
+- 2026-08-25 [convention] Promo Claude/hackathon overlays unmounted; cookie/terms consent and AI Cohort landing use scoped orange; apply pages stay purple.
+
+- 2026-08-24 [schema|rule|convention] Plan 082 on feat/hire-scout-078 lands PR #200 (/hire Scout) on the 078 architecture: CandidateAvailability dropped for CandidatePreference (repositories/candidate.ts owns the mapping and ensures a CandidateProfile row first); TalentRequestMatch/TalentEngagementRequest keyed on candidateUserId with programMemberId demoted to un-FK'd provenance; searchableUserWhere() in repositories/talent.ts is the single recruiter-discovery gate, ANDed onto every candidate query inside the new src/repositories/hire.ts seam so a caller cannot omit it, and now covering challenge and hackathon candidates (which had none) plus a re-filter of stored TalentRequestMatch rows on read; candidate-declared salary never reaches a recruiter surface; recruiter registration and admin approval also provision UserRoleAssignment(RECRUITER)+Organization+OrganizationMember with VerifiedRecruiterSeat narrowed to a pre-account invite; track registry carries the 078 cohort slug; hire plan docs renumbered 083-094. ENABLE_NEW_* stay off and legacy stays authoritative; the 078 read branch is additionally gated on NEW_HIRE_POOL_READY until Phase 2e/2f complete
+- 2026-08-25 [env|convention] Blurred "Pro" preview cards on an empty /hire search, behind HIRE_PRO_PREVIEW (default off, read on the server and passed to the desk as a prop). features/hire/locked-preview.ts fabricates 3 deterministic example profiles from the recruiter's own spec — name/location/education/email/phone/compensation are generated, never anonymised real candidates — and components/hire/locked-field.tsx blurs them with an "Upgrade to Pro to see the full profile" prompt. Refs keep the SAMPLE: prefix so the whitelist still refuses them: a preview can never be shortlisted or become an engagement request. Pro is presentational only (no plan column, no entitlement, no billing) and is a COMMERCIAL gate that must never widen the privacy gate — contact is still released only by an admin-approved TalentEngagementRequest reaching CONTACT_SHARED, and paying cannot skip that
+- 2026-08-25 [env|rule] Recruiter login/register closed unless ENABLE_RECRUITER_AUTH=true: /talent/login and /talent/register show a closed page, hire Sign in/Register buttons are hidden, and recruiter-otp authorize plus OTP/register actions refuse new sign-ins; /hire guest browsing stays public
+- 2026-08-25 [rule] Program members start at Day 1 (PROGRAM_MEMBER_START_DAY); Days 1–3 are no longer waived at enroll
+- 2026-08-25 [rule] Phase 5 pass #2 waits until 2026-08-25T15:57:57Z; extras treat recruiter-visible as all ProgramMembers plus platform_default (not consent-only); ENABLE_NEW_* stay off until that pack is clean
+- 2026-08-25 [convention] 078 points count-drift ignores Phase 2f User.synergyPoints plug rows (idempotencyKey reconciliation:phase2:*); those txs have no SynergyEvent by design and must not be deleted
+- 2026-08-25 [rule] Dual-write now covers CandidateProfile on registration/profile update and Credential on certificate issuance (legacy still authoritative; ENABLE_NEW_* stay off)

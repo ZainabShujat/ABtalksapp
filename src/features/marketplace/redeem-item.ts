@@ -1,5 +1,7 @@
-import { RedemptionStatus } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { RedemptionStatus, PointsSourceType } from "@prisma/client";
+import { writeClient } from "@/lib/db";
+import { dualWritePoints } from "@/repositories/dual-write";
+import { getBalance } from "@/repositories/points";
 
 export type RedeemResult =
   | { ok: true; redemptionId: string; newBalance: number }
@@ -15,7 +17,7 @@ export async function redeemItem(input: {
   shippingAddress: string;
   recipientPhone: string;
 }): Promise<RedeemResult> {
-  return prisma.$transaction(
+  return writeClient().$transaction(
     async (tx) => {
       const item = await tx.marketplaceItem.findUnique({
         where: { id: input.itemId },
@@ -50,11 +52,13 @@ export async function redeemItem(input: {
       });
 
       if (debit.count === 0) {
-        const user = await tx.user.findUnique({
-          where: { id: input.userId },
-          select: { synergyPoints: true },
-        });
-        if (!user) {
+        const current = await getBalance(input.userId, tx);
+        if (
+          (await tx.user.findUnique({
+            where: { id: input.userId },
+            select: { id: true },
+          })) == null
+        ) {
           return {
             ok: false,
             reason: "not_found",
@@ -64,7 +68,7 @@ export async function redeemItem(input: {
         return {
           ok: false,
           reason: "insufficient",
-          message: `You need ${Math.max(item.costSP - user.synergyPoints, 0)} more SP for this item.`,
+          message: `You need ${Math.max(item.costSP - current, 0)} more SP for this item.`,
         };
       }
 
@@ -87,11 +91,6 @@ export async function redeemItem(input: {
         select: { id: true },
       });
 
-      const updated = await tx.user.findUniqueOrThrow({
-        where: { id: input.userId },
-        select: { synergyPoints: true },
-      });
-
       await tx.synergyEvent.create({
         data: {
           userId: input.userId,
@@ -100,11 +99,21 @@ export async function redeemItem(input: {
           reason: `Redeemed ${item.title} (redemptionId=${redemption.id})`,
         },
       });
+      await dualWritePoints(tx, {
+        userId: input.userId,
+        amount: -item.costSP,
+        sourceType: PointsSourceType.REDEMPTION,
+        sourceId: redemption.id,
+        idempotencyKey: `redeem:${redemption.id}`,
+        reason: `Redeemed ${item.title} (redemptionId=${redemption.id})`,
+      });
+
+      const newBalance = await getBalance(input.userId, tx);
 
       return {
         ok: true,
         redemptionId: redemption.id,
-        newBalance: updated.synergyPoints,
+        newBalance,
       };
     },
     { maxWait: 5000, timeout: 10000 },

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { askClaudeJson } from "@/lib/anthropic";
 import { logger } from "@/lib/logger";
 import { PROGRAM_TOTAL_DAYS } from "@/features/program/constants";
+import { programMember } from "@/repositories/legacy/program-member";
 import {
   collectPassSkipSets,
   getMemberDayStates,
@@ -33,9 +34,9 @@ type EvaluateResponse = {
 
 type MemberContext = {
   fullName: string;
-  jobRole: string;
-  company: string;
-  yearsExperience: number;
+  jobRole: string | null;
+  company: string | null;
+  yearsExperience: number | null;
   missionPoints: number;
   conceptPoints: number;
   commitPoints: number;
@@ -74,7 +75,7 @@ async function ensureInterviewRecord(memberId: string) {
 
 async function loadMemberContext(memberId: string): Promise<MemberContext | null> {
   const [member, projects, { modules, days }] = await Promise.all([
-    prisma.programMember.findUnique({
+    programMember.findUnique({
       where: { id: memberId },
       select: {
         fullName: true,
@@ -146,8 +147,8 @@ export function buildInterviewInstructions(member: MemberContext): string {
     "",
     "Candidate context:",
     `- Name: ${member.fullName}`,
-    `- Role: ${member.jobRole} at ${member.company}`,
-    `- Experience: ${member.yearsExperience} years`,
+    `- Role: ${member.jobRole ?? "—"} at ${member.company ?? "—"}`,
+    `- Experience: ${member.yearsExperience ?? "—"} years`,
     `- Score components: missions ${member.missionPoints}, concepts ${member.conceptPoints}, commits ${member.commitPoints}, projects ${member.projectPoints}`,
     moduleLines,
     "Projects:",
@@ -182,7 +183,7 @@ export type InterviewEligibility =
 export async function getInterviewEligibility(
   memberId: string,
 ): Promise<InterviewEligibility> {
-  const member = await prisma.programMember.findUnique({
+  const member = await programMember.findUnique({
     where: { id: memberId },
     select: {
       cohort: { select: { endsAt: true } },
@@ -455,7 +456,7 @@ export async function evaluateInterview(
     system:
       'You evaluate B2B program exit voice interviews. Reply JSON only: {"commScore":0-100,"techScore":0-100,"problemScore":0-100,"overallScore":0-100,"summary":"2-3 recruiter-readable sentences"}. Score communication clarity, technical depth, and structured problem-solving separately; overall is holistic.',
     user: [
-      `Candidate: ${interview.member.fullName}, ${interview.member.jobRole} at ${interview.member.company}, ${interview.member.yearsExperience} yrs exp.`,
+      `Candidate: ${interview.member.fullName}, ${interview.member.jobRole ?? "—"} at ${interview.member.company ?? "—"}, ${interview.member.yearsExperience ?? "—"} yrs exp.`,
       `Duration: ${interview.durationSec ?? "?"} seconds`,
       `Transcript:\n${transcriptText || "(empty transcript)"}`,
     ].join("\n\n"),
@@ -503,7 +504,7 @@ export async function adminResetInterview(
   memberId: string,
   reason: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const member = await prisma.programMember.findUnique({
+  const member = await programMember.findUnique({
     where: { id: memberId },
     select: { userId: true },
   });
@@ -544,7 +545,7 @@ export async function adminResetInterview(
 }
 
 export async function listInterviewsForAdmin(cohortId: string) {
-  const members = await prisma.programMember.findMany({
+  const members = await programMember.findMany({
     where: {
       cohortId,
       status: { in: ["ENROLLED", "COMPLETED"] },

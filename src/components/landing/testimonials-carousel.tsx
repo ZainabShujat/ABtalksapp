@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { TestimonialsScroller } from "./testimonials-scroller";
 
-type Testimonial = {
+export type Testimonial = {
   name: string;
   org: string | null;
   /** Square crop in `public/testimonials/`. Null renders an initials avatar. */
@@ -9,7 +9,7 @@ type Testimonial = {
   quote: string;
 };
 
-const TESTIMONIALS: Testimonial[] = [
+export const TESTIMONIALS: Testimonial[] = [
   {
     name: "Samridhi Gupta",
     org: "Axis Institute of Technology and Management, Kanpur",

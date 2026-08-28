@@ -142,11 +142,64 @@ export function AppFooter() {
   const isTalent = pathname === "/talent" || pathname.startsWith("/talent/");
   const isHackathon =
     pathname === "/hackathon" || pathname.startsWith("/hackathon/");
+  // the Modernist landing ships its own footer
+  const isLanding = pathname === "/";
   const supportEmail = "team@abtalks.in";
+
+// Landing hub ships its own footer.
+  if (isLanding) return null;
 
   // The workshop pages carry their own branded footer, which links legal
   // inline — anything here would duplicate their copyright line.
   if (isWorkshop) return null;
+
+  if (pathname === "/dashboard") return null;
+  if (pathname === "/claude" || pathname.startsWith("/claude/day")) return null;
+  if (pathname === "/") return null;
+
+  if (
+    pathname === "/program/dashboard" ||
+    pathname.startsWith("/program/day")
+  ) {
+    const year = new Date().getFullYear();
+    return (
+      <footer className="mt-auto border-t border-[#E0E0E0] bg-[#FBF9F7]">
+        <div className="mx-auto grid w-full max-w-[1536px] grid-cols-1 items-center gap-4 px-4 py-5 md:grid-cols-3 md:px-6">
+          <nav
+            className="flex flex-wrap items-center justify-start gap-x-4 gap-y-1 text-xs text-[#555555]"
+            aria-label="Legal"
+          >
+            {LEGAL_LINKS.map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className="hover:text-[#E05226] hover:underline"
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
+          <p className="text-center text-xs text-[#8F8F8F]">
+            © {year} ABTalks. All rights reserved.
+          </p>
+          <div className="flex items-center justify-start gap-1 md:justify-end">
+            {SOCIAL_LINKS.map(({ label, href, icon: Icon }) => (
+              <a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={label}
+                className="inline-flex size-8 items-center justify-center rounded-full text-[#555555] transition-colors hover:bg-[#E05226]/10 hover:text-[#E05226]"
+              >
+                <Icon className="size-4" />
+              </a>
+            ))}
+          </div>
+        </div>
+      </footer>
+    );
+  }
 
   // The remaining funnel routes have no footer of their own, but must still
   // surface the legal links — a minimal strip instead of the full footer.

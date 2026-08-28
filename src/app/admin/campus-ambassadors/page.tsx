@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mail, Phone, ExternalLink, Calendar } from "lucide-react";
 import { formatDateIST } from "@/lib/date-utils";
+import { studentProfile } from "@/repositories/legacy/student-profile";
 
 export default async function CampusAmbassadorsPage({
   searchParams,
@@ -21,7 +22,7 @@ export default async function CampusAmbassadorsPage({
   const sp = await searchParams;
   const search = sp.q?.trim() ?? "";
 
-  const candidates = await prisma.studentProfile.findMany({
+  const candidates = await studentProfile.findMany({
     where: {
       isCampusAmbassadorCandidate: true,
       ...(search
@@ -113,7 +114,7 @@ export default async function CampusAmbassadorsPage({
                     </CardDescription>
                   </div>
                   <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400 px-2 py-0.5 text-xs font-medium">
-                    {candidate.domain}
+                    {candidate.domain ?? "—"}
                   </span>
                 </div>
               </CardHeader>

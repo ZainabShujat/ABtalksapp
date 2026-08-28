@@ -5,6 +5,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "@/lib/db";
 import { parseCalendarKeyToUtcDate } from "@/lib/date-utils";
 import { isDayLockBypassEnabled } from "@/lib/feature-flags";
+import { programMember } from "@/repositories/legacy/program-member";
 import {
   PROGRAM_HOLD_OPEN_COHORT_NAME,
   PROGRAM_MEMBER_START_DAY,
@@ -40,6 +41,14 @@ export function isSkippedPayload(payload: unknown): boolean {
   );
 }
 
+export function isWaivedPayload(payload: unknown): boolean {
+  return (
+    !!payload &&
+    typeof payload === "object" &&
+    (payload as { waived?: unknown }).waived === true
+  );
+}
+
 /**
  * Calendar unlock ceiling from cohort pace + start-day offset.
  * Cohort calendar day 1 → content day PROGRAM_MEMBER_START_DAY.
@@ -54,6 +63,18 @@ export function getCalendarDerivedMaxContentDay(
   );
 }
 
+/**
+ * Old enroll bootstrap wrote highestUnlockedDay = 4. After START_DAY moved
+ * to 1, that floor would still unlock Days 1–4 on calendar day 1. Drop it
+ * unless an admin raised the floor past 4.
+ */
+function effectiveUnlockFloor(highestUnlockedDay: number): number {
+  if (PROGRAM_MEMBER_START_DAY <= 1 && highestUnlockedDay <= 4) {
+    return PROGRAM_MEMBER_START_DAY;
+  }
+  return highestUnlockedDay;
+}
+
 /** Effective unlock ceiling: calendar-derived, raised by admin `highestUnlockedDay`. */
 export function getMaxContentDay(
   cohort: { startsAt: Date },
@@ -64,7 +85,7 @@ export function getMaxContentDay(
   );
   return Math.min(
     PROGRAM_TOTAL_DAYS,
-    Math.max(calendarDerived, highestUnlockedDay),
+    Math.max(calendarDerived, effectiveUnlockFloor(highestUnlockedDay)),
   );
 }
 
@@ -165,9 +186,18 @@ export function collectPassSkipSets(
 ): { passedDays: Set<number>; skippedDays: Set<number> } {
   const passedDays = new Set<number>();
   const skippedDays = new Set<number>();
+  const hasEarnedPass = submissions.some(
+    (row) => row.passed && !isWaivedPayload(row.payload),
+  );
+  const ignoreStartWaivers =
+    PROGRAM_MEMBER_START_DAY <= 1 && !hasEarnedPass;
   for (const row of submissions) {
-    if (row.passed) passedDays.add(row.dayNumber);
-    else if (isSkippedPayload(row.payload)) skippedDays.add(row.dayNumber);
+    if (row.passed) {
+      if (ignoreStartWaivers && isWaivedPayload(row.payload)) continue;
+      passedDays.add(row.dayNumber);
+    } else if (isSkippedPayload(row.payload)) {
+      skippedDays.add(row.dayNumber);
+    }
   }
   return { passedDays, skippedDays };
 }
@@ -175,7 +205,7 @@ export function collectPassSkipSets(
 export async function getMemberDayStates(
   memberId: string,
 ): Promise<{ modules: CurriculumModule[]; days: CurriculumDay[] }> {
-  const member = await prisma.programMember.findUnique({
+  const member = await programMember.findUnique({
     where: { id: memberId },
     select: {
       highestUnlockedDay: true,
@@ -244,7 +274,7 @@ export async function getMemberDayStates(
 export async function getMemberCurrentModuleNumber(
   memberId: string,
 ): Promise<number> {
-  const member = await prisma.programMember.findUnique({
+  const member = await programMember.findUnique({
     where: { id: memberId },
     select: {
       highestUnlockedDay: true,

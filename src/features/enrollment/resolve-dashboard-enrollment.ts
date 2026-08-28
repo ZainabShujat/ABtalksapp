@@ -28,7 +28,8 @@ export const sessionEnrollmentSelect = {
 
 /**
  * Resolves the enrollment shown on the dashboard.
- * - Optional `enrollmentId` must belong to the user and be ACTIVE, or it is ignored.
+ * - Optional `enrollmentId` must belong to the user; when present it is honoured
+ *   at any status so track pages never silently fall back across domains.
  * - Default: oldest ACTIVE enrollment, then legacy profile-domain match, then any enrollment.
  *
  * Wrapped in React `cache()` so repeat calls within one render dedupe to a
@@ -41,15 +42,13 @@ export const resolveDashboardEnrollment = cache(async function resolveDashboardE
 ) {
   const trimmed = enrollmentId?.trim();
   if (trimmed) {
-    const picked = await prisma.enrollment.findFirst({
-      where: {
-        id: trimmed,
-        userId,
-        status: EnrollmentStatus.ACTIVE,
-      },
+    // Caller named an enrollment (track pages pass the row for their own domain).
+    // Honour it at ANY status — a COMPLETED or ABANDONED track must render its own
+    // data, never silently fall back to a different domain.
+    return prisma.enrollment.findFirst({
+      where: { id: trimmed, userId },
       select: sessionEnrollmentSelect,
     });
-    if (picked) return picked;
   }
 
   let row = await prisma.enrollment.findFirst({

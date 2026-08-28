@@ -2,42 +2,8 @@ import "server-only";
 import type { ProgramMissionType } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getMissionHeatmap, type MissionHeatmapCell } from "@/features/program/progression";
-
-const PAGE_SIZE = 30;
-
-export type TalentPoolFilters = {
-  q?: string;
-  skills?: string[];
-  minYears?: number;
-  minScore?: number;
-  page?: number;
-};
-
-export type TalentPoolRow = {
-  rank: number;
-  memberId: string;
-  fullName: string;
-  jobRole: string;
-  company: string;
-  yearsExperience: number;
-  skills: string[];
-  totalScore: number;
-  missionPoints: number;
-  conceptPoints: number;
-  commitPoints: number;
-  projectPoints: number;
-  cleanPassPct: number;
-  interviewOverall: number | null;
-  shortlisted: boolean;
-};
-
-export type TalentPoolResult = {
-  cohortName: string;
-  members: TalentPoolRow[];
-  total: number;
-  page: number;
-  pageSize: number;
-};
+import { programMember } from "@/repositories/legacy/program-member";
+import { visibleProgramMemberWhere } from "@/repositories/talent";
 
 export type MissionPortfolioDay = {
   dayNumber: number;
@@ -52,18 +18,23 @@ export type MissionPortfolioDay = {
 export type TalentProfile = {
   memberId: string;
   fullName: string;
-  jobRole: string;
-  company: string;
-  yearsExperience: number;
+  jobRole: string | null;
+  company: string | null;
+  yearsExperience: number | null;
   education: string | null;
   university: string | null;
   graduationYear: number | null;
   skills: string[];
-  email: string;
-  linkedinUrl: string | null;
-  resumeUrl: string | null;
-  githubUsername: string;
-  githubRepoUrl: string;
+  /**
+   * Contact vectors are no longer part of this profile.
+   *
+   * They were: email as a mailto link, LinkedIn, GitHub and resume. Any
+   * approved recruiter could reach the member directly and never place a
+   * request — bypassing both the business and the member's consent, which was
+   * to be *discoverable*, not to be cold-contacted. Release happens through an
+   * accepted engagement request, handled by the ABTalks team.
+   */
+  contactReleased: false;
   rank: number;
   scoreBreakdown: {
     missionPoints: number;
@@ -97,12 +68,21 @@ export type TalentProfile = {
 
 export type ShortlistRow = {
   memberId: string;
-  fullName: string;
-  jobRole: string;
-  company: string;
+  userId: string;
+  jobRole: string | null;
   totalScore: number;
   note: string | null;
   shortlistedAt: string;
+  displayName: string | null;
+  skills: string[];
+  yearsExperience: number | null;
+  /**
+   * The real name, and only once an engagement request for this recruiter and
+   * this candidate has reached CONTACT_SHARED. Null everywhere else — the
+   * shortlist page was rendering names outright, which the rest of the portal
+   * had already stopped doing.
+   */
+  revealedName: string | null;
 };
 
 async function assertPoolAccess(recruiterUserId: string) {
@@ -110,6 +90,8 @@ async function assertPoolAccess(recruiterUserId: string) {
     where: { userId: recruiterUserId },
     select: { approved: true },
   });
+  // Same rule as the page and Server Action gates — see
+  // honoured the bypass, so /hire rendered but the pool still refused.
   if (!profile?.approved) {
     return { ok: false as const, message: "Recruiter access not approved." };
   }
@@ -163,110 +145,6 @@ export async function getPublishedCohort() {
       endsAt: true,
     },
   });
-}
-
-export async function getTalentPool(
-  recruiterUserId: string,
-  filters: TalentPoolFilters,
-): Promise<
-  | { ok: true; data: TalentPoolResult }
-  | { ok: false; message: string }
-> {
-  const access = await assertPoolAccess(recruiterUserId);
-  if (!access.ok) return access;
-
-  const page = filters.page ?? 1;
-  const skills = filters.skills?.filter(Boolean) ?? [];
-
-  const where = {
-    cohortId: access.cohort.id,
-    status: { in: ["ENROLLED", "COMPLETED"] as ("ENROLLED" | "COMPLETED")[] },
-    recruiterVisibilityConsentAt: { not: null },
-    ...(filters.minYears !== undefined
-      ? { yearsExperience: { gte: filters.minYears } }
-      : {}),
-    ...(filters.minScore !== undefined
-      ? { totalScore: { gte: filters.minScore } }
-      : {}),
-    ...(skills.length > 0 ? { skills: { hasSome: skills } } : {}),
-    ...(filters.q
-      ? {
-          OR: [
-            { fullName: { contains: filters.q, mode: "insensitive" as const } },
-            { company: { contains: filters.q, mode: "insensitive" as const } },
-            { jobRole: { contains: filters.q, mode: "insensitive" as const } },
-          ],
-        }
-      : {}),
-  };
-
-  const [allMembers, shortlistIds] = await Promise.all([
-    prisma.programMember.findMany({
-      where,
-      orderBy: [
-        { totalScore: "desc" },
-        { projectPoints: "desc" },
-        { missionPoints: "desc" },
-        { enrolledAt: "asc" },
-      ],
-      select: {
-        id: true,
-        fullName: true,
-        jobRole: true,
-        company: true,
-        yearsExperience: true,
-        skills: true,
-        missionPoints: true,
-        conceptPoints: true,
-        commitPoints: true,
-        projectPoints: true,
-        totalScore: true,
-        cleanPassCount: true,
-        interview: {
-          select: { overallScore: true, status: true },
-        },
-      },
-    }),
-    prisma.recruiterShortlistItem.findMany({
-      where: { recruiterUserId },
-      select: { memberId: true },
-    }),
-  ]);
-
-  const shortlistSet = new Set(shortlistIds.map((s) => s.memberId));
-  const total = allMembers.length;
-  const offset = (page - 1) * PAGE_SIZE;
-  const pageMembers = allMembers.slice(offset, offset + PAGE_SIZE);
-
-  const members: TalentPoolRow[] = pageMembers.map((m, i) => ({
-    rank: offset + i + 1,
-    memberId: m.id,
-    fullName: m.fullName,
-    jobRole: m.jobRole,
-    company: m.company,
-    yearsExperience: m.yearsExperience,
-    skills: m.skills,
-    totalScore: m.totalScore,
-    missionPoints: m.missionPoints,
-    conceptPoints: m.conceptPoints,
-    commitPoints: m.commitPoints,
-    projectPoints: m.projectPoints,
-    cleanPassPct: computeCleanPassPct(m.missionPoints, m.cleanPassCount),
-    interviewOverall:
-      m.interview?.status === "COMPLETED" ? m.interview.overallScore : null,
-    shortlisted: shortlistSet.has(m.id),
-  }));
-
-  return {
-    ok: true,
-    data: {
-      cohortName: access.cohort.name,
-      members,
-      total,
-      page,
-      pageSize: PAGE_SIZE,
-    },
-  };
 }
 
 async function buildMissionPortfolio(
@@ -346,12 +224,12 @@ export async function getTalentProfile(
   const access = await assertPoolAccess(recruiterUserId);
   if (!access.ok) return access;
 
-  const member = await prisma.programMember.findFirst({
+  const member = await programMember.findFirst({
     where: {
       id: memberId,
       cohortId: access.cohort.id,
       status: { in: ["ENROLLED", "COMPLETED"] },
-      recruiterVisibilityConsentAt: { not: null },
+      ...visibleProgramMemberWhere(),
     },
     select: {
       id: true,
@@ -363,10 +241,7 @@ export async function getTalentProfile(
       university: true,
       graduationYear: true,
       skills: true,
-      linkedinUrl: true,
-      resumeUrl: true,
-      githubUsername: true,
-      githubRepoUrl: true,
+
       missionPoints: true,
       conceptPoints: true,
       commitPoints: true,
@@ -376,7 +251,7 @@ export async function getTalentProfile(
       highestUnlockedDay: true,
       aiRecommendation: true,
       enrolledAt: true,
-      user: { select: { email: true } },
+
       projects: {
         select: {
           moduleNumber: true,
@@ -403,11 +278,11 @@ export async function getTalentProfile(
 
   if (!member) return { ok: false, message: "Member not found." };
 
-  const ranked = await prisma.programMember.findMany({
+  const ranked = await programMember.findMany({
     where: {
       cohortId: access.cohort.id,
       status: { in: ["ENROLLED", "COMPLETED"] },
-      recruiterVisibilityConsentAt: { not: null },
+      ...visibleProgramMemberWhere(),
     },
     orderBy: [
       { totalScore: "desc" },
@@ -445,11 +320,7 @@ export async function getTalentProfile(
       university: member.university,
       graduationYear: member.graduationYear,
       skills: member.skills,
-      email: member.user.email,
-      linkedinUrl: member.linkedinUrl,
-      resumeUrl: member.resumeUrl,
-      githubUsername: member.githubUsername,
-      githubRepoUrl: member.githubRepoUrl,
+      contactReleased: false as const,
       rank,
       scoreBreakdown: {
         missionPoints: member.missionPoints,
@@ -498,7 +369,7 @@ export async function toggleShortlist(
   const access = await assertPoolAccess(recruiterUserId);
   if (!access.ok) return access;
 
-  const member = await prisma.programMember.findFirst({
+  const member = await programMember.findFirst({
     where: {
       id: memberId,
       cohortId: access.cohort.id,
@@ -524,6 +395,36 @@ export async function toggleShortlist(
     data: { recruiterUserId, memberId },
   });
   return { ok: true, shortlisted: true };
+}
+
+/** Add only — never removes. Used to merge a guest cart after sign-in. */
+export async function ensureShortlisted(
+  recruiterUserId: string,
+  memberId: string,
+): Promise<{ ok: true; added: boolean } | { ok: false; message: string }> {
+  const access = await assertPoolAccess(recruiterUserId);
+  if (!access.ok) return access;
+
+  const member = await prisma.programMember.findFirst({
+    where: {
+      id: memberId,
+      cohortId: access.cohort.id,
+      status: { in: ["ENROLLED", "COMPLETED"] },
+    },
+    select: { id: true },
+  });
+  if (!member) return { ok: false, message: "Member not found." };
+
+  const existing = await prisma.recruiterShortlistItem.findUnique({
+    where: { recruiterUserId_memberId: { recruiterUserId, memberId } },
+    select: { id: true },
+  });
+  if (existing) return { ok: true, added: false };
+
+  await prisma.recruiterShortlistItem.create({
+    data: { recruiterUserId, memberId },
+  });
+  return { ok: true, added: true };
 }
 
 export async function updateShortlistNote(
@@ -569,10 +470,12 @@ export async function getShortlist(
       member: {
         select: {
           id: true,
+          userId: true,
           fullName: true,
           jobRole: true,
-          company: true,
           totalScore: true,
+          skills: true,
+          yearsExperience: true,
           cohortId: true,
           status: true,
         },
@@ -580,32 +483,43 @@ export async function getShortlist(
     },
   });
 
+  const visible = items.filter(
+    (i) =>
+      i.member.cohortId === access.cohort.id &&
+      (i.member.status === "ENROLLED" || i.member.status === "COMPLETED"),
+  );
+
+  // One query for the whole page rather than a lookup per row.
+  const released = new Set(
+    (
+      await prisma.talentEngagementRequest.findMany({
+        where: {
+          recruiterUserId,
+          status: "CONTACT_SHARED",
+          programMemberId: { in: visible.map((i) => i.member.id) },
+        },
+        select: { programMemberId: true },
+      })
+    )
+      .map((r) => r.programMemberId)
+      .filter((id): id is string => id !== null),
+  );
+
   return {
     ok: true,
-    data: items
-      .filter(
-        (i) =>
-          i.member.cohortId === access.cohort.id &&
-          (i.member.status === "ENROLLED" || i.member.status === "COMPLETED"),
-      )
+    data: visible
       .map((i) => ({
         memberId: i.member.id,
-        fullName: i.member.fullName,
+        userId: i.member.userId,
         jobRole: i.member.jobRole,
-        company: i.member.company,
         totalScore: i.member.totalScore,
         note: i.note,
+        displayName: i.member.fullName.trim() ? i.member.fullName.trim() : null,
+        skills: i.member.skills,
+        yearsExperience: i.member.yearsExperience,
+        revealedName: released.has(i.member.id) ? i.member.fullName : null,
         shortlistedAt: i.createdAt.toISOString(),
       })),
   };
 }
 
-export async function getShortlistedMemberIds(
-  recruiterUserId: string,
-): Promise<Set<string>> {
-  const items = await prisma.recruiterShortlistItem.findMany({
-    where: { recruiterUserId },
-    select: { memberId: true },
-  });
-  return new Set(items.map((i) => i.memberId));
-}

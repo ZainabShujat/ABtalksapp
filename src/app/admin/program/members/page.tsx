@@ -69,7 +69,7 @@ export default async function AdminProgramMembersPage({ searchParams }: Props) {
                     {m.fullName}
                   </Link>
                   <p className="text-xs text-muted-foreground">
-                    {m.jobRole} · {m.company}
+                    {m.jobRole ?? "—"} · {m.company ?? "—"}
                   </p>
                 </td>
                 <td className="px-4 py-3">{m.status}</td>

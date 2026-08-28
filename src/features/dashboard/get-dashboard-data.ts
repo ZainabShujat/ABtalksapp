@@ -33,7 +33,7 @@ export type DashboardDataWithEnrollment = {
   };
   profile: {
     fullName: string;
-    domain: string;
+    domain: Domain | null;
     userType: "STUDENT" | "PROFESSIONAL";
     college: string | null;
     organization: string | null;

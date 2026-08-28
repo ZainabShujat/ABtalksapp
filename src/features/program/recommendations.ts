@@ -4,6 +4,7 @@ import { askClaudeJson } from "@/lib/anthropic";
 import { PROGRAM_TOTAL_DAYS } from "@/features/program/constants";
 import { getCohortCalendarDay } from "@/features/program/progression";
 import { getMemberAtRiskStatus } from "@/features/program/commits";
+import { programMember } from "@/repositories/legacy/program-member";
 
 const RECOMMENDATION_TTL_DAYS = 7;
 const GAP_MS = 500;
@@ -19,7 +20,7 @@ export async function generateRecommendations(cohortId: string): Promise<{
   skipped: number;
   failed: number;
 }> {
-  const members = await prisma.programMember.findMany({
+  const members = await programMember.findMany({
     where: {
       cohortId,
       status: { in: ["ENROLLED", "COMPLETED"] },
@@ -102,7 +103,7 @@ export async function generateRecommendations(cohortId: string): Promise<{
       continue;
     }
 
-    await prisma.programMember.update({
+    await programMember.update({
       where: { id: member.id },
       data: {
         aiRecommendation: ai.data.recommendation.trim(),
@@ -120,7 +121,7 @@ export async function generateRecommendations(cohortId: string): Promise<{
 export async function getMemberRecommendation(
   memberId: string,
 ): Promise<{ recommendation: string | null; generatedAt: string | null }> {
-  const member = await prisma.programMember.findUnique({
+  const member = await programMember.findUnique({
     where: { id: memberId },
     select: { aiRecommendation: true, aiRecommendationAt: true },
   });

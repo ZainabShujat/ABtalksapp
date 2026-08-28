@@ -121,15 +121,15 @@ export default async function AdminProgramMemberDetailPage({
           <CardContent className="space-y-2 text-sm">
             <p>
               <span className="text-muted-foreground">Role:</span>{" "}
-              {member.jobRole}
+              {member.jobRole ?? "—"}
             </p>
             <p>
               <span className="text-muted-foreground">Company:</span>{" "}
-              {member.company}
+              {member.company ?? "—"}
             </p>
             <p>
               <span className="text-muted-foreground">Experience:</span>{" "}
-              {member.yearsExperience} yrs
+              {member.yearsExperience ?? "—"} yrs
             </p>
             <p>
               <span className="text-muted-foreground">Education:</span>{" "}

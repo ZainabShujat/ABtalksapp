@@ -107,7 +107,7 @@ function PodiumCard({
           </h3>
 
           <p className="mt-1 truncate text-[10px] text-white/70 sm:text-xs">
-            {filled ? `${row.company} · ${row.jobRole}` : "Open spot"}
+            {filled ? `${row.company ?? "—"} · ${row.jobRole ?? "—"}` : "Open spot"}
           </p>
 
           <div className="mt-auto pt-6">
@@ -205,13 +205,13 @@ export function ProgramLeaderboardView({
                         </td>
                         <td className="px-4 py-3 text-white">{row.fullName}</td>
                         <td className="px-4 py-3 text-[#E2E8F0]">
-                          {row.company}
+                          {row.company ?? "—"}
                         </td>
                         <td className="px-4 py-3 text-[#E2E8F0]">
-                          {row.jobRole}
+                          {row.jobRole ?? "—"}
                         </td>
                         <td className="px-4 py-3 text-center text-white">
-                          {row.yearsExperience}
+                          {row.yearsExperience ?? "—"}
                         </td>
                         <td className="px-4 py-3 text-center text-[#94A3B8]">
                           {row.missionPoints}/{row.commitPoints}/

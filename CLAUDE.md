@@ -37,12 +37,19 @@ here, to keep this file lean.)
 - Split auth config: `auth.config.ts` is edge-safe (no Prisma); `auth.ts` has
   PrismaAdapter + Credentials. Keep them split.
 - Prisma pinned to 6.x (NOT 7).
+- **Plan 078 migration is in flight.** The new 078 tables exist in production and
+  receive dual-writes (`ENABLE_DUAL_WRITE` on), but every `ENABLE_NEW_*` flag is
+  OFF and **legacy tables are authoritative for all reads**. Never plan as if the
+  cutover happened. New code reaches candidate/learning/progress/talent/points/
+  credential data through `src/repositories/`, not through fresh
+  `prisma.studentProfile` / `prisma.programMember` calls.
 - IST (Asia/Kolkata) for all CHALLENGE day boundaries. Day 1 = reference start day
   in IST. Use `lib/date-utils.ts`. `getCurrentDayNumber` caps at 60 (display,
   unlocking, streaks); `getElapsedDayNumber` is uncapped and is the ONLY correct
   input for backfill / relaxation-window decisions.
-  **Exception:** the `/program` track runs on America/Chicago — see
-  `features/program/constants.ts`. Never mix the two.
+  The `/program` track has its own zone constant, `PROGRAM_TZ` in
+  `features/program/constants.ts` — as of 2026-08-12 it is **`Asia/Kolkata`**
+  (was America/Chicago). Read `PROGRAM_TZ`; never hard-code the zone.
 - Result envelope everywhere: `{ ok: true, data } | { ok: false, message }`.
 - Zod at every boundary (action entry, route handler). Strict TS — no `any`.
 - Server Components by default; `"use client"` only when needed. Mutations via
@@ -59,6 +66,8 @@ here, to keep this file lean.)
   marketplace, jobs, recruiter, hackathon, workshop, program, talent-pool, email,
   admin. (No `auth/` module — auth lives in `src/auth.ts` + `src/lib/*-auth.ts`.)
 - `src/app/actions/` — Server Actions (34 files, grouped by track)
+- `src/repositories/` — the 078 read/write boundary (candidate, learning,
+  progress, talent, points, credentials, dual-write, drift, `legacy/` adapters)
 - `src/lib/` — db, auth (admin-auth, program-auth), logger, validations,
   date-utils, feature-flags, anthropic, email, csv
 - `src/components/ui/` — shadcn primitives (do not modify)

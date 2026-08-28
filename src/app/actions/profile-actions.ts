@@ -5,6 +5,7 @@ import { updateProfile } from "@/features/profile/update-profile";
 import type { UpdateProfileResult } from "@/features/profile/update-profile";
 import { prisma } from "@/lib/db";
 import { UserType } from "@prisma/client";
+import { studentProfile } from "@/repositories/legacy/student-profile";
 
 function parseSkillsJson(raw: string | null): unknown {
   if (!raw || raw.trim() === "") return [];
@@ -23,7 +24,7 @@ export async function updateProfileAction(
     return { ok: false, message: "You must be signed in." };
   }
 
-  const profile = await prisma.studentProfile.findUnique({
+  const profile = await studentProfile.findUnique({
     where: { userId: session.user.id },
     select: { userType: true },
   });

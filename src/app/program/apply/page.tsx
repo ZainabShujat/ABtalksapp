@@ -12,6 +12,7 @@ import {
 import { ApplyForm } from "@/components/program/apply-form";
 import { JoinCodeGate } from "@/components/program/join-code-gate";
 import { getEntryState } from "@/features/program/entry";
+import { prisma } from "@/lib/db";
 import { cn } from "@/lib/utils";
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -41,9 +42,19 @@ export default async function ProgramApplyPage({ searchParams }: Props) {
 
   const state = await getEntryState(session.user.id, code);
 
-  // Assessment quiz removed — any in-progress attempt resumes at apply/enroll.
-  if (state.screen === "in_progress") {
-    redirect("/program/apply");
+  // Only gate people who are about to apply. Existing members (enrolled /
+  // waitlisted / closed / status screens) must never be bounced to /register —
+  // legacy cohort members have no StudentProfile and keep full access (D5).
+  const profile =
+    state.screen === "form"
+      ? await prisma.studentProfile.findUnique({
+          where: { userId: session.user.id },
+          select: { linkedinUrl: true, skills: true },
+        })
+      : null;
+
+  if (state.screen === "form" && !profile) {
+    redirect("/register");
   }
 
   const showGate =
@@ -126,8 +137,15 @@ export default async function ProgramApplyPage({ searchParams }: Props) {
     );
   }
 
-  // Legacy assessment failure screens (quiz removed; rare for old attempts).
-  if (state.screen === "cooldown" || state.screen === "failed") {
+  // Assessment quiz removed. `in_progress` / `intro` / `cooldown` / `failed` are
+  // unreachable while the entry bypass is on; render a terminal status card rather
+  // than redirecting to this same route (that would be an infinite loop).
+  if (
+    state.screen === "in_progress" ||
+    state.screen === "intro" ||
+    state.screen === "cooldown" ||
+    state.screen === "failed"
+  ) {
     return (
       <Shell>
         <Card className="border-border/60">
@@ -141,11 +159,6 @@ export default async function ProgramApplyPage({ searchParams }: Props) {
         </Card>
       </Shell>
     );
-  }
-
-  // Bypass enrolls on apply — "intro" should not appear; treat as form if it does.
-  if (state.screen === "intro") {
-    redirect(code ? `/program/apply?code=${encodeURIComponent(code)}` : "/program/apply");
   }
 
   // state.screen === "form"
@@ -170,7 +183,11 @@ export default async function ProgramApplyPage({ searchParams }: Props) {
           </p>
         )}
       </div>
-      <ApplyForm joinCode={state.joinCode} />
+      <ApplyForm
+        joinCode={state.joinCode}
+        initialLinkedinUrl={profile?.linkedinUrl ?? ""}
+        initialSkills={profile?.skills ?? []}
+      />
     </Shell>
   );
 }

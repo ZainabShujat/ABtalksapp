@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { isProgramEnabled } from "@/lib/feature-flags";
 import { deriveEventNotifications } from "./derive-event-notifications";
+import { programMember } from "@/repositories/legacy/program-member";
 import type {
   AppNotification,
   NotificationCategoryKey,
@@ -88,7 +89,7 @@ export async function getNotificationsForUser(
     prisma.enrollment.findFirst({ where: { userId }, select: { id: true } }),
     // Doubles as the PROGRAM audience check and the "already joined this cohort"
     // suppression list, so it stays one query.
-    prisma.programMember.findMany({
+    programMember.findMany({
       where: { userId },
       select: { cohortId: true },
     }),
@@ -129,7 +130,6 @@ export async function getNotificationsForUser(
     ),
     isHackathonRegistered: Boolean(hackathonMembership),
     joinedCohortIds: new Set(programMemberships.map((m) => m.cohortId)),
-    hasChallengeEnrollment: Boolean(challengeMembership),
   });
 
   const items: AppNotification[] = [...adminItems, ...derivedItems]
