@@ -1,7 +1,7 @@
 import { RedemptionStatus, PointsSourceType } from "@prisma/client";
 import { writeClient } from "@/lib/db";
-import { dualWritePoints } from "@/repositories/dual-write";
-import { getBalance } from "@/repositories/points";
+import { applyPointsChange, getBalance, withLegacyPointsMirrorFlush } from "@/repositories/points";
+import { randomUUID } from "node:crypto";
 
 export type RedeemResult =
   | { ok: true; redemptionId: string; newBalance: number }
@@ -17,7 +17,8 @@ export async function redeemItem(input: {
   shippingAddress: string;
   recipientPhone: string;
 }): Promise<RedeemResult> {
-  return writeClient().$transaction(
+  return withLegacyPointsMirrorFlush(() =>
+    writeClient().$transaction(
     async (tx) => {
       const item = await tx.marketplaceItem.findUnique({
         where: { id: input.itemId },
@@ -43,28 +44,28 @@ export async function redeemItem(input: {
           message: "This item isn't available for redemption yet.",
         };
 
-      const debit = await tx.user.updateMany({
-        where: {
-          id: input.userId,
-          synergyPoints: { gte: item.costSP },
-        },
-        data: { synergyPoints: { decrement: item.costSP } },
+      const redemptionId = randomUUID();
+      const reason = `Redeemed ${item.title} (redemptionId=${redemptionId})`;
+      const applied = await applyPointsChange(tx, {
+        userId: input.userId,
+        amount: -item.costSP,
+        mode: "debit_strict",
+        sourceType: PointsSourceType.REDEMPTION,
+        sourceId: redemptionId,
+        idempotencyKey: `redeem:${redemptionId}`,
+        reason,
+        legacyEvent: { type: "REDEEM" },
       });
 
-      if (debit.count === 0) {
-        const current = await getBalance(input.userId, tx);
-        if (
-          (await tx.user.findUnique({
-            where: { id: input.userId },
-            select: { id: true },
-          })) == null
-        ) {
+      if (!applied.ok) {
+        if (applied.reason === "not_found") {
           return {
             ok: false,
             reason: "not_found",
             message: "Account not found",
           };
         }
+        const current = await getBalance(input.userId, tx);
         return {
           ok: false,
           reason: "insufficient",
@@ -72,14 +73,9 @@ export async function redeemItem(input: {
         };
       }
 
-      // First-release rollback compatibility for challenge users.
-      await tx.studentProfile.updateMany({
-        where: { userId: input.userId },
-        data: { synergyPoints: { decrement: item.costSP } },
-      });
-
       const redemption = await tx.redemption.create({
         data: {
+          id: redemptionId,
           userId: input.userId,
           itemId: item.id,
           costSP: item.costSP,
@@ -91,31 +87,13 @@ export async function redeemItem(input: {
         select: { id: true },
       });
 
-      await tx.synergyEvent.create({
-        data: {
-          userId: input.userId,
-          points: -item.costSP,
-          type: "REDEEM",
-          reason: `Redeemed ${item.title} (redemptionId=${redemption.id})`,
-        },
-      });
-      await dualWritePoints(tx, {
-        userId: input.userId,
-        amount: -item.costSP,
-        sourceType: PointsSourceType.REDEMPTION,
-        sourceId: redemption.id,
-        idempotencyKey: `redeem:${redemption.id}`,
-        reason: `Redeemed ${item.title} (redemptionId=${redemption.id})`,
-      });
-
-      const newBalance = await getBalance(input.userId, tx);
-
       return {
         ok: true,
         redemptionId: redemption.id,
-        newBalance,
+        newBalance: applied.newBalance,
       };
     },
     { maxWait: 5000, timeout: 10000 },
+    ),
   );
 }

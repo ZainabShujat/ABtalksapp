@@ -11,6 +11,7 @@ import { generateUniqueReferralCode } from "./generate-referral-code";
 import { studentProfile } from "@/repositories/legacy/student-profile";
 import { findUserIdByReferralCode } from "@/repositories/candidate";
 import { dualWriteCandidateIdentity } from "@/repositories/dual-write";
+import { lockWalletBalance, withLegacyPointsMirrorFlush } from "@/repositories/points";
 
 export type CompleteRegistrationResult =
   | { ok: true; profileId: string }
@@ -111,13 +112,9 @@ export async function completeRegistration(
 
   try {
     const profileId = await writeClient().$transaction(async (tx) => {
-      // Lock the account row before creating the rollback mirror so a
-      // simultaneous grant cannot leave the two balances out of sync.
-      const account = await tx.user.update({
-        where: { id: userId },
-        data: { synergyPoints: { increment: 0 } },
-        select: { synergyPoints: true },
-      });
+      // Lock the authoritative wallet before copying it onto the SP mirror
+      // so a simultaneous grant cannot leave the two balances out of sync.
+      const synergyPoints = await lockWalletBalance(tx, userId);
 
       const profile = await tx.studentProfile.create({
         data:
@@ -139,7 +136,7 @@ export async function completeRegistration(
                 phoneVerified,
                 githubUsername,
                 referralCode: newReferralCode,
-                synergyPoints: account.synergyPoints,
+                synergyPoints,
               }
             : {
                 userId,
@@ -158,7 +155,7 @@ export async function completeRegistration(
                 phoneVerified,
                 githubUsername,
                 referralCode: newReferralCode,
-                synergyPoints: account.synergyPoints,
+                synergyPoints,
               },
       });
 
@@ -172,7 +169,8 @@ export async function completeRegistration(
 
     if (referrerId) {
       try {
-        await writeClient().$transaction(async (tx) => {
+        await withLegacyPointsMirrorFlush(() =>
+          writeClient().$transaction(async (tx) => {
           const referral = await tx.referral.create({
             data: {
               referrerId,
@@ -186,7 +184,8 @@ export async function completeRegistration(
             referralId: referral.id,
             referredUserId: userId,
           });
-        });
+        }),
+        );
       } catch (error) {
         console.error("[registration] referral creation failed:", error);
       }

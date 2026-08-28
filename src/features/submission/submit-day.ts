@@ -14,6 +14,7 @@ import { validateLinkedinUrl } from "./validate-linkedin-url";
 import { computeStreakStats } from "./streak-utils";
 import { resolveChallengeEnrollment } from "@/features/enrollment/resolve-dashboard-enrollment";
 import { awardSubmissionSynergy } from "@/features/synergy/award-submission-synergy";
+import { withLegacyPointsMirrorFlush } from "@/repositories/points";
 import {
   dualWriteCandidateIdentity,
   dualWriteChallengeEnrollmentById,
@@ -197,7 +198,8 @@ export async function submitDay(input: {
   const newStatus = SubmissionStatus.ON_TIME;
 
   try {
-    const result = await writeClient().$transaction(async (tx) => {
+    const result = await withLegacyPointsMirrorFlush(() =>
+      writeClient().$transaction(async (tx) => {
       const existing = await tx.submission.findUnique({
         where: {
           enrollmentId_dayNumber: {
@@ -310,7 +312,8 @@ export async function submitDay(input: {
     }, {
       maxWait: 10000,
       timeout: 20000,
-    });
+    }),
+    );
 
     return { ok: true, ...result };
   } catch (e: unknown) {

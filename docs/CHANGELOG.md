@@ -76,3 +76,13 @@ rather than deleted without authorization. Cursor appends new lines below.)_
 - 2026-08-27 [convention] Phase 6 PROGRESS pre-flip audit: prisma/scripts/compare-078-progress.ts is the read-only production pack; ENABLE_NEW_PROGRESS stays false
 - 2026-08-27 [rule] Phase 6 PROGRESS dual-write closed (quiz attempts, admin delete, waivers, unlock/skip, commits, resubmit lateness); student progress reads are flag-gated from ActivityAttempt+Evaluation, not EnrollmentProgress; ENABLE_NEW_PROGRESS stays false
 - 2026-08-27 [rule] Phase 6 track streak keeps Enrollment.currentStreak / longestStreak snapshot; live recompute is a separate Phase 7 product decision; ENABLE_NEW_PROGRESS stays false
+- 2026-08-27 [env] ENABLE_NEW_PROGRESS=true on production after clean smoke + recon
+- 2026-08-27 [convention] Phase 6 PROGRESS complete: student progress reads via ActivityAttempt+ActivityEvaluation (not EnrollmentProgress); Enrollment streak snapshots preserved; ENABLE_NEW_TALENT is next; dual-write and legacy writes stay
+- 2026-08-27 [convention] Phase 6 TALENT pre-flip pack: prisma/scripts/compare-078-talent.ts; ENABLE_NEW_TALENT stays false
+- 2026-08-27 [rule] dualWriteProgramMember opens a pre-existing non-withdrawn CandidateVisibility row so ProgramMembers are recruiter-searchable; challenge dual-write still does not flip a closed historical row
+- 2026-08-27 [convention] Talent dark switch: /hire and /talent read CandidateVisibility+Profile+edu/exp/skill/preference when ENABLE_NEW_TALENT=true; NEW_HIRE_POOL_READY removed; openToWork is an explicit recruiter filter not the discovery gate; flag stays false
+- 2026-08-27 [env] ENABLE_NEW_TALENT=true on production after clean flag-ON rehearsal + deploy (dpl_BZZ1uXwHzbKagt7WErbCyH7wNuqV)
+- 2026-08-27 [convention] Phase 6 TALENT complete: /hire and /talent read CandidateVisibility+Profile+normalized children; Phase 6 complete; dual-write and legacy writes stay; do not start Phase 7
+- 2026-08-27 [convention] Phase 7 shutdown matrix: docs/plans/099-phase7-shutdown-matrix.md; dual-write stays; no legacy writes stopped; first write-family candidate is Points after redeem/admin guards move to PointsAccount
+- 2026-08-28 [env|convention] W1-A Points write authority: ENABLE_NEW_POINTS_WRITES (default off); applyPointsChange makes PointsAccount+PointsTransaction authoritative when on; User.synergyPoints and SynergyEvent stay mirrors; dual-write stays on; flag not enabled
+- 2026-08-28 [convention] W1-A legacy points mirrors flush in a separate transaction after PointsAccount+PointsTransaction commit; POINTS_FAIL_LEGACY_MIRROR is child-only

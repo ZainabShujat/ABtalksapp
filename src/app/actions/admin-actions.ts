@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { Role, PointsSourceType, type Prisma } from "@prisma/client";
+import { Role, PointsSourceType } from "@prisma/client";
 import { z } from "zod";
 import { prisma, writeClient } from "@/lib/db";
 import { isAdminEmail, requireAdmin } from "@/lib/admin-auth";
@@ -15,69 +15,19 @@ import {
   dualWriteChallengeEnrollmentById,
   dualWriteDeleteEnrollmentSubmissions,
   dualWriteDeleteSubmissionAttempt,
-  dualWritePoints,
 } from "@/repositories/dual-write";
+import {
+  applyPointsChange,
+  lockWalletBalance,
+  submissionAwardTotal,
+  withLegacyPointsMirrorFlush,
+} from "@/repositories/points";
+import { randomUUID } from "node:crypto";
 
 const baseInput = z.object({
   targetUserId: z.string().min(1),
   reason: z.string().max(500).optional(),
 });
-
-async function debitSynergyNotBelowZero(
-  tx: Prisma.TransactionClient,
-  userId: string,
-  pointsToRemove: number,
-): Promise<number> {
-  const locked = await tx.user.update({
-    where: { id: userId },
-    data: { synergyPoints: { increment: 0 } },
-    select: { synergyPoints: true },
-  });
-  const actualDebit = Math.min(pointsToRemove, Math.max(locked.synergyPoints, 0));
-  if (actualDebit > 0) {
-    await tx.user.update({
-      where: { id: userId },
-      data: { synergyPoints: { decrement: actualDebit } },
-    });
-    const profile = await tx.studentProfile.findUnique({
-      where: { userId },
-      select: { synergyPoints: true },
-    });
-    if (profile) {
-      await tx.studentProfile.update({
-        where: { userId },
-        data: { synergyPoints: Math.max(0, profile.synergyPoints - actualDebit) },
-      });
-    }
-  }
-  return Math.max(pointsToRemove - actualDebit, 0);
-}
-
-async function recordSpentSynergyClamp(
-  tx: Prisma.TransactionClient,
-  userId: string,
-  shortfall: number,
-  reason: string,
-) {
-  if (shortfall <= 0) return;
-  const event = await tx.synergyEvent.create({
-    data: {
-      userId,
-      points: shortfall,
-      type: "BALANCE_RECONCILIATION",
-      reason,
-    },
-    select: { id: true },
-  });
-  await dualWritePoints(tx, {
-    userId,
-    amount: shortfall,
-    sourceType: PointsSourceType.RECONCILIATION,
-    sourceId: event.id,
-    idempotencyKey: `legacy:${event.id}`,
-    reason,
-  });
-}
 
 function revalidateAdminViews(targetUserId: string) {
   revalidatePath(`/admin/students/${targetUserId}`);
@@ -107,7 +57,8 @@ export async function resetProgressAction(input: {
   let resetDomain: string | null = null;
 
   try {
-    await writeClient().$transaction(async (tx) => {
+    await withLegacyPointsMirrorFlush(() =>
+      writeClient().$transaction(async (tx) => {
       const enrollment = await tx.enrollment.findFirst({
         where: { userId: targetUserId },
       });
@@ -115,35 +66,37 @@ export async function resetProgressAction(input: {
       resetDomain = enrollment.domain;
 
       // Serialize reset against every balance writer before reading the ledger.
-      await tx.user.update({
-        where: { id: targetUserId },
-        data: { synergyPoints: { increment: 0 } },
+      await lockWalletBalance(tx, targetUserId);
+
+      const submissions = await tx.submission.findMany({
+        where: { enrollmentId: enrollment.id },
         select: { id: true },
       });
-
-      const removedSynergy = await tx.synergyEvent.aggregate({
-        where: {
-          enrollmentId: enrollment.id,
-          type: "SUBMISSION",
-        },
-        _sum: { points: true },
+      const pointsToRemove = await submissionAwardTotal(tx, {
+        submissionIds: submissions.map((s) => s.id),
+        enrollmentId: enrollment.id,
       });
-      const pointsToRemove = removedSynergy._sum.points ?? 0;
-      const spentShortfall =
-        pointsToRemove > 0
-          ? await debitSynergyNotBelowZero(tx, targetUserId, pointsToRemove)
-          : 0;
+      if (pointsToRemove > 0) {
+        const applied = await applyPointsChange(tx, {
+          userId: targetUserId,
+          amount: -pointsToRemove,
+          mode: "debit_clamp",
+          sourceType: PointsSourceType.RECONCILIATION,
+          sourceId: enrollment.id,
+          idempotencyKey: `reset-progress:${enrollment.id}:${randomUUID()}`,
+          reason:
+            "Clamped synergy to 0 after reset removed submission points that were already spent.",
+          createdByUserId: admin.userId,
+        });
+        if (!applied.ok) {
+          throw new Error("Failed to adjust points for reset");
+        }
+      }
 
       await tx.submission.deleteMany({
         where: { enrollmentId: enrollment.id },
       });
       await dualWriteDeleteEnrollmentSubmissions(tx, enrollment.id);
-      await recordSpentSynergyClamp(
-        tx,
-        targetUserId,
-        spentShortfall,
-        "Clamped synergy to 0 after reset removed submission points that were already spent.",
-      );
 
       await tx.enrollment.update({
         where: { id: enrollment.id },
@@ -178,7 +131,8 @@ export async function resetProgressAction(input: {
     }, {
       maxWait: 10000,
       timeout: 20000,
-    });
+    }),
+    );
 
     revalidateAdminViews(targetUserId);
 
@@ -336,7 +290,8 @@ export async function rejectSubmissionAction(input: {
   try {
     let targetUserId = "";
 
-    await writeClient().$transaction(async (tx) => {
+    await withLegacyPointsMirrorFlush(() =>
+      writeClient().$transaction(async (tx) => {
       const submission = await tx.submission.findUnique({
         where: { id: submissionId },
         select: {
@@ -358,23 +313,28 @@ export async function rejectSubmissionAction(input: {
 
       targetUserId = submission.userId;
 
-      const event = await tx.synergyEvent.findUnique({
-        where: { submissionId },
-        select: { points: true },
+      const pointsToRemove = await submissionAwardTotal(tx, {
+        submissionIds: [submissionId],
       });
-      const spentShortfall =
-        event && event.points > 0
-          ? await debitSynergyNotBelowZero(tx, submission.userId, event.points)
-          : 0;
+      if (pointsToRemove > 0) {
+        const applied = await applyPointsChange(tx, {
+          userId: submission.userId,
+          amount: -pointsToRemove,
+          mode: "debit_clamp",
+          sourceType: PointsSourceType.RECONCILIATION,
+          sourceId: submissionId,
+          idempotencyKey: `reject-submission:${submissionId}`,
+          reason:
+            "Clamped synergy to 0 after reject removed submission points that were already spent.",
+          createdByUserId: admin.userId,
+        });
+        if (!applied.ok) {
+          throw new Error("Failed to adjust points for reject");
+        }
+      }
 
       await tx.submission.delete({ where: { id: submissionId } });
       await dualWriteDeleteSubmissionAttempt(tx, submissionId);
-      await recordSpentSynergyClamp(
-        tx,
-        submission.userId,
-        spentShortfall,
-        "Clamped synergy to 0 after reject removed submission points that were already spent.",
-      );
 
       const remainingCount = await tx.submission.count({
         where: { enrollmentId: submission.enrollmentId },
@@ -429,7 +389,8 @@ export async function rejectSubmissionAction(input: {
     }, {
       maxWait: 10000,
       timeout: 20000,
-    });
+    }),
+    );
 
     revalidateAdminViews(targetUserId);
     return { ok: true as const };
@@ -460,7 +421,8 @@ export async function grantSynergyAction(input: {
   const { targetUserId, points, reason } = parsed.data;
 
   try {
-    await writeClient().$transaction(async (tx) => {
+    await withLegacyPointsMirrorFlush(() =>
+      writeClient().$transaction(async (tx) => {
       const target = await tx.user.findUnique({
         where: { id: targetUserId },
         select: {
@@ -480,33 +442,24 @@ export async function grantSynergyAction(input: {
         throw new Error("Registered student not found");
       }
 
-      const grantEvent = await tx.synergyEvent.create({
-        data: {
-          userId: targetUserId,
-          points,
-          type: "COMMUNITY_GRANT",
-          reason,
-          createdByAdminId: admin.userId,
-        },
-        select: { id: true },
-      });
-      await tx.user.update({
-        where: { id: targetUserId },
-        data: { synergyPoints: { increment: points } },
-      });
-      await tx.studentProfile.updateMany({
-        where: { userId: targetUserId },
-        data: { synergyPoints: { increment: points } },
-      });
-      await dualWritePoints(tx, {
+      const grantId = randomUUID();
+      const applied = await applyPointsChange(tx, {
         userId: targetUserId,
         amount: points,
+        mode: "credit",
         sourceType: PointsSourceType.ADMIN_GRANT,
-        sourceId: grantEvent.id,
-        idempotencyKey: `legacy:${grantEvent.id}`,
+        sourceId: grantId,
+        idempotencyKey: `admin-grant:${grantId}`,
         reason,
         createdByUserId: admin.userId,
+        legacyEvent: {
+          type: "COMMUNITY_GRANT",
+          createdByAdminId: admin.userId,
+        },
       });
+      if (!applied.ok) {
+        throw new Error("Failed to grant synergy");
+      }
       await tx.adminAction.create({
         data: {
           adminUserId: admin.userId,
@@ -516,7 +469,8 @@ export async function grantSynergyAction(input: {
           reason,
         },
       });
-    });
+    }),
+    );
     revalidateAdminViews(targetUserId);
     return { ok: true as const };
   } catch (error) {

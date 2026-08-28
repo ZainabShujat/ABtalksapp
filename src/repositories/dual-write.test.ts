@@ -223,9 +223,12 @@ suite("marketplace page and synergy action read through getMySynergy", () => {
 
 suite("redeem display balance uses getBalance after dual-write", () => {
   const src = source("src/features/marketplace/redeem-item.ts");
+  const points = source("src/repositories/points.ts");
   assert(src.includes("getBalance"), "repo");
-  assert(src.includes("dualWritePoints"), "writes still dual-written");
-  assert(src.includes("synergyPoints: { gte: item.costSP }"), "legacy write guard");
+  assert(src.includes("applyPointsChange"), "wallet boundary");
+  assert(points.includes("dualWritePoints"), "flag-off still dual-writes");
+  assert(points.includes("synergyPoints: { gte: requested }"), "legacy write guard");
+  assert(points.includes("balance: { gte: requested }"), "new write guard");
 });
 
 suite("ENABLE_NEW_* are not flipped in dual-write helpers", () => {

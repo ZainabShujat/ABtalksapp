@@ -21,7 +21,13 @@ export {
   filterSearchableUserIds,
   visibleProgramMemberWhere,
 } from "./talent";
-export { getBalance } from "./points";
+export {
+  getBalance,
+  applyPointsChange,
+  lockWalletBalance,
+  submissionAwardTotal,
+  withLegacyPointsMirrorFlush,
+} from "./points";
 export { getByPublicId, listForUser } from "./credentials";
 export {
   listProgramCandidates,
