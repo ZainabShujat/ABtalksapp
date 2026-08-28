@@ -9,7 +9,7 @@ export default function DashboardLoading() {
     <div
       aria-busy="true"
       aria-label="Loading dashboard"
-      className="report-light flex min-h-svh bg-[#FBF9F7] font-content text-[#111111]"
+      className="theme-abtalks-light theme-abtalks-orange flex min-h-svh bg-[#FBF9F7] font-content text-[#111111]"
     >
       <aside className="hidden w-64 shrink-0 flex-col border-r border-[#E0E0E0] bg-[#FBF9F7] md:flex">
         <div className="flex h-[72px] items-center border-b border-[#E0E0E0] px-4">

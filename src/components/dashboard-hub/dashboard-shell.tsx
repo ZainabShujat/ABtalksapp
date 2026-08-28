@@ -72,7 +72,7 @@ export function DashboardShell({
   }, [mobileOpen, closeMobile]);
 
   return (
-    <div className="report-light flex min-h-svh bg-[#FBF9F7] font-content text-black">
+    <div className="theme-abtalks-light theme-abtalks-orange flex min-h-svh bg-[#FBF9F7] font-content text-black">
       <DashboardSidebar
         user={user}
         mobileOpen={mobileOpen}

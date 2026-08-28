@@ -5,7 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { MotionProvider } from "@/components/shared/motion-provider";
 import { SynergyProvider } from "@/components/shared/synergy-provider";
 import { NotificationProvider } from "@/components/shared/notification-provider";
-import { Toaster } from "@/components/ui/sonner";
+import { RouteThemeToaster } from "@/components/shared/route-theme-toaster";
 import { AppFooter } from "@/components/shared/app-footer";
 import { BottomNavGate } from "@/components/shared/bottom-nav-gate";
 import { MainShell } from "@/components/shared/main-shell";
@@ -256,7 +256,7 @@ export default function RootLayout({
               </SynergyProvider>
               <AppFooter />
               <BottomNavGate />
-              <Toaster />
+              <RouteThemeToaster />
               <CookieConsentModal />
               {isChatbotEnabled() && <ChatWidget />}
             </NotificationProvider>
