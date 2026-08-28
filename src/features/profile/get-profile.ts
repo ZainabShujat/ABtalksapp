@@ -1,5 +1,6 @@
 import type { Domain, UserType } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { getCandidateProfile } from "@/repositories/candidate";
 
 export type ProfileUser = {
   email: string;
@@ -32,35 +33,18 @@ export async function getProfile(userId: string): Promise<{
   user: ProfileUser;
   profile: ProfileData | null;
 }> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      email: true,
-      image: true,
-      createdAt: true,
-      studentProfile: {
-        select: {
-          fullName: true,
-          userType: true,
-          college: true,
-          collegeId: true,
-          graduationYear: true,
-          organization: true,
-          role: true,
-          yearsExperience: true,
-          domain: true,
-          skills: true,
-          resumeUrl: true,
-          phone: true,
-          phoneVerified: true,
-          linkedinUrl: true,
-          githubUsername: true,
-          referralCode: true,
-          isReadyForInterview: true,
-        },
+  const [user, candidate] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        email: true,
+        image: true,
+        createdAt: true,
+        studentProfile: { select: { domain: true } },
       },
-    },
-  });
+    }),
+    getCandidateProfile(userId),
+  ]);
 
   if (!user) {
     throw new Error("User not found");
@@ -68,7 +52,9 @@ export async function getProfile(userId: string): Promise<{
 
   const { studentProfile, ...userFields } = user;
 
-  if (!studentProfile) {
+  // Challenge registration gate stays on StudentProfile. Identity fields come
+  // through the candidate repository (legacy SP or CandidateProfile by flag).
+  if (!studentProfile || !candidate) {
     return {
       user: userFields,
       profile: null,
@@ -82,8 +68,24 @@ export async function getProfile(userId: string): Promise<{
   return {
     user: userFields,
     profile: {
-      ...studentProfile,
+      fullName: candidate.fullName,
+      userType: candidate.userType as UserType,
+      college: candidate.college,
+      collegeId: candidate.collegeId,
+      graduationYear: candidate.graduationYear,
+      organization: candidate.organization,
+      role: candidate.role,
+      yearsExperience: candidate.yearsExperience,
+      domain: studentProfile.domain,
+      skills: candidate.skills,
+      resumeUrl: candidate.resumeUrl,
+      phone: candidate.phone,
+      phoneVerified: candidate.phoneVerified,
+      linkedinUrl: candidate.linkedinUrl,
+      githubUsername: candidate.githubUsername,
+      referralCode: candidate.referralCode,
       referralCount,
+      isReadyForInterview: candidate.isReadyForInterview,
     },
   };
 }

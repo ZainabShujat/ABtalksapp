@@ -3,7 +3,11 @@ import { randomBytes } from "crypto";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { findActiveMembership } from "@/repositories/learning";
+import {
+  findActiveMembership,
+  getCohortByJoinCode as getCohortByJoinCodeFromRepo,
+  getOpenEnrollmentCohort as getOpenEnrollmentCohortFromRepo,
+} from "@/repositories/learning";
 
 const JOIN_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -24,20 +28,7 @@ export function normalizeJoinCode(code: string): string {
 export async function getCohortByJoinCode(code: string) {
   const joinCode = normalizeJoinCode(code);
   if (joinCode.length < 4) return null;
-
-  return prisma.programCohort.findUnique({
-    where: { joinCode },
-    select: {
-      id: true,
-      name: true,
-      status: true,
-      startsAt: true,
-      endsAt: true,
-      capacity: true,
-      resultsPublishedAt: true,
-      joinCode: true,
-    },
-  });
+  return getCohortByJoinCodeFromRepo(joinCode);
 }
 
 /**
@@ -45,16 +36,12 @@ export async function getCohortByJoinCode(code: string) {
  * When several open cohorts are ENROLLING, the most recently created one wins.
  */
 export async function getOpenEnrollmentCohort() {
-  return prisma.programCohort.findFirst({
-    where: { status: "ENROLLING", requiresJoinCode: false },
-    orderBy: { createdAt: "desc" },
-    select: { id: true, name: true, status: true, joinCode: true },
-  });
+  return getOpenEnrollmentCohortFromRepo();
 }
 
 /**
  * Resolve the caller's program membership without redirecting.
- * Prefers ENROLLED over COMPLETED; among ties, newest enrolledAt.
+ * Prefers ENROLLED over COMPLETED; among ties, newest enrolledAt, then id.
  */
 export async function resolveProgramMemberForUser(userId: string) {
   return findActiveMembership(userId);

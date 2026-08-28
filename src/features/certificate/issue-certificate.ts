@@ -8,6 +8,10 @@ import { prisma, writeClient } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { generateCertificateId } from "./generate-certificate-id";
 import { dualWriteCredential } from "@/repositories/dual-write";
+import {
+  getChallengeDaySubmission,
+  getChallengeProgressStats,
+} from "@/repositories/progress";
 
 const CERTIFICATE_ELIGIBLE_DAYS = 50;
 const CERTIFICATE_REQUIRED_DAY = 60;
@@ -38,17 +42,14 @@ export async function ensureClaudeCertificate(userId: string): Promise<IssueResu
     return { ok: false, message: "Not enrolled in the Claude challenge" };
   }
 
-  const day60Submission = await prisma.submission.findFirst({
-    where: {
-      enrollmentId: enrollment.id,
-      dayNumber: CERTIFICATE_REQUIRED_DAY,
-    },
-    select: { id: true },
-  });
+  const [progress, day60Submission] = await Promise.all([
+    getChallengeProgressStats(enrollment.id),
+    getChallengeDaySubmission(enrollment.id, CERTIFICATE_REQUIRED_DAY),
+  ]);
 
   const eligible =
     day60Submission != null &&
-    enrollment.daysCompleted >= CERTIFICATE_ELIGIBLE_DAYS;
+    progress.daysCompleted >= CERTIFICATE_ELIGIBLE_DAYS;
 
   if (!eligible) {
     return { ok: false, message: "Challenge not completed yet" };
@@ -98,8 +99,8 @@ export async function ensureClaudeCertificate(userId: string): Promise<IssueResu
             enrollmentId: enrollment.id,
             issuedAt: enrollment.completedAt ?? new Date(),
             metadata: {
-              daysCompleted: enrollment.daysCompleted,
-              longestStreak: enrollment.longestStreak,
+              daysCompleted: progress.daysCompleted,
+              longestStreak: progress.longestStreak,
               completedAt: enrollment.completedAt?.toISOString() ?? null,
               college,
               organization,

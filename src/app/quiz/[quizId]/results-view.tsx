@@ -21,6 +21,7 @@ export function ResultsView({ quiz, questions, existingAttempt }: Props) {
       questions={questions}
       userAnswers={existingAttempt.answers}
       score={existingAttempt.score}
+      answersDetailAvailable={existingAttempt.answersDetailAvailable}
     />
   );
 }

@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Orange CTA for light surfaces (dashboard hub, program dashboard).
- * Overrides shadcn `default` hover, which uses `--primary` (purple).
+ * Overrides the default hover to keep the ABTalks orange treatment consistent.
  * Apply on `<Link>` / `<a>` via className — never `<Button asChild>`.
  *
  * Tokens: fill `#E05226`, hover `#C9411C`, active `#A93617` (docs/design-system.md §14).

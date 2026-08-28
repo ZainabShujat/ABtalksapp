@@ -103,7 +103,7 @@ export default async function LoginPage({ searchParams }: Props) {
   const showDev = process.env.ENABLE_DEV_AUTH === "true";
 
   return (
-    <div className="theme-abtalks-orange report-light flex min-h-svh flex-col bg-[#FBF9F7] text-foreground">
+    <div className="theme-abtalks-light theme-abtalks-orange flex min-h-svh flex-col bg-[#FBF9F7] text-foreground">
       <div className="flex flex-1 flex-col items-center justify-center p-6">
         <Card className="w-full max-w-md border-border/60 bg-card text-card-foreground shadow-md">
           <CardHeader className="space-y-2 text-center">

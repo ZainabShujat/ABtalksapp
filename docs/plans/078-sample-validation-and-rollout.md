@@ -1,14 +1,17 @@
 # Plan 078 — sample validation and production rollout
 
-**Status (2026-08-21).**
+**Status (2026-08-26).**
 
+- Production **Phase 5 is complete** (pass #1 `2026-08-24T15:57:57Z`, pass #2
+  clean 2026-08-26: V1–V10, drift, extras, 200-user shadow, interval checks).
+- Production **Phase 6 CREDENTIAL is complete**. `ENABLE_NEW_CREDENTIAL=true`.
+- Production **Phase 6 POINTS is complete**. `ENABLE_NEW_POINTS=true`.
+- Production **Phase 6 CANDIDATE is in flight** (`ENABLE_NEW_CANDIDATE=true`).
+  Genuine new-table reads + referral repair + skills/edu/exp catch-up are in
+  plan 095. Keep `ENABLE_DUAL_WRITE=true`. Do not change legacy writes. Do
+  **not** start `ENABLE_NEW_LEARNING` until that verification is clean.
 - `plan-078-phase1` remains the **sample-validation test bed**. Do not
-  full-backfill it. Do not start Phase 6 there.
-- Full unscoped Phase 1–5 rehearsal runs on a **new** Neon child created from
-  latest production (`plan-078-rehearsal`). That child is the Phase 6 gate.
-- `ENABLE_NEW_*` stay off until that rehearsal’s Phase 5 gate passes (two
-  clean verification passes, 24h apart per plan 078). The first completely
-  clean full-child run is **pass #1 only**.
+  full-backfill it. Do not run Phase 6 there.
 - Production is never written as part of rehearsal.
 
 Preserve on the sample child: `PHASE2_SAMPLE=1` tests, sample drift, upsert

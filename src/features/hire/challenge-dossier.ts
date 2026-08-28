@@ -223,7 +223,7 @@ export async function buildChallengeDossierSet(opts: {
   const now = new Date();
 
   for (const e of rows) {
-    const p = e.user.studentProfile;
+    const p = e.recruiterIdentity;
     const act = activity.get(e.userId);
     const q = quizByUser.get(e.userId);
 
@@ -253,8 +253,8 @@ export async function buildChallengeDossierSet(opts: {
           ) + 1
         : daysSubmitted;
 
-    const skills = splitSkills(p?.skills ?? []);
-    const family = familyFor(p?.role ?? null, e.domain, skills);
+    const skills = splitSkills(p.skills);
+    const family = familyFor(p.role, e.domain, skills);
     const av = availability.get(e.userId) ?? null;
 
     dossiers.push({
@@ -270,22 +270,22 @@ export async function buildChallengeDossierSet(opts: {
       userId: e.userId,
 
       roleFamily: derived(family),
-      rawRoleLabel: p?.role ? declared(tidyRoleLabel(p.role)) : derived("Not stated"),
+      rawRoleLabel: p.role ? declared(tidyRoleLabel(p.role)) : derived("Not stated"),
       yearsExperience: declared(
-        yearsFor(p?.yearsExperience ?? null, p?.graduationYear ?? null, now),
+        yearsFor(p.yearsExperience ?? null, p.graduationYear ?? null, now),
       ),
       education: declared({
         level: null,
         // The university name is identifying enough to be worth withholding
         // until an introduction is agreed, and it is not scored either way.
         university: null,
-        gradYear: p?.graduationYear ?? null,
+        gradYear: p.graduationYear ?? null,
       }),
       declaredSkills: declared(skills),
       links: declared({
-        linkedin: Boolean(p?.linkedinUrl),
-        github: Boolean(p?.githubUsername),
-        resume: Boolean(p?.resumeUrl),
+        linkedin: p.hasLinkedin,
+        github: p.hasGithub,
+        resume: p.hasResume,
       }),
 
       evidence: {
@@ -314,7 +314,10 @@ export async function buildChallengeDossierSet(opts: {
         cohortProgress: derived({ day: elapsed, ofDays: CHALLENGE_TOTAL_DAYS }),
         certificateIssued: verified(e.certificate?.status === "ISSUED"),
         quizAverage: verified(
-          q && q._count > 0 && q._avg.score != null
+          p.showAssessmentScores &&
+            q &&
+            q._count > 0 &&
+            q._avg.score != null
             ? Math.round(q._avg.score * 10) / 10
             : null,
         ),

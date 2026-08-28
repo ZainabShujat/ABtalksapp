@@ -234,7 +234,7 @@ export function DashboardWalkthrough() {
                   borderRadius: 100,
                   background:
                     i === step
-                      ? "linear-gradient(135deg, #6b7ad4, #4b5aa8)"
+                      ? "linear-gradient(135deg, #E05226, #C9411C)"
                       : "rgba(255,255,255,0.16)",
                 }}
               />
@@ -276,7 +276,7 @@ export function DashboardWalkthrough() {
                 padding: "8px 22px",
                 borderRadius: 100,
                 border: "1px solid rgba(135,155,235,0.42)",
-                background: "linear-gradient(135deg, #4b5aa8 0%, #2b3670 100%)",
+                background: "linear-gradient(135deg, #E05226 0%, #C9411C 100%)",
                 boxShadow: "0 4px 16px rgba(50,68,170,0.5), 0 0 20px 2px rgba(80,105,225,0.28), inset 0 1px 0 rgba(255,255,255,0.16)",
                 color: "#f0f3ff",
                 fontSize: 14,

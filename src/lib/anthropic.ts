@@ -8,6 +8,8 @@ type AskParams = {
   system: string;
   user: string;
   maxTokens?: number;
+  /** Omitted leaves the vendor default. Assessment calls pass 0. */
+  temperature?: number;
 };
 
 export type AnthropicResult<T> =
@@ -42,6 +44,7 @@ export async function askClaudeJson<T>({
   system,
   user,
   maxTokens = 1024,
+  temperature,
 }: AskParams): Promise<AnthropicResult<T>> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -60,6 +63,7 @@ export async function askClaudeJson<T>({
       body: JSON.stringify({
         model,
         max_tokens: maxTokens,
+        ...(temperature === undefined ? {} : { temperature }),
         system,
         messages: [{ role: "user", content: user }],
       }),

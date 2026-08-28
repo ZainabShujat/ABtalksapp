@@ -9,7 +9,9 @@ import { recordLegalConsents } from "@/features/legal/record-consent";
 import { recordNewsletterOptIn } from "@/features/legal/record-newsletter-optin";
 import { generateUniqueReferralCode } from "./generate-referral-code";
 import { studentProfile } from "@/repositories/legacy/student-profile";
+import { findUserIdByReferralCode } from "@/repositories/candidate";
 import { dualWriteCandidateIdentity } from "@/repositories/dual-write";
+import { lockWalletBalance, withLegacyPointsMirrorFlush } from "@/repositories/points";
 
 export type CompleteRegistrationResult =
   | { ok: true; profileId: string }
@@ -49,13 +51,10 @@ export async function completeRegistration(
 
   let referrerId: string | null = null;
   if (input.referralCode) {
-    const matchingReferrer = await studentProfile.findUnique({
-      where: { referralCode: input.referralCode },
-      select: { userId: true },
-    });
-    if (matchingReferrer && matchingReferrer.userId !== userId) {
-      referrerId = matchingReferrer.userId;
-    } else if (!matchingReferrer) {
+    const matchingUserId = await findUserIdByReferralCode(input.referralCode);
+    if (matchingUserId && matchingUserId !== userId) {
+      referrerId = matchingUserId;
+    } else if (!matchingUserId) {
       console.warn(
         "[registration] invalid referral code skipped:",
         input.referralCode,
@@ -113,13 +112,9 @@ export async function completeRegistration(
 
   try {
     const profileId = await writeClient().$transaction(async (tx) => {
-      // Lock the account row before creating the rollback mirror so a
-      // simultaneous grant cannot leave the two balances out of sync.
-      const account = await tx.user.update({
-        where: { id: userId },
-        data: { synergyPoints: { increment: 0 } },
-        select: { synergyPoints: true },
-      });
+      // Lock the authoritative wallet before copying it onto the SP mirror
+      // so a simultaneous grant cannot leave the two balances out of sync.
+      const synergyPoints = await lockWalletBalance(tx, userId);
 
       const profile = await tx.studentProfile.create({
         data:
@@ -141,7 +136,7 @@ export async function completeRegistration(
                 phoneVerified,
                 githubUsername,
                 referralCode: newReferralCode,
-                synergyPoints: account.synergyPoints,
+                synergyPoints,
               }
             : {
                 userId,
@@ -160,7 +155,7 @@ export async function completeRegistration(
                 phoneVerified,
                 githubUsername,
                 referralCode: newReferralCode,
-                synergyPoints: account.synergyPoints,
+                synergyPoints,
               },
       });
 
@@ -174,7 +169,8 @@ export async function completeRegistration(
 
     if (referrerId) {
       try {
-        await writeClient().$transaction(async (tx) => {
+        await withLegacyPointsMirrorFlush(() =>
+          writeClient().$transaction(async (tx) => {
           const referral = await tx.referral.create({
             data: {
               referrerId,
@@ -188,7 +184,8 @@ export async function completeRegistration(
             referralId: referral.id,
             referredUserId: userId,
           });
-        });
+        }),
+        );
       } catch (error) {
         console.error("[registration] referral creation failed:", error);
       }

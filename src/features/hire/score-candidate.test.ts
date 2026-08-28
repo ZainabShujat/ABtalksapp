@@ -153,7 +153,7 @@ console.log("score-candidate tests");
 }
 
 {
-  const blocked = scoreCandidate(
+  const notLooking = scoreCandidate(
     baseMember({
       availability: {
         openToWork: false,
@@ -168,8 +168,28 @@ console.log("score-candidate tests");
     }),
     baseSpec,
   );
-  assert(blocked.hardFiltered, "openToWork false hard-filters");
-  ok("openToWork false");
+  assert(!notLooking.hardFiltered, "openToWork false is not a discovery gate");
+  ok("openToWork false stays searchable");
+}
+
+{
+  const blocked = scoreCandidate(
+    baseMember({
+      availability: {
+        openToWork: false,
+        expectedSalaryMin: null,
+        expectedSalaryMax: null,
+        salaryCurrency: "INR",
+        noticePeriodDays: null,
+        preferredWorkMode: null,
+        preferredCities: [],
+        openToRelocate: false,
+      },
+    }),
+    { ...baseSpec, extra: { openToWork: true } },
+  );
+  assert(blocked.hardFiltered, "explicit openToWork filter hard-filters");
+  ok("explicit openToWork filter");
 }
 
 {

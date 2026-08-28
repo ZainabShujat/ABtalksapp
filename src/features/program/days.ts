@@ -1,6 +1,5 @@
 import "server-only";
 import type { ProgramLanguage, ProgramMissionType, Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
 import {
   collectPassSkipSets,
   deriveDayState,
@@ -9,6 +8,11 @@ import {
 } from "@/features/program/progression";
 import { isDayLockBypassEnabled } from "@/lib/feature-flags";
 import { programMember } from "@/repositories/legacy/program-member";
+import { getProgramDayShell } from "@/repositories/learning";
+import {
+  getProgramUnlockFloor,
+  listProgramMissionProgress,
+} from "@/repositories/progress";
 
 export type { DayState } from "@/features/program/progression";
 
@@ -46,35 +50,7 @@ export async function getDayShell(
   memberId: string,
   dayNumber: number,
 ): Promise<DayShellResult | null> {
-  const day = await prisma.programDay.findUnique({
-    where: { dayNumber },
-    select: {
-      id: true,
-      dayNumber: true,
-      title: true,
-      missionType: true,
-      briefMd: true,
-      assetsJson: true,
-      starterCode: true,
-      language: true,
-      objectives: true,
-      tools: true,
-      estimatedMin: true,
-      missionPoints: true,
-      isProjectDay: true,
-      module: { select: { number: true, title: true, color: true } },
-      videos: {
-        select: {
-          id: true,
-          order: true,
-          title: true,
-          youtubeId: true,
-          durationMin: true,
-        },
-        orderBy: { order: "asc" },
-      },
-    },
-  });
+  const day = await getProgramDayShell(dayNumber);
   if (!day) return null;
 
   const member = await programMember.findUnique({
@@ -86,16 +62,13 @@ export async function getDayShell(
   });
   if (!member) return null;
 
-  const submissions = await prisma.programMissionSubmission.findMany({
-    where: { memberId },
-    select: { dayNumber: true, passed: true, payload: true },
-  });
+  const [submissions, unlockFloor] = await Promise.all([
+    listProgramMissionProgress(memberId),
+    getProgramUnlockFloor(memberId, member.highestUnlockedDay),
+  ]);
 
   const { passedDays, skippedDays } = collectPassSkipSets(submissions);
-  const maxContentDay = getMaxContentDay(
-    member.cohort,
-    member.highestUnlockedDay,
-  );
+  const maxContentDay = getMaxContentDay(member.cohort, unlockFloor);
 
   const state = deriveDayState(
     dayNumber,

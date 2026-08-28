@@ -2,6 +2,7 @@ import { Domain, EnrollmentStatus } from "@prisma/client";
 import { prisma, writeClient } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { dualWriteChallengeEnrollment } from "@/repositories/dual-write";
+import { findChallengeEnrollment, getChallengeByDomain } from "@/repositories/learning";
 
 export type CoreDomain = Extract<Domain, "AI" | "DS" | "SE">;
 
@@ -48,10 +49,7 @@ export async function createCoreEnrollment(
     };
   }
 
-  const challenge = await prisma.challenge.findUnique({
-    where: { domain },
-    select: { id: true },
-  });
+  const challenge = await getChallengeByDomain(domain);
   if (!challenge) {
     return {
       ok: false,
@@ -60,10 +58,7 @@ export async function createCoreEnrollment(
     };
   }
 
-  const existing = await prisma.enrollment.findFirst({
-    where: { userId, challengeId: challenge.id },
-    select: { id: true, status: true },
-  });
+  const existing = await findChallengeEnrollment(userId, { domain });
   if (existing?.status === EnrollmentStatus.ABANDONED) {
     return {
       ok: false,

@@ -1,8 +1,8 @@
 import type { Prisma } from "@prisma/client";
 import { PointsSourceType } from "@prisma/client";
 import { SYNERGY_REFERRAL } from "./scoring";
-import { dualWritePoints } from "@/repositories/dual-write";
-//synergy event for referral
+import { applyPointsChange } from "@/repositories/points";
+
 export async function awardReferralSynergy(
   tx: Prisma.TransactionClient,
   args: {
@@ -11,29 +11,19 @@ export async function awardReferralSynergy(
     referredUserId: string;
   },
 ): Promise<number> {
-  await tx.synergyEvent.create({
-    data: {
-      userId: args.referrerId,
-      points: SYNERGY_REFERRAL,
-      type: "REFERRAL",
-      reason: `Referral signup (referralId=${args.referralId}, referredUserId=${args.referredUserId})`,
-    },
-  });
-  await tx.user.update({
-    where: { id: args.referrerId },
-    data: { synergyPoints: { increment: SYNERGY_REFERRAL } },
-  });
-  await tx.studentProfile.updateMany({
-    where: { userId: args.referrerId },
-    data: { synergyPoints: { increment: SYNERGY_REFERRAL } },
-  });
-  await dualWritePoints(tx, {
+  const reason = `Referral signup (referralId=${args.referralId}, referredUserId=${args.referredUserId})`;
+  const applied = await applyPointsChange(tx, {
     userId: args.referrerId,
     amount: SYNERGY_REFERRAL,
+    mode: "credit",
     sourceType: PointsSourceType.REFERRAL,
     sourceId: args.referralId,
     idempotencyKey: `referral:${args.referralId}`,
-    reason: `Referral signup (referralId=${args.referralId}, referredUserId=${args.referredUserId})`,
+    reason,
+    legacyEvent: { type: "REFERRAL" },
   });
+  if (!applied.ok) {
+    throw new Error("Failed to award referral synergy");
+  }
   return SYNERGY_REFERRAL;
 }

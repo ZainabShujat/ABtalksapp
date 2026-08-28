@@ -5,6 +5,7 @@ import { MarketplaceHero } from "@/components/marketplace/marketplace-hero";
 import { ProductGrid } from "@/components/marketplace/product-grid";
 import { getCatalog } from "@/features/marketplace/get-catalog";
 import { getMySynergy } from "@/features/synergy/get-my-synergy";
+import { getCandidateProfile } from "@/repositories/candidate";
 import { prisma } from "@/lib/db";
 
 export default async function MarketplacePage() {
@@ -15,13 +16,13 @@ export default async function MarketplacePage() {
 
   const userId = session.user.id;
 
-  const [items, balance, contact] = await Promise.all([
+  const [items, balance, candidate, contact] = await Promise.all([
     getCatalog(),
     getMySynergy(userId),
+    getCandidateProfile(userId),
     prisma.user.findUnique({
       where: { id: userId },
       select: {
-        studentProfile: { select: { phone: true } },
         hackathonParticipant: { select: { phone: true } },
       },
     }),
@@ -49,7 +50,7 @@ export default async function MarketplacePage() {
           items={items}
           balance={balance}
           defaultPhone={
-            contact?.studentProfile?.phone ??
+            candidate?.phone ??
             contact?.hackathonParticipant?.phone ??
             ""
           }

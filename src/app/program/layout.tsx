@@ -9,3 +9,4 @@ export default function ProgramLayout({
   if (!isProgramEnabled()) notFound();
   return <>{children}</>;
 }
+ 

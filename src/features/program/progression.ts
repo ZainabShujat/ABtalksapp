@@ -3,9 +3,20 @@ import type { ProgramCohortStatus, ProgramMissionType } from "@prisma/client";
 import { differenceInCalendarDays } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "@/lib/db";
-import { parseCalendarKeyToUtcDate } from "@/lib/date-utils";
+import {
+  addCalendarDaysToKey,
+  parseCalendarKeyToUtcDate,
+} from "@/lib/date-utils";
 import { isDayLockBypassEnabled } from "@/lib/feature-flags";
 import { programMember } from "@/repositories/legacy/program-member";
+import {
+  listProgramModules,
+  listProgramDayCatalog,
+} from "@/repositories/learning";
+import {
+  getProgramUnlockFloor,
+  listProgramMissionProgress,
+} from "@/repositories/progress";
 import {
   PROGRAM_HOLD_OPEN_COHORT_NAME,
   PROGRAM_MEMBER_START_DAY,
@@ -61,6 +72,16 @@ export function getCalendarDerivedMaxContentDay(
     PROGRAM_TOTAL_DAYS,
     PROGRAM_MEMBER_START_DAY - 1 + cohortCalendarDay,
   );
+}
+
+/** PROGRAM_TZ calendar key (`yyyy-MM-dd`) on which `dayNumber` becomes unlockable. */
+export function getContentDayUnlockKey(
+  cohort: { startsAt: Date },
+  dayNumber: number,
+): string {
+  const startKey = formatInTimeZone(cohort.startsAt, PROGRAM_TZ, "yyyy-MM-dd");
+  const offset = dayNumber - PROGRAM_MEMBER_START_DAY;
+  return addCalendarDaysToKey(startKey, Math.max(0, offset));
 }
 
 /**
@@ -216,39 +237,14 @@ export async function getMemberDayStates(
     return { modules: [], days: [] };
   }
 
-  const maxContentDay = getMaxContentDay(
-    member.cohort,
-    member.highestUnlockedDay,
-  );
-
-  const [modules, days, submissions] = await Promise.all([
-    prisma.programModule.findMany({
-      orderBy: { number: "asc" },
-      select: {
-        number: true,
-        title: true,
-        subtitle: true,
-        color: true,
-        startDay: true,
-        endDay: true,
-      },
-    }),
-    prisma.programDay.findMany({
-      orderBy: { dayNumber: "asc" },
-      select: {
-        dayNumber: true,
-        title: true,
-        missionType: true,
-        isProjectDay: true,
-        module: { select: { number: true } },
-      },
-    }),
-    prisma.programMissionSubmission.findMany({
-      where: { memberId },
-      select: { dayNumber: true, passed: true, payload: true },
-      orderBy: { createdAt: "desc" },
-    }),
+  const [modules, days, submissions, unlockFloor] = await Promise.all([
+    listProgramModules(),
+    listProgramDayCatalog(),
+    listProgramMissionProgress(memberId),
+    getProgramUnlockFloor(memberId, member.highestUnlockedDay),
   ]);
+
+  const maxContentDay = getMaxContentDay(member.cohort, unlockFloor);
 
   const { passedDays, skippedDays } = collectPassSkipSets(submissions);
 
@@ -257,7 +253,7 @@ export async function getMemberDayStates(
     title: d.title,
     missionType: d.missionType,
     isProjectDay: d.isProjectDay,
-    moduleNumber: d.module.number,
+    moduleNumber: d.moduleNumber,
     state: deriveDayState(
       d.dayNumber,
       maxContentDay,
@@ -282,13 +278,12 @@ export async function getMemberCurrentModuleNumber(
     },
   });
   if (!member) return 1;
-  const dayNumber = getMaxContentDay(
-    member.cohort,
+  const unlockFloor = await getProgramUnlockFloor(
+    memberId,
     member.highestUnlockedDay,
   );
-  const day = await prisma.programDay.findUnique({
-    where: { dayNumber },
-    select: { module: { select: { number: true } } },
-  });
-  return day?.module.number ?? 1;
+  const dayNumber = getMaxContentDay(member.cohort, unlockFloor);
+  const days = await listProgramDayCatalog();
+  const day = days.find((d) => d.dayNumber === dayNumber);
+  return day?.moduleNumber ?? 1;
 }

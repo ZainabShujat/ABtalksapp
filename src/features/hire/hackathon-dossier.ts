@@ -42,8 +42,8 @@ export async function buildHackathonDossierSet(): Promise<HackathonDossierSet> {
 
   const nameByUser = new Map<string, string>();
   const dossiers: CandidateDossier[] = rows.map((row) => {
-    const p = row.user.studentProfile;
-    const skills = splitSkills(p?.skills ?? []);
+    const p = row.recruiterIdentity;
+    const skills = splitSkills(p.skills);
     const given = row.user.name?.trim();
     if (given) nameByUser.set(row.userId, given);
     return {
@@ -53,20 +53,20 @@ export async function buildHackathonDossierSet(): Promise<HackathonDossierSet> {
       programMemberId: null,
       userId: row.userId,
       roleFamily: derived("OTHER"),
-      rawRoleLabel: p?.role
+      rawRoleLabel: p.role
         ? declared(tidyRoleLabel(p.role))
         : derived("Hackathon builder"),
-      yearsExperience: declared(p?.yearsExperience ?? 0),
+      yearsExperience: declared(p.yearsExperience ?? 0),
       education: declared({
         level: null,
         university: null,
-        gradYear: p?.graduationYear ?? null,
+        gradYear: p.graduationYear ?? null,
       }),
       declaredSkills: declared(skills),
       links: declared({
-        linkedin: Boolean(p?.linkedinUrl),
-        github: Boolean(p?.githubUsername),
-        resume: Boolean(p?.resumeUrl),
+        linkedin: p.hasLinkedin,
+        github: p.hasGithub,
+        resume: p.hasResume,
       }),
       evidence: {
         missionsPassed: verified(1),

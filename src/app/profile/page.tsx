@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { Domain } from "@prisma/client";
+import { Domain, UserType } from "@prisma/client";
 import { ExternalLink, Users } from "lucide-react";
 import { auth } from "@/auth";
 import { getProfile } from "@/features/profile/get-profile";
-import { AppHeader } from "@/components/shared/app-header";
+import { DashboardShell } from "@/components/dashboard-hub/dashboard-shell";
 import { CopyReferralLinkButton } from "@/components/profile/copy-referral-link-button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,6 @@ import { SoundPreferences } from "@/components/profile/sound-preferences";
 import { ProfileForm } from "./profile-form";
 import type { ProfileFormValues } from "@/lib/validations/profile";
 import { userTypeLabel } from "@/lib/profile-display";
-import { UserType } from "@prisma/client";
 import { isOtpVerificationRequired } from "@/lib/feature-flags";
 import { getMyRedemptions } from "@/features/marketplace/get-my-redemptions";
 
@@ -70,18 +69,19 @@ export default async function ProfilePage() {
     getMyRedemptions(userId),
   ]);
 
-  const headerUser = {
-    name: session.user.name ?? null,
+  const shellUser = {
+    name: session.user.name ?? session.user.email ?? "",
     email: session.user.email ?? "",
     image: session.user.image ?? null,
-    role: session.user.role ?? "STUDENT",
-    isAdmin: session.user.isAdmin ?? false,
   };
 
   if (!bundle.profile) {
     return (
-      <div className="flex min-h-svh flex-col">
-        <AppHeader user={headerUser} />
+      <DashboardShell
+        user={shellUser}
+        isAdmin={session.user.isAdmin ?? false}
+        showSectionNav={false}
+      >
         <main className="mx-auto flex max-w-lg flex-1 flex-col items-center justify-center px-4 py-12 text-center">
           <h1 className="font-display text-lg font-semibold">
             Complete your registration first
@@ -97,7 +97,7 @@ export default async function ProfilePage() {
             Back to dashboard
           </Link>
         </main>
-      </div>
+      </DashboardShell>
     );
   }
 
@@ -136,8 +136,11 @@ export default async function ProfilePage() {
         };
 
   return (
-    <div className="flex min-h-svh flex-col bg-muted/30">
-      <AppHeader user={headerUser} domain={profile.domain} />
+    <DashboardShell
+      user={{ ...shellUser, name: profile.fullName || shellUser.name }}
+      isAdmin={session.user.isAdmin ?? false}
+      showSectionNav={false}
+    >
       <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 space-y-5 px-4 py-5 sm:space-y-8 sm:py-8">
         <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">Profile</h1>
 
@@ -323,6 +326,6 @@ export default async function ProfilePage() {
           </div>
         </div>
       </main>
-    </div>
+    </DashboardShell>
   );
 }

@@ -12,10 +12,10 @@ const SEEN_KEY = "abtalks_figma_workshop_promo_v2";
 const TARGET = new Date("2026-08-01T12:30:00Z").getTime();
 
 const AVATARS = [
-  { i: "A", g: "linear-gradient(135deg,#6366f1,#8b5cf6)" },
-  { i: "R", g: "linear-gradient(135deg,#8b5cf6,#a855f7)" },
-  { i: "P", g: "linear-gradient(135deg,#818cf8,#6366f1)" },
-  { i: "S", g: "linear-gradient(135deg,#a855f7,#4f46e5)" },
+  { i: "A", g: "linear-gradient(135deg,#E05226,#C9411C)" },
+  { i: "R", g: "linear-gradient(135deg,#E05226,#C9411C)" },
+  { i: "P", g: "linear-gradient(135deg,#FFECE3,#E05226)" },
+  { i: "S", g: "linear-gradient(135deg,#C9411C,#E05226)" },
 ];
 
 export function WorkshopPromoModal() {
@@ -125,13 +125,13 @@ export function WorkshopPromoModal() {
               --wk-bg: #050a17;
               --wk-surface: #0b1120;
               --wk-text: #f5f6fa;
-              --wk-a1: #6366f1;
-              --wk-a1-rgb: 99, 102, 241;
-              --wk-a1-light: #818cf8;
-              --wk-a1-deep: #4f46e5;
-              --wk-a2: #8b5cf6;
-              --wk-a2-rgb: 139, 92, 246;
-              --wk-a3: #a855f7;
+              --wk-a1: #e05226;
+              --wk-a1-rgb: 224, 82, 38;
+              --wk-a1-light: #ffece3;
+              --wk-a1-deep: #c9411c;
+              --wk-a2: #e05226;
+              --wk-a2-rgb: 224, 82, 38;
+              --wk-a3: #c9411c;
               --wk-grad: linear-gradient(135deg, var(--wk-a1) 0%, var(--wk-a2) 100%);
             }
             @keyframes wk-promo-halo { to { transform: rotate(360deg); } }
@@ -190,13 +190,13 @@ export function WorkshopPromoModal() {
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             className="relative w-full max-w-[440px]"
           >
-            {/* rotating indigo/violet halo */}
+            {/* rotating orange halo */}
             <div
               aria-hidden
               className="pointer-events-none absolute -inset-6 rounded-[42px] opacity-50 blur-2xl"
               style={{
                 background:
-                  "conic-gradient(from 0deg, #6366f1, #8b5cf6, #a855f7, #4f46e5, #6366f1)",
+                  "conic-gradient(from 0deg, #E05226, #FFECE3, #C9411C, #E05226)",
                 animation: "wk-promo-halo 8s linear infinite",
               }}
             />

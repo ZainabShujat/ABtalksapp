@@ -50,27 +50,51 @@ function clampScore(score: number): number {
   return Math.min(100, Math.max(0, Math.round(score)));
 }
 
+const INTERVIEW_RECORD_SELECT = {
+  id: true,
+  status: true,
+  startedAt: true,
+  endedAt: true,
+  durationSec: true,
+  transcript: true,
+  commScore: true,
+  techScore: true,
+  problemScore: true,
+  overallScore: true,
+  summary: true,
+  evaluatedAt: true,
+  resetCount: true,
+} as const;
+
+/**
+ * Upsert is not race-safe here. The dashboard calls this from inside a
+ * `Promise.all`, so two concurrent invocations both see "no row", both try to
+ * create, and the loser dies on the `memberId` unique constraint (P2002).
+ * Prisma's upsert does not serialise that for us.
+ *
+ * So: treat P2002 as "someone else just created it" and read the row back.
+ */
 async function ensureInterviewRecord(memberId: string) {
-  return prisma.programInterview.upsert({
-    where: { memberId },
-    create: { memberId },
-    update: {},
-    select: {
-      id: true,
-      status: true,
-      startedAt: true,
-      endedAt: true,
-      durationSec: true,
-      transcript: true,
-      commScore: true,
-      techScore: true,
-      problemScore: true,
-      overallScore: true,
-      summary: true,
-      evaluatedAt: true,
-      resetCount: true,
-    },
-  });
+  try {
+    return await prisma.programInterview.upsert({
+      where: { memberId },
+      create: { memberId },
+      update: {},
+      select: INTERVIEW_RECORD_SELECT,
+    });
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      const existing = await prisma.programInterview.findUnique({
+        where: { memberId },
+        select: INTERVIEW_RECORD_SELECT,
+      });
+      if (existing) return existing;
+    }
+    throw err;
+  }
 }
 
 async function loadMemberContext(memberId: string): Promise<MemberContext | null> {

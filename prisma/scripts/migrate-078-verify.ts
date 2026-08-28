@@ -98,16 +98,29 @@ async function main() {
   );
   const v4b = await count(
     "V4b visibility count (sample-scoped)",
-    `SELECT 1 WHERE (
-       (SELECT COUNT(DISTINCT m."userId") FROM "ProgramMember" m
-         WHERE ${sqlIn('m."userId"', sample)})
-       <>
-       (SELECT COUNT(*) FROM "CandidateVisibility" v
-         JOIN "ProgramMember" m ON m."userId" = v."userId"
-         WHERE v."searchableByRecruiters" = true
-           AND ${sqlIn('v."userId"', sample)})
-     )`,
+    `SELECT DISTINCT m."userId" FROM "ProgramMember" m
+      WHERE ${sqlIn('m."userId"', sample)}
+        AND NOT EXISTS (
+          SELECT 1 FROM "CandidateVisibility" v
+           WHERE v."userId" = m."userId"
+             AND v."searchableByRecruiters" = true
+        )`,
   );
+  if (v4b > 0) {
+    const offenders = await prisma.$queryRawUnsafe<Array<{ userId: string }>>(
+      `SELECT DISTINCT m."userId" FROM "ProgramMember" m
+        WHERE ${sqlIn('m."userId"', sample)}
+          AND NOT EXISTS (
+            SELECT 1 FROM "CandidateVisibility" v
+             WHERE v."userId" = m."userId"
+               AND v."searchableByRecruiters" = true
+          )`,
+    );
+    console.log(
+      "V4b not-searchable ProgramMember userIds:",
+      offenders.map((r) => r.userId).join(","),
+    );
+  }
   const v8 = await count(
     "V8 orphan attempts",
     `SELECT a.id FROM "ActivityAttempt" a

@@ -1,5 +1,9 @@
-import { EnrollmentStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import {
+  findChallengeEnrollment,
+  getQuizDefinition,
+} from "@/repositories/learning";
+import { getQuizAttemptForUser } from "@/repositories/progress";
 
 export type QuizQuestionPublic = {
   id: string;
@@ -26,62 +30,84 @@ export type QuizWithQuestionsPayload = {
     score: number;
     answers: Record<string, string>;
     attemptedAt: Date;
+    answersDetailAvailable: boolean;
   } | null;
 };
+
+export function mapQuizAttemptAnswers(input: {
+  currentQuestionIds: Set<string>;
+  answers: Record<string, string>;
+  legacyByOrder: Array<{ id: string; questionOrder: number }>;
+  currentIdByOrder: Map<number, string>;
+}): { answers: Record<string, string>; answersDetailAvailable: boolean } {
+  const keys = Object.keys(input.answers);
+  if (keys.length === 0) {
+    return { answers: {}, answersDetailAvailable: false };
+  }
+  if (keys.every((key) => input.currentQuestionIds.has(key))) {
+    return { answers: input.answers, answersDetailAvailable: true };
+  }
+
+  const remapped: Record<string, string> = {};
+  for (const row of input.legacyByOrder) {
+    const nextId = input.currentIdByOrder.get(row.questionOrder);
+    const value = input.answers[row.id];
+    if (nextId && value) remapped[nextId] = value;
+  }
+  const remappedKeys = Object.keys(remapped);
+  const fullyMapped =
+    remappedKeys.length === keys.length &&
+    remappedKeys.every((key) => input.currentQuestionIds.has(key));
+  if (fullyMapped) {
+    return { answers: remapped, answersDetailAvailable: true };
+  }
+  return { answers: {}, answersDetailAvailable: false };
+}
+
+async function remapAttemptAnswers(
+  quizId: string,
+  questions: QuizQuestionPublic[],
+  answers: Record<string, string>,
+): Promise<{ answers: Record<string, string>; answersDetailAvailable: boolean }> {
+  const currentQuestionIds = new Set(questions.map((q) => q.id));
+  const currentIdByOrder = new Map(questions.map((q) => [q.questionOrder, q.id]));
+  const already = mapQuizAttemptAnswers({
+    currentQuestionIds,
+    answers,
+    legacyByOrder: [],
+    currentIdByOrder,
+  });
+  if (already.answersDetailAvailable) return already;
+
+  const legacy = await prisma.quizQuestion.findMany({
+    where: { quizId },
+    select: { id: true, questionOrder: true },
+  });
+  return mapQuizAttemptAnswers({
+    currentQuestionIds,
+    answers,
+    legacyByOrder: legacy,
+    currentIdByOrder,
+  });
+}
 
 export async function getQuizWithQuestions(
   quizId: string,
   userId: string,
 ): Promise<QuizWithQuestionsPayload | null> {
-  const quiz = await prisma.quiz.findFirst({
-    where: { id: quizId },
-    select: {
-      id: true,
-      weekNumber: true,
-      title: true,
-      domain: true,
-      challengeId: true,
-    },
+  const quiz = await getQuizDefinition(quizId);
+  if (!quiz) return null;
+
+  const enrollment = await findChallengeEnrollment(userId, {
+    domain: quiz.domain,
+    excludeAbandoned: true,
   });
+  if (!enrollment) return null;
 
-  if (!quiz) {
-    return null;
-  }
-
-  const enrollment = await prisma.enrollment.findFirst({
-    where: {
-      userId,
-      challengeId: quiz.challengeId,
-      domain: quiz.domain,
-      status: { not: EnrollmentStatus.ABANDONED },
-    },
-    select: { id: true },
-  });
-
-  if (!enrollment) {
-    return null;
-  }
-
-  const rows = await prisma.quizQuestion.findMany({
-    where: { quizId },
-    orderBy: { questionOrder: "asc" },
-  });
-
-  const existingAttempt = await prisma.quizAttempt.findUnique({
-    where: {
-      userId_quizId: { userId, quizId },
-    },
-    select: {
-      id: true,
-      score: true,
-      answers: true,
-      attemptedAt: true,
-    },
-  });
+  const existingAttempt = await getQuizAttemptForUser(userId, quizId);
 
   const revealSolutions = existingAttempt !== null;
-
-  const questions: QuizQuestionPublic[] = rows.map((q) => ({
+  const questions: QuizQuestionPublic[] = quiz.questions.map((q) => ({
     id: q.id,
     questionOrder: q.questionOrder,
     questionText: q.questionText,
@@ -93,6 +119,10 @@ export async function getQuizWithQuestions(
       ? { correctAnswer: q.correctAnswer, explanation: q.explanation }
       : {}),
   }));
+
+  const mapped = existingAttempt
+    ? await remapAttemptAnswers(quizId, questions, existingAttempt.answers)
+    : null;
 
   return {
     quiz: {
@@ -106,8 +136,9 @@ export async function getQuizWithQuestions(
       ? {
           id: existingAttempt.id,
           score: existingAttempt.score,
-          answers: existingAttempt.answers as Record<string, string>,
+          answers: mapped?.answers ?? {},
           attemptedAt: existingAttempt.attemptedAt,
+          answersDetailAvailable: mapped?.answersDetailAvailable ?? false,
         }
       : null,
   };

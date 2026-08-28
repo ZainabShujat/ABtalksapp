@@ -153,13 +153,18 @@ export function AppFooter() {
   // inline — anything here would duplicate their copyright line.
   if (isWorkshop) return null;
 
-  if (pathname === "/dashboard") return null;
+  if (pathname === "/dashboard" || pathname === "/profile") return null;
   if (pathname === "/claude" || pathname.startsWith("/claude/day")) return null;
   if (pathname === "/") return null;
 
+  // The cohort interview and its report share the cream program surface, so
+  // they take the program footer rather than the generic funnel strip below —
+  // that strip is themed with `border-border`/`text-muted-foreground`, which
+  // rendered as a dark band under the interview pages.
   if (
     pathname === "/program/dashboard" ||
-    pathname.startsWith("/program/day")
+    pathname.startsWith("/program/day") ||
+    pathname.startsWith("/program/cohort-interview")
   ) {
     const year = new Date().getFullYear();
     return (
