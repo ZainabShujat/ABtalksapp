@@ -101,6 +101,14 @@ suite("dual-write helpers stay free of ENABLE_NEW_POINTS_WRITES", () => {
   assert(!src.includes("ENABLE_NEW_"), "no new-read flags");
 });
 
+suite("idempotent retry does not re-queue a legacy mirror increment", () => {
+  const src = source("src/repositories/points.ts");
+  const idx = src.indexOf("if (existing)");
+  const slice = src.slice(idx, idx + 400);
+  assert(slice.includes("duplicate: true"), "duplicate result");
+  assert(!slice.includes("enqueueLegacyMirror"), "no second mirror increment");
+});
+
 suite("registration locks wallet through lockWalletBalance", () => {
   const src = source("src/features/registration/complete-registration.ts");
   assert(src.includes("lockWalletBalance"), "lock helper");

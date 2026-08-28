@@ -326,7 +326,6 @@ async function applyNewAuthoritative(
     select: { id: true, amount: true },
   });
   if (existing) {
-    enqueueLegacyMirror(input, existing.amount);
     const balance = await accountBalance(tx, input.userId);
     return {
       ok: true,
