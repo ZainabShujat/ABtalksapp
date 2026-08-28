@@ -4,10 +4,14 @@ import { prisma } from "@/lib/db";
 import { getMissionHeatmap, type MissionHeatmapCell } from "@/features/program/progression";
 import {
   getInterviewSignal,
-  getInterviewSignals,
 } from "@/features/interview/read-model";
+import { isNewTalentRepoEnabled } from "@/lib/feature-flags";
 import { programMember } from "@/repositories/legacy/program-member";
-import { visibleProgramMemberWhere } from "@/repositories/talent";
+import {
+  filterSearchableUserIds,
+  loadRecruiterIdentities,
+  searchableUserWhere,
+} from "@/repositories/talent";
 
 export type MissionPortfolioDay = {
   dayNumber: number;
@@ -233,10 +237,11 @@ export async function getTalentProfile(
       id: memberId,
       cohortId: access.cohort.id,
       status: { in: ["ENROLLED", "COMPLETED"] },
-      ...visibleProgramMemberWhere(),
+      user: searchableUserWhere(),
     },
     select: {
       id: true,
+      userId: true,
       fullName: true,
       jobRole: true,
       company: true,
@@ -276,7 +281,7 @@ export async function getTalentProfile(
     where: {
       cohortId: access.cohort.id,
       status: { in: ["ENROLLED", "COMPLETED"] },
-      ...visibleProgramMemberWhere(),
+      user: searchableUserWhere(),
     },
     orderBy: [
       { totalScore: "desc" },
@@ -304,18 +309,31 @@ export async function getTalentProfile(
     getInterviewSignal(memberId),
   ]);
 
+  const useNew = isNewTalentRepoEnabled();
+  const idn = useNew
+    ? (await loadRecruiterIdentities([member.userId])).get(member.userId)
+    : undefined;
+
   return {
     ok: true,
     data: {
       memberId: member.id,
-      fullName: member.fullName,
-      jobRole: member.jobRole,
-      company: member.company,
-      yearsExperience: member.yearsExperience,
-      education: member.education,
-      university: member.university,
-      graduationYear: member.graduationYear,
-      skills: member.skills,
+      fullName: useNew ? (idn?.fullName || member.fullName) : member.fullName,
+      jobRole: useNew ? (idn?.role ?? member.jobRole) : member.jobRole,
+      company:
+        useNew && idn?.showCurrentEmployer === false ? null : member.company,
+      yearsExperience: useNew
+        ? (idn?.yearsExperience ?? member.yearsExperience)
+        : member.yearsExperience,
+      education: useNew ? (idn?.education ?? member.education) : member.education,
+      university: useNew
+        ? (idn?.university ?? member.university)
+        : member.university,
+      graduationYear: useNew
+        ? (idn?.graduationYear ?? member.graduationYear)
+        : member.graduationYear,
+      skills:
+        useNew && idn?.skills.length ? idn.skills : member.skills,
       contactReleased: false as const,
       rank,
       scoreBreakdown: {
@@ -341,17 +359,20 @@ export async function getTalentProfile(
       // Payload keys deliberately unchanged so the recruiter profile UI needs no
       // edit: comm/tech/problem now come from the new competency fields, or from
       // the legacy row while it is still the only result a member has.
-      interview: interviewSignal
-        ? {
-            status: interviewSignal.status,
-            overallScore: interviewSignal.overallScore,
-            commScore: interviewSignal.communicationScore,
-            techScore: interviewSignal.technicalDepthScore,
-            problemScore: interviewSignal.problemSolvingScore,
-            summary: interviewSignal.summary,
-            transcript: [] as { role: string; text: string }[],
-          }
-        : null,
+      interview:
+        useNew && !idn?.showInterviewResults
+          ? null
+          : interviewSignal
+            ? {
+                status: interviewSignal.status,
+                overallScore: interviewSignal.overallScore,
+                commScore: interviewSignal.communicationScore,
+                techScore: interviewSignal.technicalDepthScore,
+                problemScore: interviewSignal.problemSolvingScore,
+                summary: interviewSignal.summary,
+                transcript: [] as { role: string; text: string }[],
+              }
+            : null,
       aiRecommendation: member.aiRecommendation,
       shortlisted: !!shortlistItem,
       shortlistNote: shortlistItem?.note ?? null,
@@ -373,6 +394,7 @@ export async function toggleShortlist(
       id: memberId,
       cohortId: access.cohort.id,
       status: { in: ["ENROLLED", "COMPLETED"] },
+      user: searchableUserWhere(),
     },
     select: { id: true },
   });
@@ -409,6 +431,7 @@ export async function ensureShortlisted(
       id: memberId,
       cohortId: access.cohort.id,
       status: { in: ["ENROLLED", "COMPLETED"] },
+      user: searchableUserWhere(),
     },
     select: { id: true },
   });
@@ -487,15 +510,22 @@ export async function getShortlist(
       i.member.cohortId === access.cohort.id &&
       (i.member.status === "ENROLLED" || i.member.status === "COMPLETED"),
   );
+  const searchable = await filterSearchableUserIds(
+    visible.map((i) => i.member.userId),
+  );
+  const shown = visible.filter((i) => searchable.has(i.member.userId));
 
-  // One query for the whole page rather than a lookup per row.
+  const identities = isNewTalentRepoEnabled()
+    ? await loadRecruiterIdentities(shown.map((i) => i.member.userId))
+    : new Map();
+
   const released = new Set(
     (
       await prisma.talentEngagementRequest.findMany({
         where: {
           recruiterUserId,
           status: "CONTACT_SHARED",
-          programMemberId: { in: visible.map((i) => i.member.id) },
+          programMemberId: { in: shown.map((i) => i.member.id) },
         },
         select: { programMemberId: true },
       })
@@ -506,19 +536,22 @@ export async function getShortlist(
 
   return {
     ok: true,
-    data: visible
-      .map((i) => ({
+    data: shown.map((i) => {
+      const idn = identities.get(i.member.userId);
+      const name = idn?.fullName || i.member.fullName;
+      return {
         memberId: i.member.id,
         userId: i.member.userId,
-        jobRole: i.member.jobRole,
+        jobRole: idn?.role ?? i.member.jobRole,
         totalScore: i.member.totalScore,
         note: i.note,
-        displayName: i.member.fullName.trim() ? i.member.fullName.trim() : null,
-        skills: i.member.skills,
-        yearsExperience: i.member.yearsExperience,
-        revealedName: released.has(i.member.id) ? i.member.fullName : null,
+        displayName: name.trim() ? name.trim() : null,
+        skills: idn?.skills.length ? idn.skills : i.member.skills,
+        yearsExperience: idn?.yearsExperience ?? i.member.yearsExperience,
+        revealedName: released.has(i.member.id) ? name : null,
         shortlistedAt: i.createdAt.toISOString(),
-      })),
+      };
+    }),
   };
 }
 

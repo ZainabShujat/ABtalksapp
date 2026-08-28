@@ -93,6 +93,50 @@ async function ensureCandidateVisibility(tx: Tx, userId: string): Promise<void> 
   });
 }
 
+/**
+ * ProgramMembers are recruiter-searchable by platform policy. Challenge
+ * dual-write must not flip a pre-2b closed row; cohort enrollment must.
+ * `withdrawnAt` stays a hard stop.
+ */
+async function ensureProgramMemberDiscoverable(
+  tx: Tx,
+  userId: string,
+  consentedAt: Date | null,
+): Promise<void> {
+  const existing = await tx.candidateVisibility.findUnique({
+    where: { userId },
+    select: {
+      withdrawnAt: true,
+      searchableByRecruiters: true,
+      consentSource: true,
+      consentedAt: true,
+    },
+  });
+  if (existing?.withdrawnAt) return;
+  const source = consentedAt ? "program_apply_migrated" : "platform_default";
+  if (!existing) {
+    await tx.candidateVisibility.create({
+      data: {
+        userId,
+        searchableByRecruiters: true,
+        consentSource: source,
+        consentedAt: consentedAt ?? new Date(),
+      },
+    });
+    return;
+  }
+  if (existing.searchableByRecruiters) return;
+  await tx.candidateVisibility.update({
+    where: { userId },
+    data: {
+      searchableByRecruiters: true,
+      consentSource: existing.consentSource ?? source,
+      consentedAt: existing.consentedAt ?? consentedAt ?? new Date(),
+      withdrawnAt: null,
+    },
+  });
+}
+
 export function mapChallengeStatus(status: EnrollmentStatus): EnrollmentStatusV2 {
   if (status === EnrollmentStatus.COMPLETED) return EnrollmentStatusV2.COMPLETED;
   if (status === EnrollmentStatus.ABANDONED) return EnrollmentStatusV2.DROPPED;
@@ -190,6 +234,7 @@ export async function dualWriteProgramMember(
         githubRepoUrl: true,
         highestUnlockedDay: true,
         skipTokensUsed: true,
+        recruiterVisibilityConsentAt: true,
       },
     });
     if (!member) throw new Error(`Missing ProgramMember ${memberId}`);
@@ -223,7 +268,11 @@ export async function dualWriteProgramMember(
         skipTokensUsed: member.skipTokensUsed,
       },
     });
-    await ensureCandidateVisibility(tx, member.userId);
+    await ensureProgramMemberDiscoverable(
+      tx,
+      member.userId,
+      member.recruiterVisibilityConsentAt,
+    );
   });
 }
 

@@ -26,6 +26,10 @@ export type CandidateSearchFilters = {
   availableBefore?: Date;
   locationCity?: string;
   countryCode?: string;
+  /** Explicit recruiter filter. Never implied by searchability. */
+  openToWork?: boolean;
+  workMode?: string;
+  noticePeriodDaysMax?: number;
   page?: number;
   pageSize?: number;
 };
