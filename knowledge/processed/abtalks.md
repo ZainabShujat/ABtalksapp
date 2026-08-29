@@ -1,5 +1,10 @@
 # ABTalks
 
+People also ask this as: what is ABTalks · tell me about AB Talks · what
+exactly is this community · what does ABTalks do · what is this website ·
+who is ABTalks for · is ABTalks free · how does ABTalks work · learn daily
+build showcase get hired.
+
 ## Identity
 
 ABTalks is an India-first build-in-public community and talent network for students and early-career builders.
@@ -9,7 +14,11 @@ Key facts:
 - Tagline: "Code consistently. Post publicly. Get noticed." (the live site also presents "Build in public. Grow together." as a tagline)
 - Primary domain: abtalks.in
 - Audience: college students, recent graduates, and working professionals in live sessions
-- Cost to participate: free
+- Cost to participate: free — the Terms state the service is **currently
+  provided free of charge**, and ABTalks does not process payments. The
+  homepage phrases it as "most challenges are free to join; paid cohorts are
+  always priced up front", and nobody placed through the recruiter network
+  pays a placement fee. See `legal-and-privacy.md`.
 - Contact: team@abtalks.in
 
 ## Mission / why it exists
@@ -43,6 +52,13 @@ College students (1st year through recent graduates) and working professionals, 
 
 See `community.md` for more detail.
 
+## Synergy Points (SP)
+
+Synergy Points (often abbreviated as **SP**) are the community reward system on ABTalks. They are designed to recognize and reward consistency and community growth.
+- **How they are earned:** Participants earn SP primarily by submitting their daily challenge tasks (earning up to 15 SP per day: 5 base points + 5 for attaching a GitHub repo + 5 for attaching a LinkedIn post) and by referring friends to join the platform (earning 3 SP per successful signup).
+- **How they are used:** Accumulated Synergy Points can be redeemed in the **Marketplace** (`/marketplace`) for various rewards, goodies, or special opportunities.
+- **Important note:** SP is not a currency, has no cash value, and cannot be exchanged for money.
+
 ## Ecosystem
 
 - Recruiter/talent side: the AI Cohort links completion to recruiter visibility via a ranked profile — part of a broader, publicly-described recruiter/talent ecosystem that sits behind sign-in on the website (mission, jobs, and talent pages)
@@ -56,3 +72,10 @@ See `community.md` for more detail.
 - AI Cohort
 - Vibe Code Hackathon
 - Free AI Bootcamp — its relationship to the AI Tools Workshop is unresolved; do not present it as an independently confirmed 5th program distinct from the AI Tools Workshop. See `workshops.md` and `knowledge/metadata/facts.json` (`free-ai-bootcamp-vs-ai-tools-workshop`).
+
+## Platform Mechanics
+
+ABTalks has several core platform mechanics that apply across the challenges:
+- **Leaderboard**: The global leaderboard is ranked primarily by **Days Completed** (highest to lowest), followed by **Current Streak** (highest to lowest), then **Longest Streak** (highest to lowest), and finally by **Start Date** (earliest to latest).
+- **Quizzes**: Only the current week's quiz is available to participants, based on their total days completed.
+- **Referrals**: Every participant has a unique 6-character referral code. When someone signs up using this code, the referrer instantly earns 3 Synergy Points (SP).

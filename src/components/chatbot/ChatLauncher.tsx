@@ -3,6 +3,8 @@
 import { MessageCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+import { AnimatePresence, motion } from "framer-motion";
+
 type ChatLauncherProps = {
   open: boolean;
   onToggle: () => void;
