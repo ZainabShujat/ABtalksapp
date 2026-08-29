@@ -154,7 +154,12 @@ export function AppFooter() {
   if (isWorkshop) return null;
 
   if (pathname === "/dashboard" || pathname === "/profile") return null;
+  // Challenge tracks render inside DashboardShell, which ships DashboardFooter.
   if (pathname === "/claude" || pathname.startsWith("/claude/day")) return null;
+  if (pathname === "/ai" || pathname === "/ds" || pathname === "/se") {
+    return null;
+  }
+  if (pathname.startsWith("/challenge/")) return null;
   if (pathname === "/") return null;
 
   // The cohort interview and its report share the cream program surface, so

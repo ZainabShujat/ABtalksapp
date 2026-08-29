@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getCurrentDayNumber } from "@/lib/date-utils";
 import { resolveChallengeEnrollment } from "@/features/enrollment/resolve-dashboard-enrollment";
+import { TRACK_CONFIG, dayHref } from "@/components/challenge/track-config";
 
 type PageProps = {
   searchParams: Promise<{ challenge?: string | string[] }>;
@@ -40,11 +41,7 @@ export default async function ChallengeTodayPage({
     enrollment,
     enrollment.challenge,
   );
-  const enc = encodeURIComponent(enrollment.id);
-
-  if (enrollment.domain === "CLAUDE") {
-    redirect(`/claude/day/${currentDayNumber}?challenge=${enc}`);
-  }
-
-  redirect(`/challenge/${currentDayNumber}?challenge=${enc}`);
+  redirect(
+    dayHref(TRACK_CONFIG[enrollment.domain], currentDayNumber, enrollment.id),
+  );
 }

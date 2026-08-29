@@ -32,11 +32,12 @@ import {
   isClaudeMilestoneDay,
   type ClaudeMilestoneDay,
 } from "@/lib/claude-linkedin-prompts";
-import type { DayContent } from "@/components/challenge/day-page";
+import type { DayContent } from "@/components/challenge/day-content";
+import { trackHref, type TrackConfig } from "@/components/challenge/track-config";
 import { ToolChip } from "@/components/program/day-section-card";
 import { dsButtonVariants } from "@/components/design/ds-button";
 
-function ClaudeDaySection({
+function DaySection({
   title,
   icon: Icon,
   children,
@@ -109,6 +110,7 @@ function getYoutubeVideoId(url: string): string | null {
 }
 
 type Props = {
+  track: TrackConfig;
   dayNumber: number;
   content: DayContent;
   enrollmentId: string;
@@ -118,7 +120,8 @@ type Props = {
   canSubmit: boolean;
 };
 
-export function ClaudeDayView({
+export function ChallengeDayView({
+  track,
   dayNumber,
   content,
   enrollmentId,
@@ -143,7 +146,7 @@ export function ClaudeDayView({
   const solutionVideoUrl =
     content.solutionVideoUrl ?? content.task.solutionVideoUrl;
   const resources = resourcesProp ?? content.resources ?? [];
-  const backHref = `/claude?challenge=${encodeURIComponent(enrollmentId)}`;
+  const backHref = trackHref(track, enrollmentId);
 
   const handleCopyPrompt = async () => {
     try {
@@ -233,7 +236,7 @@ export function ClaudeDayView({
                 href={backHref}
                 className="text-[#8F8F8F] hover:text-[#E05226]"
               >
-                Claude Challenge
+                {track.label}
               </Link>
             </li>
             <li aria-hidden className="text-[#8F8F8F]">
@@ -266,7 +269,7 @@ export function ClaudeDayView({
           </div>
         </header>
 
-        <ClaudeDaySection title="Prompt Template" icon={FileCode}>
+        <DaySection title="Prompt Template" icon={FileCode}>
           <div className="mb-3">
             <button
               type="button"
@@ -289,10 +292,10 @@ export function ClaudeDayView({
           <pre className="overflow-x-auto rounded-lg border border-[#E0E0E0] bg-[#FBF9F7] p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap text-[#4B4B4B] md:text-sm">
             {content.promptTemplate}
           </pre>
-        </ClaudeDaySection>
+        </DaySection>
 
         {solutionVideoUrl ? (
-          <ClaudeDaySection title="Tutorial Video" icon={PlayCircle}>
+          <DaySection title="Tutorial Video" icon={PlayCircle}>
             <p className="mb-3 text-xs text-[#8F8F8F]">
               Step-by-step video guide
             </p>
@@ -331,11 +334,11 @@ export function ClaudeDayView({
                 </a>
               </div>
             )}
-          </ClaudeDaySection>
+          </DaySection>
         ) : null}
 
         {content.tool ? (
-          <ClaudeDaySection title="Tool of the Day" icon={Wrench}>
+          <DaySection title="Tool of the Day" icon={Wrench}>
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <span className="font-semibold text-[#111111]">
                 {content.tool.name}
@@ -369,10 +372,10 @@ export function ClaudeDayView({
               {content.tool.linkLabel}
               <ExternalLink className="h-3 w-3" />
             </a>
-          </ClaudeDaySection>
+          </DaySection>
         ) : null}
 
-        <ClaudeDaySection title={content.task.title} icon={ListChecks}>
+        <DaySection title={content.task.title} icon={ListChecks}>
           <ol className="space-y-3">
             {content.task.steps.map((step, i) => (
               <li key={i} className="flex items-start gap-3">
@@ -385,9 +388,9 @@ export function ClaudeDayView({
               </li>
             ))}
           </ol>
-        </ClaudeDaySection>
+        </DaySection>
 
-        <ClaudeDaySection title="What You'll Learn" icon={Lightbulb}>
+        <DaySection title="What You'll Learn" icon={Lightbulb}>
           <p className="mb-4 text-sm leading-relaxed text-[#4B4B4B]">
             {content.learning.summary}
           </p>
@@ -406,10 +409,10 @@ export function ClaudeDayView({
               </li>
             ))}
           </ol>
-        </ClaudeDaySection>
+        </DaySection>
 
         {resources.length > 0 ? (
-          <ClaudeDaySection title="Resources" icon={BookOpen}>
+          <DaySection title="Resources" icon={BookOpen}>
             <ul className="space-y-2">
               {resources.map((url, i) => {
                 let label = url;
@@ -434,10 +437,10 @@ export function ClaudeDayView({
                 );
               })}
             </ul>
-          </ClaudeDaySection>
+          </DaySection>
         ) : null}
 
-        <ClaudeDaySection title="LinkedIn Post Guidelines" icon={Share2}>
+        <DaySection title="LinkedIn Post Guidelines" icon={Share2}>
           <p className="mb-2 text-xs text-[#8F8F8F]">{content.engagement.type}</p>
           <p className="mb-3 text-sm leading-relaxed text-[#4B4B4B]">
             {content.engagement.description}
@@ -475,16 +478,16 @@ export function ClaudeDayView({
               </a>
             ))}
           </div>
-        </ClaudeDaySection>
+        </DaySection>
 
-        <ClaudeDaySection title="Your Deliverable" icon={FileOutput}>
+        <DaySection title="Your Deliverable" icon={FileOutput}>
           <p className="text-sm text-[#4B4B4B]">
             {content.deliverable.description}
           </p>
           <span className="mt-2 inline-block font-mono text-xs font-semibold text-[#8F8F8F]">
             Format: {content.deliverable.format}
           </span>
-        </ClaudeDaySection>
+        </DaySection>
 
         {canSubmit ? (
           <section className="rounded-[12px] border border-[#E0E0E0] bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] md:p-5">
@@ -626,7 +629,7 @@ export function ClaudeDayView({
                 "mt-4 inline-flex",
               )}
             >
-              Back to Claude Challenge
+              Back to {track.label}
             </Link>
           </section>
         )}
