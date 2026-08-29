@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { AppHeader } from "@/components/shared/app-header";
+import { DashboardShell } from "@/components/dashboard-hub/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatDateIST } from "@/lib/date-utils";
@@ -31,18 +31,19 @@ export default async function JobsPage() {
 
   const jobs = await getOpenJobs();
 
-  const headerUser = {
-    name: session.user.name ?? null,
+  const shellUser = {
+    name: session.user.name ?? session.user.email ?? "",
     email: session.user.email ?? "",
     image: session.user.image ?? null,
-    role: session.user.role ?? "STUDENT",
-    isAdmin: session.user.isAdmin ?? false,
   };
 
   return (
-    <div className="flex min-h-svh flex-col bg-muted/30">
-      <AppHeader user={headerUser} />
-      <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6">
+    <DashboardShell
+      user={shellUser}
+      isAdmin={session.user.isAdmin ?? false}
+      showSectionNav={false}
+    >
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6">
         <h1 className="font-display text-3xl font-bold tracking-tight">Jobs</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Open roles from the ABTalks community and partners.
@@ -82,7 +83,7 @@ export default async function JobsPage() {
             ))}
           </ul>
         )}
-      </div>
-    </div>
+      </main>
+    </DashboardShell>
   );
 }
