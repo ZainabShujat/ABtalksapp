@@ -9,6 +9,7 @@ import { recordLegalConsents } from "@/features/legal/record-consent";
 import { recordNewsletterOptIn } from "@/features/legal/record-newsletter-optin";
 import { generateUniqueReferralCode } from "./generate-referral-code";
 import { studentProfile } from "@/repositories/legacy/student-profile";
+import { dualWriteCandidateIdentity } from "@/repositories/dual-write";
 
 export type CompleteRegistrationResult =
   | { ok: true; profileId: string }
@@ -162,6 +163,8 @@ export async function completeRegistration(
                 synergyPoints: account.synergyPoints,
               },
       });
+
+      await dualWriteCandidateIdentity(tx, userId);
 
       return profile.id;
     }, {

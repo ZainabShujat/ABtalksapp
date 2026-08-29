@@ -1,6 +1,12 @@
 /**
  * Plan 078 Phase 4 drift monitor. With PHASE2_SAMPLE=1, compares only the
  * backfilled user slice. Unscoped counts on this child are not defects.
+ *
+ * Points count-drift excludes `idempotencyKey LIKE 'reconciliation:phase2:%'`.
+ * Those rows are Phase 2f plugs so SUM(PointsTransaction) = User.synergyPoints
+ * when the legacy event ledger already disagreed with the wallet. They have no
+ * SynergyEvent by design. Do not delete them; V3 / ledger-vs-account still
+ * include them.
  */
 import { config } from "dotenv";
 config({ path: ".env.local" });
@@ -49,6 +55,7 @@ async function main() {
         program_pe: bigint;
         synergy: bigint;
         points_tx: bigint;
+        points_tx_phase2_recon: bigint;
       }[]
     >(`
       SELECT
@@ -70,7 +77,12 @@ async function main() {
         (SELECT COUNT(*) FROM "ProgramEnrollment" pe
          WHERE pe.id LIKE 'pe_pm_%' AND ${peu}) AS program_pe,
         (SELECT COUNT(*) FROM "SynergyEvent" se WHERE ${syu}) AS synergy,
-        (SELECT COUNT(*) FROM "PointsTransaction" pt WHERE ${ptu}) AS points_tx
+        (SELECT COUNT(*) FROM "PointsTransaction" pt
+          WHERE ${ptu}
+            AND pt."idempotencyKey" NOT LIKE 'reconciliation:phase2:%') AS points_tx,
+        (SELECT COUNT(*) FROM "PointsTransaction" pt
+          WHERE ${ptu}
+            AND pt."idempotencyKey" LIKE 'reconciliation:phase2:%') AS points_tx_phase2_recon
     `);
     const r = rows[0];
     if (!r) throw new Error("No drift row");

@@ -59,7 +59,7 @@ export function Roadmaps({
                   HUB_CARD_HOVER_CLASS,
                 )}
               >
-                <p className="font-heading font-semibold text-black">{label}</p>
+                <p className="font-inter font-bold text-black">{label}</p>
                 <p className="mt-1 flex-1 text-sm text-[#555555]">
                   60-day challenge track
                 </p>
@@ -88,7 +88,7 @@ export function Roadmaps({
           >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <p className="font-heading text-lg font-semibold text-black">
+                <p className="font-inter text-lg font-bold text-black">
                   31 Days AI Cohort
                 </p>
                 <p className="mt-1 text-sm text-[#555555]">

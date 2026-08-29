@@ -14,7 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { SubmissionFlow } from "./submission-flow";
+import { SubmissionFlow } from "@/components/challenge/submission-flow";
 import {
   DayPage,
   type DayContent,
@@ -123,6 +123,11 @@ export default async function ChallengeDayPage({ params, searchParams }: PagePro
         </Card>
       </ChallengePageShell>
     );
+  }
+
+  if (data.enrollment.domain === "CLAUDE") {
+    const enc = encodeURIComponent(data.enrollment.id);
+    redirect(`/claude/day/${day}?challenge=${enc}`);
   }
 
   const bypassEnabled = isDayLockBypassEnabled();

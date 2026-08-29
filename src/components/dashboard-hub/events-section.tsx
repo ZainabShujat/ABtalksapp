@@ -95,7 +95,7 @@ function EventCard({
         </span>
       </div>
 
-      <h4 className="mt-4 font-heading text-base font-semibold leading-snug text-black">
+      <h4 className="mt-4 font-inter text-base font-bold leading-snug text-black">
         {event.title}
       </h4>
       <p className="mt-2 text-xs text-[#555555]">
