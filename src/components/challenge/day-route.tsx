@@ -1,24 +1,21 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ExternalLink } from "lucide-react";
 import { auth } from "@/auth";
 import { ChallengeDayView } from "@/components/challenge/challenge-day-view";
+import { ChallengeTaskDayView } from "@/components/challenge/challenge-task-day-view";
 import type { DayContent } from "@/components/challenge/day-content";
 import {
   TRACK_CONFIG,
   dayHref,
   sectionNavFromDay,
   trackHref,
-  type TrackConfig,
 } from "@/components/challenge/track-config";
 import { DashboardShell } from "@/components/dashboard-hub/dashboard-shell";
 import { dsButtonVariants } from "@/components/design/ds-button";
 import { getDayData } from "@/features/challenge/get-day-data";
-import { formatDateIST } from "@/lib/date-utils";
 import { prisma } from "@/lib/db";
 import { isDayLockBypassEnabled } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
-import { SubmissionFlow } from "@/components/challenge/submission-flow";
 
 type DayRouteProps = {
   /**
@@ -37,42 +34,6 @@ function readChallengeParam(
   const v = Array.isArray(raw) ? raw[0] : raw;
   const t = typeof v === "string" ? v.trim() : "";
   return t || undefined;
-}
-
-function Breadcrumb({
-  track,
-  backHref,
-  dayNumber,
-}: {
-  track: TrackConfig;
-  backHref: string;
-  dayNumber: number;
-}) {
-  return (
-    <nav aria-label="Breadcrumb">
-      <ol className="flex flex-wrap items-center gap-2 text-sm">
-        <li>
-          <Link href="/dashboard" className="text-[#8F8F8F] hover:text-[#E05226]">
-            Dashboard
-          </Link>
-        </li>
-        <li aria-hidden className="text-[#8F8F8F]">
-          &gt;
-        </li>
-        <li>
-          <Link href={backHref} className="text-[#8F8F8F] hover:text-[#E05226]">
-            {track.label}
-          </Link>
-        </li>
-        <li aria-hidden className="text-[#8F8F8F]">
-          &gt;
-        </li>
-        <li aria-current="page" className="font-semibold text-[#111111]">
-          Day {dayNumber}
-        </li>
-      </ol>
-    </nav>
-  );
 }
 
 export async function ChallengeDayRoute({
@@ -208,9 +169,8 @@ export async function ChallengeDayRoute({
       }
     : null;
 
-  // No authored day content: fall back to the bare task + submission flow.
+  // No authored `dayContent` (AI/DS/SE): the brief lives in the task columns.
   if (!enrichedDayContent) {
-    const sub = data.existingSubmission;
     return (
       <DashboardShell
         user={shellUser}
@@ -218,79 +178,30 @@ export async function ChallengeDayRoute({
         collapsible
         sectionNavItems={sectionNavItems}
       >
-        <div className="mx-auto max-w-3xl space-y-6 px-5 py-8">
-          <Breadcrumb track={track} backHref={backHref} dayNumber={day} />
-          <div className="rounded-[12px] border border-[#E0E0E0] bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-            <h1 className="font-heading text-2xl font-semibold text-[#111111]">
-              {data.task.title}
-            </h1>
-            {sub ? (
-              <p className="mt-2 text-sm text-[#4B4B4B]">
-                You completed this day on {formatDateIST(sub.submittedAt)} ·
-                Status:{" "}
-                {sub.status === "ON_TIME" || sub.status === "LATE"
-                  ? "On time"
-                  : "Late"}
-              </p>
-            ) : (
-              <p className="mt-2 text-sm text-[#4B4B4B]">
-                {data.task.problemStatement}
-              </p>
-            )}
-            {sub?.githubUrl ? (
-              <div className="mt-4 space-y-1 text-sm">
-                <p className="font-medium text-[#8F8F8F]">GitHub</p>
-                <a
-                  href={sub.githubUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[#E05226] hover:underline"
-                >
-                  {sub.githubUrl}
-                  <ExternalLink className="size-3.5" aria-hidden />
-                </a>
-              </div>
-            ) : null}
-            {sub?.linkedinUrl ? (
-              <div className="mt-4 space-y-1 text-sm">
-                <p className="font-medium text-[#8F8F8F]">LinkedIn</p>
-                <a
-                  href={sub.linkedinUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[#E05226] hover:underline"
-                >
-                  {sub.linkedinUrl}
-                  <ExternalLink className="size-3.5" aria-hidden />
-                </a>
-              </div>
-            ) : null}
-            {!sub && canSubmit ? (
-              <div className="mt-6">
-                <SubmissionFlow
-                  dayNumber={day}
-                  enrollmentId={data.enrollment.id}
-                  task={{
-                    title: data.task.title,
-                    problemStatement: data.task.problemStatement,
-                  }}
-                  userDomain={data.enrollment.domain}
-                  isRelaxable={data.isRelaxable}
-                  canSubmit={canSubmit}
-                />
-              </div>
-            ) : null}
-            <Link
-              href={backHref}
-              className={cn(
-                dsButtonVariants({ size: "sm" }),
-                "mt-6 inline-flex",
-              )}
-            >
-              Back to {track.label}
-            </Link>
-          </div>
-        </div>
+        <ChallengeTaskDayView
+          track={track}
+          dayNumber={day}
+          task={{
+            title: data.task.title,
+            problemStatement: data.task.problemStatement,
+            learningObjectives: data.task.learningObjectives,
+            resources: data.task.resources,
+            difficulty: data.task.difficulty,
+            estimatedMinutes: data.task.estimatedMinutes,
+            linkedinTemplate: data.task.linkedinTemplate,
+          }}
+          enrollmentId={data.enrollment.id}
+          existingSubmission={
+            data.existingSubmission
+              ? {
+                  githubUrl: data.existingSubmission.githubUrl ?? "",
+                  linkedinUrl: data.existingSubmission.linkedinUrl ?? "",
+                }
+              : null
+          }
+          canSubmit={canSubmit}
+          isRelaxable={data.isRelaxable}
+        />
       </DashboardShell>
     );
   }

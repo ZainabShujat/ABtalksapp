@@ -34,7 +34,49 @@ export const DEFAULT_OPENAI_MODEL = "gpt-4o";
 
 type ChatCompletion = {
   choices?: { message?: { content?: string } }[];
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+  };
 };
+
+/**
+ * Running token total for this process, by model.
+ *
+ * The interview runs on a metered, prepaid key, and until now the only way to
+ * learn what one interview cost was to read the billing page the next day.
+ * Accumulating what the API itself reports turns "roughly thirty calls, maybe"
+ * into a measured number — which is what capacity planning against a fixed
+ * balance actually needs. Cheap: two integers per call, no I/O.
+ */
+export type TokenUsage = { calls: number; promptTokens: number; completionTokens: number };
+
+const usageByModel = new Map<string, TokenUsage>();
+
+export function recordUsage(
+  model: string,
+  promptTokens: number,
+  completionTokens: number,
+): void {
+  const current = usageByModel.get(model) ?? {
+    calls: 0,
+    promptTokens: 0,
+    completionTokens: 0,
+  };
+  current.calls += 1;
+  current.promptTokens += promptTokens;
+  current.completionTokens += completionTokens;
+  usageByModel.set(model, current);
+}
+
+/** Snapshot of everything spent so far in this process. */
+export function readUsage(): Record<string, TokenUsage> {
+  return Object.fromEntries(usageByModel);
+}
+
+export function resetUsage(): void {
+  usageByModel.clear();
+}
 
 /** The first balanced JSON object in a string. */
 function extractJson(text: string): string | null {
@@ -114,6 +156,11 @@ export function createOpenAiInterviewLLM(
         }
 
         const json = (await res.json()) as ChatCompletion;
+        recordUsage(
+          model,
+          json.usage?.prompt_tokens ?? 0,
+          json.usage?.completion_tokens ?? 0,
+        );
         const content = json.choices?.[0]?.message?.content ?? "";
         const slice = extractJson(content);
         if (!slice) return { ok: false, message: "OpenAI returned no JSON object." };

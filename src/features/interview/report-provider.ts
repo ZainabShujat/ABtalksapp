@@ -44,6 +44,8 @@ function retryAfterMs(body: string): number {
   return Number.isFinite(seconds) ? Math.min(seconds * 1000 + 500, 65_000) : 20_000;
 }
 
+import { recordUsage } from "@/features/interview/agent/llm/openai-provider";
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const askOpenAi: AskJson = async ({ system, user, maxTokens }) => {
@@ -101,7 +103,18 @@ const askOpenAi: AskJson = async ({ system, user, maxTokens }) => {
 
     const json = (await res.json()) as {
       choices?: { message?: { content?: string } }[];
+      usage?: { prompt_tokens?: number; completion_tokens?: number };
     };
+    // The report is a second, larger OpenAI call on the same prepaid key. It is
+    // counted here so "what did one interview cost" includes the document the
+    // candidate actually reads, not just the turns.
+    recordUsage(
+      process.env.OPENAI_INTERVIEW_REPORT_MODEL ??
+        process.env.OPENAI_INTERVIEW_MODEL ??
+        DEFAULT_OPENAI_REPORT_MODEL,
+      json.usage?.prompt_tokens ?? 0,
+      json.usage?.completion_tokens ?? 0,
+    );
     const slice = extractJson(json.choices?.[0]?.message?.content ?? "");
     if (!slice) return { ok: false, message: "OpenAI returned no JSON object." };
 
