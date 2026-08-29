@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { Mic, MicOff, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LANGUAGE_RETRY_LINE } from "@/features/interview/language-gate";
@@ -81,6 +87,53 @@ function readStoredRoomTheme(): OrbPalette {
     // Private mode / blocked storage — stay on the default.
   }
   return "light";
+}
+
+/**
+ * The room theme as an external store.
+ *
+ * It lives in `localStorage`, which does not exist during SSR, so the server
+ * render and the first client render must both say "light" and the stored
+ * preference can only be applied once hydrated. `useSyncExternalStore` states
+ * that contract directly: `getServerSnapshot` covers the render that has to
+ * match the server, `getSnapshot` takes over afterwards.
+ *
+ * This used to be `useState` plus a mount effect that called `setTheme`, which
+ * expresses the same intent by scheduling a second render pass on every mount.
+ * Behaviour is unchanged — light first, stored preference immediately after
+ * hydration, toggle writes through to storage.
+ */
+const roomThemeListeners = new Set<() => void>();
+let roomThemeCache: OrbPalette | null = null;
+
+function subscribeRoomTheme(onStoreChange: () => void): () => void {
+  roomThemeListeners.add(onStoreChange);
+  return () => {
+    roomThemeListeners.delete(onStoreChange);
+  };
+}
+
+/**
+ * Cached: `getSnapshot` runs on every render and must return the same value
+ * until something notifies, or React re-renders in a loop.
+ */
+function getRoomThemeSnapshot(): OrbPalette {
+  if (roomThemeCache === null) roomThemeCache = readStoredRoomTheme();
+  return roomThemeCache;
+}
+
+function getRoomThemeServerSnapshot(): OrbPalette {
+  return "light";
+}
+
+function writeRoomTheme(next: OrbPalette): void {
+  roomThemeCache = next;
+  try {
+    localStorage.setItem(ROOM_THEME_KEY, next);
+  } catch {
+    // Persistence is a convenience, not a requirement.
+  }
+  for (const listener of roomThemeListeners) listener();
 }
 
 const PHASE_COPY: Record<Phase, { label: string; hint: string }> = {
@@ -165,6 +218,17 @@ function decodeSpokenLine(header: string | null): string | null {
 // Turn-taking thresholds live in features/interview/constants.ts so the
 // analyser, the tests and any future transport all read the same numbers.
 
+/**
+ * How long the room waits when the candidate has said NOTHING at all before
+ * prompting them.
+ *
+ * Different from `SILENCE_MS`, which ends an answer that has already happened.
+ * This is the awkward case: the microphone is live and nobody is talking. A
+ * human interviewer would not sit in silence indefinitely; they would re-ask,
+ * and then offer a way out.
+ */
+const NO_ANSWER_MS = 10_000;
+
 function formatClock(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
@@ -220,7 +284,11 @@ export function InterviewRoom({
   const [elapsed, setElapsed] = useState(0);
   const [closing, setClosing] = useState(false);
   const [confirmExit, setConfirmExit] = useState(false);
-  const [theme, setTheme] = useState<OrbPalette>("light");
+  const theme = useSyncExternalStore(
+    subscribeRoomTheme,
+    getRoomThemeSnapshot,
+    getRoomThemeServerSnapshot,
+  );
   /**
    * Microphone muted.
    *
@@ -243,20 +311,8 @@ export function InterviewRoom({
    */
   const [fatal, setFatal] = useState<string | null>(null);
 
-  useEffect(() => {
-    setTheme(readStoredRoomTheme());
-  }, []);
-
   function toggleRoomTheme() {
-    setTheme((current) => {
-      const next: OrbPalette = current === "light" ? "dark" : "light";
-      try {
-        localStorage.setItem(ROOM_THEME_KEY, next);
-      } catch {
-        // Persistence is a convenience, not a requirement.
-      }
-      return next;
-    });
+    writeRoomTheme(theme === "light" ? "dark" : "light");
   }
   /**
    * Progress through the CORE spine, straight from the server.
@@ -1485,10 +1541,21 @@ export function InterviewRoom({
     onAbandonedAction();
   }
 
-  // Past the halfway mark the warning changes, because the consequence changes:
-  // the attempt is spent either way, but a candidate who has answered most of
-  // the spine is giving up something substantial and deserves to be told so
-  // plainly rather than nudged through a generic confirm.
+  // Past the halfway mark the warning changes, because the CONSEQUENCE changes,
+  // and the two outcomes are opposites rather than degrees of the same thing:
+  //
+  //   past halfway   `finishInterviewAction` scores what was answered and the
+  //                  milestone is marked COMPLETED. They get a report, and
+  //                  unreached questions count as unanswered.
+  //   before halfway `abandonInterviewAction` writes ABANDONED, which is not
+  //                  COMPLETED, so the milestone is NOT consumed. No score, no
+  //                  report, and the attempt can be retaken.
+  //
+  // Someone leaving early is usually leaving by accident — a wrong tab, a
+  // misread button — so the early warning names all three consequences
+  // explicitly instead of the single vague sentence it used to show. It also
+  // says how far they actually are: "not halfway" means nothing without the
+  // number behind it.
   const pastHalfway = progress.total > 0 && progress.ratio >= 0.5;
 
   // The orb has no state machine of its own: it mirrors the phase the room
@@ -1643,10 +1710,24 @@ export function InterviewRoom({
                 and this milestone will be marked complete.
               </p>
             ) : (
-              <p className="mt-3 text-[14px] leading-relaxed text-[var(--iv-text-muted)]">
-                Your progress will not be saved and this attempt will not be
-                assessed. You can start a fresh interview from the dashboard.
-              </p>
+              <>
+                <p className="mt-3 text-[14px] leading-relaxed text-[var(--iv-text)]">
+                  You&apos;re not halfway through yet
+                  {progress.total > 0
+                    ? ` — you've answered ${progress.answered} of ${progress.total} questions`
+                    : ""}
+                  .
+                </p>
+                <ul className="mt-3 list-disc space-y-1 pl-5 text-[14px] leading-relaxed text-[var(--iv-text-muted)]">
+                  <li>This attempt will not be counted.</li>
+                  <li>You will not get a report from it.</li>
+                  <li>Nothing you have said so far will be assessed.</li>
+                </ul>
+                <p className="mt-3 text-[14px] leading-relaxed text-[var(--iv-text-muted)]">
+                  Your milestone stays open, so you can start a fresh interview
+                  from the dashboard whenever you&apos;re ready.
+                </p>
+              </>
             )}
 
             <div className="mt-6 flex flex-wrap gap-3">
@@ -1662,7 +1743,9 @@ export function InterviewRoom({
                 onClick={() => void endInterview()}
                 className="inline-flex h-10 items-center rounded-[10px] border border-[#C9282B]/40 px-4 text-[14px] text-[#C9282B] transition-colors hover:bg-[#C9282B]/10"
               >
-                {pastHalfway ? "End & get my report" : "End interview"}
+                {/* The label carries the consequence too: a candidate who
+                    skims the dialog still sees what the button costs. */}
+                {pastHalfway ? "End & get my report" : "End without a report"}
               </button>
             </div>
           </div>
