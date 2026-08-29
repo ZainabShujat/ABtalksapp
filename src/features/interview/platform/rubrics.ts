@@ -74,7 +74,7 @@ const AI_FLUENCY_V1: RubricDefinition = {
  */
 const BEHAVIORAL_V1: RubricDefinition = {
   id: "behavioral-v1",
-  label: "Behavioral",
+  label: "Workplace Situations",
   competencies: [
     {
       id: "specificity",

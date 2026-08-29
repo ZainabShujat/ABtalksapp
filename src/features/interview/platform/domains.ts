@@ -39,6 +39,8 @@ const DOMAINS: readonly InterviewDomain[] = [
     label: "AI Fluency",
     blurb:
       "How well you understand and work with AI tools day to day. For any role, not just engineering.",
+    purpose:
+      "A practical interview about working with AI tools. It asks what you understand about how these tools behave, what you have actually used them for, and how you decide when to trust the output. It is not a coding interview and does not assume an engineering background.",
     family: "AI",
     status: "LIVE",
     rubricId: "ai-fluency-v1",
@@ -51,10 +53,16 @@ const DOMAINS: readonly InterviewDomain[] = [
     maxAttempts: null,
   },
   {
+    // The SLUG stays `behavioral` while the label changes. The slug is identity,
+    // not copy: it is persisted on every attempt row, pinned by the pack, and
+    // baked into report URLs. Renaming a display name is a copy change; renaming
+    // an identity key is a migration, and the two should never ride together.
     slug: "behavioral",
-    label: "Behavioral",
+    label: "Workplace Situations",
     blurb:
-      "Real examples from your own work: what you did, how you handled it, what you would change.",
+      "The people side of working: how you handle pressure, disagreement, ownership and change, told through real examples.",
+    purpose:
+      "A professional and people-situations interview. It asks about real situations you have been in and listens for communication, ownership, decision-making, adaptability, problem-solving and self-awareness. There is nothing technical in it and nothing about AI — it is deliberately separate from AI Fluency, and the two assess different things. Take this one to practise the round where you are asked to talk about yourself and your work rather than about a technology.",
     family: "General",
     status: "LIVE",
     rubricId: "behavioral-v1",

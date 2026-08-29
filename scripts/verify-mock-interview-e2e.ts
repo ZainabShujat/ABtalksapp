@@ -490,6 +490,35 @@ async function dbChecks(): Promise<void> {
   });
 
   try {
+  /**
+   * Drives an attempt until `target` questions are answered.
+   *
+   * Bounded generously rather than tightly: a turn is not the same as an
+   * answered question — follow-ups, escalations and repeats all consume turns
+   * without advancing the count, and how many fire depends on the answer text.
+   * A tight cap makes this test fail for a reason that has nothing to do with
+   * what it is checking.
+   */
+  async function answerUntil(
+    attemptId: string,
+    firstQuestionId: string,
+    text: string,
+    target: number,
+  ): Promise<number> {
+    let questionId = firstQuestionId;
+    let answered = 0;
+    for (let i = 0; i < 40 && answered < target; i += 1) {
+      const res = await service.recordAnswer(userA.id, attemptId, questionId, {
+        text,
+      });
+      if (!res.ok) break;
+      answered = res.data.progress.answered;
+      if (res.data.finished || !res.data.question) break;
+      questionId = res.data.question.id;
+    }
+    return answered;
+  }
+
     /* ---------------------------------------------------------- creation */
 
     const started = await service.startAttempt(userA.id, "ai-fluency");
@@ -547,22 +576,15 @@ async function dbChecks(): Promise<void> {
 
     /* -------------------------------------------------- turn persistence */
 
-    let openQuestionId = started.data.question.id;
-    let answeredQuestions = 0;
-    for (let i = 0; i < 12 && answeredQuestions < 4; i += 1) {
-      const res = await service.recordAnswer(userA.id, attempt1, openQuestionId, {
-        text:
-          "It predicts the next piece of text from patterns it learned in " +
-          "training, rather than looking an answer up in a database. I used it " +
-          "last week to draft a summary and had to correct two figures it " +
-          "invented, so I check anything numeric against the source.",
-      });
-      assert.equal(res.ok, true, res.ok ? "" : res.message);
-      if (!res.ok) break;
-      answeredQuestions = res.data.progress.answered;
-      if (res.data.finished || !res.data.question) break;
-      openQuestionId = res.data.question.id;
-    }
+    const answeredQuestions = await answerUntil(
+      attempt1,
+      started.data.question.id,
+      "It predicts the next piece of text from patterns it learned in training, " +
+        "rather than looking an answer up in a database. I used it last week to " +
+        "draft a summary and had to correct two figures it invented, so I check " +
+        "anything numeric against the source.",
+      4,
+    );
 
     const turns = await repo.loadTurns(attempt1, userA.id);
     check("turns persist in order with prompt, answer and evidence", () => {
@@ -636,11 +658,82 @@ async function dbChecks(): Promise<void> {
     if (!retake.ok) throw new Error("retake failed");
     const attempt2 = retake.data.attemptId;
 
+    /* ------------------------------- a retake gets its OWN, separate report */
+
+    // Answer the retake through to a scored report, then prove the first
+    // attempt's report still exists and is untouched. This is the guarantee the
+    // history page is built on: practising again never overwrites what came
+    // before.
+    const retakeAnswered = await answerUntil(
+      attempt2,
+      retake.data.question.id,
+      "A second run at this. It generates text from learned patterns rather than " +
+        "retrieving a stored answer, which is why it can be fluent and wrong at " +
+        "once. I check figures and citations against the source before I use them.",
+      4,
+    );
+    const retakeFinished = await service.finishAttempt(userA.id, attempt2);
+    const reportOne = await service.getAttemptReport(userA.id, attempt1);
+    const reportTwo = await service.getAttemptReport(userA.id, attempt2);
+
+    check("a retake produces its own report, leaving the first intact", () => {
+      assert.equal(
+        retakeFinished.ok,
+        true,
+        `retake could not be finished (answered ${retakeAnswered}): ` +
+          (retakeFinished.ok ? "" : retakeFinished.message),
+      );
+      assert.equal(reportOne.ok, true, "the first report disappeared");
+      assert.equal(reportTwo.ok, true, "the retake produced no report");
+      if (!reportOne.ok || !reportTwo.ok) return;
+      assert.equal(reportOne.data.report.coverage.attemptNumber, 1);
+      assert.equal(reportTwo.data.report.coverage.attemptNumber, 2);
+      assert.equal(
+        loaded.ok &&
+          reportOne.data.generatedAt.getTime() ===
+            loaded.data.generatedAt.getTime(),
+        true,
+        "the first report was regenerated when the retake was scored",
+      );
+    });
+
+    const reportRows = await prisma.mockInterviewReport.findMany({
+      where: { interview: { userId: userA.id } },
+      select: { interviewId: true },
+    });
+    check("each completed attempt has exactly one report row of its own", () => {
+      const ids = reportRows.map((r: { interviewId: string }) => r.interviewId);
+      assert.equal(ids.length, 2, `expected 2 report rows, found ${ids.length}`);
+      assert.equal(new Set(ids).size, 2, "report rows are not per-attempt");
+      assert.equal(ids.includes(attempt1), true);
+      assert.equal(ids.includes(attempt2), true);
+    });
+
+    const historyWithReports = await service.getHistory(userA.id);
+    check("every COMPLETED attempt in history has a report to view", () => {
+      assert.equal(historyWithReports.ok, true);
+      if (!historyWithReports.ok) return;
+      const completed = historyWithReports.data.filter(
+        (h) => h.status === "COMPLETED",
+      );
+      assert.equal(completed.length, 2, "expected 2 completed attempts");
+      for (const h of completed) {
+        assert.equal(
+          h.hasReport,
+          true,
+          `attempt ${h.attemptNumber} is completed but has no report`,
+        );
+      }
+    });
+
     /* -------------------------------------------------------- abandon */
 
-    const abandoned = await service.abandonAttempt(userA.id, attempt2);
+    const third = await service.startAttempt(userA.id, "ai-fluency");
+    if (!third.ok) throw new Error("third start failed");
+    const attempt2b = third.data.attemptId;
+    const abandoned = await service.abandonAttempt(userA.id, attempt2b);
     const abandonedRow = await prisma.mockInterview.findUnique({
-      where: { id: attempt2 },
+      where: { id: attempt2b },
       select: { status: true, id: true },
     });
     check("an abandoned attempt is marked, not deleted", () => {
@@ -656,7 +749,7 @@ async function dbChecks(): Promise<void> {
     const attempt3 = thin.data.attemptId;
 
     check("attemptNumber increments across abandoned attempts too", () => {
-      assert.equal(thin.data.attemptNumber, 3);
+      assert.equal(thin.data.attemptNumber, 4);
     });
 
     const one = await service.recordAnswer(userA.id, attempt3, thin.data.question.id, {

@@ -198,7 +198,15 @@ export type InterviewDomain = {
   /** URL segment and stable identity. Persisted on every attempt. */
   slug: string;
   label: string;
+  /** One line for the catalogue card. */
   blurb: string;
+  /**
+   * A fuller explanation of what this interview is for, shown on its detail
+   * page. Exists because a one-line blurb cannot stop a candidate confusing two
+   * adjacent domains — the reader needs to know what the interview is NOT as
+   * much as what it is. Optional: a domain with an unambiguous name can omit it.
+   */
+  purpose?: string;
   /** Catalogue grouping, e.g. "AI", "General". Presentation only. */
   family: string;
   status: DomainStatus;

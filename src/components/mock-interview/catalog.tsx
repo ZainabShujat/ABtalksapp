@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Clock, Lock, Mic, RotateCcw, Sparkles } from "lucide-react";
+import { Check, Clock, Code2, Lock, Mic, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CatalogueEntry } from "@/features/interview/platform/service";
 
@@ -31,6 +31,19 @@ const BADGE_TAKEN =
 
 function minutes(seconds: number): string {
   return `${Math.round(seconds / 60)} min`;
+}
+
+/**
+ * How the candidate answers, derived from the domain's declared capabilities.
+ *
+ * Read from `capabilities` rather than hard-coded per domain, so a coding
+ * interview says "code editor" because it actually declares CODE_SANDBOX — the
+ * label cannot drift from what the interview will really offer.
+ */
+function formatLabel(capabilities: string[]): string {
+  if (capabilities.includes("CODE_SANDBOX")) return "Spoken + code editor";
+  if (capabilities.includes("WHITEBOARD")) return "Spoken + whiteboard";
+  return "Spoken";
 }
 
 function DomainCard({
@@ -91,17 +104,21 @@ function DomainCard({
           </div>
         ) : null}
         <div className="flex items-center gap-1.5">
-          <Mic className="size-3.5 text-[#8F8F8F]" strokeWidth={2} />
+          {entry.capabilities.includes("CODE_SANDBOX") ? (
+            <Code2 className="size-3.5 text-[#8F8F8F]" strokeWidth={2} />
+          ) : (
+            <Mic className="size-3.5 text-[#8F8F8F]" strokeWidth={2} />
+          )}
           <dt className="sr-only">Format</dt>
-          <dd>Spoken</dd>
+          <dd>{formatLabel(entry.capabilities)}</dd>
         </div>
       </dl>
 
       {signedIn && entry.completedAttempts > 0 ? (
         <div className="mt-3">
           <span className={BADGE_TAKEN}>
-            <RotateCcw className="size-3" strokeWidth={2.5} />
-            Taken {entry.completedAttempts}&times;
+            <Check className="size-3" strokeWidth={2.5} />
+            Completed
           </span>
         </div>
       ) : null}
@@ -109,7 +126,7 @@ function DomainCard({
       <div className="mt-5">
         {live ? (
           <Link href={`/mock-interviews/${entry.slug}`} className={cn(BTN, "w-full")}>
-            {entry.completedAttempts > 0 ? "Practise again" : "View interview"} &rarr;
+            View interview &rarr;
           </Link>
         ) : (
           <span className="inline-flex h-11 w-full items-center justify-center rounded-[12px] border border-[#E0E0E0] bg-[#F5F5F5] px-6 text-sm font-semibold text-[#8F8F8F]">

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Clock, Mic, Repeat } from "lucide-react";
+import { ArrowLeft, Clock, Code2, Mic } from "lucide-react";
 import { auth } from "@/auth";
 import { getDomain, getStartableDomain } from "@/features/interview/platform/domains";
 import { getPack } from "@/features/interview/platform/packs";
@@ -51,6 +51,15 @@ export default async function MockInterviewDomainPage({
   const pack = domain.packRef ? getPack(domain.packRef) : null;
   const rubric = domain.rubricId ? getRubric(domain.rubricId) : null;
   const minutes = Math.round(domain.durationSec / 60);
+  // Derived from declared capabilities, so the label cannot claim a workspace
+  // the interview does not actually offer.
+  const usesEditor = domain.capabilities.includes("CODE_SANDBOX");
+  const usesBoard = domain.capabilities.includes("WHITEBOARD");
+  const format = usesEditor
+    ? "Spoken, with code typed in the editor"
+    : usesBoard
+      ? "Spoken, with a whiteboard"
+      : "Spoken";
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 md:py-14">
@@ -86,18 +95,36 @@ export default async function MockInterviewDomainPage({
             </div>
           ) : null}
           <div className="flex items-center gap-1.5">
-            <Mic className="size-4 text-[#8F8F8F]" strokeWidth={2} />
-            <dd>Spoken</dd>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Repeat className="size-4 text-[#8F8F8F]" strokeWidth={2} />
-            <dd>Unlimited retakes</dd>
+            {usesEditor ? (
+              <Code2 className="size-4 text-[#8F8F8F]" strokeWidth={2} />
+            ) : (
+              <Mic className="size-4 text-[#8F8F8F]" strokeWidth={2} />
+            )}
+            <dd>{format}</dd>
           </div>
         </dl>
       </header>
 
+      {domain.purpose ? (
+        <section
+          className="mt-7 rounded-[16px] border border-[#E0E0E0] bg-[#FFF5F0] p-5"
+          aria-labelledby="purpose"
+        >
+          <h2
+            id="purpose"
+            className="text-[15px] font-semibold text-[#111111]"
+          >
+            What this interview is for
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-[#4B4B4B]">
+            {domain.purpose}
+          </p>
+        </section>
+      ) : null}
+
       {!startable ? (
         <div className="mt-8 rounded-[16px] border border-[#E0E0E0] bg-[#F5F5F5] p-5">
+
           <h2 className="text-[15px] font-semibold text-[#111111]">
             Not available yet
           </h2>
@@ -161,8 +188,10 @@ export default async function MockInterviewDomainPage({
             </h2>
             <ul className="mt-2.5 space-y-1.5 text-sm leading-relaxed text-[#4B4B4B]">
               <li>
-                &bull; You&rsquo;ll need a working microphone. This interview is
-                spoken.
+                &bull; You&rsquo;ll need a working microphone.{" "}
+                {usesEditor
+                  ? "You speak your reasoning and type your code in the editor."
+                  : "This interview is spoken."}
               </li>
               <li>
                 &bull; Answer at least {MIN_ANSWERED_TO_SCORE} questions to get a

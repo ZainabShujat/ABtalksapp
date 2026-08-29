@@ -1,7 +1,7 @@
 import type { InterviewPack } from "@/features/interview/platform/types";
 
 /**
- * Behavioral — pack v1, scored against rubric `behavioral-v1`.
+ * Workplace Situations — pack v1, scored against rubric `behavioral-v1`.
  *
  * Ships alongside AI Fluency deliberately: it shares none of that rubric's
  * competency ids, so any code that quietly assumes a fixed competency set fails

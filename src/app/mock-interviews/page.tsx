@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Mic, ShieldCheck, Repeat } from "lucide-react";
+import { Mic, ShieldCheck } from "lucide-react";
 import { auth } from "@/auth";
 import {
   listDomains,
@@ -75,10 +75,6 @@ export default async function MockInterviewsPage() {
             Spoken, not typed
           </li>
           <li className="flex items-center gap-2">
-            <Repeat className="size-4 text-[#E05226]" strokeWidth={2} />
-            Retake as often as you like
-          </li>
-          <li className="flex items-center gap-2">
             <ShieldCheck className="size-4 text-[#E05226]" strokeWidth={2} />
             Scored from evidence, not vibes
           </li>
@@ -101,12 +97,22 @@ export default async function MockInterviewsPage() {
 
       {/* ------------------------------------------------------- catalogue */}
       <section className="mt-10" aria-labelledby="catalogue-heading">
-        <h2
-          id="catalogue-heading"
-          className="mb-4 text-lg font-semibold text-[#111111]"
-        >
-          Choose an interview
-        </h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2
+            id="catalogue-heading"
+            className="text-lg font-semibold text-[#111111]"
+          >
+            Choose an interview
+          </h2>
+          {signedIn ? (
+            <Link
+              href="/mock-interviews/history"
+              className="text-[13px] font-medium text-[#E05226] underline underline-offset-4 transition-colors hover:text-[#C9411C]"
+            >
+              Your practice history &rarr;
+            </Link>
+          ) : null}
+        </div>
         <MockInterviewCatalog entries={entries} signedIn={signedIn} />
       </section>
 
