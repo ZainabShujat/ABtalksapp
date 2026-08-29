@@ -4,15 +4,16 @@ import { useState } from "react";
 import Link from "next/link";
 import { HelpCircle, History, ListChecks } from "lucide-react";
 import { dsButtonVariants } from "@/components/design/ds-button";
-import { ClaudeCollapsiblePanel } from "@/components/claude/claude-collapsible-panel";
-import { ClaudeDayList } from "@/components/claude/claude-day-list";
+import { CollapsiblePanel } from "@/components/challenge/collapsible-panel";
+import { ChallengeDayList } from "@/components/challenge/challenge-day-list";
+import { dayHref, type TrackConfig } from "@/components/challenge/track-config";
 import { ClaudeFaqBody } from "@/components/shared/claude-faq";
 import type { HeatmapCell } from "@/features/dashboard/get-heatmap-data";
 import type { AvailableQuizPayload } from "@/features/quiz/get-available-quiz";
 import type { QuizHistoryRow } from "@/features/quiz/get-quiz-attempt-history";
 import { cn } from "@/lib/utils";
 
-export type ClaudeContinueInfo = {
+export type ChallengeContinueInfo = {
   mode: "start" | "continue" | "caught_up" | "complete";
   dayNumber: number | null;
   title: string | null;
@@ -26,12 +27,13 @@ type RecentSubmission = {
 };
 
 type Props = {
+  track: TrackConfig;
   enrollmentId: string;
   currentDay: number;
   totalDays: number;
   daysCompleted: number;
   cells: HeatmapCell[];
-  continueInfo: ClaudeContinueInfo;
+  continueInfo: ChallengeContinueInfo;
   recentSubmissions: RecentSubmission[];
   quizAvailability: AvailableQuizPayload;
   quizHistory: QuizHistoryRow[];
@@ -40,7 +42,8 @@ type Props = {
 
 const ctaClass = dsButtonVariants({ size: "lg" });
 
-export function ClaudeChallengeView({
+export function ChallengeView({
+  track,
   enrollmentId,
   currentDay,
   totalDays,
@@ -59,7 +62,7 @@ export function ClaudeChallengeView({
 
   const dayLink =
     continueInfo.dayNumber != null
-      ? `/claude/day/${continueInfo.dayNumber}?challenge=${encodeURIComponent(enrollmentId)}`
+      ? dayHref(track, continueInfo.dayNumber, enrollmentId)
       : null;
 
   return (
@@ -79,17 +82,17 @@ export function ClaudeChallengeView({
               &gt;
             </li>
             <li aria-current="page" className="font-semibold text-[#111111]">
-              Claude Challenge
+              {track.label}
             </li>
           </ol>
         </nav>
 
         <header>
           <h1 className="font-heading text-[32px] leading-9 font-semibold text-[#111111] md:text-[40px] md:leading-[48px]">
-            Claude Challenge
+            {track.label}
           </h1>
           <p className="mt-2 text-[17px] leading-7 text-[#4B4B4B]">
-            Master Claude with a 60-day learning journey. Complete your daily tasks, submit your proof of work, and take weekly quizzes.
+            {track.description}
           </p>
         </header>
 
@@ -98,26 +101,30 @@ export function ClaudeChallengeView({
           dayLink={dayLink}
           totalDays={totalDays}
           isReadyForInterview={isReadyForInterview}
+          trackLabel={track.label}
         />
 
-        <ClaudeDayList
+        <ChallengeDayList
           cells={cells}
           currentDay={currentDay}
           enrollmentId={enrollmentId}
+          track={track}
         />
 
-        <ClaudeCollapsiblePanel
-          id="claude-faqs"
-          title="FAQs"
-          icon={HelpCircle}
-          open={faqsOpen}
-          onOpenChange={setFaqsOpen}
-        >
-          <ClaudeFaqBody />
-        </ClaudeCollapsiblePanel>
+        {track.showFaq ? (
+          <CollapsiblePanel
+            id="challenge-faqs"
+            title="FAQs"
+            icon={HelpCircle}
+            open={faqsOpen}
+            onOpenChange={setFaqsOpen}
+          >
+            <ClaudeFaqBody />
+          </CollapsiblePanel>
+        ) : null}
 
-        <ClaudeCollapsiblePanel
-          id="claude-recent-runs"
+        <CollapsiblePanel
+          id="challenge-recent-runs"
           title="Recent Runs"
           icon={History}
           open={runsOpen}
@@ -147,7 +154,7 @@ export function ClaudeChallengeView({
                       </span>
                     </span>
                     <Link
-                      href={`/claude/day/${s.dayNumber}?challenge=${encodeURIComponent(enrollmentId)}`}
+                      href={dayHref(track, s.dayNumber, enrollmentId)}
                       className="text-[14px] text-[#E05226] hover:underline"
                     >
                       View
@@ -156,10 +163,10 @@ export function ClaudeChallengeView({
                 ))}
             </ul>
           )}
-        </ClaudeCollapsiblePanel>
+        </CollapsiblePanel>
 
-        <ClaudeCollapsiblePanel
-          id="claude-quiz-history"
+        <CollapsiblePanel
+          id="challenge-quiz-history"
           title="Quiz History"
           icon={ListChecks}
           open={quizOpen}
@@ -229,7 +236,7 @@ export function ClaudeChallengeView({
               </p>
             ) : null}
           </div>
-        </ClaudeCollapsiblePanel>
+        </CollapsiblePanel>
       </div>
     </div>
   );
@@ -240,11 +247,13 @@ function ContinueCard({
   dayLink,
   totalDays,
   isReadyForInterview,
+  trackLabel,
 }: {
-  continueInfo: ClaudeContinueInfo;
+  continueInfo: ChallengeContinueInfo;
   dayLink: string | null;
   totalDays: number;
   isReadyForInterview: boolean;
+  trackLabel: string;
 }) {
   let eyebrow: string;
   let title: string;
@@ -253,7 +262,7 @@ function ContinueCard({
 
   if (continueInfo.mode === "complete") {
     eyebrow = "CHALLENGE COMPLETE";
-    title = "You finished the 60-day Claude Challenge";
+    title = `You finished the 60-day ${trackLabel}`;
     supporting = isReadyForInterview
       ? "Your profile is marked ready for interview opportunities."
       : "Great work — keep building on what you learned.";
