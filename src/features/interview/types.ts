@@ -20,6 +20,12 @@ export type EvidenceTier = (typeof EVIDENCE_TIERS)[number];
 export const QUESTION_SOURCES = [
   /** A fixed AI Cohort bank question, grounded in cohort curriculum days. */
   "COHORT_CURRICULUM",
+  /**
+   * A question from a versioned interview-platform pack (plan 103). Carries no
+   * cohort day: its provenance is `{packId, packVersion, sectionId}`, recorded
+   * on the question itself.
+   */
+  "PLATFORM_PACK",
   "CHALLENGE_TASK",
   "RESUME_CLAIM",
   "PROFILE_SKILL",
@@ -184,6 +190,27 @@ export type PlannedQuestion = {
   maxFollowUps?: number;
   /** Deterministic fallback probe, used when LLM follow-up drafting fails. */
   followUpPrompt?: string | null;
+
+  /* --- interview-platform fields (plan 103); absent on cohort questions --- */
+
+  /**
+   * The pack section this question belongs to. Replaces the cohort's curriculum
+   * module as the grouping unit in a platform report, so a report can say
+   * "Prompting: 3 of 4" without any notion of a cohort day.
+   */
+  sectionId?: string;
+
+  /**
+   * The DOMAIN RUBRIC competency this question scores against.
+   *
+   * Deliberately separate from `competency` above, which stays one of the five
+   * engine competencies. That field is not presentational — `depth.ts` keys the
+   * competence signal and the escalation ceiling off it, so widening it to an
+   * arbitrary string would silently change how every interview adapts. A
+   * platform question therefore declares both: `competency` for the engine's
+   * bookkeeping, `platformCompetencyId` for what the report actually reports.
+   */
+  platformCompetencyId?: string;
 };
 
 /**
@@ -227,12 +254,52 @@ export type GeneralPlanContext = {
   hasStructuredResume: boolean;
 };
 
+/**
+ * Provenance for an interview-platform attempt (plan 103).
+ *
+ * The platform equivalent of `CohortPlanContext`, and deliberately a third
+ * variant rather than a widening of it: a mock interview has no blueprint, no
+ * cohort day scope and no milestone, and pretending otherwise is what would put
+ * a fake `DAY_15` into a report.
+ *
+ * `rubric` is FROZEN here at plan build, for the same reason the cohort freezes
+ * its question set: a domain config edited mid-flight must not change an attempt
+ * already in progress, and a stored report must stay interpretable against the
+ * rubric it was actually scored under.
+ */
+export type PlatformPlanContext = {
+  kind: "PLATFORM";
+  domainSlug: string;
+  domainLabel: string;
+  packId: string;
+  packVersion: number;
+  /** Number of questions asked. Two attempts are compared on this. */
+  questionCount: number;
+  /** Pack sections, in order. The report's grouping unit. */
+  sections: { id: string; label: string }[];
+  /** The domain rubric, frozen. Platform scoring reads this, never a const. */
+  rubric: {
+    id: string;
+    competencies: { id: string; label: string; weight: number }[];
+  };
+  /** Declared workspaces. `["VOICE"]` in Phase 1. Frozen at open. */
+  capabilities: string[];
+  /** First name for the spoken opening. Null degrades to a nameless greeting. */
+  candidateFirstName?: string | null;
+};
+
 export type InterviewPlan = {
   questions: PlannedQuestion[];
+  /**
+   * Cohort rubric snapshot. Written for provenance and never read anywhere in
+   * the codebase (verified: only `cohort/planner.ts` and `mock/mock-provider.ts`
+   * write it). A platform plan carries the same default so this field keeps one
+   * shape; platform scoring reads `contextSummary.rubric` instead.
+   */
   rubricSnapshot: ReturnType<
     typeof import("@/features/interview/rubric").buildRubricSnapshot
   >;
-  contextSummary: CohortPlanContext | GeneralPlanContext;
+  contextSummary: CohortPlanContext | GeneralPlanContext | PlatformPlanContext;
 };
 
 /* ------------------------------------------------------------- evaluation */

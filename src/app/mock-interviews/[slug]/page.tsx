@@ -1,0 +1,201 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ArrowLeft, Clock, Mic, Repeat } from "lucide-react";
+import { auth } from "@/auth";
+import { getDomain, getStartableDomain } from "@/features/interview/platform/domains";
+import { getPack } from "@/features/interview/platform/packs";
+import { getRubric } from "@/features/interview/platform/rubrics";
+import { MIN_ANSWERED_TO_SCORE } from "@/features/interview/platform/service";
+
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const domain = getDomain(slug);
+  return {
+    title: domain ? `${domain.label} Mock Interview | ABTalks` : "Mock Interview",
+    description: domain?.blurb,
+  };
+}
+
+/**
+ * One interview's detail page.
+ *
+ * Server Component. Everything shown is read from the code registry — the
+ * domain, its pack sections and its rubric — so this page cannot show a
+ * candidate anything the server would not actually ask them.
+ *
+ * WHAT IS DELIBERATELY NOT SHOWN: the questions themselves, their expected
+ * evidence, and `minEvidence`. Sections and rubric competencies are safe to
+ * publish (they tell someone what is being assessed, which is fair); the
+ * checklist is not, because a candidate who reads it can recite it back.
+ */
+export default async function MockInterviewDomainPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const domain = getDomain(slug);
+  if (!domain) notFound();
+
+  const session = await auth();
+  const signedIn = Boolean(session?.user?.id);
+
+  const startable = getStartableDomain(slug) !== null;
+  const pack = domain.packRef ? getPack(domain.packRef) : null;
+  const rubric = domain.rubricId ? getRubric(domain.rubricId) : null;
+  const minutes = Math.round(domain.durationSec / 60);
+
+  return (
+    <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 md:py-14">
+      <Link
+        href="/mock-interviews"
+        className="inline-flex items-center gap-1.5 text-[13px] text-[#4B4B4B] transition-colors hover:text-[#111111]"
+      >
+        <ArrowLeft className="size-3.5" strokeWidth={2} />
+        All mock interviews
+      </Link>
+
+      <header className="mt-5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8F8F8F]">
+          {domain.family}
+          {" · "}
+          Practice
+        </p>
+        <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-[#111111]">
+          {domain.label}
+        </h1>
+        <p className="mt-3 text-[15px] leading-relaxed text-[#4B4B4B]">
+          {domain.blurb}
+        </p>
+
+        <dl className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-[#4B4B4B]">
+          <div className="flex items-center gap-1.5">
+            <Clock className="size-4 text-[#8F8F8F]" strokeWidth={2} />
+            <dd>{minutes} minutes</dd>
+          </div>
+          {pack ? (
+            <div className="flex items-center gap-1.5">
+              <dd>{pack.questions.length} questions, plus follow-ups</dd>
+            </div>
+          ) : null}
+          <div className="flex items-center gap-1.5">
+            <Mic className="size-4 text-[#8F8F8F]" strokeWidth={2} />
+            <dd>Spoken</dd>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Repeat className="size-4 text-[#8F8F8F]" strokeWidth={2} />
+            <dd>Unlimited retakes</dd>
+          </div>
+        </dl>
+      </header>
+
+      {!startable ? (
+        <div className="mt-8 rounded-[16px] border border-[#E0E0E0] bg-[#F5F5F5] p-5">
+          <h2 className="text-[15px] font-semibold text-[#111111]">
+            Not available yet
+          </h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-[#4B4B4B]">
+            This interview is on the roadmap. Its question pack has not been
+            written yet, so it cannot be started.
+          </p>
+        </div>
+      ) : (
+        <>
+          {pack ? (
+            <section className="mt-9" aria-labelledby="covers">
+              <h2 id="covers" className="text-lg font-semibold text-[#111111]">
+                What it covers
+              </h2>
+              <ul className="mt-3 space-y-2">
+                {pack.sections.map((s) => (
+                  <li
+                    key={s.id}
+                    className="flex items-start gap-2.5 text-sm text-[#4B4B4B]"
+                  >
+                    <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-[#E05226]" />
+                    {s.label}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {rubric ? (
+            <section className="mt-9" aria-labelledby="assessed">
+              <h2 id="assessed" className="text-lg font-semibold text-[#111111]">
+                What you&rsquo;re assessed on
+              </h2>
+              <div className="mt-3 space-y-3">
+                {rubric.competencies.map((c) => (
+                  <div
+                    key={c.id}
+                    className="rounded-[12px] border border-[#E0E0E0] bg-[#FFF5F0] p-4"
+                  >
+                    <div className="flex items-baseline justify-between gap-3">
+                      <h3 className="text-[14px] font-semibold text-[#111111]">
+                        {c.label}
+                      </h3>
+                      <span className="shrink-0 text-[12px] font-semibold text-[#E05226]">
+                        {c.weight}%
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-[13px] leading-relaxed text-[#4B4B4B]">
+                      {c.expectations}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          <section className="mt-9 rounded-[16px] border border-[#E0E0E0] bg-white p-5">
+            <h2 className="text-[15px] font-semibold text-[#111111]">
+              Before you start
+            </h2>
+            <ul className="mt-2.5 space-y-1.5 text-sm leading-relaxed text-[#4B4B4B]">
+              <li>
+                &bull; You&rsquo;ll need a working microphone. This interview is
+                spoken.
+              </li>
+              <li>
+                &bull; Answer at least {MIN_ANSWERED_TO_SCORE} questions to get a
+                report. Leave earlier and nothing is scored or counted.
+              </li>
+              <li>
+                &bull; Practice only. Nothing here affects your cohort or
+                challenge progress.
+              </li>
+            </ul>
+          </section>
+
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            {/*
+              Not wired to `startMockInterviewAction` yet: the interview ROOM is
+              the remaining Phase 4 work, and a Start button that opens an
+              attempt with nowhere to conduct it would create rows and abandon
+              them. Deliberately inert rather than deceptively live.
+            */}
+            <span
+              aria-disabled="true"
+              className="inline-flex h-11 cursor-not-allowed items-center justify-center rounded-[12px] border border-[#E0E0E0] bg-[#F5F5F5] px-6 text-sm font-semibold text-[#8F8F8F]"
+            >
+              Start interview
+            </span>
+            <span className="text-[13px] text-[#8F8F8F]">
+              {signedIn
+                ? "The interview room is the next piece of work."
+                : "Sign in to practise once the room is live."}
+            </span>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

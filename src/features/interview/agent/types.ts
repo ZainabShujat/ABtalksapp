@@ -180,11 +180,22 @@ export type InterviewDecision = {
  * the prompt need, projected from the plan and the persisted state when the
  * turn opens.
  */
+/**
+ * What kind of interview a turn belongs to.
+ *
+ * A cohort blueprint, or an interview-platform domain slug (plan 103). Widened
+ * to a string rather than having the platform pass a fake `"DAY_15"`: this value
+ * is carried on the agent state and would otherwise be false provenance in every
+ * log line and replay. Nothing in the graph reads it — `grep -c blueprint
+ * nodes.ts` is 0 — so this is a type-only change with no runtime effect.
+ */
+export type InterviewTrackKey = InterviewBlueprintKey | (string & {});
+
 export type InterviewAgentState = {
   interviewId: string;
   /** Minutes remaining in the session, or null when unknown. */
   minutesLeft?: number | null;
-  blueprint: InterviewBlueprintKey;
+  blueprint: InterviewTrackKey;
 
   plan: InterviewPlan;
   interviewState: InterviewState;

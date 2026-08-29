@@ -26,6 +26,7 @@ import type {
   AgentAction,
   InterviewAgentState,
   InterviewDecision,
+  InterviewTrackKey,
   LlmAction,
   TranscriptTurn,
 } from "@/features/interview/agent/types";
@@ -60,7 +61,7 @@ import type { InterviewLLM } from "@/features/interview/agent/llm/provider";
 
 const InterviewAnnotation = Annotation.Root({
   interviewId: Annotation<string>,
-  blueprint: Annotation<InterviewBlueprintKey>,
+  blueprint: Annotation<InterviewTrackKey>,
 
   plan: Annotation<InterviewPlan>,
   interviewState: Annotation<InterviewState>,
@@ -176,7 +177,7 @@ export type RunTurnInput = {
   /** Minutes left in the session, from the server clock. Null when unknown. */
   minutesLeft?: number | null;
   interviewId: string;
-  blueprint: InterviewBlueprintKey;
+  blueprint: InterviewTrackKey;
   plan: InterviewPlan;
   state: InterviewState;
   questionId: string;
