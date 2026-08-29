@@ -1,5 +1,11 @@
 # Vibe Code Hackathon — Full Rules, Deliverables & Judging
 
+People also ask this as: can I still register for the hackathon · was the
+hackathon online or offline · what do I need to submit · do participants get
+certificates · how are winners chosen · what are the prizes · can I join solo
+· how big can my team be · ViCoDathon · vibe coding hackathon · 48 hour AI
+hackathon.
+
 Source of truth: the live public hackathon page at `/hackathon` (the
 `ABTalks Vibe Code Hackathon`, branded "ViCoDathon" for specific editions).
 This file supersedes the "sourcing gap" note in `vicodathon.md` — the rules,

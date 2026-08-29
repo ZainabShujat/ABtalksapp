@@ -61,12 +61,23 @@ export function resolveInterviewLLM(): InterviewLLM {
       return createMockInterviewLLM();
 
     case "":
+      // OpenAI ONLY on autodetect. This deliberately does NOT walk down to the
+      // free tiers.
+      //
+      // A 15-minute assessment cannot survive a mid-session quota rejection:
+      // Gemini's free tier allows ~15 requests a day against roughly thirty per
+      // interview, Groq rate-limits under ordinary load, and Anthropic currently
+      // reports a zero credit balance. A candidate whose interview degrades
+      // halfway through is scored on a different instrument than the person
+      // before them, which is worse than the interview not starting at all.
+      //
+      // The helper chatbot keeps its four-provider chain — a support answer can
+      // tolerate a retry; a graded interview cannot. See
+      // src/lib/chatbot/providers.ts.
       if (process.env.OPENAI_API_KEY) return openAiOrMock();
-      if (process.env.GROQ_API_KEY) return groqOrMock();
-      if (process.env.GEMINI_API_KEY) return geminiOrMock();
-      if (process.env.ANTHROPIC_API_KEY) return createAnthropicInterviewLLM();
       logger.warn(
-        "[interview-agent] no provider key configured — using mock; results are not real",
+        "[interview-agent] no OPENAI_API_KEY — using mock; results are NOT real. " +
+          "Free-tier providers are deliberately not used for interviews.",
       );
       return createMockInterviewLLM();
 

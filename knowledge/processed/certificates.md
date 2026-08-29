@@ -1,5 +1,13 @@
 # ABTalks Certificates — Eligibility, Claiming, Verification
 
+People also ask this as: how do I get my certificate · where is my
+certificate · can I download my Claude cert · do I get a cert after
+finishing · how can I claim the certificate · is there a claim button ·
+certificate download link · how do I verify a certificate · check if a
+certificate is real · certificate ID · my certificate was revoked · my name
+is wrong on the certificate · do hackathon participants get certificates ·
+does the coding challenge give a certificate.
+
 Covers every ABTalks certificate: who gets one, how to claim it, where to
 download it, and how anyone (recruiter, college, employer) can verify it.
 
@@ -18,6 +26,27 @@ PDF certificate — the core outcome there is visible proof of work
 Cohort and workshop certificate types exist in the platform but are not
 being issued automatically today. If you attended an AI Cohort or a
 workshop and need a certificate, email team@abtalks.in.
+
+## What a certificate is — and is not
+
+Certificates issued by ABTalks are certificates of **participation and
+completion only**. They are **not accredited academic or professional
+qualifications**, carry no academic credit, and are not recognised or
+accredited by any university, statutory body, examination authority or
+regulator. Do not present one as a degree, diploma or licensed credential.
+ABTalks may revoke a certificate for fraud or a Terms violation.
+
+Four different things get confused with each other — keep them apart:
+
+- **Certificate** — an issued, downloadable, publicly verifiable PDF with an
+  ID and QR code. Only the Claude Challenge and the ViCoDathon hackathon
+  currently have one.
+- **Completion recognition** — being recognised as having finished, without
+  an auto-issued PDF. This is what the 60-Day Coding Challenge gives.
+- **Proof of work / portfolio** — your public GitHub and LinkedIn trail plus
+  your ABTalks profile. Every program produces this.
+- **Award recognition** — hackathon placement (Winner, 2nd, 3rd, Top 5),
+  which is a separate extra certificate on its own artwork.
 
 ## Certificates are always free
 

@@ -1,4 +1,27 @@
 /**
+ * SUPERSEDED (2026-08-28) by `scripts/ingest-site.ts`. Nothing imports this
+ * file, and running it today throws on 7 of its 8 sources.
+ *
+ * It reads knowledge by importing named exports out of page components, which
+ * makes it a hostage to every redesign. The landing, challenges, claude-slides,
+ * workshop and talent-hunt rewrites have since renamed or inlined nearly all of
+ * them. Verified missing at HEAD: `SUPPORT_EMAIL`, `SOCIAL_LINKS`
+ * (app-footer), `DAY_STEPS`, `FAQ_ITEMS` (challenges/page), `DOMAINS`
+ * (domain-picker), `WELCOME_FACTS`, `CLAUDE_WHY_ITEMS`, `ROLES`, `PHASES`,
+ * `CHALLENGE_RULES` (claude slides), `TOPICS`, `STATS` (workshop),
+ * `PROGRAM_FACTS` (talent-hunt hero), `requirements` (program-landing). The
+ * whole `landing/modernist/landing-content` module no longer exists. Only
+ * `ROADMAP_PHASES` still resolves.
+ *
+ * `ingest-site.ts` crawls the rendered public pages over HTTP instead, which
+ * survives refactors because it depends on what visitors actually see.
+ *
+ * Kept, not deleted, pending a separate review — the route allowlist and the
+ * auth-drift reasoning below are still the best written record of which pages
+ * are safe to ingest.
+ *
+ * ---
+ *
  * The chatbot knowledge-ingestion allowlist (docs/plans/063-chatbot-dynamic-knowledge-ingestion.md).
  *
  * This is the single safety mechanism preventing private/internal app

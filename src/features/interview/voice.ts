@@ -124,18 +124,6 @@ const TRANSCRIPTION_VOCABULARY_HINT =
   "context window, hallucination, agent, tool calling, MCP, API key, " +
   "Streamlit, FastAPI, Next.js, Python, Postgres, Prisma, Docker, Vercel.";
 
-/**
- * Transcription gets its own, much longer budget.
- *
- * Synthesis time depends on one short interviewer line, so 30s is generous.
- * Transcription time scales with how long the CANDIDATE talked: a three-minute
- * answer is a multi-megabyte upload followed by a proportionally longer
- * transcription. Sharing the 30s ceiling meant that the better someone
- * answered, the more likely their answer was thrown away — which is the exact
- * opposite of what an assessment should do.
- */
-const TRANSCRIBE_TIMEOUT_MS = 180_000;
-
 export {
   ALLOWED_AUDIO_TYPES,
   MAX_AUDIO_BYTES,
@@ -200,7 +188,6 @@ export async function transcribeAnswer(
   const form = new FormData();
   form.append("file", audio, filename);
   form.append("model", model);
-<<<<<<< Updated upstream
 
   // `verbose_json` is what carries the DETECTED LANGUAGE, which the English-only
   // gate prefers over any test run on the transcript text. Only the Whisper
@@ -226,12 +213,6 @@ export async function transcribeAnswer(
   // mangled tool name is exactly the token the evidence checklist is looking
   // for. The prompt biases spelling only; it never adds content.
   form.append("prompt", TRANSCRIPTION_VOCABULARY_HINT);
-=======
-  // Removed the hardcoded language hint. When 'language' is set to 'en', Whisper 
-  // forces non-English audio into English words, causing severe hallucinations. 
-  // Omitting this allows it to auto-detect the spoken language (e.g. Hindi) and 
-  // correctly transcribe or translate it.
->>>>>>> Stashed changes
 
   try {
     const res = await fetch(

@@ -8,6 +8,10 @@ ABTalks programs are built around shipping real work in public: daily or timed b
 - 60-Day Claude AI Challenge: 60 days, daily prompt-engineering tasks
 - AI Cohort: 31 days, 8 phases, application-gated, 2–4 hrs/day
 - Vibe Code Hackathon: 48 hours, solo or teams of 1–3
+- Databricks Cohort: announced on the homepage — Spark, lakehouse and
+  production pipelines, built against a real data brief. **Dates are
+  announced to the waitlist**; there is no published start date, no
+  published duration, and no open registration. Do not invent any of those.
 - Free AI Bootcamp: 1 hour, live on Google Meet, recurring — relationship to the AI Tools Workshop is **unresolved**; see `workshops.md` and `knowledge/metadata/facts.json` (`free-ai-bootcamp-vs-ai-tools-workshop`). Do not present this as a confirmed, independent program distinct from the AI Tools Workshop.
 
 ## 60-Day Coding Challenge
@@ -25,7 +29,9 @@ ABTalks programs are built around shipping real work in public: daily or timed b
 - Focus: prompt engineering and practical AI workflows
 - Proof of work: one dedicated GitHub repo (`Day1/` … `Day60/` folders) plus a LinkedIn post per day tagging `@AnilBajpai`, `@ABTalksOnAI`, and `@Anthropic`
 - A day only counts when all three are done: GitHub push, LinkedIn post, required tags
-- Cost: free; verified completion includes a QR-verified certificate
+- Cost: free (the Terms state the service is currently provided free of
+  charge — see `legal-and-privacy.md`); verified completion includes a
+  QR-verified certificate
 - Full detail: `claude-challenge.md`
 
 ## AI Cohort
@@ -44,6 +50,16 @@ ABTalks programs are built around shipping real work in public: daily or timed b
 - Cost: free to enter
 - Status: the most recent known editions (ViCodathon 2026, and the Aug 7, 2026 "48-Hour AI Hackathon") are both historical/completed relative to the current project date
 - Full detail: `vicodathon.md` and `events.md`
+
+## Databricks Cohort
+
+- Focus: Spark, lakehouse and production data pipelines, built against a
+  real data brief
+- Status: announced on the homepage, **waitlist only** — dates announced to
+  the waitlist
+- Cost, duration, eligibility, curriculum and application route: **not
+  published**. If asked, say so and point to team@abtalks.in rather than
+  reusing another cohort's rules.
 
 ## Free AI Bootcamp / AI Tools Workshop
 

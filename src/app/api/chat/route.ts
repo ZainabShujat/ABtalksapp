@@ -1,272 +1,205 @@
-import fs from 'fs';
-import path from 'path';
-import { matchQuestion } from "@/lib/chatbot-matcher";
+import { z } from "zod";
+import { formatInTimeZone } from "date-fns-tz";
+import { IST } from "@/lib/date-utils";
+import { logger } from "@/lib/logger";
+import { buildContext, retrieve } from "@/lib/chatbot/retrieve";
+import { generateStream, type ChatTurn } from "@/lib/chatbot/providers";
+import {
+  FALLBACK_MESSAGE,
+  GENERATION_UNAVAILABLE_MESSAGE,
+  RETRIEVAL_ERROR_MESSAGE,
+  buildClarifyMessage,
+  buildSystemPrompt,
+} from "@/lib/chatbot/prompt";
+import {
+  THIRD_PARTY_DATA_REPLY,
+  isThirdPartyDataRequest,
+} from "@/lib/chatbot-matcher";
 
-const KB_DIR = path.join(process.cwd(), 'knowledge', 'processed');
+/**
+ * The chatbot endpoint.
+ *
+ * Order matters and is the whole design:
+ *
+ *   validate -> retrieve -> CONFIDENCE GATE -> generate
+ *
+ * Nothing reaches a generation provider until retrieval has decided the corpus
+ * can actually support an answer. That ordering is what stops "does ABTalks
+ * provide hostel accommodation?" from becoming a fluent, confident yes.
+ *
+ * `nodejs` runtime: the corpus is read from disk with `fs`.
+ */
 
-type Chunk = {
-  text: string;
-  source: string;
-};
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-type ProcessedChunk = Chunk & {
-  tokens: string[];
-  termFrequencies: Record<string, number>;
-};
+const requestSchema = z.object({
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string().trim().min(1).max(2000),
+      }),
+    )
+    .min(1)
+    .max(40),
+});
 
-let cachedKb: ProcessedChunk[] | null = null;
-let idfCache: Record<string, number> = {};
+/**
+ * Turns sent upstream. The retrieval query uses the last two user-side turns;
+ * the model gets a slightly longer window so it can resolve "and after that?"
+ * without the history growing without bound.
+ */
+const HISTORY_TURNS = 8;
 
-// Basic tokenizer
-function tokenize(text: string): string[] {
-  return text.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(t => t.length > 2);
+/**
+ * One wire format for every provider: `data: {"text": "..."}`, terminated by
+ * `data: [DONE]`. The browser parses exactly one shape and never learns which
+ * provider served it.
+ */
+function sseFrame(text: string): string {
+  return `data: ${JSON.stringify({ text })}\n\n`;
 }
 
-function chunkMarkdown(text: string, filename: string): Chunk[] {
-  const chunks: Chunk[] = [];
-  const lines = text.split('\n');
-  
-  let currentChunkText = '';
-  let currentHeader = '';
+const SSE_HEADERS = {
+  "Content-Type": "text/event-stream; charset=utf-8",
+  "Cache-Control": "no-cache, no-transform",
+  Connection: "keep-alive",
+} as const;
 
-  for (const line of lines) {
-    if (line.match(/^#{2,4}\s/)) {
-      if (currentChunkText.trim().length > 20) {
-        chunks.push({ text: (currentHeader ? `${currentHeader}\n` : '') + currentChunkText.trim(), source: filename });
-      }
-      currentHeader = line.trim();
-      currentChunkText = '';
-    } else {
-      currentChunkText += line + '\n';
-    }
-  }
-
-  if (currentChunkText.trim().length > 20) {
-    chunks.push({ text: (currentHeader ? `${currentHeader}\n` : '') + currentChunkText.trim(), source: filename });
-  }
-
-  // Refine large chunks
-  const refinedChunks: Chunk[] = [];
-  for (const c of chunks) {
-    if (c.text.length > 1000) {
-      const paragraphs = c.text.split('\n\n');
-      let subChunk = '';
-      for (const p of paragraphs) {
-        if ((subChunk.length + p.length) > 1000 && subChunk.trim()) {
-           refinedChunks.push({ text: subChunk.trim(), source: c.source });
-           subChunk = '';
-        }
-        subChunk += p + '\n\n';
-      }
-      if (subChunk.trim()) refinedChunks.push({ text: subChunk.trim(), source: c.source });
-    } else {
-      refinedChunks.push(c);
-    }
-  }
-  return refinedChunks;
-}
-
-// Generates the KB using TF-IDF on the fly
-async function getEmbeddedKb(): Promise<{ chunks: ProcessedChunk[], idf: Record<string, number> }> {
-  if (cachedKb) return { chunks: cachedKb, idf: idfCache };
-  console.log('[chat-api] Generating TF-IDF KB on the fly...');
-  
-  const files = fs.readdirSync(KB_DIR).filter(f => f.endsWith('.md'));
-  const allChunks: Chunk[] = [];
-
-  for (const file of files) {
-    const filePath = path.join(KB_DIR, file);
-    const text = fs.readFileSync(filePath, 'utf-8');
-    allChunks.push(...chunkMarkdown(text, file));
-  }
-
-  const processed: ProcessedChunk[] = [];
-  const documentFreq: Record<string, number> = {};
-
-  for (const chunk of allChunks) {
-    const tokens = tokenize(chunk.text);
-    const tf: Record<string, number> = {};
-    const uniqueTokens = new Set(tokens);
-    
-    for (const t of tokens) tf[t] = (tf[t] || 0) + 1;
-    for (const t of uniqueTokens) documentFreq[t] = (documentFreq[t] || 0) + 1;
-
-    processed.push({ ...chunk, tokens, termFrequencies: tf });
-  }
-
-  // Calculate IDF
-  const N = processed.length;
-  for (const [term, df] of Object.entries(documentFreq)) {
-    idfCache[term] = Math.log(1 + (N - df + 0.5) / (df + 0.5)); // BM25-style IDF
-  }
-
-  cachedKb = processed;
-  return { chunks: cachedKb, idf: idfCache };
-}
-
-// BM25 scoring
-function scoreQuery(queryTokens: string[], chunk: ProcessedChunk, idf: Record<string, number>): number {
-  let score = 0;
-  const k1 = 1.5; // Term frequency saturation
-  const b = 0.75; // Document length normalization
-  const avgdl = 150; // Approximated average doc length in tokens
-  const dl = chunk.tokens.length;
-
-  for (const q of queryTokens) {
-    if (chunk.termFrequencies[q]) {
-      const tf = chunk.termFrequencies[q];
-      const termIdf = idf[q] || Math.log(1 + 0.5); // Default rare word IDF
-      const numerator = tf * (k1 + 1);
-      const denominator = tf + k1 * (1 - b + b * (dl / avgdl));
-      score += termIdf * (numerator / denominator);
-    }
-  }
-  return score;
-}
-
-const FALLBACK_MESSAGE =
-  "I couldn't find a direct answer to that in my knowledge base. Please reach out to team@abtalks.in.";
-
-const OUT_OF_SCOPE_RE =
-  /\b(accommodation|hostel|lodging|travel (allowance|reimbursement)|visa|stipend amount|salary|placement guarantee|job guarantee|revenue|funding|investor|valuation)\b/i;
-const OUT_OF_SCOPE_REPLY =
-  "I don't have reliable information about that in the ABTalks knowledge base. You can contact the ABTalks team directly at team@abtalks.in.";
-
-const CRISIS_RE =
-  /\b(suicid\w*|kill myself|end (my life|it all)|want (to )?end it\b|self[\s-]?harm|hurt myself|want to die|don'?t want to (live|be alive)|no reason to live|no point (in )?living)\b/i;
-const CRISIS_REPLY =
-  "I'm really sorry you're going through this — please know you don't have to handle it alone. If you're in India, you can reach iCall at 9152987821 or the Vandrevala Foundation at 1860-2662-345, both free and confidential, right now. If you're outside India, please contact your local emergency services or a crisis line where you are. You're also welcome to email team@abtalks.in — but please reach out to one of the helplines above first.";
-
-const HARASSMENT_ESCALATION_RE =
-  /\b(harass\w*|doxx\w*|being threatened|threat(en(ed|ing))? (me|us)|blackmail\w*|being bullied|is impersonating|fake (admin|staff)|sue (you|abtalks)|legal action against (you|abtalks)|report (someone|a participant|abuse)|being stalked)\b/i;
-const HARASSMENT_ESCALATION_REPLY =
-  "I'm sorry to hear that — this isn't something I can resolve here, but it's exactly the kind of thing the ABTalks team handles directly and seriously. Please email team@abtalks.in with as much detail as you're comfortable sharing (screenshots help), and they'll follow up with you personally.";
-
-const SCAM_RE =
-  /\b(ask(ed|ing)? (me )?for (payment|money) to (unlock|access|release|activate)|pay to (unlock|get) (my |the )?certificate|asked me to pay|wants? money to (verify|release))\b/i;
-const SCAM_REPLY =
-  "That's not legitimate — ABTalks never asks for payment to unlock a certificate, verify your account, or access program benefits. Every ABTalks program is free to participate in. Please don't send any money, and forward the message to team@abtalks.in so the team can look into it.";
-
-const SYSTEM_PROMPT = `You are the ABTalks Help Assistant.
-Your primary role is to answer questions about ABTalks using ONLY the provided context.
-- Always mention that ABTalks is an online community when introducing it.
-- If someone asks how to apply or wants to join the team, instruct them to share their cover letter, resume, and any other relevant details to team@abtalks.in.
-- When explaining a challenge or program, go into hyper detail based on the context. Every step, requirement, and rule should be clearly listed and explained.
-- Site structure (Sitemap): Home (/), Hackathons (/hackathons), Evidence (/evidence), Privacy (/privacy), Sign In (/login).
-- For multi-part questions, answer every independently answerable part. Do not stop after answering only the first part.
-- Answer naturally as an ABTalks support assistant. Do not mention "the knowledge base", "retrieved context", "chunks", "documents", "RAG", or internal sources unless the user explicitly asks how the assistant works.
-- If the answer is NOT present in the provided context, you MUST output exactly: "${FALLBACK_MESSAGE}". Do not invent, guess, or synthesize information outside the context.
-- Keep your answers conversational but highly detailed when required.
-- If a user's question is ambiguous (e.g., "How do I join?"), briefly explain the options (e.g., Hackathon, AI Cohort) and ask them which one they mean.
-- Do not repeat the prompt or context in your response.`;
-
-function sseTextResponse(text: string): Response {
-  return new Response(
-    `data: {"type":"content_block_delta","delta":{"text":${JSON.stringify(text)}}}\n\ndata: {"type":"message_stop"}\n\n`,
-    { headers: { 'Content-Type': 'text/event-stream' } }
-  );
+/** A complete, deterministic answer — no model involved. */
+function staticStream(text: string): Response {
+  return new Response(`${sseFrame(text)}data: [DONE]\n\n`, {
+    headers: SSE_HEADERS,
+  });
 }
 
 export async function POST(req: Request) {
+  let payload: unknown;
   try {
-    const { messages } = await req.json();
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return new Response(JSON.stringify({ error: 'Missing messages' }), { status: 400 });
-    }
-
-    const lastMessage = messages[messages.length - 1];
-    if (lastMessage.role !== 'user') {
-      return new Response(JSON.stringify({ error: 'Last message must be from user' }), { status: 400 });
-    }
-
-    const trimmedLast = lastMessage.content.trim();
-    const exactMatch = matchQuestion(trimmedLast);
-    if (exactMatch) {
-      return sseTextResponse(exactMatch.answer);
-    }
-    
-    if (CRISIS_RE.test(trimmedLast)) return sseTextResponse(CRISIS_REPLY);
-    if (HARASSMENT_ESCALATION_RE.test(trimmedLast)) return sseTextResponse(HARASSMENT_ESCALATION_REPLY);
-    if (SCAM_RE.test(trimmedLast)) return sseTextResponse(SCAM_REPLY);
-    if (OUT_OF_SCOPE_RE.test(trimmedLast)) return sseTextResponse(OUT_OF_SCOPE_REPLY);
-
-    let searchQuery = lastMessage.content;
-    if (messages.length > 2) {
-      const prevMessage = messages[messages.length - 2].content;
-      searchQuery = `${prevMessage} \n ${searchQuery}`;
-    }
-
-    const queryTokens = tokenize(searchQuery);
-    
-    // 3. Search the KB using TF-IDF / BM25
-    const { chunks, idf } = await getEmbeddedKb();
-    const scoredChunks = chunks.map(chunk => ({
-      ...chunk,
-      score: scoreQuery(queryTokens, chunk, idf),
-    }));
-
-    scoredChunks.sort((a, b) => b.score - a.score);
-    
-    // Confidence Threshold (BM25 scores aren't exactly 0-1, so we check for > 0.1 as a baseline)
-    const topChunks = scoredChunks.filter(c => c.score > 0.1).slice(0, 10);
-
-    if (topChunks.length === 0) {
-      // If we have absolutely no semantic matches, immediately return the fallback text
-      // to save LLM latency and enforce strict boundaries.
-      return new Response(
-        `data: {"type":"content_block_delta","delta":{"text":${JSON.stringify(FALLBACK_MESSAGE)}}}\n\ndata: {"type":"message_stop"}\n\n`,
-        { headers: { 'Content-Type': 'text/event-stream' } }
-      );
-    }
-
-    const contextText = topChunks.map(c => `[Source: ${c.source}]\n${c.text}`).join('\n\n---\n\n');
-    
-    const systemWithContext = `${SYSTEM_PROMPT}\n\nHere is the verified knowledge base context:\n<context>\n${contextText}\n</context>`;
-
-    // 5. Stream response from Gemini using official REST API
-    const geminiMessages = messages.map((m: any, idx: number) => {
-      let text = m.content;
-      // Prepend system instruction to the first user message to avoid systemInstruction API issues
-      if (idx === 0 && m.role === 'user') {
-        text = `${systemWithContext}\n\nUser query: ${text}`;
-      }
-      return {
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text }]
-      };
-    });
-
-    const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:streamGenerateContent?alt=sse&key=${process.env.GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: geminiMessages,
-        generationConfig: {
-          temperature: 0,
-          maxOutputTokens: 1024,
-        }
-      })
-    });
-
-    if (!geminiRes.ok) {
-      const err = await geminiRes.text();
-      console.error('Gemini API error:', err);
-      return new Response(JSON.stringify({ error: 'Failed to generate response', details: err }), { status: 500 });
-    }
-
-    // We can pipe the exact Gemini SSE stream back to the client.
-    return new Response(geminiRes.body, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
-      }
-    });
-
-  } catch (err: any) {
-    console.error('Error in /api/chat:', err);
-    return new Response(JSON.stringify({ error: 'Internal server error', details: err.message }), { status: 500 });
+    payload = await req.json();
+  } catch {
+    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
   }
+
+  const parsed = requestSchema.safeParse(payload);
+  if (!parsed.success) {
+    return Response.json({ error: "Invalid request" }, { status: 400 });
+  }
+
+  const messages = parsed.data.messages;
+  const last = messages[messages.length - 1];
+  if (last.role !== "user") {
+    return Response.json(
+      { error: "Last message must be from the user" },
+      { status: 400 },
+    );
+  }
+
+  // Asking for another person's data is out of scope regardless of what the
+  // corpus contains, so it is refused before retrieval rather than after.
+  if (isThirdPartyDataRequest(last.content)) {
+    return staticStream(THIRD_PARTY_DATA_REPLY);
+  }
+
+  // Retrieval query: the current question plus the last two user turns before
+  // it, so a bare follow-up ("who do I tag?", "i mean the cohort one") still
+  // carries its subject. Assistant text is deliberately excluded — its wording
+  // would drag retrieval toward whatever the last answer happened to mention.
+  //
+  // Two turns rather than one because a clarification costs a turn: after
+  // "which did you mean?" -> "the cohort interview", the original question is
+  // already two turns back, and a one-turn window has forgotten it.
+  const priorUserTurns = messages
+    .slice(0, -1)
+    .filter((m) => m.role === "user")
+    .slice(-2)
+    .map((m) => m.content);
+  const query = [...priorUserTurns, last.content].join("\n");
+
+  let retrieval;
+  try {
+    retrieval = await retrieve(query);
+  } catch (error) {
+    // The search itself broke. Saying the knowledge base has nothing would
+    // blame the corpus for a system fault and hide the incident.
+    logger.error("Chatbot retrieval failed", { error: String(error) });
+    return staticStream(RETRIEVAL_ERROR_MESSAGE);
+  }
+
+  if (retrieval.verdict === "fallback") {
+    logger.info("Chatbot fallback: insufficient retrieval confidence", {
+      score: Number(retrieval.topScore.toFixed(3)),
+    });
+    return staticStream(FALLBACK_MESSAGE);
+  }
+
+  // A weak or split signal is handled BY THE MODEL, with the retrieved context
+  // and the same grounding rules, rather than by a canned list of topic names.
+  // The canned version could not see that the user had already answered the
+  // clarifying question in their previous message, which is what made the
+  // assistant feel like a phone menu instead of a conversation.
+  const ambiguous = retrieval.verdict === "clarify";
+
+  const today = formatInTimeZone(new Date(), IST, "d MMMM yyyy");
+  const system = buildSystemPrompt(
+    buildContext(retrieval.results),
+    today,
+    ambiguous,
+  );
+  const turns: ChatTurn[] = messages.slice(-HISTORY_TURNS);
+
+  const generation = await generateStream(system, turns);
+  if (!generation.ok) {
+    // Retrieval SUCCEEDED and generation did not. Saying the knowledge base has
+    // nothing would be false, and it hides an outage behind a content problem.
+    // The deterministic clarification is a better answer than a wrong excuse.
+    logger.error("Chatbot generation unavailable — every provider failed");
+    return staticStream(
+      ambiguous
+        ? buildClarifyMessage(retrieval.topics)
+        : GENERATION_UNAVAILABLE_MESSAGE,
+    );
+  }
+
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const reader = generation.stream.getReader();
+      let produced = false;
+      try {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value) {
+            produced = true;
+            controller.enqueue(encoder.encode(sseFrame(value)));
+          }
+        }
+        // A provider that opened a stream and then said nothing must not leave
+        // an empty bubble on screen. This is an upstream failure, so it reports
+        // as one — the corpus already proved it had an answer.
+        if (!produced) {
+          controller.enqueue(
+            encoder.encode(sseFrame(GENERATION_UNAVAILABLE_MESSAGE)),
+          );
+        }
+      } catch (error) {
+        logger.error("Chatbot stream broke mid-response", {
+          provider: generation.provider,
+          error: String(error),
+        });
+        if (!produced) {
+          controller.enqueue(
+            encoder.encode(sseFrame(GENERATION_UNAVAILABLE_MESSAGE)),
+          );
+        }
+      } finally {
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, { headers: SSE_HEADERS });
 }

@@ -28,7 +28,7 @@ about stats, cohort names or pricing wording, this file wins.
 - **Claude Challenge** (`/claude-signup`) — 60 days building with Claude;
   prompt engineering through real projects; daily public builds.
 
-## Cost — the precise current wording
+## Is ABTalks free? Cost, fees, pricing and paid cohorts
 
 The homepage FAQ says: **most challenges are free to join. Paid cohorts are
 always priced up front**, and anyone placed through the recruiter network

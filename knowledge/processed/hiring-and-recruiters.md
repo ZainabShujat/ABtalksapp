@@ -1,5 +1,11 @@
 # Hiring on ABTalks — Scout, the Recruiter Network & Candidate Consent
 
+People also ask this as: how does ABTalks help recruiters find candidates ·
+who can see my profile · do recruiters get my phone number · how do I get
+hired through ABTalks · how do companies find me · is my profile public ·
+what is Scout · talent portal · am I open to work · do you charge a
+placement fee.
+
 This covers the employer/recruiter side of ABTalks and what candidates need
 to know about how their profile reaches companies. Source of truth: the live
 public pages `/` (homepage), `/hire` and the talent portal.
@@ -19,9 +25,11 @@ the recruiter network, 15+ profiles shared with consent.
 `/hire` is the recruiter entry point, a chat-style tool called **Scout**.
 You describe the role in plain language — stack, seniority, salary band
 (e.g. ₹5–10 LPA, ₹10–20 LPA, ₹20–35 LPA) — and Scout matches candidates
-against verified platform evidence rather than resumes. You can start
-exploring on `/hire` without an ABTalks account; saving requests and
-shortlists requires an approved recruiter account.
+against verified platform evidence rather than resumes.
+
+**`/hire` requires you to be signed in** — visiting it signed-out sends you
+to `/login`. Saving requests and shortlists additionally requires an
+approved recruiter account.
 
 Each match can be opened as an **evidence resume** (`/hire/evidence`) —
 platform-verified evidence for that match, not a self-written CV.
@@ -37,6 +45,10 @@ This is the rule candidates ask about most:
 - Participant phone numbers and entry details are never exposed to
   recruiters.
 - Nobody placed through the recruiter network ever pays a placement fee.
+- A candidate only appears in recruiter search at all while their profile is
+  marked searchable by recruiters; withdrawn and deleted accounts are
+  excluded outright. "Open to work" is a separate filter recruiters can
+  apply — it is not what makes you discoverable.
 
 ## The talent portal (`/talent`)
 

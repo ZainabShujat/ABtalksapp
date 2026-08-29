@@ -1,4 +1,15 @@
-# ABTalks — Helper Chatbot Knowledge Base
+# ABTalks — Helper Chatbot Knowledge Base (LEGACY SNAPSHOT — LOWEST PRECEDENCE)
+
+> **Precedence warning.** This is a site snapshot taken on **10 August 2026**
+> and it is the OLDEST source in the corpus. Wherever it disagrees with a
+> dedicated topic file — `homepage.md`, `certificates.md`, `hackathon.md`,
+> `workshops.md`, `events.md`, `voice-interview.md`,
+> `hiring-and-recruiters.md`, `legal-and-privacy.md`, `website.md` — **those
+> files win and this one is wrong**. Two known-stale claims in particular:
+> its blanket "every flagship program is free for participants" predates the
+> current pricing wording (see `legal-and-privacy.md`), and every event or
+> registration state it describes is now historical. Never quote a date,
+> registration status or price from this file.
 
 **Purpose:** Ground truth for an ABTalks helper chatbot serving four audiences: students, recruiters, working professionals, and investors.
 **Sources:** abtalks.in (all public pages) + 60-Day Claude AI Challenge tracker + individual challenge task pages (Days 1–60).
@@ -9,7 +20,7 @@
 
 ## 0. THIRTY-SECOND SUMMARY
 
-ABTalks is an India-focused AI-native learning community, founded by Anil Bajpai, that helps college students and working professionals build public proof of work through daily challenges, cohort programs, and hackathons — then routes the strongest builders to a hiring partner network. Community and every flagship program are **free for participants**. Public tagline: *"Code consistently. Post publicly. Get noticed."* Stated scale: **10,000+ members, 500+ projects, 100+ hiring partners**. Positioning line to remember: **"Not a course. A build challenge."**
+ABTalks is an India-focused AI-native learning community, founded by Anil Bajpai, that helps college students and working professionals build public proof of work through daily challenges, cohort programs, and hackathons — then routes the strongest builders to a hiring partner network. Community participation and the flagship programs are free to join. For the precise current wording — the Terms state the service is **currently provided free of charge**, the homepage says most challenges are free with any paid cohort priced up front, and nobody placed through the recruiter network pays a placement fee — see `legal-and-privacy.md`, which supersedes this line. Public tagline: *"Code consistently. Post publicly. Get noticed."* Stated scale: **10,000+ members, 500+ projects, 100+ hiring partners**. Positioning line to remember: **"Not a course. A build challenge."**
 
 Flagship products:
 1. **60-Day Claude AI Challenge** — daily prompt-engineering + capstone builds
@@ -69,7 +80,7 @@ Everything ABTalks ships is oriented around visible artifacts (GitHub commits, d
 2. **Consistency as the outcome.** Streaks, daily cadence, and IST day boundaries are marketed as the transformative variable.
 3. **Recruiter visibility as the reward.** All flagships end in "ranked profile / hiring network / recruiter discovery."
 4. **India-first, college-first.** Explicit for the hackathon; language and testimonial roster confirm the rest.
-5. **Free at point of entry.** Every flagship is free for participants.
+5. **Free at point of entry.** The flagships are free to join; see `legal-and-privacy.md` for the current, precise pricing wording, which supersedes this line.
 6. **Claude-native.** Anthropic's Claude is the primary AI stack across content, curriculum, and community identity.
 
 ---
@@ -462,7 +473,7 @@ A: An India-focused, community-first AI upskilling platform that turns learners 
 A: 10,000+ members, 500+ projects, 100+ hiring partners. Four flagship programs live. Community distributed across WhatsApp, Discord, LinkedIn, YouTube, Instagram, X — all under one handle (`abtalksonai`).
 
 **Q: What's the business model?**
-A: Currently free at point of entry for participants across every flagship. Monetization signals visible today: **hiring partner network** (100+ partners) and **event sponsorships** (Breeth sponsored the last ViCodathon, giving free Pro accounts to all participants).
+A: Free at point of entry across the flagships as of this snapshot; `legal-and-privacy.md` carries the current wording and supersedes this answer. Monetization signals visible today: **hiring partner network** (100+ partners) and **event sponsorships** (Breeth sponsored the last ViCodathon, giving free Pro accounts to all participants).
 
 **Q: What's the moat?**
 A: 1) **Community depth** — multi-platform, IST-native, single unified handle. 2) **Proof-of-work rail** — every graduate produces public artifacts, giving the platform a permanent LinkedIn-visible growth flywheel. 3) **Claude-native curriculum** — early positioning as the go-to Indian Claude community. 4) **SDLC-grade capstone** — no other Indian AI upskilling program mandates a versioned v1.0.0 release with docs, retrospective, and 30-day growth plan.

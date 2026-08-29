@@ -488,7 +488,6 @@ async function main() {
     // interview is spoken, the question stays on the floor, and the off-topic
     // request is never answered. Redirect wording now varies per interview, so
     // pinning a literal string here would fail for two candidates in three.
-<<<<<<< Updated upstream
     // Redirect wording appears on a REPEATED off-topic turn. On the first one
     // the interviewer simply puts the question again.
     const second = await turn(
@@ -499,9 +498,6 @@ async function main() {
     );
     assert.equal(second.action, "REDIRECT");
     assert.ok(second.prompt?.includes(redirectLineFor("iv_adaptive")));
-=======
-    assert.ok(out.prompt?.includes(redirectLineFor("iv_adaptive")));
->>>>>>> Stashed changes
     assert.ok(out.prompt?.includes(question.text));
     assert.ok(!/joke/i.test(out.prompt ?? ""));
     assert.ok(!out.prompt?.toLowerCase().includes("joke"));

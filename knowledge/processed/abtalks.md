@@ -1,5 +1,10 @@
 # ABTalks
 
+People also ask this as: what is ABTalks · tell me about AB Talks · what
+exactly is this community · what does ABTalks do · what is this website ·
+who is ABTalks for · is ABTalks free · how does ABTalks work · learn daily
+build showcase get hired.
+
 ## Identity
 
 ABTalks is an India-first build-in-public community and talent network for students and early-career builders.
@@ -9,7 +14,11 @@ Key facts:
 - Tagline: "Code consistently. Post publicly. Get noticed." (the live site also presents "Build in public. Grow together." as a tagline)
 - Primary domain: abtalks.in
 - Audience: college students, recent graduates, and working professionals in live sessions
-- Cost to participate: free
+- Cost to participate: free — the Terms state the service is **currently
+  provided free of charge**, and ABTalks does not process payments. The
+  homepage phrases it as "most challenges are free to join; paid cohorts are
+  always priced up front", and nobody placed through the recruiter network
+  pays a placement fee. See `legal-and-privacy.md`.
 - Contact: team@abtalks.in
 
 ## Mission / why it exists

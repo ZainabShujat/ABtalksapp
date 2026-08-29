@@ -4,6 +4,12 @@ accessLevel: public
 ---
 # 60-Day Claude AI Challenge
 
+People also ask this as: how does the Claude challenge work · what do I have
+to submit every day · which accounts do I tag · who do I tag on LinkedIn ·
+what happens if I miss a day · do I need to complete all 60 days · what
+GitHub repo do I need · how do I join the Claude challenge · 60 days of
+Claude · prompt engineering challenge · what happens after day 60.
+
 The 60-Day Claude AI Challenge is a free, 60-day build-in-public program focused on prompt engineering and practical AI workflows.
 
 Key points:

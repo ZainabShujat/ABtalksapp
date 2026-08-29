@@ -7,6 +7,17 @@ const ROOT = process.cwd();
 const GENERATED_DIR = path.join(ROOT, 'knowledge', 'generated');
 const SITE_BASE_URL = process.env.SITE_BASE_URL || 'http://localhost:3000';
 
+/**
+ * PUBLIC routes only. Every entry here must be absent from `protectedPaths` in
+ * `middleware.ts` — that check is the only thing standing between this crawler
+ * and authenticated content, and it is done by hand because middleware cannot
+ * be imported from a script.
+ *
+ * `/mission` was removed on 2026-08-28: it IS in `protectedPaths`, so every
+ * previous run captured the login page instead of the mission page and wrote
+ * "Dev mode: use test accounts from seed script" into the knowledge base. The
+ * `LOGIN_MARKERS` guard below now fails the run loudly if that recurs.
+ */
 const ALLOWLIST_ROUTES = [
   { path: '/', slug: 'homepage' },
   { path: '/challenges', slug: 'challenges-page' },
@@ -16,9 +27,20 @@ const ALLOWLIST_ROUTES = [
   { path: '/ai-cohort-register', slug: 'ai-cohort-register' },
   { path: '/ai-cohort-india', slug: 'ai-cohort-india' },
   { path: '/program', slug: 'program-landing-page' },
-  { path: '/mission', slug: 'mission-page' },
+  { path: '/hackathon', slug: 'hackathon-page' },
   { path: '/contact', slug: 'contact-page' },
+  { path: '/terms', slug: 'legal-terms' },
+  { path: '/privacy', slug: 'legal-privacy' },
+  { path: '/cookies', slug: 'legal-cookies' },
 ];
+
+/**
+ * Text that only ever appears on the sign-in page. Seeing it means the crawler
+ * followed an auth redirect, so the route is not public and its content must
+ * not be written — silently ingesting a login page poisons the corpus with
+ * developer instructions.
+ */
+const LOGIN_MARKERS = ['Dev mode', 'Dev Login', 'Accept the Terms of Service and Privacy Policy'];
 
 function domToMarkdown($: cheerio.CheerioAPI, $el: any): string {
   const lines: string[] = [];
@@ -100,6 +122,15 @@ async function ingestRoute(route: string, slug: string): Promise<{ success: bool
   // Extract clean text
   const markdownBody = domToMarkdown($, $main);
 
+  const marker = LOGIN_MARKERS.find((m) => markdownBody.includes(m));
+  if (marker) {
+    return {
+      success: false,
+      chunks: 0,
+      error: `auth redirect detected (matched "${marker}") — route is NOT public, remove it from ALLOWLIST_ROUTES`,
+    };
+  }
+
   const finalMarkdown = `---
 title: ${title}
 route: ${route}
@@ -138,9 +169,15 @@ async function main() {
   }
 
   console.log(`\n[ingest-site] Ingestion complete. ${successCount} successful, ${failCount} failed.`);
-  
+  console.log(`[ingest-site] Routes attempted: ${ALLOWLIST_ROUTES.length}`);
+  console.log(`[ingest-site] Output directory: ${GENERATED_DIR}`);
+  console.log(`[ingest-site] Next step: npm run kb:embed (re-embeds only what changed).`);
+
+  // A failed route means the corpus is now missing or stale for that page.
+  // Exiting non-zero makes that visible in CI instead of scrolling past.
   if (failCount > 0) {
-    console.warn(`[ingest-site] Warning: ${failCount} routes failed. Proceeding with embedding generation anyway for the successful routes.`);
+    console.error(`[ingest-site] ${failCount} route(s) failed — see errors above.`);
+    process.exitCode = 1;
   }
 }
 

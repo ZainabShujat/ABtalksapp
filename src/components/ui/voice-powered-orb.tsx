@@ -139,15 +139,6 @@ const frag = /* glsl */ `
     return vec4(colorIn.rgb / (a + 1e-5), a);
   }
 
-<<<<<<< Updated upstream
-=======
-  const vec3 baseColor1 = vec3(0.05, 0.40, 1.00); // Deep Blue
-  const vec3 baseColor2 = vec3(0.05, 0.90, 0.45); // Bright Green
-  const vec3 baseColor3 = vec3(0.00, 0.65, 0.90); // Cyan Blue
-  const float innerRadius = 0.6;
-  const float noiseScale = 0.65;
-
->>>>>>> Stashed changes
   float light1(float intensity, float attenuation, float dist) {
     return intensity / (1.0 + dist * attenuation);
   }

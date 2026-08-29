@@ -1,5 +1,10 @@
 # Workshops
 
+People also ask this as: what is the next workshop · when is the next
+session · is registration open · how do I register for the workshop · was the
+Figma workshop already held · do you run free webinars · weekly workshop ·
+Saturday workshop · upcoming events · past events.
+
 ABTalks runs recurring public workshops. Two distinct workshop formats are documented below. A third name, "Free AI Bootcamp," appears on the live events calendar with an unresolved relationship to one of them — see the note under AI Tools Workshop.
 
 ## AI Tools Workshop (recurring format)
@@ -28,15 +33,26 @@ Known facts:
 
 ## Related but distinct: Enhance LinkedIn & AI Mock Interview
 
-"Enhance LinkedIn & AI Mock Interview" is a separate ABTalks event — not a workshop, and not a restatement of either workshop above. See the live site extraction for current details.
+"Enhance LinkedIn & AI Mock Interview" is a separate ABTalks event — not a
+workshop, and not a restatement of either workshop above. It ran on 21
+August 2026, 6:00 PM IST, live on YouTube; registration is closed. See
+`events.md`.
 
-## AI Post & Video Generation (Workshop)
+## Create Anything with AI: From Prompt to Published Content
 
-This is a new content generation workshop focusing on AI automation for social media.
+The current live workshop — **Saturday 5 September 2026, 7:00 PM IST, free,
+live on YouTube, registration OPEN**. Previously listed under the working
+title "AI Post & Video Generation" at 6:00 PM; use the title and time above.
 
-Known facts:
-- Platform: YouTube
-- Price: free
-- Curriculum: Turn one idea into a week of content, generate scroll-stopping posts, carousels, and short-form videos with AI, then edit and schedule them.
+Curriculum: prompt engineering fundamentals; role, context and task; style,
+constraints and output; AI image, video, voice and audio generation; AI
+avatars and digital presenters; the script → avatar → voice → video
+pipeline; AI + MCP workflows; and Canva AI content publishing.
 
-(For the most up-to-date schedule of these workshops, refer to the live site extraction `ai-workshop-events.md` which is automatically updated on every build.)
+## Cadence: every Saturday
+
+Since 1 September 2026 the workshops run **weekly on Saturdays**, live on
+YouTube and free. A Saturday whose topic has not been announced yet appears
+on `/ai-workshop/events` as "Workshop — TBA" at 6:00 PM IST, and you can
+register to be notified when it opens. Only one upcoming session accepts
+signups at a time. Full schedule: `/ai-workshop/events` (see `events.md`).

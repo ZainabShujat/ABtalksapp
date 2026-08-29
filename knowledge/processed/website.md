@@ -16,7 +16,6 @@ someone where to go, and never invent a path.
 - `/ai-workshop` — AI Tools Workshop microsite
 - `/ai-workshop/events` — workshop and event listing with dates
 - `/program` — 31-Day AI Cohort public landing page
-- `/hire` — Scout, the recruiter entry point (works signed-out)
 - `/hire/evidence` — evidence resume for a Scout match (there is no
   top-level `/evidence` page)
 - `/contact` — contact page
@@ -30,7 +29,9 @@ someone where to go, and never invent a path.
 
 - `/dashboard`, `/profile`, `/explore` — participant hub
 - `/achievements` — your certificates (see `certificates.md`)
+- `/hire` — Scout, the recruiter entry point (sign-in required)
 - `/challenge/today`, `/challenge/[day]` — daily challenge task
+- `/claude/day/[day]` — Claude Challenge daily task
 - `/quiz/[quizId]` — weekly quiz
 - `/mission` — community/mission page
 - `/marketplace` — redeem Synergy Points
@@ -39,7 +40,8 @@ someone where to go, and never invent a path.
 - `/hackathon/register`, `/hackathon/dashboard`, `/hackathon/submission`
 - `/program/apply`, `/program/assessment`, `/program/dashboard`,
   `/program/day/[day]`, `/program/curriculum`, `/program/videos`,
-  `/program/leaderboard`, `/program/interview` — AI Cohort program area
+  `/program/leaderboard`, `/program/interview`,
+  `/program/cohort-interview/[blueprint]` — AI Cohort program area
 - `/talent/...` — recruiter/talent portal (approved recruiters)
 - `/admin/...` — ABTalks staff only
 

@@ -4,6 +4,10 @@ accessLevel: public
 ---
 # AI Cohort
 
+People also ask this as: what is the AI cohort · 31 day cohort · how do I
+apply to the cohort · what do I build in the cohort · cohort prerequisites ·
+how many hours a day · is the cohort free · what happens after the cohort.
+
 The AI Cohort is a 31-day program for building and deploying a production-grade enterprise AI chatbot.
 
 Core facts:

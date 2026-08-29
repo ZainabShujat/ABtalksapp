@@ -1,66 +1,106 @@
-import { QUICK_QUESTION_IDS, CHATBOT_CATEGORIES, type ChatbotCategory } from "@/data/chatbot-menu";
+import { CHATBOT_CATEGORIES, SUPPORT_EMAIL } from "@/data/chatbot-menu";
+
+/**
+ * The deterministic fast path, running BEFORE retrieval.
+ *
+ * THE RULE FOR ADDING ANYTHING HERE:
+ *
+ *   An intent may return a constant only if the answer is a route, an email
+ *   address, or a UI affordance — something that cannot go stale. Anything
+ *   about dates, eligibility, pricing, tags, rules or program details belongs
+ *   in `knowledge/` and must go through retrieval.
+ *
+ * This rule is not academic. Two intents used to live here that broke it, and
+ * both silently served wrong answers for months, because a match here means
+ * the knowledge base is never consulted:
+ *
+ *   - a Claude Challenge intent listing tags "@abtalksonai, #abtalks,
+ *     #60DaysOfClaude, #60DaysOfGenAI". The live challenge page and the
+ *     official guidelines PDF both say to tag Anthropic, Anil Bajpai and
+ *     ABTalksOnAI. Retrieval had the right answer; this overrode it.
+ *   - an "is ABTalks free" intent answering "completely free" after the site
+ *     had moved to "most challenges are free; paid cohorts are priced up
+ *     front".
+ *
+ * Both are deleted. Do not reintroduce factual answers here, and do not grow
+ * this file into a keyword FAQ — that is what the retrieval pipeline is for.
+ */
+
+export type MatchResult = { answer: string; confidence: number };
 
 const INTENTS: { regex: RegExp; answer: string }[] = [
   {
-    regex: /\b(how\s*to\s*)?(apply|join|work\s*for)\s*(to\s*)?(the\s*)?(abtalks|team|company)\b/i,
-    answer: "If you're interested in joining the ABTalks team or working with us, please email your cover letter, resume, and any other relevant details to team@abtalks.in!",
+    // Careers/recruitment enquiry — an email address, not a fact about a program.
+    regex:
+      /\b(how\s*(do\s*i|to)\s*)?(apply|join|work)\s*(for|with|at)\s*(the\s*)?(abtalks\s*)?(team|company|abtalks)\b.*\b(job|role|hiring|career|work)\b|\bwork\s*(for|with)\s*abtalks\b/i,
+    answer: `If you'd like to work with the ABTalks team, email your cover letter, resume and anything else relevant to ${SUPPORT_EMAIL}.`,
   },
   {
-    regex: /\b(how\s*to\s*)?(apply|register|sign\s*up|join)\s*(to\s*)?(program|cohort|challenge)?\b/i,
-    answer: "To join ABTalks, you can sign in using your Google account at /login. We have multiple programs you can sign up for: The 60-Day Coding Challenge (/challenges), the 60-Day Claude AI Challenge (/claude-signup), and the 31-Day AI Cohort (/ai-cohort-register).",
-  },
-  {
-    regex: /\b(what is|tell me about)\s*(the\s*)?(60\s*day\s*coding\s*challenge|coding\s*challenge)\b/i,
-    answer: "The 60-Day Coding Challenge is a self-paced, community-driven program where you complete one coding task every day for 60 days. You track your progress on our platform, and it's completely free to participate. You can sign up at /challenges!",
-  },
-  {
-    regex: /\b(what is|tell me about)\s*(the\s*)?(60\s*day\s*claude\s*challenge|claude\s*ai\s*challenge)\b/i,
-    answer: "The 60-Day Claude AI Challenge focuses on mastering prompt engineering. Every day you'll receive a new AI prompt task to complete using Claude. To participate, post your daily update with the required tags: @abtalksonai, #abtalks, #60DaysOfClaude, #60DaysOfGenAI. Sign up at /claude-signup!",
-  },
-  {
-    regex: /\b(what is|tell me about)\s*(the\s*)?(ai\s*cohort|31\s*day\s*ai\s*cohort)\b/i,
-    answer: "The 31-Day AI Cohort is our flagship intensive program where participants build a production-grade enterprise chatbot in 31 days. It includes daily guided missions, mentorship, and a final capstone project. You can register your interest at /ai-cohort-register.",
-  },
-  {
-    regex: /\b(who is|tell me about)\s*(anil|anil\s*bajpai|the\s*founder)\b/i,
-    answer: "Anil Bajpai is the founder of ABTalks. He created this community to help students and professionals build real-world skills through public, consistent coding.",
-  },
-  {
-    regex: /\b(what is|tell me about)\s*abtalks\b/i,
-    answer: "ABTalks is India's coding community for college students to learn, build, and accelerate careers through visible proof of work. Our tagline is 'Build in public. Grow together.'",
-  },
-  {
-    regex: /\b(is\s*abtalks\s*free|how\s*much\s*does\s*it\s*cost)\b/i,
-    answer: "Yes! The community and every flagship program (like the 60-Day Challenges and the AI Cohort) are completely free for participants.",
-  },
-  {
-    regex: /\b(who\s*can\s*participate|is\s*this\s*for\s*me)\b/i,
-    answer: "ABTalks serves students, recruiters, working professionals, and investors. Anyone looking to learn, build, or hire is welcome to join the community!",
-  },
-  {
-    regex: /\b(contact\s*email|how\s*to\s*contact|email\s*address)\b/i,
-    answer: "You can contact the ABTalks team directly at team@abtalks.in.",
+    regex: /\b(contact\s*(email|details)?|email\s*address|support\s*email|reach\s*(you|the\s*team))\b/i,
+    answer: `You can reach the ABTalks team at ${SUPPORT_EMAIL}.`,
   },
 ];
 
-export function matchQuestion(query: string): { answer: string; confidence: number } | null {
-  const lowerQuery = query.toLowerCase().trim();
-  
-  // Check regex intents first
+/**
+ * Requests for someone else's data, or to act on another person's account.
+ *
+ * Retrieval cannot catch these: "can you tell me my friend's profile details"
+ * is built entirely from words the knowledge base uses constantly, so it
+ * sails through the confidence gate and lands on real documents about
+ * profiles. The problem was never that the corpus lacks the answer — it is
+ * that answering at all is the wrong behaviour. That makes it a scope rule,
+ * checked before retrieval, not a knowledge gap.
+ */
+/**
+ * Written to tolerate how people actually type possessives: apostrophes are
+ * routinely dropped ("someone elses certificate") and the noun is as often
+ * plural as singular ("another students submission"). Matching only the
+ * grammatically correct forms let the two most natural phrasings straight
+ * through, which is the opposite of what a privacy guard is for.
+ */
+const THIRD_PARTY_DATA =
+  /\b(my\s+)?(friends?'?s?|someone\s*else'?s?|somebody\s*else'?s?|another\s+(person|user|student|candidate|member|participant)s?'?s?|other\s+(people|students|users)'?s?|his|her|their)\b[^?]*\b(profile|account|details|data|email|phone|number|score|submission|certificate|application|progress|report)s?\b/i;
+
+export function isThirdPartyDataRequest(input: string): boolean {
+  return THIRD_PARTY_DATA.test(input.trim());
+}
+
+export const THIRD_PARTY_DATA_REPLY =
+  `I can't look up or share anyone else's account, profile or personal details — that information is private to them. ` +
+  `I can help with anything about ABTalks itself, or you can reach the team at ${SUPPORT_EMAIL}.`;
+
+/** Menu / greeting / navigation commands. UI affordances, never facts. */
+const MENU_COMMANDS =
+  /^(menu|help|options|start|hi|hey|hello|main\s*menu|home|topics|what\s*can\s*you\s*do\??)$/i;
+
+export function isMenuCommand(input: string): boolean {
+  return MENU_COMMANDS.test(input.trim());
+}
+
+/**
+ * Resolves "5" or "claude challenge" to a menu category, so a user can drive
+ * the menu by number without that turning into a factual answer — the returned
+ * category becomes a retrieval query, not a canned reply.
+ */
+export function matchCategory(input: string): { label: string; query: string } | null {
+  const trimmed = input.trim();
+  const asNumber = /^\d{1,2}$/.test(trimmed) ? Number(trimmed) : null;
+  const category =
+    asNumber !== null
+      ? CHATBOT_CATEGORIES.find((c) => c.number === asNumber)
+      : CHATBOT_CATEGORIES.find(
+          (c) => c.label.toLowerCase() === trimmed.toLowerCase(),
+        );
+  if (!category) return null;
+  return { label: category.label, query: category.seedQuestion };
+}
+
+export function matchQuestion(query: string): MatchResult | null {
+  const trimmed = query.trim();
   for (const intent of INTENTS) {
-    if (intent.regex.test(lowerQuery)) {
-      return { answer: intent.answer, confidence: 1.0 };
+    if (intent.regex.test(trimmed)) {
+      return { answer: intent.answer, confidence: 1 };
     }
   }
-
-  // Exact match for category numbers
-  const asNumber = /^\d+$/.test(lowerQuery) ? parseInt(lowerQuery, 10) : null;
-  if (asNumber !== null) {
-    const category = CHATBOT_CATEGORIES.find((c) => c.number === asNumber);
-    if (category) {
-      return { answer: `You selected ${category.label}. I can answer any questions you have about this topic!`, confidence: 1.0 };
-    }
-  }
-
   return null;
 }

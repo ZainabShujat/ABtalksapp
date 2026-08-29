@@ -6,13 +6,18 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   CHATBOT_CATEGORIES,
-  QUICK_QUESTION_IDS,
+  OPENING_SUGGESTIONS,
   SUPPORT_EMAIL,
-  type ChatbotCategory,
+  followUpsFor,
 } from "@/data/chatbot-menu";
 import { ChatLauncher } from "./ChatLauncher";
 import { ChatBubble } from "./ChatBubble";
-import { matchQuestion } from "@/lib/chatbot-matcher";
+import {
+  isMenuCommand,
+  matchCategory,
+  matchQuestion,
+} from "@/lib/chatbot-matcher";
+
 
 type Message = {
   id: string;
@@ -24,6 +29,15 @@ type Message = {
   feedback?: "helpful" | "not-helpful";
 };
 
+/**
+ * A conversation, held in memory for the life of the page ONLY.
+ *
+ * Nothing is written to `localStorage`: a refresh, a new tab or closing the tab
+ * starts a fresh chat. Support conversations routinely contain a person's
+ * situation and sometimes their email, and keeping that on a shared or public
+ * machine to save someone re-typing one question is a bad trade. "New chat"
+ * still works within a page load.
+ */
 type Session = {
   id: string;
   title: string;
@@ -32,27 +46,19 @@ type Session = {
   updatedAt: number;
 };
 
-const SESSION_KEY = "abtalks_chatbot_sessions";
-
-// Use existing categories/questions as shortcuts to send text.
-const QUICK_QUESTIONS = QUICK_QUESTION_IDS.map((id) => {
-  // A simple map since we removed CHATBOT_QUESTIONS to rely on RAG.
-  const map: Record<string, string> = {
-    "is-abtalks-free": "Is ABTalks free?",
-    "who-can-participate": "Who can participate?",
-    "claude-challenge-tagging": "What are the required tags for the Claude Challenge?",
-    "ai-cohort-overview": "What is the AI Cohort?",
-    "contact-email": "What is the contact email?",
-  };
-  return { id, canonicalQuestion: map[id] || "Tell me about ABTalks" };
-});
+/** Session titles come from the first question, trimmed for the list. */
+function titleFrom(text: string): string {
+  const clean = text.trim().replace(/\s+/g, " ");
+  return clean.length > 34 ? `${clean.slice(0, 34)}...` : clean;
+}
 
 function generateId() {
   return `id-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 }
 
 const GREETING = "Hi! I'm the ABTalks Help Assistant.";
-const FALLBACK_MESSAGE = "Sorry, I couldn't give you a useful answer. You can try rephrasing your question, or contact the ABTalks team directly at team@abtalks.in.";
+const NOT_HELPFUL_MESSAGE = `Sorry that wasn't useful. The ABTalks team can help you directly — email ${SUPPORT_EMAIL} and they'll get back to you.`;
+const TRANSPORT_ERROR_MESSAGE = `Something went wrong on my side. Please try again in a moment, or email ${SUPPORT_EMAIL} if it keeps happening.`;
 
 function renderMenuText(): string {
   const lines = CHATBOT_CATEGORIES.map((c) => `${c.number}. ${c.label}`);
@@ -71,17 +77,57 @@ export function ChatWidget() {
   
   const hydrated = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  /** True mid-resize: the drag leaves the panel, and must not collapse it. */
+  const resizingRef = useRef(false);
 
-  // Initialize
-  useEffect(() => {
-    if (hydrated.current) return;
-    hydrated.current = true;
-    startNewSession();
-  }, []);
+  /**
+   * Opening is the only place a session is created.
+   *
+   * Deliberately not a mount effect: a visitor who never opens the chat should
+   * cost nothing, and creating state in an effect just to read it back is the
+   * cascading-render pattern React warns about.
+   */
+  function openWidget() {
+    if (!hydrated.current) {
+      hydrated.current = true;
+      startNewSession();
+    }
+    setOpen(true);
+    setMinimized(false);
+  }
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [sessions, currentSessionId, viewState]);
+
+  /**
+   * Clicking anywhere outside the panel collapses it back to the bubble.
+   *
+   * `pointerdown` rather than `click`: the panel should get out of the way the
+   * moment someone reaches for the page behind it, and a `click` listener only
+   * fires after mouseup, which feels like a lag on a panel this size. It also
+   * avoids swallowing the press that a `click` handler would.
+   *
+   * Bound only while open, so the page carries no listener for the (common)
+   * case of a visitor who never opens the chat. `mousedown` on the resize
+   * handle drags outside the panel bounds, so the drag is checked explicitly
+   * rather than by geometry.
+   */
+  useEffect(() => {
+    if (!open) return;
+
+    function onPointerDown(event: PointerEvent) {
+      if (resizingRef.current) return;
+      const target = event.target as Node | null;
+      if (target && panelRef.current?.contains(target)) return;
+      setOpen(false);
+      setMinimized(true);
+    }
+
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
 
   const currentSession = currentSessionId ? sessions[currentSessionId] : null;
   const messages = currentSession?.messages || [];
@@ -118,9 +164,10 @@ export function ChatWidget() {
     setSessions(prev => {
       const session = prev[currentSessionId];
       // Generate a title based on the first user message
-      const title = session.messages.filter(m => m.isUser).length === 0 
-        ? text.slice(0, 30) + (text.length > 30 ? "..." : "")
-        : session.title;
+      const title =
+        session.messages.filter((m) => m.isUser).length === 0
+          ? titleFrom(text)
+          : session.title;
         
       return {
         ...prev,
@@ -143,9 +190,15 @@ export function ChatWidget() {
     updateSession(currentSessionId, { messages: updatedMessages });
     
     if (kind === "not-helpful") {
-      // Add the fallback apology directly to the chat
-      const fallbackMsg: Message = { id: generateId(), text: FALLBACK_MESSAGE, isUser: false, timestamp: Date.now() };
-      updateSession(currentSessionId, { messages: [...updatedMessages, fallbackMsg] });
+      // Escalate rather than apologise and stop. A "not helpful" with no route
+      // forward is the moment a support bot loses the user for good.
+      const escalation: Message = {
+        id: generateId(),
+        text: NOT_HELPFUL_MESSAGE,
+        isUser: false,
+        timestamp: Date.now(),
+      };
+      updateSession(currentSessionId, { messages: [...updatedMessages, escalation] });
     }
   }
 
@@ -154,6 +207,24 @@ export function ChatWidget() {
     updateSession(currentSessionId, {
       dismissedSuggestions: [...currentSession.dismissedSuggestions, suggestionId]
     });
+  }
+
+  function deleteSession(id: string) {
+    setSessions((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    if (id === currentSessionId) {
+      const remaining = Object.values(sessions)
+        .filter((s) => s.id !== id)
+        .sort((a, b) => b.updatedAt - a.updatedAt);
+      if (remaining.length > 0) {
+        setCurrentSessionId(remaining[0].id);
+      } else {
+        startNewSession();
+      }
+    }
   }
 
   async function streamApiMessage(text: string) {
@@ -174,33 +245,25 @@ export function ChatWidget() {
     });
 
     try {
-      // Get current history for API, ensuring it starts with a 'user' message
-      // (Anthropic API strictly requires the first message to be 'user')
-      // Anthropic API requires alternating user/assistant turns, starting with 'user'
+      // Providers require strictly alternating user/assistant turns starting
+      // with 'user', so the greeting and any consecutive same-role messages
+      // (which happen when a request fails) are folded out here.
       const session = sessions[currentSessionId];
-      let history: { role: string; content: string }[] = [];
-      let nextExpectedRole = 'user';
+      const history: { role: "user" | "assistant"; content: string }[] = [];
+      let nextExpectedRole: "user" | "assistant" = "user";
 
       for (const m of session.messages) {
-        const role = m.isUser ? 'user' : 'assistant';
-        // Skip leading assistant messages or consecutive messages of the same role
+        const role = m.isUser ? "user" : "assistant";
         if (role === nextExpectedRole && m.text.trim().length > 0) {
           history.push({ role, content: m.text });
-          nextExpectedRole = role === 'user' ? 'assistant' : 'user';
+          nextExpectedRole = role === "user" ? "assistant" : "user";
         }
       }
 
-      // Finally, append the current user's message
-      if (nextExpectedRole === 'assistant') {
-         // If we are expecting an assistant message but the user sent another one (e.g. previous API failed)
-         // we must drop the last user message or combine them. We'll combine them for simplicity.
-         if (history.length > 0) {
-             history[history.length - 1].content += `\n\n${text}`;
-         } else {
-             history.push({ role: 'user', content: text });
-         }
+      if (nextExpectedRole === "assistant" && history.length > 0) {
+        history[history.length - 1].content += `\n\n${text}`;
       } else {
-         history.push({ role: 'user', content: text });
+        history.push({ role: "user", content: text });
       }
 
       const response = await fetch('/api/chat', {
@@ -223,55 +286,54 @@ export function ChatWidget() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let fullText = "";
-
-      // Simple SSE parser
       let buffer = "";
-      while (true) {
+
+      // One state update per network chunk, not per character.
+      //
+      // The previous implementation appended one character at a time behind a
+      // 10ms sleep, which meant a 600-character answer scheduled 600 React
+      // renders across six seconds and locked up the widget. The provider
+      // already streams in human-sized pieces, so rendering each piece as it
+      // arrives reads as live typing and costs a handful of renders.
+      for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
-        
+
         buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || ""; // Keep the incomplete line in the buffer
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
 
+        let batched = "";
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const dataStr = line.slice(6);
-            if (dataStr === '[DONE]') continue;
-            
-            try {
-              const data = JSON.parse(dataStr);
-              let chunkText = "";
-              
-              if (data.type === 'content_block_delta' && data.delta?.text) {
-                chunkText = data.delta.text; // Anthropic format
-              } else if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-                chunkText = data.candidates[0].content.parts[0].text; // Gemini format
-              }
-
-              if (chunkText) {
-                // Letter by letter typewriter effect
-                for (let i = 0; i < chunkText.length; i++) {
-                  fullText += chunkText[i];
-                  setSessions(prev => {
-                    const s = prev[currentSessionId];
-                    if (!s) return prev;
-                    return {
-                      ...prev,
-                      [currentSessionId]: {
-                        ...s,
-                        messages: s.messages.map(m => m.id === id ? { ...m, text: fullText } : m),
-                      }
-                    };
-                  });
-                  // 10ms delay per character
-                  await new Promise(resolve => setTimeout(resolve, 10));
-                }
-              }
-            } catch (e) {
-              // Ignore parse errors from partial JSON
-            }
+          if (!line.startsWith("data:")) continue;
+          const payload = line.slice(5).trim();
+          if (!payload || payload === "[DONE]") continue;
+          try {
+            // The server normalises every provider to `{ text }`, so the
+            // browser parses one shape and never learns who answered.
+            const data = JSON.parse(payload) as { text?: string };
+            if (data.text) batched += data.text;
+          } catch {
+            // Partial frame split across reads — the buffer will retry it.
           }
+        }
+
+        if (batched) {
+          fullText += batched;
+          const snapshot = fullText;
+          setSessions((prev) => {
+            const s = prev[currentSessionId];
+            if (!s) return prev;
+            return {
+              ...prev,
+              [currentSessionId]: {
+                ...s,
+                messages: s.messages.map((m) =>
+                  m.id === id ? { ...m, text: snapshot } : m,
+                ),
+              },
+            };
+          });
         }
       }
 
@@ -287,71 +349,102 @@ export function ChatWidget() {
         };
       });
 
-    } catch (err: any) {
-      console.error(err);
-      // Fallback update
-      setSessions(prev => {
+    } catch {
+      // Never surface a raw error string to a visitor — it leaks internals and
+      // tells them nothing they can act on.
+      setSessions((prev) => {
         const s = prev[currentSessionId];
+        if (!s) return prev;
         return {
           ...prev,
           [currentSessionId]: {
             ...s,
-            messages: s.messages.map(m => m.id === id ? {
-              ...m,
-              text: `API Error: ${err.message || 'Unknown error'}`,
-              streaming: false,
-              showFeedback: true,
-            } : m),
-          }
+            messages: s.messages.map((m) =>
+              m.id === id
+                ? {
+                    ...m,
+                    text: TRANSPORT_ERROR_MESSAGE,
+                    streaming: false,
+                    showFeedback: true,
+                  }
+                : m,
+            ),
+          },
         };
       });
     }
+  }
+
+  /** Appends a user turn and an immediate canned reply, with no API call. */
+  function respondLocally(userText: string, botText: string, feedback = false) {
+    if (!currentSessionId) return;
+    const userMsg: Message = {
+      id: generateId(),
+      text: userText,
+      isUser: true,
+      timestamp: Date.now(),
+    };
+    const botMsg: Message = {
+      id: generateId(),
+      text: botText,
+      isUser: false,
+      timestamp: Date.now(),
+      showFeedback: feedback,
+    };
+    setSessions((prev) => {
+      const s = prev[currentSessionId];
+      if (!s) return prev;
+      const title = s.messages.some((m) => m.isUser) ? s.title : titleFrom(userText);
+      return {
+        ...prev,
+        [currentSessionId]: {
+          ...s,
+          title,
+          messages: [...s.messages, userMsg, botMsg],
+          updatedAt: Date.now(),
+        },
+      };
+    });
   }
 
   function handleSubmit(raw: string) {
     const trimmed = raw.trim();
     if (!trimmed) return;
     setInput("");
-    
-    const lower = trimmed.toLowerCase();
-    
-    // Check for explicit menu commands
-    if (["menu", "home", "main menu"].includes(lower)) {
-      if (currentSessionId) {
-        const userMsg: Message = { id: generateId(), text: trimmed, isUser: true, timestamp: Date.now() };
-        const botMsg: Message = { id: generateId(), text: renderMenuText(), isUser: false, timestamp: Date.now() };
-        setSessions(prev => {
-          const s = prev[currentSessionId];
-          return { ...prev, [currentSessionId]: { ...s, messages: [...s.messages, userMsg, botMsg] } };
-        });
-      }
+
+    // Menu, greetings and navigation are UI, so they answer instantly.
+    if (isMenuCommand(trimmed)) {
+      respondLocally(trimmed, renderMenuText());
       return;
     }
 
-    // Try local matching first (Hybrid RAG approach)
-    const localMatch = matchQuestion(trimmed);
-    
-    if (localMatch) {
-      if (currentSessionId) {
-        const userMsg: Message = { id: generateId(), text: trimmed, isUser: true, timestamp: Date.now() };
-        const botMsg: Message = { id: generateId(), text: localMatch.answer, isUser: false, timestamp: Date.now(), showFeedback: true };
-        setSessions(prev => {
-          const s = prev[currentSessionId];
-          return { ...prev, [currentSessionId]: { ...s, messages: [...s.messages, userMsg, botMsg] } };
-        });
-      }
+    // A category pick ("5", "Certificates") becomes a real retrieval query
+    // rather than a canned section blurb — the menu is a shortcut INTO the
+    // knowledge base, not a parallel set of answers that can drift from it.
+    const category = matchCategory(trimmed);
+    if (category) {
+      addUserMessage(trimmed);
+      void streamApiMessage(category.query);
       return;
     }
 
-    // Fallback to RAG via API
+    // The remaining fast-path intents return an email address or a route, never
+    // a fact. Everything factual goes through retrieval — see chatbot-matcher.
+    const routing = matchQuestion(trimmed);
+    if (routing) {
+      respondLocally(trimmed, routing.answer, true);
+      return;
+    }
+
     addUserMessage(trimmed);
-    streamApiMessage(trimmed);
+    void streamApiMessage(trimmed);
   }
 
   const [size, setSize] = useState({ width: 400, height: 600 });
 
   const startResize = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
+    resizingRef.current = true;
     const startX = e.clientX;
     const startY = e.clientY;
     const startW = size.width;
@@ -372,6 +465,7 @@ export function ChatWidget() {
     };
 
     const onMouseUp = () => {
+      resizingRef.current = false;
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
     };
@@ -381,20 +475,33 @@ export function ChatWidget() {
   };
 
   if (!open && !minimized) {
-    return <ChatLauncher open={false} onToggle={() => setOpen(true)} />;
+    return <ChatLauncher open={false} onToggle={openWidget} />;
   }
 
   const sortedSessions = Object.values(sessions).sort((a, b) => b.updatedAt - a.updatedAt);
-  const visibleSuggestions = QUICK_QUESTIONS.filter(q => !currentSession?.dismissedSuggestions.includes(q.id)).slice(0, 3);
+
+  // Suggestions follow the conversation: after a Claude Challenge answer the
+  // useful next questions are about posting and tagging, not a generic list.
+  // Capped at three — a wall of pills reads as a phone menu and pushes people
+  // away from typing, which is what this assistant is actually good at.
+  const lastUserQuestion = [...messages].reverse().find((m) => m.isUser)?.text ?? "";
+  const contextual = followUpsFor(lastUserQuestion);
+  const suggestionPool = (
+    contextual.length > 0
+      ? contextual.map((question) => ({ id: `ctx-${question}`, question }))
+      : OPENING_SUGGESTIONS
+  ).filter((q) => !currentSession?.dismissedSuggestions.includes(q.id));
+  const visibleSuggestions = suggestionPool.slice(0, 3);
 
   return (
     <>
       {(!open && minimized) && (
-        <ChatLauncher open={false} onToggle={() => { setOpen(true); setMinimized(false); }} />
+        <ChatLauncher open={false} onToggle={openWidget} />
       )}
       
       {open && (
         <div 
+          ref={panelRef}
           className="theme-abtalks-orange fixed bottom-4 right-4 z-50 flex max-h-[calc(100vh-8rem)] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border bg-background shadow-2xl"
           style={{ width: size.width, height: size.height }}
         >
@@ -451,18 +558,32 @@ export function ChatWidget() {
               ) : (
                 <div className="flex flex-col gap-1">
                   {sortedSessions.map(s => (
-                    <button
+                    <div
                       key={s.id}
-                      onClick={() => { setCurrentSessionId(s.id); setViewState("chat"); }}
-                      className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition ${
-                        s.id === currentSessionId ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      className={`group flex w-full items-center rounded-lg transition ${
+                        s.id === currentSessionId ? "bg-muted" : "hover:bg-muted/50"
                       }`}
                     >
-                      <span className="truncate pr-2">{s.title}</span>
-                      <span className="text-[10px] whitespace-nowrap opacity-70">
-                        {new Date(s.updatedAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </button>
+                      <button
+                        onClick={() => { setCurrentSessionId(s.id); setViewState("chat"); }}
+                        className={`flex min-w-0 flex-1 items-center justify-between px-3 py-2 text-left text-sm ${
+                          s.id === currentSessionId ? "font-medium text-foreground" : "text-muted-foreground group-hover:text-foreground"
+                        }`}
+                      >
+                        <span className="truncate pr-2">{s.title}</span>
+                        <span className="text-[10px] whitespace-nowrap opacity-70">
+                          {new Date(s.updatedAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => deleteSession(s.id)}
+                        className="mr-1 rounded-full p-1.5 text-muted-foreground opacity-0 transition hover:bg-background hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
+                        aria-label={`Delete chat: ${s.title}`}
+                        title="Delete chat"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -514,10 +635,10 @@ export function ChatWidget() {
                     <div key={q.id} className="group relative flex items-center">
                       <button
                         type="button"
-                        onClick={() => handleSubmit(q.canonicalQuestion)}
+                        onClick={() => handleSubmit(q.question)}
                         className="rounded-full border border-border bg-background py-1 pl-2.5 pr-6 text-xs text-foreground transition hover:bg-muted"
                       >
-                        {q.canonicalQuestion}
+                        {q.question}
                       </button>
                       <button 
                         onClick={() => dismissSuggestion(q.id)}
