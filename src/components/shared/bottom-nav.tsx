@@ -77,6 +77,9 @@ export function BottomNav() {
     pathname === "/" ||
     pathname === "/dashboard" ||
     pathname === "/profile" ||
+    pathname === "/jobs" ||
+    pathname.startsWith("/jobs/") ||
+    pathname === "/achievements" ||
     // Every challenge track renders inside DashboardShell, which carries its
     // own sidebar/footer navigation.
     pathname === "/claude" ||

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { auth } from "@/auth";
-import { AppHeader } from "@/components/shared/app-header";
+import { DashboardShell } from "@/components/dashboard-hub/dashboard-shell";
 import { ApplyJobButton } from "@/components/jobs/apply-job-button";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -44,18 +44,19 @@ export default async function JobDetailPage({ params }: PageProps) {
 
   const { job, alreadyApplied } = data;
 
-  const headerUser = {
-    name: session.user.name ?? null,
+  const shellUser = {
+    name: session.user.name ?? session.user.email ?? "",
     email: session.user.email ?? "",
     image: session.user.image ?? null,
-    role: session.user.role ?? "STUDENT",
-    isAdmin: session.user.isAdmin ?? false,
   };
 
   return (
-    <div className="flex min-h-svh flex-col bg-muted/30">
-      <AppHeader user={headerUser} />
-      <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6">
+    <DashboardShell
+      user={shellUser}
+      isAdmin={session.user.isAdmin ?? false}
+      showSectionNav={false}
+    >
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6">
         <Link
           href="/jobs"
           className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "mb-4")}
@@ -99,7 +100,7 @@ export default async function JobDetailPage({ params }: PageProps) {
             isOpen={job.isOpen}
           />
         </div>
-      </div>
-    </div>
+      </main>
+    </DashboardShell>
   );
 }
