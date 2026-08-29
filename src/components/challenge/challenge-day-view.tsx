@@ -1,11 +1,10 @@
 "use client";
 
-import { type ReactNode, useId, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   BookOpen,
   Check,
-  ChevronDown,
   Clock,
   Copy,
   ExternalLink,
@@ -14,79 +13,18 @@ import {
   Lightbulb,
   ListChecks,
   PlayCircle,
-  Send,
   Share2,
   Tag,
-  type LucideIcon,
   Wrench,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { submitDayAction } from "@/app/actions/submission-actions";
-import { useSynergy } from "@/components/shared/synergy-provider";
-import { ClaudeSharePromptDialog } from "@/components/claude/claude-share-prompt-dialog";
-import { CLAUDE_DAY0_SHARE_PENDING_KEY } from "@/components/claude/claude-day0-share-prompt";
-import {
-  isClaudeMilestoneDay,
-  type ClaudeMilestoneDay,
-} from "@/lib/claude-linkedin-prompts";
 import type { DayContent } from "@/components/challenge/day-content";
 import { trackHref, type TrackConfig } from "@/components/challenge/track-config";
 import { ToolChip } from "@/components/program/day-section-card";
+import { DaySection } from "@/components/challenge/day-section";
+import { DaySubmitPanel } from "@/components/challenge/day-submit-panel";
 import { dsButtonVariants } from "@/components/design/ds-button";
-
-function DaySection({
-  title,
-  icon: Icon,
-  children,
-}: {
-  title: string;
-  icon: LucideIcon;
-  children: ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  const panelId = useId();
-
-  return (
-    <section className="overflow-hidden rounded-[12px] border border-[#E0E0E0] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-      <h2>
-        <button
-          type="button"
-          onClick={() => setOpen((current) => !current)}
-          aria-expanded={open}
-          aria-controls={panelId}
-          className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition-colors hover:bg-[#FBF9F7] focus-visible:ring-2 focus-visible:ring-[#E05226] focus-visible:ring-inset md:px-5 md:py-5"
-        >
-          <span className="flex min-w-0 items-center gap-2.5">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-[#FFECE3]">
-              <Icon className="size-4 text-[#E05226]" aria-hidden />
-            </span>
-            <span className="font-heading text-base font-semibold text-[#111111] md:text-lg">
-              {title}
-            </span>
-          </span>
-          <ChevronDown
-            className={cn(
-              "size-5 shrink-0 text-[#8F8F8F] transition-transform",
-              open && "rotate-180",
-            )}
-            aria-hidden
-          />
-        </button>
-      </h2>
-      {open ? (
-        <div
-          id={panelId}
-          className="border-t border-[#E0E0E0] px-4 py-4 md:px-5 md:py-5"
-        >
-          {children}
-        </div>
-      ) : null}
-    </section>
-  );
-}
 
 function getYoutubeVideoId(url: string): string | null {
   try {
@@ -129,19 +67,7 @@ export function ChallengeDayView({
   existingSubmission,
   canSubmit,
 }: Props) {
-  const router = useRouter();
-  const { refresh } = useSynergy();
-  const [githubUrl, setGithubUrl] = useState(
-    existingSubmission?.githubUrl ?? "",
-  );
-  const [linkedinUrl, setLinkedinUrl] = useState(
-    existingSubmission?.linkedinUrl ?? "",
-  );
-  const [confirmed, setConfirmed] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
-  const [milestoneDialogDay, setMilestoneDialogDay] =
-    useState<ClaudeMilestoneDay | null>(null);
 
   const solutionVideoUrl =
     content.solutionVideoUrl ?? content.task.solutionVideoUrl;
@@ -158,65 +84,8 @@ export function ChallengeDayView({
     }
   };
 
-  const handleSubmit = async () => {
-    if (!confirmed) return;
-
-    setSubmitting(true);
-    try {
-      const fd = new FormData();
-      fd.append("githubUrl", githubUrl.trim());
-      fd.append("linkedinUrl", linkedinUrl.trim());
-      fd.append("dayNumber", String(dayNumber));
-      fd.append("enrollmentId", enrollmentId);
-      fd.append("confirmed", "true");
-
-      const result = await submitDayAction(fd);
-
-      if (result.ok) {
-        refresh();
-        const synergyMsg =
-          result.synergyAwarded !== undefined
-            ? `Day ${dayNumber} submitted! +${result.synergyAwarded} synergy`
-            : `Day ${dayNumber} submitted!`;
-        toast.success(synergyMsg);
-        if (dayNumber === 1) {
-          try {
-            window.localStorage.removeItem(CLAUDE_DAY0_SHARE_PENDING_KEY);
-          } catch {
-            // ignore
-          }
-        }
-        if (isClaudeMilestoneDay(dayNumber)) {
-          setMilestoneDialogDay(dayNumber);
-          setSubmitting(false);
-          return;
-        }
-        router.push(backHref);
-      } else {
-        toast.error(result.message);
-        setSubmitting(false);
-      }
-    } catch {
-      toast.error("Submission failed");
-      setSubmitting(false);
-    }
-  };
-
   return (
     <div className="bg-[#FBF9F7] px-5 py-8 font-content text-[#111111] sm:px-8">
-      {milestoneDialogDay != null ? (
-        <ClaudeSharePromptDialog
-          open
-          day={milestoneDialogDay}
-          onOpenChange={(open) => {
-            if (!open) {
-              setMilestoneDialogDay(null);
-              router.push(backHref);
-            }
-          }}
-        />
-      ) : null}
-
       <div className="mx-auto w-full max-w-[1500px] space-y-5">
         <nav aria-label="Breadcrumb">
           <ol className="flex flex-wrap items-center gap-2 text-sm">
@@ -269,7 +138,7 @@ export function ChallengeDayView({
           </div>
         </header>
 
-        <DaySection title="Prompt Template" icon={FileCode}>
+        <DaySection title="Prompt Template" icon={<FileCode aria-hidden />}>
           <div className="mb-3">
             <button
               type="button"
@@ -295,7 +164,7 @@ export function ChallengeDayView({
         </DaySection>
 
         {solutionVideoUrl ? (
-          <DaySection title="Tutorial Video" icon={PlayCircle}>
+          <DaySection title="Tutorial Video" icon={<PlayCircle aria-hidden />}>
             <p className="mb-3 text-xs text-[#8F8F8F]">
               Step-by-step video guide
             </p>
@@ -338,7 +207,7 @@ export function ChallengeDayView({
         ) : null}
 
         {content.tool ? (
-          <DaySection title="Tool of the Day" icon={Wrench}>
+          <DaySection title="Tool of the Day" icon={<Wrench aria-hidden />}>
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <span className="font-semibold text-[#111111]">
                 {content.tool.name}
@@ -375,7 +244,7 @@ export function ChallengeDayView({
           </DaySection>
         ) : null}
 
-        <DaySection title={content.task.title} icon={ListChecks}>
+        <DaySection title={content.task.title} icon={<ListChecks aria-hidden />}>
           <ol className="space-y-3">
             {content.task.steps.map((step, i) => (
               <li key={i} className="flex items-start gap-3">
@@ -390,7 +259,7 @@ export function ChallengeDayView({
           </ol>
         </DaySection>
 
-        <DaySection title="What You'll Learn" icon={Lightbulb}>
+        <DaySection title="What You'll Learn" icon={<Lightbulb aria-hidden />}>
           <p className="mb-4 text-sm leading-relaxed text-[#4B4B4B]">
             {content.learning.summary}
           </p>
@@ -412,7 +281,7 @@ export function ChallengeDayView({
         </DaySection>
 
         {resources.length > 0 ? (
-          <DaySection title="Resources" icon={BookOpen}>
+          <DaySection title="Resources" icon={<BookOpen aria-hidden />}>
             <ul className="space-y-2">
               {resources.map((url, i) => {
                 let label = url;
@@ -440,7 +309,7 @@ export function ChallengeDayView({
           </DaySection>
         ) : null}
 
-        <DaySection title="LinkedIn Post Guidelines" icon={Share2}>
+        <DaySection title="LinkedIn Post Guidelines" icon={<Share2 aria-hidden />}>
           <p className="mb-2 text-xs text-[#8F8F8F]">{content.engagement.type}</p>
           <p className="mb-3 text-sm leading-relaxed text-[#4B4B4B]">
             {content.engagement.description}
@@ -480,7 +349,7 @@ export function ChallengeDayView({
           </div>
         </DaySection>
 
-        <DaySection title="Your Deliverable" icon={FileOutput}>
+        <DaySection title="Your Deliverable" icon={<FileOutput aria-hidden />}>
           <p className="text-sm text-[#4B4B4B]">
             {content.deliverable.description}
           </p>
@@ -489,150 +358,13 @@ export function ChallengeDayView({
           </span>
         </DaySection>
 
-        {canSubmit ? (
-          <section className="rounded-[12px] border border-[#E0E0E0] bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] md:p-5">
-            <h2 className="mb-4 font-heading text-base font-semibold text-[#111111] md:text-lg">
-              Submit Day {dayNumber}
-            </h2>
-            <div className="space-y-5">
-              <div className="flex items-start gap-3 rounded-[12px] border border-[#E05226]/30 bg-[#FFECE3]/50 p-4">
-                <input
-                  id="confirm-task"
-                  type="checkbox"
-                  checked={confirmed}
-                  onChange={(e) => setConfirmed(e.target.checked)}
-                  disabled={submitting}
-                  className="mt-0.5 size-4 shrink-0 rounded border border-[#E0E0E0] accent-[#E05226]"
-                />
-                <label
-                  htmlFor="confirm-task"
-                  className="text-sm font-medium leading-snug text-[#111111]"
-                >
-                  I confirm I have completed today&apos;s task.
-                </label>
-              </div>
-
-              <div className="space-y-4">
-                <p className="text-sm font-medium text-[#8F8F8F]">
-                  Add proof (optional, earns more synergy)
-                </p>
-                <div className="space-y-2">
-                  <label
-                    htmlFor="github-url"
-                    className="text-sm font-medium text-[#111111]"
-                  >
-                    GitHub URL
-                  </label>
-                  <Input
-                    id="github-url"
-                    type="url"
-                    placeholder="GitHub commit or repo URL"
-                    value={githubUrl}
-                    onChange={(e) => setGithubUrl(e.target.value)}
-                    className="text-sm"
-                    disabled={submitting}
-                  />
-                  <p className="text-xs text-[#8F8F8F]">Optional · +5 synergy</p>
-                </div>
-                <div className="space-y-2">
-                  <label
-                    htmlFor="linkedin-url"
-                    className="text-sm font-medium text-[#111111]"
-                  >
-                    LinkedIn URL
-                  </label>
-                  <Input
-                    id="linkedin-url"
-                    type="url"
-                    placeholder="LinkedIn post URL"
-                    value={linkedinUrl}
-                    onChange={(e) => setLinkedinUrl(e.target.value)}
-                    className="text-sm"
-                    disabled={submitting}
-                  />
-                  <p className="text-xs text-[#8F8F8F]">Optional · +8 synergy</p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => void handleSubmit()}
-                disabled={submitting || !confirmed}
-                className={cn(
-                  dsButtonVariants({ size: "default" }),
-                  "inline-flex w-full gap-2 sm:w-auto",
-                  (submitting || !confirmed) && "opacity-60",
-                )}
-              >
-                <Send className="h-4 w-4" />
-                {submitting ? "Submitting..." : `Submit Day ${dayNumber}`}
-              </button>
-            </div>
-          </section>
-        ) : (
-          <section className="min-w-0 overflow-hidden rounded-[12px] border border-[#E0E0E0] bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] md:p-5">
-            <h2 className="mb-4 font-heading text-base font-semibold text-[#111111] md:text-lg">
-              {existingSubmission ? "Your submission" : "View only"}
-            </h2>
-            {existingSubmission &&
-            (existingSubmission.githubUrl || existingSubmission.linkedinUrl) ? (
-              <div className="mb-4 min-w-0 space-y-3 text-sm">
-                {existingSubmission.githubUrl ? (
-                  <div className="min-w-0 space-y-1">
-                    <p className="font-medium text-[#8F8F8F]">GitHub</p>
-                    <a
-                      href={existingSubmission.githubUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex max-w-full items-start gap-1 text-[#E05226] underline-offset-4 hover:underline"
-                    >
-                      <span className="min-w-0 flex-1 break-all">
-                        {existingSubmission.githubUrl}
-                      </span>
-                      <ExternalLink
-                        className="mt-0.5 size-3.5 shrink-0"
-                        aria-hidden
-                      />
-                    </a>
-                  </div>
-                ) : null}
-                {existingSubmission.linkedinUrl ? (
-                  <div className="min-w-0 space-y-1">
-                    <p className="font-medium text-[#8F8F8F]">LinkedIn</p>
-                    <a
-                      href={existingSubmission.linkedinUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex max-w-full items-start gap-1 text-[#E05226] underline-offset-4 hover:underline"
-                    >
-                      <span className="min-w-0 flex-1 break-all">
-                        {existingSubmission.linkedinUrl}
-                      </span>
-                      <ExternalLink
-                        className="mt-0.5 size-3.5 shrink-0"
-                        aria-hidden
-                      />
-                    </a>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-            <p className="text-sm text-[#4B4B4B]">
-              {existingSubmission
-                ? "You've completed this day. Submissions cannot be edited from this page after the window closes."
-                : "Submissions for this day are closed. You're viewing it for reference."}
-            </p>
-            <Link
-              href={backHref}
-              className={cn(
-                dsButtonVariants({ size: "sm" }),
-                "mt-4 inline-flex",
-              )}
-            >
-              Back to {track.label}
-            </Link>
-          </section>
-        )}
+        <DaySubmitPanel
+          track={track}
+          dayNumber={dayNumber}
+          enrollmentId={enrollmentId}
+          existingSubmission={existingSubmission}
+          canSubmit={canSubmit}
+        />
       </div>
     </div>
   );
