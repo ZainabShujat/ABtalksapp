@@ -15,6 +15,7 @@ import {
   THIRD_PARTY_DATA_REPLY,
   isThirdPartyDataRequest,
 } from "@/lib/chatbot-matcher";
+import { buildLiveFacts } from "@/lib/chatbot/live-facts";
 
 /**
  * The chatbot endpoint.
@@ -142,10 +143,14 @@ export async function POST(req: Request) {
   const ambiguous = retrieval.verdict === "clarify";
 
   const today = formatInTimeZone(new Date(), IST, "d MMMM yyyy");
+  // Dates and open/closed states come from the live site every request, not
+  // from whenever the corpus was last ingested. See lib/chatbot/live-facts.ts.
+  const liveFacts = await buildLiveFacts();
   const system = buildSystemPrompt(
     buildContext(retrieval.results),
     today,
     ambiguous,
+    liveFacts,
   );
   const turns: ChatTurn[] = messages.slice(-HISTORY_TURNS);
 

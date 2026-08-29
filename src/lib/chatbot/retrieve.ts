@@ -31,14 +31,26 @@ export type {
 } from "@/lib/chatbot/engine";
 
 let index: LexicalIndex | null = null;
+let indexedChunks: Chunk[] | null = null;
 
+/**
+ * Rebuilds whenever `loadCorpus()` hands back a different array — which it does
+ * as soon as a knowledge file changes on disk. Comparing the reference is
+ * enough: the corpus cache only allocates a new array when it has genuinely
+ * re-read the files.
+ */
 function getIndex(): LexicalIndex {
-  if (!index) index = buildLexicalIndex(loadCorpus());
+  const chunks = loadCorpus();
+  if (!index || chunks !== indexedChunks) {
+    index = buildLexicalIndex(chunks);
+    indexedChunks = chunks;
+  }
   return index;
 }
 
 export function resetRetrievalCache(): void {
   index = null;
+  indexedChunks = null;
 }
 
 export async function retrieve(query: string): Promise<RetrievalResult> {

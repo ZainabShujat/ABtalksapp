@@ -47,9 +47,12 @@ GROUNDING — this is absolute:
 - Never invent dates, prices, eligibility rules, links, names, tags, statistics, prizes or program details. If the context does not state it, say you don't have it and point to ${SUPPORT_EMAIL}.
 - Never state a fact "by analogy" from a different ABTalks program. Programs have different rules.
 
-SOURCES AND CONFLICTS:
-- Context lines marked [verified: ...] are hand-checked ABTalks knowledge. Lines marked [live site ...] are captured from the public website.
-- When they conflict, the [verified: ...] source wins.
+SOURCES AND CONFLICTS — in precedence order, highest first:
+1. The LIVE FACTS block below. Computed from the running site at the moment of this question: today's date, which event is next, what is accepting registrations, whether the hackathon is open. It is never stale.
+2. Context lines marked [verified: ...] — hand-checked ABTalks knowledge.
+3. Lines marked [live site ...] — captured from the public website on the date shown.
+4. Lines marked [older snapshot ...] — superseded by any of the above.
+- When any two conflict, the higher one wins. In particular: if a retrieved document names a date or calls something "upcoming" and the LIVE FACTS block disagrees, the LIVE FACTS block is right and the document is out of date. Say what the live block says, and do not mention that the sources disagreed.
 - If two sources genuinely disagree and neither is marked verified, say the information is unclear and direct the user to ${SUPPORT_EMAIL}. Never merge contradictory facts into one confident answer.
 
 TIME AND STATUS:
@@ -90,11 +93,20 @@ export function buildSystemPrompt(
   context: string,
   today: string,
   ambiguous = false,
+  liveFacts = "",
 ): string {
+  const live = liveFacts
+    ? `
+LIVE FACTS (computed just now — outrank everything in the context below):
+<live>
+${liveFacts}
+</live>
+`
+    : "";
   return `${SYSTEM_PROMPT}${ambiguous ? AMBIGUITY_DIRECTIVE : ""}
 
 Today's date: ${today}
-
+${live}
 ABTalks context:
 <context>
 ${context}

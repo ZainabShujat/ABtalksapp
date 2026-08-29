@@ -53,9 +53,39 @@ function readDir(
 }
 
 let cached: Chunk[] | null = null;
+let cachedFingerprint = "";
+
+/**
+ * Cheap change-detector: filenames plus modification times.
+ *
+ * The corpus used to be cached for the whole process lifetime, which meant
+ * `npm run ingest:site` had no effect on a running server until someone
+ * restarted it — the one moment you most want the new content live. Stat-ing
+ * ~35 files is microseconds and happens once per request, against a retrieval
+ * step that already does an OpenAI round trip.
+ */
+function fingerprint(): string {
+  const parts: string[] = [];
+  for (const dir of [PROCESSED_DIR, GENERATED_DIR]) {
+    try {
+      for (const name of fs.readdirSync(dir).sort()) {
+        if (!name.endsWith(".md")) continue;
+        parts.push(`${name}:${fs.statSync(path.join(dir, name)).mtimeMs}`);
+      }
+    } catch {
+      // Directory missing is itself part of the fingerprint.
+      parts.push(`${dir}:absent`);
+    }
+  }
+  return parts.join("|");
+}
 
 export function loadCorpus(): Chunk[] {
-  if (cached) return cached;
+  const current = fingerprint();
+  if (cached && current === cachedFingerprint) return cached;
+  if (cached) {
+    logger.info("Chatbot corpus changed on disk — rebuilding index");
+  }
   const chunks = buildChunks([
     ...readDir(PROCESSED_DIR, "curated"),
     ...readDir(GENERATED_DIR, "site"),
@@ -67,10 +97,12 @@ export function loadCorpus(): Chunk[] {
     legacy: chunks.filter((c) => c.origin === "legacy").length,
   });
   cached = chunks;
+  cachedFingerprint = current;
   return cached;
 }
 
 /** Test hook — rebuilds the index between fixtures. */
 export function resetCorpusCache(): void {
   cached = null;
+  cachedFingerprint = "";
 }
