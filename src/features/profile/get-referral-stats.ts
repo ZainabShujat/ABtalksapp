@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/db";
-import { studentProfile } from "@/repositories/legacy/student-profile";
+import {
+  getCandidateProfile,
+  listCandidateProfiles,
+} from "@/repositories/candidate";
 
 export type ReferralBadgeTier = "none" | "bronze" | "silver" | "gold" | "platinum";
 
@@ -47,10 +50,7 @@ function nextBadgeForRewarded(
 export async function getReferralStats(
   userId: string,
 ): Promise<ReferralStats | null> {
-  const profile = await studentProfile.findUnique({
-    where: { userId },
-    select: { referralCode: true },
-  });
+  const profile = await getCandidateProfile(userId);
 
   if (!profile) {
     return null;
@@ -62,14 +62,17 @@ export async function getReferralStats(
     include: {
       referred: {
         select: {
+          id: true,
           email: true,
           studentProfile: {
-            select: { fullName: true, domain: true },
+            select: { domain: true },
           },
         },
       },
     },
   });
+
+  const identities = await listCandidateProfiles(rows.map((r) => r.referred.id));
 
   const totalReferrals = rows.length;
   const rewardedReferrals = rows.filter((r) => r.rewardGiven).length;
@@ -79,10 +82,10 @@ export async function getReferralStats(
   const nextBadge = nextBadgeForRewarded(rewardedReferrals);
 
   const referrals: ReferralListItem[] = rows.map((r) => {
-    const sp = r.referred.studentProfile;
+    const identity = identities.get(r.referred.id);
     const referredName =
-      sp?.fullName?.trim() || r.referred.email || "Unknown";
-    const referredDomain = sp?.domain ?? "-";
+      identity?.fullName?.trim() || r.referred.email || "Unknown";
+    const referredDomain = r.referred.studentProfile?.domain ?? "-";
     return {
       id: r.id,
       referredName,

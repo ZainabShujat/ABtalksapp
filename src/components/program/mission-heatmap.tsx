@@ -49,7 +49,7 @@ export function MissionHeatmap({ cells, variant = "dashboard" }: Props) {
         className={cn(
           "inline-flex items-center gap-2 text-xs",
           isDashboard
-            ? "rounded-[8px] border border-[#8365E3] bg-[#110528] px-3 py-1.5 text-[#E9E9E9] transition-colors duration-300 ease-out hover:border-[#968BEC]/70"
+            ? "rounded-[8px] border border-[#E05226] bg-[#111111] px-3 py-1.5 text-[#E9E9E9] transition-colors duration-300 ease-out hover:border-[#FFECE3]/70"
             : "text-muted-foreground",
         )}
       >

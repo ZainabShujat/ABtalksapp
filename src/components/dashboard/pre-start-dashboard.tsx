@@ -84,7 +84,7 @@ export function PreStartDashboard({ enrollment, challenge }: Props) {
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl border bg-gradient-to-br from-orange-500/10 via-pink-500/5 to-violet-500/10 p-6 text-center md:p-8"
+        className="rounded-2xl border bg-[#FFF5F0] p-6 text-center md:p-8"
       >
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
           <Rocket className="h-8 w-8 text-primary" />

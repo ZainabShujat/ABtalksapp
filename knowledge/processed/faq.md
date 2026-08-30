@@ -21,6 +21,8 @@ This is a question index, not a source of truth. Each question points to the can
 - What counts as a completed day in the Claude Challenge? → `claude-challenge.md`
 - What is the AI Cohort? How long is it and what does it cover? → `ai-cohort.md`
 - What is the Vibe Code Hackathon / ViCodathon? → `vicodathon.md`, `events.md`
+- What's the Claude Challenge curriculum / roadmap? → `knowledge/generated/claude-signup-page.md` (auto-extracted from the live `/claude-signup` page — authoritative; do not hand-write a curriculum table here again, see 063)
+- Can you share a testimonial / success story? → `testimonials.md` (only quote the names listed there, never invent new ones — note: the homepage has its own separate, unnamed testimonials in `knowledge/generated/homepage.md`; don't merge the two)
 
 ## Workshops and events
 
@@ -39,6 +41,24 @@ This is a question index, not a source of truth. Each question points to the can
 ## Website
 
 - What sections does the ABTalks website have? → `website.md`
+- Where do I register / find the challenge / find the workshop / log in / submit proof of work? → `website.md`
+
+## By audience
+
+- Questions from a recruiter, working professional, or investor perspective → `audience-faqs.md`
+
+## Live-sourced content (knowledge/generated/, auto-extracted, always current)
+
+Per `docs/plans/063-chatbot-dynamic-knowledge-ingestion.md`, these are
+regenerated from the actual app source every build — treat them as more
+authoritative than any hand-written file above if the two ever disagree:
+
+- Homepage stats, FAQ, programs, testimonials → `knowledge/generated/homepage.md`
+- `/challenges` page FAQ, domains, day-flow → `knowledge/generated/challenges-page.md`
+- `/claude-signup` curriculum, audience, rules → `knowledge/generated/claude-signup-page.md`
+- `/ai-workshop` topics, stats, events, live webinar logistics → `knowledge/generated/ai-workshop-page.md`
+- `/ai-cohort-register` + `/ai-cohort-india` application pages → `knowledge/generated/ai-cohort-application-pages.md`
+- `/program` landing page (requirements, prerequisites, roadmap) → `knowledge/generated/program-landing-page.md`
 
 ## Out of scope
 

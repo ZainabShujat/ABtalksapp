@@ -25,17 +25,6 @@ export const BRIDGE_SLABS = [
   { key: "bottom", slab: 1, label: "12k+ users" },
 ] as const;
 
-export const COMPANY_LOGOS = [
-  { name: "Meta", src: "/landing/company-logo/meta.svg" },
-  { name: "Amazon", src: "/landing/company-logo/amazon.svg" },
-  { name: "JPMorgan Chase", src: "/landing/company-logo/J_P_Morgan.svg" },
-  { name: "Deloitte", src: "/landing/company-logo/deloitte.svg" },
-  { name: "American Express", src: "/landing/company-logo/americanexpress.svg" },
-  { name: "Infosys", src: "/landing/company-logo/infosys.svg" },
-  { name: "Samsung", src: "/landing/company-logo/samsung.svg" },
-  { name: "EXL", src: "/landing/company-logo/EXLS.svg" },
-] as const;
-
 export const BRIDGE_PANELS = [
   {
     label: "The Bridge",
@@ -417,7 +406,7 @@ export const COMMUNITY_PHOTOS = [
   },
 ] as const;
 
-export const QUOTE_TINTS = ["pink", "violet", "cream", "peach"] as const;
+export const QUOTE_TINTS = ["pink", "coral", "cream", "peach"] as const;
 
 export const GLOBE_LATS = [
   { r: 0.1, h: 0.995 },

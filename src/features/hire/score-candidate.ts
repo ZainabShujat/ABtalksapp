@@ -271,46 +271,46 @@ export function evaluateHardFilters(
 
   const avail = member.availability;
   if (avail) {
-    if (!avail.openToWork) {
+    const extra = (spec.extra ?? {}) as Record<string, unknown>;
+    if (extra.openToWork === true && !avail.openToWork) {
       reasons.push("Not open to work");
-    } else {
-      if (
-        spec.salaryMax != null &&
-        avail.expectedSalaryMin != null &&
-        avail.expectedSalaryMin > spec.salaryMax
-      ) {
-        reasons.push("Expected salary above budget");
-      }
-      if (
-        spec.noticePeriodDays != null &&
-        avail.noticePeriodDays != null &&
-        avail.noticePeriodDays > spec.noticePeriodDays
-      ) {
-        reasons.push("Notice period too long");
-      }
-      if (
-        spec.workMode &&
-        avail.preferredWorkMode &&
-        avail.preferredWorkMode !== "FLEXIBLE" &&
-        spec.workMode !== "FLEXIBLE" &&
-        avail.preferredWorkMode !== spec.workMode
-      ) {
-        reasons.push("Work mode mismatch");
-      }
-      if (
-        spec.locationCity &&
-        !avail.openToRelocate &&
-        avail.preferredCities.length > 0
-      ) {
-        const city = normToken(spec.locationCity);
-        const hit = avail.preferredCities.some(
-          (c) =>
-            normToken(c) === city ||
-            normToken(c).includes(city) ||
-            city.includes(normToken(c)),
-        );
-        if (!hit) reasons.push("Location mismatch");
-      }
+    }
+    if (
+      spec.salaryMax != null &&
+      avail.expectedSalaryMin != null &&
+      avail.expectedSalaryMin > spec.salaryMax
+    ) {
+      reasons.push("Expected salary above budget");
+    }
+    if (
+      spec.noticePeriodDays != null &&
+      avail.noticePeriodDays != null &&
+      avail.noticePeriodDays > spec.noticePeriodDays
+    ) {
+      reasons.push("Notice period too long");
+    }
+    if (
+      spec.workMode &&
+      avail.preferredWorkMode &&
+      avail.preferredWorkMode !== "FLEXIBLE" &&
+      spec.workMode !== "FLEXIBLE" &&
+      avail.preferredWorkMode !== spec.workMode
+    ) {
+      reasons.push("Work mode mismatch");
+    }
+    if (
+      spec.locationCity &&
+      !avail.openToRelocate &&
+      avail.preferredCities.length > 0
+    ) {
+      const city = normToken(spec.locationCity);
+      const hit = avail.preferredCities.some(
+        (c) =>
+          normToken(c) === city ||
+          normToken(c).includes(city) ||
+          city.includes(normToken(c)),
+      );
+      if (!hit) reasons.push("Location mismatch");
     }
   }
 

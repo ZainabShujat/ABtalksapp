@@ -1,6 +1,10 @@
 import type { Prisma } from "@prisma/client";
-import { EnrollmentStatus } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
+import {
+  findChallengeEnrollment,
+  getQuizDefinition,
+} from "@/repositories/learning";
+import { dualWriteQuizAttempt } from "@/repositories/dual-write";
 
 export type QuizSubmitResultRow = {
   questionId: string;
@@ -41,34 +45,20 @@ export async function submitQuiz(input: {
     return { ok: false, message: "Quiz already submitted" };
   }
 
-  const quiz = await prisma.quiz.findFirst({
-    where: { id: quizId },
-    select: { challengeId: true, domain: true },
-  });
-
+  const quiz = await getQuizDefinition(quizId);
   if (!quiz) {
     return { ok: false, message: "Quiz not found" };
   }
 
-  const enrollment = await prisma.enrollment.findFirst({
-    where: {
-      userId,
-      challengeId: quiz.challengeId,
-      domain: quiz.domain,
-      status: { not: EnrollmentStatus.ABANDONED },
-    },
-    select: { id: true },
+  const enrollment = await findChallengeEnrollment(userId, {
+    domain: quiz.domain,
+    excludeAbandoned: true,
   });
-
   if (!enrollment) {
     return { ok: false, message: "No enrollment for this quiz" };
   }
 
-  const questions = await prisma.quizQuestion.findMany({
-    where: { quizId },
-    orderBy: { questionOrder: "asc" },
-  });
-
+  const questions = quiz.questions;
   if (questions.length === 0) {
     return { ok: false, message: "Quiz has no questions" };
   }
@@ -94,13 +84,24 @@ export async function submitQuiz(input: {
     };
   });
 
-  await prisma.quizAttempt.create({
-    data: {
-      userId,
+  await writeClient().$transaction(async (tx) => {
+    const created = await tx.quizAttempt.create({
+      data: {
+        userId,
+        quizId,
+        score,
+        answers: answers as Prisma.InputJsonValue,
+      },
+      select: { id: true, attemptedAt: true },
+    });
+    await dualWriteQuizAttempt(tx, {
+      id: created.id,
+      enrollmentId: enrollment.id,
       quizId,
       score,
       answers: answers as Prisma.InputJsonValue,
-    },
+      attemptedAt: created.attemptedAt,
+    });
   });
 
   return { ok: true, score, results };

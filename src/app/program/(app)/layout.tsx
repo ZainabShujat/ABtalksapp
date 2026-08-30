@@ -17,7 +17,7 @@ export default async function ProgramAppLayout({
   await requireProgramMember();
 
   return (
-    <div className="min-h-svh bg-[#FBF9F7] font-content text-[#111111]">
+    <div className="theme-abtalks-light theme-abtalks-orange min-h-svh bg-[#FBF9F7] font-content text-[#111111]">
       <header className="sticky top-0 z-40 border-b border-[#E0E0E0] bg-white/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-[1536px] items-center gap-2 px-3 py-2.5 md:gap-6 md:px-4 md:py-4">
           <Link href="/" className="shrink-0" aria-label="ABTalks home">

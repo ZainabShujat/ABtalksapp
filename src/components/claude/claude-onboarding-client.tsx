@@ -276,7 +276,7 @@ export function ClaudeOnboardingClient() {
                 href={LOGIN_HREF}
                 className={cn(
                   buttonVariants(),
-                  "w-full justify-center gap-2 bg-gradient-to-r from-orange-500 via-pink-500 to-violet-500 text-white hover:opacity-90",
+                  "w-full justify-center gap-2 bg-[#E05226] text-white hover:bg-[#C9411C]",
                 )}
               >
                 <Rocket className="h-4 w-4" />
@@ -337,7 +337,7 @@ function ClaudeBackgroundBlobs({ slideIndex }: { slideIndex: number }) {
       <motion.div
         animate={{ x: slideIndex * 15, y: -slideIndex * 25 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className="absolute bottom-20 left-1/3 h-64 w-64 rounded-full bg-violet-500/15 blur-3xl"
+        className="absolute bottom-20 left-1/3 h-64 w-64 rounded-full bg-[#FFECE3] blur-3xl"
       />
     </div>
   );

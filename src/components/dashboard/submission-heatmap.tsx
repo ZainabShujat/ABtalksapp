@@ -25,7 +25,7 @@ type Props = {
 const STATUS_CLASS: Record<HeatmapCell["status"], string> = {
   on_time: "bg-emerald-500",
   late: "bg-emerald-500",
-  rejected: "bg-purple-500 dark:bg-purple-600",
+  rejected: "bg-[#E05226]",
   missed: "bg-red-500",
   future:
     "border border-dotted border-muted-foreground/40 bg-muted/20 dark:bg-muted/30",
@@ -211,7 +211,7 @@ export function SubmissionHeatmap({
         </li>
         <li className="flex items-center gap-2">
           <span
-            className="size-3.5 shrink-0 rounded-sm bg-purple-500 dark:bg-purple-600"
+            className="size-3.5 shrink-0 rounded-sm bg-[#E05226]"
             aria-hidden
           />
           Rejected
@@ -274,7 +274,7 @@ export function SubmissionHeatmap({
                       className={
                         active.status === "on_time" || active.status === "late"
                           ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
-                          : "bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300"
+                          : "bg-[#FFECE3] text-[#C9411C]"
                       }
                     >
                       {active.status === "on_time" || active.status === "late"

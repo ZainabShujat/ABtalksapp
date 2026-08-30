@@ -4,7 +4,7 @@ import { Trophy } from "lucide-react";
 import { auth } from "@/auth";
 import { getAchievements } from "@/features/certificate/get-achievements";
 import { AchievementCard } from "@/components/certificate/achievement-card";
-import { AppHeader } from "@/components/shared/app-header";
+import { DashboardShell } from "@/components/dashboard-hub/dashboard-shell";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -35,12 +35,10 @@ export default async function AchievementsPage() {
   }
 
   const userId = session.user.id;
-  const headerUser = {
-    name: session.user.name ?? null,
+  const shellUser = {
+    name: session.user.name ?? session.user.email ?? "",
     email: session.user.email ?? "",
     image: session.user.image ?? null,
-    role: session.user.role ?? "STUDENT",
-    isAdmin: session.user.isAdmin ?? false,
   };
 
   const achievements = await getAchievements(userId);
@@ -51,9 +49,12 @@ export default async function AchievementsPage() {
   const verifyBaseUrl = `${protocol}://${host}`;
 
   return (
-    <div className="flex min-h-svh flex-col bg-muted/30">
-      <AppHeader user={headerUser} />
-      <main className="mx-auto w-full min-w-0 max-w-3xl flex-1 space-y-5 px-4 py-5 pb-24 sm:space-y-8 sm:py-8">
+    <DashboardShell
+      user={shellUser}
+      isAdmin={session.user.isAdmin ?? false}
+      showSectionNav={false}
+    >
+      <main className="mx-auto w-full min-w-0 max-w-3xl flex-1 space-y-5 px-4 py-5 sm:space-y-8 sm:py-8">
         <div>
           <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">
             Your Achievements
@@ -96,6 +97,6 @@ export default async function AchievementsPage() {
           </div>
         )}
       </main>
-    </div>
+    </DashboardShell>
   );
 }

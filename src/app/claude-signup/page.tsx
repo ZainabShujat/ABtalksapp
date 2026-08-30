@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { isClaudeEnabled } from "@/lib/feature-flags";
 import { ClaudeOnboardingClient } from "@/components/claude/claude-onboarding-client";
 import { studentProfile } from "@/repositories/legacy/student-profile";
+import { findChallengeEnrollment } from "@/repositories/learning";
 
 export default async function ClaudeSignupPage() {
   if (!isClaudeEnabled()) {
@@ -31,13 +32,10 @@ export default async function ClaudeSignupPage() {
     });
 
     if (profile) {
-      const claudeEnrollment = await prisma.enrollment.findFirst({
-        where: {
-          userId: session.user.id,
-          domain: Domain.CLAUDE,
-        },
-        select: { id: true },
-      });
+      const claudeEnrollment = await findChallengeEnrollment(
+        session.user.id,
+        { domain: Domain.CLAUDE },
+      );
 
       if (claudeEnrollment) {
         redirect("/claude");

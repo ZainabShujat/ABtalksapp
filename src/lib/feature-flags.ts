@@ -11,7 +11,7 @@ export function isDayLockBypassEnabled(): boolean {
 }
 
 export function isProgramEnabled(): boolean {
-  return process.env.ENABLE_PROGRAM === "true";
+  return true;
 }
 
 /**
@@ -87,6 +87,18 @@ export function isNewTalentRepoEnabled(): boolean {
 }
 export function isNewPointsRepoEnabled(): boolean {
   return process.env.ENABLE_NEW_POINTS === "true";
+}
+
+/**
+ * W1-A write authority for the points wallet. Separate from
+ * `ENABLE_NEW_POINTS` (reads). Off unless explicitly `"true"`.
+ *
+ * When on: PointsAccount + PointsTransaction are authoritative;
+ * User.synergyPoints and SynergyEvent are compatibility mirrors.
+ * Do not enable without ENABLE_NEW_POINTS already on. Dual-write stays on.
+ */
+export function isNewPointsWritesEnabled(): boolean {
+  return process.env.ENABLE_NEW_POINTS_WRITES === "true";
 }
 export function isNewCredentialRepoEnabled(): boolean {
   return process.env.ENABLE_NEW_CREDENTIAL === "true";

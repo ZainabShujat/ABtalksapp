@@ -22,8 +22,8 @@ const ROLES: {
     icon: Code2,
     title: "Developer / Engineer",
     desc: "Code gen, debugging, Claude API, RAG pipelines, VS Code, Claude Code CLI, GitHub",
-    iconBg: "bg-violet-500/10",
-    iconColor: "text-violet-500",
+    iconBg: "bg-[#FFECE3]",
+    iconColor: "text-[#E05226]",
   },
   {
     icon: FileText,
@@ -70,9 +70,9 @@ export function ClaudeAudienceSlide() {
       transition={{ delay: 0.1, duration: 0.5 }}
       className="rounded-3xl border bg-card/80 p-5 shadow-lg backdrop-blur-sm md:p-6"
     >
-      <motion.div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1">
+      <motion.div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#E05226]/20 bg-[#FFECE3] px-3 py-1">
         <span className="text-xs">👥</span>
-        <span className="text-xs font-semibold text-violet-600 dark:text-violet-400">
+        <span className="text-xs font-semibold text-[#C9411C]">
           One challenge. Every role.
         </span>
       </motion.div>

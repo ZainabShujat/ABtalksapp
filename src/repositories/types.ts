@@ -26,6 +26,10 @@ export type CandidateSearchFilters = {
   availableBefore?: Date;
   locationCity?: string;
   countryCode?: string;
+  /** Explicit recruiter filter. Never implied by searchability. */
+  openToWork?: boolean;
+  workMode?: string;
+  noticePeriodDaysMax?: number;
   page?: number;
   pageSize?: number;
 };
@@ -48,6 +52,15 @@ export type CandidateProfileView = {
   referralCode: string;
   skills: string[];
   isReadyForInterview: boolean;
+  userType: "STUDENT" | "PROFESSIONAL";
+  college: string | null;
+  collegeId: string | null;
+  graduationYear: number | null;
+  organization: string | null;
+  role: string | null;
+  yearsExperience: number | null;
+  isCampusAmbassadorCandidate: boolean;
+  ambassadorDismissedAt: Date | null;
 };
 
 export type CredentialView = {

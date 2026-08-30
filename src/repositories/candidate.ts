@@ -1,62 +1,97 @@
 import "server-only";
-import type { Prisma } from "@prisma/client";
+import { CandidatePersona, UserType, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { isNewCandidateRepoEnabled } from "@/lib/feature-flags";
+import {
+  educationIdForStudentProfile,
+  experienceIdForStudentProfile,
+} from "@/repositories/dual-write";
 import { studentProfile } from "@/repositories/legacy/student-profile";
 import type { CandidateProfileView } from "@/repositories/types";
 
-export async function getCandidateProfile(
-  userId: string,
-): Promise<CandidateProfileView | null> {
-  if (isNewCandidateRepoEnabled()) {
-    const row = await prisma.candidateProfile.findUnique({
-      where: { userId },
-      select: {
-        userId: true,
-        fullName: true,
-        headline: true,
-        phone: true,
-        phoneVerified: true,
-        linkedinUrl: true,
-        githubUsername: true,
-        resumeUrl: true,
-        referralCode: true,
-        isReadyForInterview: true,
-        skills: { select: { skill: { select: { name: true } } } },
-      },
-    });
-    if (!row) return null;
-    return {
-      userId: row.userId,
-      fullName: row.fullName,
-      headline: row.headline,
-      phone: row.phone,
-      phoneVerified: row.phoneVerified,
-      linkedinUrl: row.linkedinUrl,
-      githubUsername: row.githubUsername,
-      resumeUrl: row.resumeUrl,
-      referralCode: row.referralCode,
-      skills: row.skills.map((s) => s.skill.name),
-      isReadyForInterview: row.isReadyForInterview,
-    };
-  }
+const legacyIdentitySelect = {
+  userId: true,
+  fullName: true,
+  userType: true,
+  college: true,
+  collegeId: true,
+  graduationYear: true,
+  organization: true,
+  role: true,
+  yearsExperience: true,
+  phone: true,
+  phoneVerified: true,
+  linkedinUrl: true,
+  githubUsername: true,
+  resumeUrl: true,
+  referralCode: true,
+  skills: true,
+  isReadyForInterview: true,
+  isCampusAmbassadorCandidate: true,
+  ambassadorDismissedAt: true,
+} as const;
 
-  const row = await studentProfile.findUnique({
-    where: { userId },
+const newIdentitySelect = {
+  userId: true,
+  fullName: true,
+  headline: true,
+  primaryPersona: true,
+  phone: true,
+  phoneVerified: true,
+  linkedinUrl: true,
+  githubUsername: true,
+  resumeUrl: true,
+  referralCode: true,
+  isReadyForInterview: true,
+  isCampusAmbassadorCandidate: true,
+  ambassadorDismissedAt: true,
+  education: {
+    where: { id: { startsWith: "edu_sp_" } },
     select: {
-      userId: true,
-      fullName: true,
-      phone: true,
-      phoneVerified: true,
-      linkedinUrl: true,
-      githubUsername: true,
-      resumeUrl: true,
-      referralCode: true,
-      skills: true,
-      isReadyForInterview: true,
+      id: true,
+      institutionName: true,
+      collegeId: true,
+      graduationYear: true,
+      sortOrder: true,
     },
-  });
-  if (!row) return null;
+  },
+  experience: {
+    where: { id: { startsWith: "exp_sp_" } },
+    select: {
+      id: true,
+      companyName: true,
+      title: true,
+      totalMonths: true,
+    },
+  },
+  skills: { select: { skill: { select: { name: true } } } },
+} as const;
+
+function userTypeFromPersona(persona: string): "STUDENT" | "PROFESSIONAL" {
+  return persona === "PROFESSIONAL" ? "PROFESSIONAL" : "STUDENT";
+}
+
+function viewFromLegacy(row: {
+  userId: string;
+  fullName: string;
+  userType: UserType;
+  college: string | null;
+  collegeId: string | null;
+  graduationYear: number | null;
+  organization: string | null;
+  role: string | null;
+  yearsExperience: number | null;
+  phone: string | null;
+  phoneVerified: boolean;
+  linkedinUrl: string | null;
+  githubUsername: string | null;
+  resumeUrl: string | null;
+  referralCode: string;
+  skills: string[];
+  isReadyForInterview: boolean;
+  isCampusAmbassadorCandidate: boolean;
+  ambassadorDismissedAt: Date | null;
+}): CandidateProfileView {
   return {
     userId: row.userId,
     fullName: row.fullName,
@@ -69,7 +104,126 @@ export async function getCandidateProfile(
     referralCode: row.referralCode,
     skills: row.skills,
     isReadyForInterview: row.isReadyForInterview,
+    userType: userTypeFromPersona(row.userType),
+    college: row.college,
+    collegeId: row.collegeId,
+    graduationYear: row.graduationYear,
+    organization: row.organization,
+    role: row.role,
+    yearsExperience: row.yearsExperience,
+    isCampusAmbassadorCandidate: row.isCampusAmbassadorCandidate,
+    ambassadorDismissedAt: row.ambassadorDismissedAt,
   };
+}
+
+function viewFromNew(
+  row: {
+    userId: string;
+    fullName: string;
+    headline: string | null;
+    primaryPersona: CandidatePersona;
+    phone: string | null;
+    phoneVerified: boolean;
+    linkedinUrl: string | null;
+    githubUsername: string | null;
+    resumeUrl: string | null;
+    referralCode: string;
+    isReadyForInterview: boolean;
+    isCampusAmbassadorCandidate: boolean;
+    ambassadorDismissedAt: Date | null;
+    education: Array<{
+      id: string;
+      institutionName: string;
+      collegeId: string | null;
+      graduationYear: number | null;
+      sortOrder: number;
+    }>;
+    experience: Array<{
+      id: string;
+      companyName: string;
+      title: string;
+      totalMonths: number;
+    }>;
+    skills: Array<{ skill: { name: string } }>;
+  },
+): CandidateProfileView {
+  const education = row.education.find(
+    (e) => e.id === educationIdForStudentProfile(row.userId),
+  );
+  const experience = row.experience.find(
+    (e) => e.id === experienceIdForStudentProfile(row.userId),
+  );
+
+  return {
+    userId: row.userId,
+    fullName: row.fullName,
+    headline: row.headline,
+    phone: row.phone,
+    phoneVerified: row.phoneVerified,
+    linkedinUrl: row.linkedinUrl,
+    githubUsername: row.githubUsername,
+    resumeUrl: row.resumeUrl,
+    referralCode: row.referralCode,
+    skills: row.skills.map((s) => s.skill.name),
+    isReadyForInterview: row.isReadyForInterview,
+    userType: userTypeFromPersona(row.primaryPersona),
+    college: unspecifiedToNull(education?.institutionName),
+    collegeId: education?.collegeId ?? null,
+    graduationYear: education?.graduationYear ?? null,
+    organization: unspecifiedToNull(experience?.companyName),
+    role: unspecifiedToNull(experience?.title),
+    yearsExperience: experience
+      ? Math.max(0, Math.round(experience.totalMonths / 12))
+      : null,
+    isCampusAmbassadorCandidate: row.isCampusAmbassadorCandidate,
+    ambassadorDismissedAt: row.ambassadorDismissedAt,
+  };
+}
+
+function unspecifiedToNull(value: string | undefined): string | null {
+  if (!value || value === "Not specified") return null;
+  return value;
+}
+
+export async function getCandidateProfile(
+  userId: string,
+): Promise<CandidateProfileView | null> {
+  if (isNewCandidateRepoEnabled()) {
+    const row = await prisma.candidateProfile.findUnique({
+      where: { userId },
+      select: newIdentitySelect,
+    });
+    if (!row) return null;
+    return viewFromNew(row);
+  }
+
+  const row = await studentProfile.findUnique({
+    where: { userId },
+    select: legacyIdentitySelect,
+  });
+  if (!row) return null;
+  return viewFromLegacy(row);
+}
+
+export async function listCandidateProfiles(
+  userIds: string[],
+): Promise<Map<string, CandidateProfileView>> {
+  const ids = [...new Set(userIds.filter(Boolean))];
+  if (ids.length === 0) return new Map();
+
+  if (isNewCandidateRepoEnabled()) {
+    const rows = await prisma.candidateProfile.findMany({
+      where: { userId: { in: ids } },
+      select: newIdentitySelect,
+    });
+    return new Map(rows.map((row) => [row.userId, viewFromNew(row)]));
+  }
+
+  const rows = await studentProfile.findMany({
+    where: { userId: { in: ids } },
+    select: legacyIdentitySelect,
+  });
+  return new Map(rows.map((row) => [row.userId, viewFromLegacy(row)]));
 }
 
 export async function getProfileSummary(userId: string): Promise<{
@@ -79,6 +233,28 @@ export async function getProfileSummary(userId: string): Promise<{
   const profile = await getCandidateProfile(userId);
   if (!profile) return null;
   return { fullName: profile.fullName, referralCode: profile.referralCode };
+}
+
+/**
+ * Resolve a pasted/shared referral code to a user.
+ * Flag off: StudentProfile (legacy unique). Flag on: CandidateProfile
+ * (canonical unique). Both tables must hold the same live code.
+ */
+export async function findUserIdByReferralCode(
+  code: string,
+): Promise<string | null> {
+  if (isNewCandidateRepoEnabled()) {
+    const row = await prisma.candidateProfile.findUnique({
+      where: { referralCode: code },
+      select: { userId: true },
+    });
+    return row?.userId ?? null;
+  }
+  const row = await studentProfile.findUnique({
+    where: { referralCode: code },
+    select: { userId: true },
+  });
+  return row?.userId ?? null;
 }
 
 export async function updateStudentFields(
@@ -182,15 +358,28 @@ function randomReferralCode(): string {
   return out;
 }
 
+async function mintHireOnlyReferralCode(tx: Prisma.TransactionClient): Promise<string> {
+  for (let i = 0; i < 10; i++) {
+    const code = randomReferralCode();
+    const [onCandidate, onStudent] = await Promise.all([
+      tx.candidateProfile.findUnique({
+        where: { referralCode: code },
+        select: { userId: true },
+      }),
+      tx.studentProfile.findUnique({
+        where: { referralCode: code },
+        select: { userId: true },
+      }),
+    ]);
+    if (!onCandidate && !onStudent) return code;
+  }
+  throw new Error("Could not mint unique hire-only referral code");
+}
+
 /**
  * `CandidatePreference.userId` is an FK to `CandidateProfile`, not to `User`.
- * Phase 2a has backfilled ~10.9k of ~12.8k users, so a live candidate can still
- * be without a profile row — writing a preference for them would fail on the FK.
- *
- * This creates the missing row using the same precedence Phase 2a uses
- * (`StudentProfile` first, then the User record), and reuses the student's own
- * `referralCode` where it is free, so a later 2a run finds this row and keeps
- * it rather than allocating a second code.
+ * If StudentProfile exists, CandidateProfile copies that live referral code.
+ * 8-character codes are only for users with no StudentProfile (hire-only).
  */
 async function ensureCandidateProfile(
   tx: Prisma.TransactionClient,
@@ -230,12 +419,12 @@ async function ensureCandidateProfile(
     user?.email?.split("@")[0] ||
     "Unknown";
 
-  let referralCode = sp?.referralCode ?? randomReferralCode();
-  const taken = await tx.candidateProfile.findUnique({
-    where: { referralCode },
-    select: { userId: true },
-  });
-  if (taken) referralCode = randomReferralCode();
+  let referralCode: string;
+  if (sp?.referralCode) {
+    referralCode = sp.referralCode;
+  } else {
+    referralCode = await mintHireOnlyReferralCode(tx);
+  }
 
   await tx.candidateProfile.create({
     data: {

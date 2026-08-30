@@ -1,13 +1,33 @@
-export { getCandidateProfile, getProfileSummary } from "./candidate";
+export {
+  getCandidateProfile,
+  getProfileSummary,
+  listCandidateProfiles,
+  findUserIdByReferralCode,
+} from "./candidate";
 export { listChallengeEnrollments, findActiveMembership } from "./learning";
-export { getDashboardPrograms } from "./progress";
+export {
+  getChallengeProgressStats,
+  listChallengeSubmissions,
+  listHubSubmissionTimes,
+  getChallengeDaySubmission,
+  listProgramMissionProgress,
+  getProgramUnlockFloor,
+  listQuizAttemptsForUser,
+  getQuizAttemptForUser,
+} from "./progress";
 export {
   searchCandidates,
   searchableUserWhere,
   filterSearchableUserIds,
   visibleProgramMemberWhere,
 } from "./talent";
-export { getBalance } from "./points";
+export {
+  getBalance,
+  applyPointsChange,
+  lockWalletBalance,
+  submissionAwardTotal,
+  withLegacyPointsMirrorFlush,
+} from "./points";
 export { getByPublicId, listForUser } from "./credentials";
 export {
   listProgramCandidates,

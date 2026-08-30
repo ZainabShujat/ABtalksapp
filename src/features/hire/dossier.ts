@@ -307,9 +307,9 @@ export async function buildDossierSet(
       }),
       declaredSkills: declared(m.skills),
       links: declared({
-        linkedin: Boolean(m.linkedinUrl),
-        github: Boolean(m.githubUsername),
-        resume: Boolean(m.resumeUrl),
+        linkedin: Boolean(m.hasLinkedin),
+        github: Boolean(m.hasGithub),
+        resume: Boolean(m.hasResume),
       }),
 
       evidence: {

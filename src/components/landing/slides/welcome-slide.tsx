@@ -28,7 +28,7 @@ export function WelcomeSlide() {
       >
         Welcome to the
         <br />
-        <span className="bg-gradient-to-r from-primary to-violet-500 bg-clip-text text-transparent">
+        <span className="text-primary">
           60-Day Coding Challenge
         </span>
       </motion.h1>

@@ -11,24 +11,19 @@ import {
   Flame,
   LogOut,
   Menu,
-  Moon,
   Star,
-  Sun,
   User,
   Wrench,
   X,
 } from "lucide-react";
-import { useTheme } from "next-themes";
 import { signOutAction } from "@/app/actions/auth-actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSynergy } from "@/components/shared/synergy-provider";
 import type { AppHeaderUser } from "@/components/shared/app-header";
-import { playClickSound } from "@/lib/sound-pref";
 import { cn } from "@/lib/utils";
 
 type Props = {
   user: AppHeaderUser;
-  isMarketplace: boolean;
 };
 
 function initials(name: string) {
@@ -42,13 +37,11 @@ function initials(name: string) {
 const ROW_CLASS =
   "focus-spark flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted";
 
-export function MobileSidebar({ user, isMarketplace }: Props) {
+export function MobileSidebar({ user }: Props) {
   const [open, setOpen] = useState(false);
   const { points } = useSynergy();
-  const { resolvedTheme, setTheme } = useTheme();
 
   const label = user.name?.trim() || user.email || "User";
-  const isDark = resolvedTheme === "dark";
 
   useEffect(() => {
     if (!open) return;
@@ -124,7 +117,7 @@ export function MobileSidebar({ user, isMarketplace }: Props) {
                   <Link
                     href="/marketplace"
                     onClick={() => setOpen(false)}
-                    className="focus-spark flex items-center justify-between rounded-lg border border-primary/20 bg-linear-to-r from-primary/15 to-violet-500/15 px-3 py-2.5 text-sm font-semibold text-primary transition-colors hover:from-primary/25 hover:to-violet-500/25"
+                    className="focus-spark flex items-center justify-between rounded-lg border border-primary/20 bg-primary/15 px-3 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/25"
                   >
                     <span className="inline-flex items-center gap-2">
                       <Flame className="size-4" aria-hidden />
@@ -150,29 +143,6 @@ export function MobileSidebar({ user, isMarketplace }: Props) {
                       />
                       Admin Panel
                     </Link>
-                  ) : null}
-                  {!isMarketplace ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playClickSound();
-                        setTheme(isDark ? "light" : "dark");
-                      }}
-                      className={cn(ROW_CLASS, "text-left")}
-                    >
-                      {isDark ? (
-                        <Sun
-                          className="size-4 text-muted-foreground"
-                          aria-hidden
-                        />
-                      ) : (
-                        <Moon
-                          className="size-4 text-muted-foreground"
-                          aria-hidden
-                        />
-                      )}
-                      {isDark ? "Light Mode" : "Dark Mode"}
-                    </button>
                   ) : null}
                   <Link
                     href="/achievements"

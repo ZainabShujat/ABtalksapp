@@ -17,7 +17,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { SynergyChip } from "@/components/shared/synergy-chip";
 import { NotificationBellButton } from "@/components/shared/notification-bell-button";
 import {
@@ -65,8 +64,6 @@ export function AppHeader({
   const router = useRouter();
   const pathname = usePathname();
   const jobsActive = pathname.startsWith("/jobs");
-  const isMarketplace =
-    pathname === "/marketplace" || pathname.startsWith("/marketplace/");
   const label = displayLabel(user);
   const showChallengeSwitcher =
     (userEnrollments?.length ?? 0) >= 1 &&
@@ -154,11 +151,6 @@ export function AppHeader({
           <div className="hidden md:block">
             <SynergyChip />
           </div>
-          {!isMarketplace ? (
-            <div className="hidden md:block">
-              <ThemeToggle />
-            </div>
-          ) : null}
           <span className="hidden h-6 w-px shrink-0 bg-border md:block" aria-hidden />
           <div className="hidden md:block">
             <DropdownMenu>
@@ -230,7 +222,7 @@ export function AppHeader({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <MobileSidebar user={user} isMarketplace={isMarketplace} />
+          <MobileSidebar user={user} />
         </div>
       </div>
     </header>

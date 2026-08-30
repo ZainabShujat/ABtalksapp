@@ -145,6 +145,12 @@ export function MissionPanel({
           points: result.data.pointsAwarded,
           unlockedDay: result.data.unlockedDay,
         });
+
+        if (dayNumber === 15) {
+          toast.success("🎉 Day 15 completed! The Day 15 Checkpoint AI Interview is now unlocked on your dashboard.", { duration: 8000 });
+        } else if (dayNumber === 31) {
+          toast.success("🏆 Day 31 completed! The Final AI Interview is now unlocked on your dashboard.", { duration: 8000 });
+        }
         setMissionState((s) => ({
           ...s,
           dayState: "PASSED",

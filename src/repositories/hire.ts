@@ -3,8 +3,12 @@ import type { Prisma } from "@prisma/client";
 import { Domain, ProgramCohortStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { isNewTalentRepoEnabled } from "@/lib/feature-flags";
-import { logger } from "@/lib/logger";
-import { searchableUserWhere } from "@/repositories/talent";
+import { peIdForMember, memberIdFromPe } from "@/repositories/ids";
+import {
+  loadRecruiterIdentities,
+  searchableUserWhere,
+  type RecruiterPublicIdentity,
+} from "@/repositories/talent";
 
 /**
  * Candidate reads for `/hire`.
@@ -26,39 +30,36 @@ import { searchableUserWhere } from "@/repositories/talent";
  * implementations must satisfy (078 §8.2).
  */
 
-/**
- * Whether the 078 tables can actually answer these questions yet.
- *
- * Separate from `ENABLE_NEW_TALENT` on purpose. That flag switches `/talent`'s
- * candidate search, which reads `CandidateProfile` — already backfilled for
- * ~10.9k users. The recruiter desk needs considerably more: per-activity
- * attempts and evaluations (`ProgramEnrollment` / `ActivityAttempt` /
- * `ActivityEvaluation`) for the evidence dimensions, and `SkillEvidence` for
- * stack matching. Phase 2e is **stopped**, so none of that is complete.
- *
- * Flipping `ENABLE_NEW_TALENT` must not silently hand the desk a half-backfilled
- * pool, and it must not throw either — `/talent` has to be able to switch on its
- * own. So the desk stays on legacy and says so, once, in the log.
- *
- * Turn this on only when Phase 2e and 2f are complete and Phase 5 verification
- * has passed. See docs/plans/082-hire-on-078-architecture.md §8.
- */
-const NEW_HIRE_POOL_READY = false;
-
-let warnedOnce = false;
-
 function newModelActive(): boolean {
-  if (!isNewTalentRepoEnabled()) return false;
-  if (NEW_HIRE_POOL_READY) return true;
-  if (!warnedOnce) {
-    warnedOnce = true;
-    logger.error(
-      "[hire] ENABLE_NEW_TALENT is on but the 078 candidate pool is not ready " +
-        "(Phase 2e/2f incomplete). The recruiter desk is still reading legacy tables.",
-      {},
-    );
-  }
-  return false;
+  return isNewTalentRepoEnabled();
+}
+
+function identityFromLegacyProfile(p: {
+  fullName?: string | null;
+  role?: string | null;
+  yearsExperience?: number | null;
+  graduationYear?: number | null;
+  college?: string | null;
+  skills?: string[] | null;
+  linkedinUrl?: string | null;
+  githubUsername?: string | null;
+  resumeUrl?: string | null;
+} | null): RecruiterPublicIdentity {
+  return {
+    fullName: p?.fullName ?? "",
+    role: p?.role ?? null,
+    yearsExperience: p?.yearsExperience ?? null,
+    graduationYear: p?.graduationYear ?? null,
+    education: null,
+    university: p?.college ?? null,
+    skills: p?.skills ?? [],
+    hasLinkedin: Boolean(p?.linkedinUrl),
+    hasGithub: Boolean(p?.githubUsername),
+    hasResume: Boolean(p?.resumeUrl),
+    showInterviewResults: false,
+    showAssessmentScores: true,
+    showCurrentEmployer: true,
+  };
 }
 
 /* ── program (AI cohort) ──────────────────────────────────────────────────── */
@@ -78,9 +79,35 @@ export const PROGRAM_CANDIDATE_SELECT = {
   university: true,
   graduationYear: true,
   skills: true,
-  linkedinUrl: true,
-  githubUsername: true,
-  resumeUrl: true,
+  updatedAt: true,
+  cohort: { select: { id: true, startsAt: true } },
+  commitDays: { select: { date: true } },
+  projects: { select: { aiScore: true, adminScore: true, status: true } },
+  interview: {
+    select: {
+      status: true,
+      overallScore: true,
+      commScore: true,
+      techScore: true,
+      problemScore: true,
+    },
+  },
+} satisfies Prisma.ProgramMemberSelect;
+
+const PROGRAM_EVIDENCE_SELECT = {
+  id: true,
+  userId: true,
+  cohortId: true,
+  status: true,
+  jobRole: true,
+  company: true,
+  missionPoints: true,
+  totalScore: true,
+  yearsExperience: true,
+  education: true,
+  university: true,
+  graduationYear: true,
+  skills: true,
   updatedAt: true,
   cohort: { select: { id: true, startsAt: true } },
   commitDays: { select: { date: true } },
@@ -98,7 +125,23 @@ export const PROGRAM_CANDIDATE_SELECT = {
 
 export type ProgramCandidateRow = Prisma.ProgramMemberGetPayload<{
   select: typeof PROGRAM_CANDIDATE_SELECT;
-}>;
+}> & {
+  hasLinkedin: boolean;
+  hasGithub: boolean;
+  hasResume: boolean;
+};
+
+function withLegacyLinkFlags(
+  row: Prisma.ProgramMemberGetPayload<{ select: typeof PROGRAM_CANDIDATE_SELECT }>,
+  extras?: { linkedinUrl?: string | null; githubUsername?: string | null; resumeUrl?: string | null },
+): ProgramCandidateRow {
+  return {
+    ...row,
+    hasLinkedin: Boolean(extras?.linkedinUrl),
+    hasGithub: Boolean(extras?.githubUsername),
+    hasResume: Boolean(extras?.resumeUrl),
+  };
+}
 
 /**
  * `where` describes which *pool* to search — cohorts, statuses. The visibility
@@ -115,13 +158,53 @@ export async function listProgramCandidates(
   where: Prisma.ProgramMemberWhereInput,
 ): Promise<ProgramCandidateRow[]> {
   if (newModelActive()) {
-    // 078: ProgramEnrollment + EnrollmentProgress + ActivityAttempt/Evaluation.
-    // Not implemented — see NEW_HIRE_POOL_READY.
+    const rows = await prisma.programMember.findMany({
+      where: { AND: [where, { user: searchableUserWhere() }] },
+      select: PROGRAM_EVIDENCE_SELECT,
+    });
+    const identities = await loadRecruiterIdentities(rows.map((r) => r.userId));
+    return rows.map((r) => {
+      const idn = identities.get(r.userId);
+      const interview = idn?.showInterviewResults ? r.interview : null;
+      return {
+        id: r.id,
+        userId: r.userId,
+        cohortId: r.cohortId,
+        status: r.status,
+        fullName: idn?.fullName || "",
+        jobRole: idn?.role ?? r.jobRole,
+        company: idn?.showCurrentEmployer === false ? null : r.company,
+        missionPoints: r.missionPoints,
+        totalScore: r.totalScore,
+        yearsExperience: idn?.yearsExperience ?? r.yearsExperience,
+        education: idn?.education ?? r.education,
+        university: idn?.university ?? r.university,
+        graduationYear: idn?.graduationYear ?? r.graduationYear,
+        skills: idn?.skills.length ? idn.skills : r.skills,
+        updatedAt: r.updatedAt,
+        cohort: r.cohort,
+        commitDays: r.commitDays,
+        projects: r.projects,
+        interview,
+        hasLinkedin: idn?.hasLinkedin ?? false,
+        hasGithub: idn?.hasGithub ?? false,
+        hasResume: idn?.hasResume ?? false,
+      };
+    });
   }
-  return prisma.programMember.findMany({
+
+  const rows = await prisma.programMember.findMany({
     where: { AND: [where, { user: searchableUserWhere() }] },
-    select: PROGRAM_CANDIDATE_SELECT,
+    select: {
+      ...PROGRAM_CANDIDATE_SELECT,
+      linkedinUrl: true,
+      githubUsername: true,
+      resumeUrl: true,
+    },
   });
+  return rows.map(({ linkedinUrl, githubUsername, resumeUrl, ...row }) =>
+    withLegacyLinkFlags(row, { linkedinUrl, githubUsername, resumeUrl }),
+  );
 }
 
 export type MissionAttemptRow = {
@@ -138,7 +221,43 @@ export async function listMissionAttempts(
 ): Promise<MissionAttemptRow[]> {
   if (memberIds.length === 0) return [];
   if (newModelActive()) {
-    // 078: ActivityAttempt joined to ActivityEvaluation.
+    const rows = await prisma.activityAttempt.findMany({
+      where: {
+        enrollmentId: { in: memberIds.map(peIdForMember) },
+        id: { startsWith: "aa_ms_" },
+        activityId: { startsWith: "act_pd_" },
+      },
+      select: {
+        enrollmentId: true,
+        attemptNumber: true,
+        passed: true,
+        payload: true,
+        submittedAt: true,
+        createdAt: true,
+        activity: { select: { dayNumber: true } },
+        evaluations: {
+          where: { isAuthoritative: true },
+          select: { passed: true },
+          take: 1,
+        },
+      },
+      orderBy: [{ createdAt: "asc" }],
+    });
+    return rows.flatMap((row) => {
+      const memberId = memberIdFromPe(row.enrollmentId);
+      const dayNumber = row.activity.dayNumber;
+      if (!memberId || dayNumber == null) return [];
+      return [
+        {
+          memberId,
+          dayNumber,
+          attemptNumber: row.attemptNumber,
+          passed: row.evaluations[0]?.passed ?? row.passed,
+          payload: row.payload ?? null,
+          createdAt: row.submittedAt ?? row.createdAt,
+        },
+      ];
+    });
   }
   return prisma.programMissionSubmission.findMany({
     where: { memberId: { in: memberIds } },
@@ -161,9 +280,6 @@ export type CurriculumDayRow = {
 };
 
 export async function listCurriculumDays(): Promise<CurriculumDayRow[]> {
-  if (newModelActive()) {
-    // 078: Activity rows on the program's published ProgramVersion.
-  }
   const days = await prisma.programDay.findMany({
     select: { dayNumber: true, language: true, missionType: true },
   });
@@ -206,7 +322,7 @@ export async function listPoolCohorts(openIds: string[] | "all" | null): Promise
 
 /* ── challenge (60-day + Claude) ──────────────────────────────────────────── */
 
-export const CHALLENGE_CANDIDATE_SELECT = {
+const CHALLENGE_EVIDENCE_SELECT = {
   id: true,
   userId: true,
   domain: true,
@@ -217,47 +333,86 @@ export const CHALLENGE_CANDIDATE_SELECT = {
   currentStreak: true,
   certificate: { select: { status: true } },
   _count: { select: { submissions: true } },
-  user: {
-    select: {
-      name: true,
-      studentProfile: {
-        select: {
-          skills: true,
-          role: true,
-          yearsExperience: true,
-          graduationYear: true,
-          domain: true,
-          linkedinUrl: true,
-          githubUsername: true,
-          college: true,
-          fullName: true,
-          resumeUrl: true,
-        },
-      },
-    },
-  },
+  user: { select: { name: true } },
 } satisfies Prisma.EnrollmentSelect;
 
-export type ChallengeCandidateRow = Prisma.EnrollmentGetPayload<{
-  select: typeof CHALLENGE_CANDIDATE_SELECT;
-}>;
+export type ChallengeCandidateRow = {
+  id: string;
+  userId: string;
+  domain: Domain;
+  status: Prisma.EnrollmentGetPayload<{ select: typeof CHALLENGE_EVIDENCE_SELECT }>["status"];
+  startedAt: Date;
+  completedAt: Date | null;
+  longestStreak: number;
+  currentStreak: number;
+  certificate: { status: string } | null;
+  _count: { submissions: number };
+  user: { name: string | null };
+  recruiterIdentity: RecruiterPublicIdentity;
+};
 
 export async function listChallengeCandidates(
   domains: Domain[],
 ): Promise<ChallengeCandidateRow[]> {
   if (newModelActive()) {
-    // 078: ProgramEnrollment on the legacy-<domain> cohorts + EnrollmentProgress.
+    const rows = await prisma.enrollment.findMany({
+      where: {
+        challenge: { domain: { in: domains } },
+        submissions: { some: {} },
+        user: searchableUserWhere(),
+      },
+      select: CHALLENGE_EVIDENCE_SELECT,
+    });
+    const identities = await loadRecruiterIdentities(rows.map((r) => r.userId));
+    return rows.map((r) => ({
+      ...r,
+      recruiterIdentity:
+        identities.get(r.userId) ?? identityFromLegacyProfile(null),
+    }));
   }
-  return prisma.enrollment.findMany({
+
+  const rows = await prisma.enrollment.findMany({
     where: {
       challenge: { domain: { in: domains } },
-      // A candidate is someone with a track record.
       submissions: { some: {} },
-      // Finishing days of the challenge is evidence, not permission.
       user: searchableUserWhere(),
     },
-    select: CHALLENGE_CANDIDATE_SELECT,
+    select: {
+      ...CHALLENGE_EVIDENCE_SELECT,
+      user: {
+        select: {
+          name: true,
+          studentProfile: {
+            select: {
+              skills: true,
+              role: true,
+              yearsExperience: true,
+              graduationYear: true,
+              linkedinUrl: true,
+              githubUsername: true,
+              college: true,
+              fullName: true,
+              resumeUrl: true,
+            },
+          },
+        },
+      },
+    },
   });
+  return rows.map((r) => ({
+    id: r.id,
+    userId: r.userId,
+    domain: r.domain,
+    status: r.status,
+    startedAt: r.startedAt,
+    completedAt: r.completedAt,
+    longestStreak: r.longestStreak,
+    currentStreak: r.currentStreak,
+    certificate: r.certificate,
+    _count: r._count,
+    user: { name: r.user.name },
+    recruiterIdentity: identityFromLegacyProfile(r.user.studentProfile),
+  }));
 }
 
 /** First / last submission per candidate — the consistency evidence dimension. */
@@ -269,7 +424,43 @@ export async function listSubmissionActivity(userIds: string[]) {
       _min: { submittedAt: Date | null };
     }[];
   if (newModelActive()) {
-    // 078: ActivityAttempt.submittedAt aggregated per enrollment.
+    const attempts = await prisma.activityAttempt.findMany({
+      where: {
+        id: { startsWith: "aa_sub_" },
+        submittedAt: { not: null },
+        enrollment: { userId: { in: userIds } },
+      },
+      select: {
+        submittedAt: true,
+        enrollment: { select: { userId: true } },
+        activity: { select: { dayNumber: true } },
+      },
+    });
+    const byUser = new Map<
+      string,
+      { maxAt: Date | null; minAt: Date | null; maxDay: number | null }
+    >();
+    for (const a of attempts) {
+      const uid = a.enrollment.userId;
+      const cur = byUser.get(uid) ?? {
+        maxAt: null,
+        minAt: null,
+        maxDay: null,
+      };
+      const at = a.submittedAt;
+      if (at && (!cur.maxAt || at > cur.maxAt)) cur.maxAt = at;
+      if (at && (!cur.minAt || at < cur.minAt)) cur.minAt = at;
+      const day = a.activity.dayNumber;
+      if (day != null && (cur.maxDay == null || day > cur.maxDay)) {
+        cur.maxDay = day;
+      }
+      byUser.set(uid, cur);
+    }
+    return [...byUser.entries()].map(([userId, v]) => ({
+      userId,
+      _max: { submittedAt: v.maxAt, dayNumber: v.maxDay },
+      _min: { submittedAt: v.minAt },
+    }));
   }
   return prisma.submission.groupBy({
     by: ["userId"],
@@ -283,7 +474,35 @@ export async function listQuizAggregates(userIds: string[]) {
   if (userIds.length === 0)
     return [] as { userId: string; _avg: { score: number | null }; _count: number }[];
   if (newModelActive()) {
-    // 078: ActivityEvaluation.score over Activity(type = QUIZ).
+    const attempts = await prisma.activityAttempt.findMany({
+      where: {
+        id: { startsWith: "aa_qa_" },
+        enrollment: { userId: { in: userIds } },
+      },
+      select: {
+        score: true,
+        enrollment: { select: { userId: true } },
+        evaluations: {
+          where: { isAuthoritative: true },
+          select: { score: true },
+          take: 1,
+        },
+      },
+    });
+    const byUser = new Map<string, { sum: number; count: number }>();
+    for (const a of attempts) {
+      const score = a.evaluations[0]?.score ?? a.score;
+      if (score == null) continue;
+      const cur = byUser.get(a.enrollment.userId) ?? { sum: 0, count: 0 };
+      cur.sum += score;
+      cur.count += 1;
+      byUser.set(a.enrollment.userId, cur);
+    }
+    return [...byUser.entries()].map(([userId, v]) => ({
+      userId,
+      _avg: { score: v.count > 0 ? v.sum / v.count : null },
+      _count: v.count,
+    }));
   }
   return prisma.quizAttempt.groupBy({
     by: ["userId"],
@@ -295,44 +514,69 @@ export async function listQuizAggregates(userIds: string[]) {
 
 /* ── hackathon ────────────────────────────────────────────────────────────── */
 
-export const HACKATHON_CANDIDATE_SELECT = {
+const HACKATHON_EVIDENCE_SELECT = {
   userId: true,
-  user: {
-    select: {
-      name: true,
-      studentProfile: {
-        select: {
-          skills: true,
-          role: true,
-          yearsExperience: true,
-          graduationYear: true,
-          linkedinUrl: true,
-          githubUsername: true,
-          resumeUrl: true,
-        },
-      },
-    },
-  },
+  user: { select: { name: true } },
 } satisfies Prisma.HackathonParticipantSelect;
 
-export type HackathonCandidateRow = Prisma.HackathonParticipantGetPayload<{
-  select: typeof HACKATHON_CANDIDATE_SELECT;
-}>;
+export type HackathonCandidateRow = {
+  userId: string;
+  user: { name: string | null };
+  recruiterIdentity: RecruiterPublicIdentity;
+};
 
 export async function listHackathonCandidates(
   take = 200,
 ): Promise<HackathonCandidateRow[]> {
-  // Hackathons stay a separate bounded subsystem under 078 (§3.4) and reach the
-  // profile through CandidateAchievement / Credential / SkillEvidence, so there
-  // is no new-model branch to switch to here — only the gate matters.
-  return prisma.hackathonParticipant.findMany({
+  if (newModelActive()) {
+    const rows = await prisma.hackathonParticipant.findMany({
+      where: {
+        team: { submission: { isNot: null } },
+        user: searchableUserWhere(),
+      },
+      select: HACKATHON_EVIDENCE_SELECT,
+      take,
+    });
+    const identities = await loadRecruiterIdentities(rows.map((r) => r.userId));
+    return rows.map((r) => ({
+      userId: r.userId,
+      user: r.user,
+      recruiterIdentity:
+        identities.get(r.userId) ?? identityFromLegacyProfile(null),
+    }));
+  }
+
+  const rows = await prisma.hackathonParticipant.findMany({
     where: {
       team: { submission: { isNot: null } },
       user: searchableUserWhere(),
     },
-    select: HACKATHON_CANDIDATE_SELECT,
+    select: {
+      userId: true,
+      user: {
+        select: {
+          name: true,
+          studentProfile: {
+            select: {
+              skills: true,
+              role: true,
+              yearsExperience: true,
+              graduationYear: true,
+              linkedinUrl: true,
+              githubUsername: true,
+              resumeUrl: true,
+            },
+          },
+        },
+      },
+    },
     take,
   });
+  return rows.map((r) => ({
+    userId: r.userId,
+    user: { name: r.user.name },
+    recruiterIdentity: identityFromLegacyProfile(r.user.studentProfile),
+  }));
 }
 
 /* ── provenance and display ───────────────────────────────────────────────── */
@@ -355,10 +599,11 @@ export async function listProgramMemberLabels(
   }[]
 > {
   if (memberIds.length === 0) return [];
-  return prisma.programMember.findMany({
+  const rows = await prisma.programMember.findMany({
     where: { id: { in: memberIds } },
     select: {
       id: true,
+      userId: true,
       fullName: true,
       jobRole: true,
       shortlistedBy: opts?.shortlistedByRecruiterUserId
@@ -370,6 +615,24 @@ export async function listProgramMemberLabels(
         : { where: { id: "" }, select: { id: true }, take: 0 },
     },
   });
+  if (!newModelActive()) {
+    return rows.map((r) => ({
+      id: r.id,
+      fullName: r.fullName,
+      jobRole: r.jobRole,
+      shortlistedBy: r.shortlistedBy,
+    }));
+  }
+  const identities = await loadRecruiterIdentities(rows.map((r) => r.userId));
+  return rows.map((r) => {
+    const idn = identities.get(r.userId);
+    return {
+      id: r.id,
+      fullName: idn?.fullName || r.fullName,
+      jobRole: idn?.role ?? r.jobRole,
+      shortlistedBy: r.shortlistedBy,
+    };
+  });
 }
 
 export async function listUserDisplayNames(
@@ -377,6 +640,17 @@ export async function listUserDisplayNames(
 ): Promise<Map<string, string>> {
   const ids = [...new Set(userIds.filter(Boolean))];
   if (ids.length === 0) return new Map();
+  if (newModelActive()) {
+    const rows = await prisma.candidateProfile.findMany({
+      where: { userId: { in: ids } },
+      select: { userId: true, fullName: true },
+    });
+    return new Map(
+      rows
+        .filter((u) => u.fullName.trim())
+        .map((u) => [u.userId, u.fullName.trim()]),
+    );
+  }
   const rows = await prisma.user.findMany({
     where: { id: { in: ids } },
     select: { id: true, name: true },

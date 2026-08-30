@@ -4,7 +4,7 @@ import { RedemptionStatus, PointsSourceType } from "@prisma/client";
 import { requireAdmin } from "@/lib/admin-auth";
 import { writeClient } from "@/lib/db";
 import { updateRedemptionStatusSchema } from "@/lib/validations/marketplace";
-import { dualWritePoints } from "@/repositories/dual-write";
+import { applyPointsChange, withLegacyPointsMirrorFlush } from "@/repositories/points";
 
 export async function updateRedemptionStatusAction(formData: FormData) {
   await requireAdmin();
@@ -21,7 +21,8 @@ export async function updateRedemptionStatusAction(formData: FormData) {
   }
   const { redemptionId, nextStatus, trackingNote } = parsed.data;
 
-  return writeClient().$transaction(async (tx) => {
+  return withLegacyPointsMirrorFlush(() =>
+    writeClient().$transaction(async (tx) => {
     const current = await tx.redemption.findUnique({
       where: { id: redemptionId },
       select: { status: true, userId: true, costSP: true },
@@ -57,32 +58,22 @@ export async function updateRedemptionStatusAction(formData: FormData) {
       nextStatus === RedemptionStatus.CANCELLED &&
       current.status !== RedemptionStatus.CANCELLED
     ) {
-      await tx.user.update({
-        where: { id: current.userId },
-        data: { synergyPoints: { increment: current.costSP } },
-      });
-      await tx.studentProfile.updateMany({
-        where: { userId: current.userId },
-        data: { synergyPoints: { increment: current.costSP } },
-      });
-      await tx.synergyEvent.create({
-        data: {
-          userId: current.userId,
-          points: current.costSP,
-          type: "REDEEM_REFUND",
-          reason: `Refund for cancelled redemption ${redemptionId}`,
-        },
-      });
-      await dualWritePoints(tx, {
+      const applied = await applyPointsChange(tx, {
         userId: current.userId,
         amount: current.costSP,
+        mode: "credit",
         sourceType: PointsSourceType.REDEMPTION_REFUND,
         sourceId: redemptionId,
         idempotencyKey: `redeem-refund:${redemptionId}`,
         reason: `Refund for cancelled redemption ${redemptionId}`,
+        legacyEvent: { type: "REDEEM_REFUND" },
       });
+      if (!applied.ok) {
+        throw new Error("Failed to refund points");
+      }
     }
 
     return { ok: true as const };
-  });
+  }),
+  );
 }

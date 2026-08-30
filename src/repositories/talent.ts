@@ -33,6 +33,105 @@ export function searchableUserWhere(): Prisma.UserWhereInput {
   };
 }
 
+/** Recruiter-safe identity. No email, phone, or resume URL. */
+export type RecruiterPublicIdentity = {
+  fullName: string;
+  role: string | null;
+  yearsExperience: number | null;
+  graduationYear: number | null;
+  education: string | null;
+  university: string | null;
+  skills: string[];
+  hasLinkedin: boolean;
+  hasGithub: boolean;
+  hasResume: boolean;
+  showInterviewResults: boolean;
+  showAssessmentScores: boolean;
+  showCurrentEmployer: boolean;
+};
+
+/**
+ * Overlay for `/hire` and `/talent` list/detail. Does not select email, phone,
+ * or resume URL — resume presence is an existence check only.
+ */
+export async function loadRecruiterIdentities(
+  userIds: string[],
+): Promise<Map<string, RecruiterPublicIdentity>> {
+  const ids = [...new Set(userIds.filter(Boolean))];
+  const out = new Map<string, RecruiterPublicIdentity>();
+  if (ids.length === 0) return out;
+
+  const [profiles, withResume] = await Promise.all([
+    prisma.candidateProfile.findMany({
+      where: { userId: { in: ids } },
+      select: {
+        userId: true,
+        fullName: true,
+        headline: true,
+        linkedinUrl: true,
+        githubUsername: true,
+        skills: {
+          orderBy: { evidenceScore: "desc" },
+          select: { skill: { select: { name: true } } },
+        },
+        education: {
+          orderBy: { graduationYear: "desc" },
+          take: 1,
+          select: {
+            degree: true,
+            institutionName: true,
+            graduationYear: true,
+          },
+        },
+        experience: {
+          select: { totalMonths: true },
+        },
+        user: {
+          select: {
+            visibility: {
+              select: {
+                showLinkedin: true,
+                showGithub: true,
+                showResume: true,
+                showInterviewResults: true,
+                showAssessmentScores: true,
+                showCurrentEmployer: true,
+              },
+            },
+          },
+        },
+      },
+    }),
+    prisma.candidateProfile.findMany({
+      where: { userId: { in: ids }, resumeUrl: { not: null } },
+      select: { userId: true },
+    }),
+  ]);
+  const resumeSet = new Set(withResume.map((r) => r.userId));
+
+  for (const p of profiles) {
+    const vis = p.user.visibility;
+    const months = p.experience.reduce((sum, e) => sum + (e.totalMonths ?? 0), 0);
+    const edu = p.education[0];
+    out.set(p.userId, {
+      fullName: p.fullName,
+      role: p.headline,
+      yearsExperience: months > 0 ? Math.round(months / 12) : null,
+      graduationYear: edu?.graduationYear ?? null,
+      education: edu?.degree ?? null,
+      university: edu?.institutionName ?? null,
+      skills: p.skills.map((s) => s.skill.name).filter(Boolean),
+      hasLinkedin: Boolean((vis?.showLinkedin ?? true) && p.linkedinUrl),
+      hasGithub: Boolean((vis?.showGithub ?? true) && p.githubUsername),
+      hasResume: Boolean(vis?.showResume === true && resumeSet.has(p.userId)),
+      showInterviewResults: vis?.showInterviewResults === true,
+      showAssessmentScores: vis?.showAssessmentScores === true,
+      showCurrentEmployer: vis?.showCurrentEmployer ?? true,
+    });
+  }
+  return out;
+}
+
 /**
  * Set-membership form of {@link searchableUserWhere}, for the paths that hold
  * candidate ids already and need to drop the ones that must not be shown.
@@ -50,9 +149,8 @@ export async function filterSearchableUserIds(
 }
 
 /**
- * Legacy `/talent` fragment. Retiring with the `/talent` pool — new surfaces use
- * {@link searchableUserWhere}. Left in place only because the legacy branch of
- * `searchCandidates` below still ranks `ProgramMember` rows.
+ * Legacy `/talent` fragment. The live gate is {@link searchableUserWhere}.
+ * Kept as a single-key fragment so tests can catch it growing a second job.
  */
 export function visibleProgramMemberWhere(): Prisma.ProgramMemberWhereInput {
   return { recruiterVisibilityConsentAt: { not: null } };
@@ -61,7 +159,13 @@ export function visibleProgramMemberWhere(): Prisma.ProgramMemberWhereInput {
 function buildUserGate(f: CandidateSearchFilters): Prisma.UserWhereInput {
   return {
     deletedAt: null,
-    visibility: { is: { searchableByRecruiters: true } },
+    visibility: {
+      is: {
+        searchableByRecruiters: true,
+        withdrawnAt: null,
+        ...(f.minAssessmentScore && { showAssessmentScores: true }),
+      },
+    },
     ...(f.completedProgramIds?.length && {
       programEnrollments: {
         some: {
@@ -88,10 +192,22 @@ function buildUserGate(f: CandidateSearchFilters): Prisma.UserWhereInput {
   };
 }
 
-function redactForRecruiter<T extends { user?: { visibility?: unknown } }>(
-  row: T,
-): T {
-  return row;
+function preferenceFilter(
+  f: CandidateSearchFilters,
+): Prisma.CandidatePreferenceWhereInput | null {
+  const pref: Prisma.CandidatePreferenceWhereInput = {};
+  if (f.openToWork === true) pref.openToWork = true;
+  if (f.availableBefore) {
+    pref.openToWork = true;
+    pref.availableFrom = { lte: f.availableBefore };
+  }
+  if (f.workMode && f.workMode !== "FLEXIBLE") {
+    pref.remotePreference = f.workMode;
+  }
+  if (f.noticePeriodDaysMax != null) {
+    pref.noticePeriodDays = { lte: f.noticePeriodDaysMax };
+  }
+  return Object.keys(pref).length > 0 ? pref : null;
 }
 
 export async function searchCandidates(
@@ -102,23 +218,29 @@ export async function searchCandidates(
   const skip = ((f.page ?? 1) - 1) * pageSize;
 
   if (isNewTalentRepoEnabled()) {
-    const where: Prisma.CandidateProfileWhereInput = {
-      user: buildUserGate(f),
-      ...(f.q && {
+    const clauses: Prisma.CandidateProfileWhereInput[] = [
+      { user: buildUserGate(f) },
+    ];
+    if (f.q) {
+      clauses.push({
         OR: [
           { fullName: { contains: f.q, mode: "insensitive" } },
           { headline: { contains: f.q, mode: "insensitive" } },
         ],
-      }),
-      ...(f.skillIds?.length && {
+      });
+    }
+    if (f.skillIds?.length) {
+      clauses.push({
         skills: {
           some: {
             skillId: { in: f.skillIds },
             evidenceScore: { gte: f.minEvidenceScore ?? 0 },
           },
         },
-      }),
-      ...((f.graduationYearFrom || f.graduationYearTo) && {
+      });
+    }
+    if (f.graduationYearFrom || f.graduationYearTo) {
+      clauses.push({
         education: {
           some: {
             graduationYear: {
@@ -127,20 +249,30 @@ export async function searchCandidates(
             },
           },
         },
-      }),
-      ...(f.minExperienceMonths && {
+      });
+    }
+    if (f.minExperienceMonths) {
+      clauses.push({
         experience: { some: { totalMonths: { gte: f.minExperienceMonths } } },
-      }),
-      ...(f.availableBefore && {
-        preference: {
-          is: { openToWork: true, availableFrom: { lte: f.availableBefore } },
-        },
-      }),
-      ...(f.locationCity && {
-        locationCity: { equals: f.locationCity, mode: "insensitive" },
-      }),
-      ...(f.countryCode && { countryCode: f.countryCode }),
-    };
+      });
+    }
+    const pref = preferenceFilter(f);
+    if (pref) clauses.push({ preference: { is: pref } });
+    if (f.locationCity) {
+      clauses.push({
+        OR: [
+          { locationCity: { equals: f.locationCity, mode: "insensitive" } },
+          {
+            preference: {
+              is: { preferredLocations: { has: f.locationCity } },
+            },
+          },
+        ],
+      });
+    }
+    if (f.countryCode) clauses.push({ countryCode: f.countryCode });
+
+    const where: Prisma.CandidateProfileWhereInput = { AND: clauses };
 
     const [total, rows] = await prisma.$transaction([
       prisma.candidateProfile.count({ where }),
@@ -159,18 +291,17 @@ export async function searchCandidates(
             select: {
               visibility: {
                 select: {
-                  showEmail: true,
-                  showPhone: true,
                   showResume: true,
                   showLinkedin: true,
                   showGithub: true,
                   showAssessmentScores: true,
+                  showInterviewResults: true,
+                  showCurrentEmployer: true,
                 },
               },
             },
           },
           skills: {
-            where: { verified: true },
             orderBy: { evidenceScore: "desc" },
             take: 8,
             select: {
@@ -200,12 +331,32 @@ export async function searchCandidates(
       total,
       page: f.page ?? 1,
       pageSize,
-      rows: rows.map(redactForRecruiter),
+      rows: rows.map((row) => {
+        const vis = row.user.visibility;
+        const showEmployer = vis?.showCurrentEmployer ?? true;
+        return {
+          userId: row.userId,
+          fullName: row.fullName,
+          headline: row.headline,
+          locationCity: row.locationCity,
+          countryCode: row.countryCode,
+          hasLinkedin: vis?.showLinkedin ?? true,
+          hasGithub: vis?.showGithub ?? true,
+          hasResume: vis?.showResume === true,
+          skills: row.skills,
+          education: row.education,
+          experience: row.experience.map((e) => ({
+            title: e.title,
+            companyName: showEmployer ? e.companyName : null,
+            totalMonths: e.totalMonths,
+          })),
+        };
+      }),
     };
   }
 
   const where: Prisma.ProgramMemberWhereInput = {
-    ...visibleProgramMemberWhere(),
+    user: searchableUserWhere(),
     status: { in: ["ENROLLED", "COMPLETED"] },
     ...(f.q && {
       OR: [

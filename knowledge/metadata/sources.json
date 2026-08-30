@@ -4,71 +4,124 @@
       "id": "master-fact-sheet",
       "type": "pdf",
       "status": "authoritative",
-      "scope": ["abtalks", "programs", "community", "channels", "website"],
+      "scope": [
+        "abtalks",
+        "programs",
+        "community",
+        "channels",
+        "website"
+      ],
       "note": "Not present in this repository."
     },
     {
       "id": "abtalks-overview",
       "type": "pptx",
       "status": "supporting",
-      "scope": ["positioning", "market", "product", "traction"],
+      "scope": [
+        "positioning",
+        "market",
+        "product",
+        "traction"
+      ],
       "note": "Not present in this repository."
     },
     {
       "id": "fact-sheet-docx",
       "type": "docx",
       "status": "supporting",
-      "scope": ["abtalks", "programs", "community", "channels", "website"],
+      "scope": [
+        "abtalks",
+        "programs",
+        "community",
+        "channels",
+        "website"
+      ],
       "note": "Treated as a duplicate or alternate representation of master-fact-sheet unless it contains new information. Not present in this repository; not yet cross-checked for new content."
     },
     {
       "id": "fact-sheet-pdf",
       "type": "pdf",
       "status": "supporting",
-      "scope": ["abtalks", "programs", "community", "channels", "website"],
+      "scope": [
+        "abtalks",
+        "programs",
+        "community",
+        "channels",
+        "website"
+      ],
       "note": "Same treatment as master-fact-sheet. Not present in this repository."
     },
     {
       "id": "ai-tools-workshop-overview",
       "type": "document",
       "status": "authoritative",
-      "scope": ["ai-tools-workshop"],
+      "scope": [
+        "ai-tools-workshop"
+      ],
       "note": "Primary source for AI Tools Workshop purpose, duration, format, audience, tools, curriculum. Not present in this repository."
     },
     {
       "id": "figma-cursor-workshop-pdf",
       "type": "pdf",
       "status": "authoritative",
-      "scope": ["figma-cursor-workshop"],
+      "scope": [
+        "figma-cursor-workshop"
+      ],
       "note": "Separate workshop from the AI Tools Workshop; must not be merged with it. Not present in this repository."
     },
     {
       "id": "vicodathon-event-notice",
       "type": "document",
       "status": "authoritative",
-      "scope": ["vicodathon"],
+      "scope": [
+        "vicodathon"
+      ],
       "note": "Highest-authority source for ViCodathon 2026 event-specific facts. Event is historical/completed relative to the current project date. Not present in this repository."
     },
     {
       "id": "vicodathon-influencer-brief",
       "type": "document",
       "status": "supporting",
-      "scope": ["vicodathon"],
+      "scope": [
+        "vicodathon"
+      ],
       "note": "Supporting source for hackathon positioning, content angles, and event ecosystem context. Not present in this repository."
     },
     {
       "id": "claude-challenge-guidelines-pdf",
       "type": "pdf",
       "status": "authoritative",
-      "scope": ["claude-challenge"],
+      "scope": [
+        "claude-challenge"
+      ],
       "path": "public/documents/ABTalks-60-Day-Challenge-Guidelines.pdf",
       "note": "Present in this repository and currently linked from the live site. Ingested 2026-08-10 into claude-challenge.md."
+    },
+    {
+      "id": "chatbot-kb-site-scrape",
+      "type": "document",
+      "status": "supporting",
+      "scope": [
+        "claude-challenge-curriculum",
+        "testimonials",
+        "community",
+        "ai-cohort",
+        "vicodathon",
+        "audience-faqs"
+      ],
+      "note": "Provenance for content merged in from the retired knowledge/processed/abtalks-chatbot-kb.md monolith (docs/plans/061-chatbot-retrieval-quality-fixes.md) into claude-challenge-curriculum.md, testimonials.md, audience-faqs.md, and additions to community.md/ai-cohort.md/vicodathon.md/anil-bajpai.md. Predates the corrections in docs/plans/039-chatbot-knowledge-corrections-and-wiring.md and this file's other authoritative sources — wherever it conflicts with a topic file or facts.json, the topic file/facts.json wins. Not independently re-verified against the live site as a whole; individual unverified claims are flagged inline where merged."
     },
     {
       "id": "live-site-abtalks-in",
       "type": "website",
       "status": "authoritative",
-      "scope": ["community", "channels", "workshops", "events", "programs"],
+      "scope": [
+        "community",
+        "channels",
+        "workshops",
+        "events",
+        "programs"
+      ],
       "lastCheckedAt": "2026-08-10",
       "note": "abtalks.in, cross-checked directly for verification of facts, dates, and social handles. Time-sensitive facts sourced here (event dates/status, social handles) should be treated as current only as of lastCheckedAt; re-verify before relying on them long after this date."
     }

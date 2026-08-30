@@ -124,7 +124,7 @@ export function HackathonPromoModal() {
             </button>
 
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white/70">
-              <Sparkles className="size-3 text-violet-400" aria-hidden />
+              <Sparkles className="size-3 text-[#FFECE3]" aria-hidden />
               ViCODATHON
             </span>
 
@@ -132,7 +132,7 @@ export function HackathonPromoModal() {
               ABTalks{" "}
               <span
                 style={{
-                  background: "linear-gradient(120deg,#8b5cf6,#6366f1)",
+                  background: "linear-gradient(120deg,#E05226,#C9411C)",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                   backgroundClip: "text",
@@ -174,7 +174,7 @@ export function HackathonPromoModal() {
               onClick={() => setOpen(false)}
               className="group mt-5 flex w-full items-center justify-center gap-2 rounded-full py-3 text-[14px] font-semibold text-white transition-[transform,filter] duration-200 hover:-translate-y-0.5 hover:brightness-110"
               style={{
-                background: "linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%)",
+                background: "linear-gradient(135deg,#E05226 0%,#C9411C 100%)",
                 boxShadow:
                   "0 12px 28px -12px rgba(124,92,246,0.7), inset 0 1px 0 rgba(255,255,255,0.22)",
               }}

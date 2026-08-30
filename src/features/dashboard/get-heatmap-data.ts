@@ -1,5 +1,6 @@
 import { SubmissionStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { listChallengeSubmissions } from "@/repositories/progress";
 import { readDayNumberFromMetadata } from "@/lib/admin-action-metadata";
 import {
   getCurrentDayNumber,
@@ -102,16 +103,15 @@ export async function getHeatmapData(
 
   const submissionsPromise: Promise<HeatmapSubmission[]> = options?.submissions
     ? Promise.resolve(options.submissions)
-    : prisma.submission.findMany({
-        where: { enrollmentId },
-        select: {
-          dayNumber: true,
-          status: true,
-          githubUrl: includeSubmissionDetails,
-          linkedinUrl: includeSubmissionDetails,
-          submittedAt: true,
-        },
-      });
+    : listChallengeSubmissions(enrollmentId).then((rows) =>
+        rows.map((s) => ({
+          dayNumber: s.dayNumber,
+          status: s.status,
+          githubUrl: includeSubmissionDetails ? s.githubUrl : null,
+          linkedinUrl: includeSubmissionDetails ? s.linkedinUrl : null,
+          submittedAt: s.submittedAt,
+        })),
+      );
 
   const [submissions, tasks, titleByDay, adminActions] = await Promise.all([
     submissionsPromise,

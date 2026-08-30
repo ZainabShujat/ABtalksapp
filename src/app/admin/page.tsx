@@ -48,7 +48,7 @@ export default async function AdminHomePage() {
           label="Active Today"
           value={data.stats.activeToday}
           delta={data.stats.activeTodayDelta}
-          accent="purple"
+          accent="orange"
           icon={<Activity className="h-4 w-4" />}
         />
         <StatCard

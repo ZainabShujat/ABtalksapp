@@ -1,19 +1,46 @@
 import "@fontsource/dseg7-classic/400.css";
 import "@fontsource/dseg7-classic/700.css";
-import { Bitcount_Prop_Single, IBM_Plex_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import type { ReactNode } from "react";
 import { HackathonHeader } from "@/components/hackathon/hackathon-header";
 
-const bitcount = Bitcount_Prop_Single({
-  subsets: ["latin"],
+const bitcount = localFont({
+  src: [
+    {
+      path: "../../fonts/bitcount-prop-single/bitcount-prop-single-latin-400-normal.woff2",
+      weight: "400",
+      style: "normal",
+    },
+  ],
   variable: "--font-hackathon-display",
-  weight: "400",
+  display: "swap",
 });
 
-const plexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
+const plexMono = localFont({
+  src: [
+    {
+      path: "../../fonts/ibm-plex-mono/ibm-plex-mono-latin-400-normal.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/ibm-plex-mono/ibm-plex-mono-latin-500-normal.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/ibm-plex-mono/ibm-plex-mono-latin-600-normal.woff2",
+      weight: "600",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/ibm-plex-mono/ibm-plex-mono-latin-700-normal.woff2",
+      weight: "700",
+      style: "normal",
+    },
+  ],
   variable: "--font-hackathon-mono",
-  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 export default function HackathonLayout({ children }: { children: ReactNode }) {

@@ -1,5 +1,6 @@
 import type { Domain } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { listQuizCatalog } from "@/repositories/learning";
+import { listQuizAttemptsForUser } from "@/repositories/progress";
 
 export type QuizHistoryRow = {
   attemptId: string;
@@ -13,27 +14,24 @@ export async function getQuizAttemptHistory(
   userId: string,
   enrollment: { challengeId: string; domain: Domain },
 ): Promise<QuizHistoryRow[]> {
-  const attempts = await prisma.quizAttempt.findMany({
-    where: {
-      userId,
-      quiz: {
-        challengeId: enrollment.challengeId,
-        domain: enrollment.domain,
-      },
-    },
-    select: {
-      id: true,
-      score: true,
-      quiz: { select: { id: true, weekNumber: true, title: true } },
-    },
-    orderBy: { attemptedAt: "desc" },
-  });
+  const catalog = await listQuizCatalog(enrollment.domain);
+  const quizIds = catalog.map((q) => q.id);
+  if (quizIds.length === 0) return [];
 
-  return attempts.map((a) => ({
-    attemptId: a.id,
-    quizId: a.quiz.id,
-    weekNumber: a.quiz.weekNumber,
-    score: a.score,
-    title: a.quiz.title,
-  }));
+  const byId = new Map(catalog.map((q) => [q.id, q]));
+  const attempts = await listQuizAttemptsForUser(userId, quizIds);
+
+  return attempts.flatMap((a) => {
+    const quiz = byId.get(a.quizId);
+    if (!quiz) return [];
+    return [
+      {
+        attemptId: a.id,
+        quizId: a.quizId,
+        weekNumber: quiz.weekNumber,
+        score: a.score,
+        title: quiz.title,
+      },
+    ];
+  });
 }

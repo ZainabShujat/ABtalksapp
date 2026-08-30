@@ -7,6 +7,7 @@ import { isProgramEnabled } from "@/lib/feature-flags";
 import { logger } from "@/lib/logger";
 import { resolveProgramMemberForUser } from "@/lib/program-auth";
 import { isUserRegistered } from "@/features/hackathon/registration-status";
+import { findChallengeEnrollment } from "@/repositories/learning";
 
 export type LandingUser = {
   name: string | null;
@@ -56,10 +57,7 @@ export async function getLandingState(): Promise<LandingState> {
           where: { userId },
           select: { id: true },
         }),
-        prisma.enrollment.findFirst({
-          where: { userId, domain: Domain.CLAUDE },
-          select: { id: true },
-        }),
+        findChallengeEnrollment(userId, { domain: Domain.CLAUDE }),
         isProgramEnabled()
           ? resolveProgramMemberForUser(userId)
           : Promise.resolve(null),

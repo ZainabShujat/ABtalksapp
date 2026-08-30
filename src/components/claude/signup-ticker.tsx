@@ -32,7 +32,7 @@ export function SignupTicker({ signups, isPaused }: Props) {
   const current = signups[currentIndex];
 
   return (
-    <div className="relative z-10 shrink-0 border-b bg-gradient-to-r from-orange-500/5 via-pink-500/5 to-violet-500/5 backdrop-blur-sm">
+    <div className="relative z-10 shrink-0 border-b bg-[#FFF5F0] backdrop-blur-sm">
       <div className="container mx-auto flex h-10 items-center justify-center overflow-hidden px-4 md:px-6">
         <AnimatePresence mode="wait">
           <motion.div

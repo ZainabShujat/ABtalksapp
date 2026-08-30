@@ -1,6 +1,6 @@
 import { Domain } from "@prisma/client";
 import { unstable_cache } from "next/cache";
-import { prisma } from "@/lib/db";
+import { getChallengeByDomain, findChallengeEnrollment } from "@/repositories/learning";
 
 /**
  * CLAUDE cohort start is immutable content — cache it indefinitely (tag
@@ -9,10 +9,7 @@ import { prisma } from "@/lib/db";
  */
 const getClaudeChallengeStartsAtMs = unstable_cache(
   async (): Promise<number | null> => {
-    const challenge = await prisma.challenge.findUnique({
-      where: { domain: Domain.CLAUDE },
-      select: { startsAt: true },
-    });
+    const challenge = await getChallengeByDomain(Domain.CLAUDE);
     return challenge?.startsAt ? challenge.startsAt.getTime() : null;
   },
   ["claude-challenge-starts-at"],
@@ -36,12 +33,8 @@ export async function shouldShowClaudeBanner(
   if (typeof hasClaudeEnrollment === "boolean") {
     enrolled = hasClaudeEnrollment;
   } else {
-    const enrollment = await prisma.enrollment.findFirst({
-      where: {
-        userId,
-        domain: Domain.CLAUDE,
-      },
-      select: { id: true },
+    const enrollment = await findChallengeEnrollment(userId, {
+      domain: Domain.CLAUDE,
     });
     enrolled = enrollment !== null;
   }

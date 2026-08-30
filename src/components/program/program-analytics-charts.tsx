@@ -19,13 +19,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { CohortOverview } from "@/features/program/admin";
 
 const PIE_COLORS = [
-  "#8B5CF6",
+  "#E05226",
   "#10B981",
   "#0891B2",
   "#F97316",
   "#EC4899",
   "#EAB308",
-  "#6366F1",
+  "#C9411C",
   "#14B8A6",
 ];
 
