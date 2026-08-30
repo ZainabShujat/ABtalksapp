@@ -87,6 +87,7 @@ type Props = {
   initialSearched?: boolean;
   /** Server flag: fill an empty desk with blurred example profiles. */
   proPreview?: boolean;
+  virtualCandidates?: boolean;
 };
 
 const OPENING: Msg = {
@@ -285,6 +286,7 @@ export function ScoutChat({
   alertWhenAvailable = false,
   initialSearched = false,
   proPreview = false,
+  virtualCandidates = false,
 }: Props) {
   const router = useRouter();
   const [requestId, setRequestId] = useState<string | null>(initialRequestId);
@@ -351,7 +353,7 @@ export function ScoutChat({
     ? []
     : proPreview
       ? buildLockedPreviewCards(spec)
-      : virtualProfile
+      : virtualCandidates && virtualProfile
         ? [virtualCandidateToCard(virtualProfile)]
         : buildSampleCards(spec);
 

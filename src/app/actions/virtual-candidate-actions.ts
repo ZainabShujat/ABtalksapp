@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { requireAdmin } from "@/lib/admin-auth";
+import { isVirtualCandidatesEnabled } from "@/lib/feature-flags";
 import {
   cancelVirtualCandidateRequest,
   linkRealCandidate,
@@ -63,6 +64,10 @@ async function requireRegisteredRecruiter(): Promise<
 export async function requestVirtualCandidateAction(
   input: unknown,
 ): Promise<ActionResult<{ requestId: string; duplicate: boolean }>> {
+  if (!isVirtualCandidatesEnabled()) {
+    return { ok: false, message: "Sourcing requests aren't open yet." };
+  }
+
   const gate = await requireRegisteredRecruiter();
   if (!gate.ok) return gate;
 

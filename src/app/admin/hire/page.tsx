@@ -6,6 +6,7 @@ import { EngagementDecision } from "@/components/admin/engagement-decision";
 import { getDemandBoard } from "@/features/hire/demand-board";
 import { listVirtualCandidateRequests } from "@/features/hire/virtual-candidate-store";
 import { getDemandAnalytics } from "@/features/hire/demand-analytics";
+import { isVirtualCandidatesEnabled } from "@/lib/feature-flags";
 import { VirtualCandidateQueue } from "@/components/admin/virtual-candidate-queue";
 import { cn } from "@/lib/utils";
 
@@ -32,8 +33,14 @@ export default async function AdminHirePage() {
 
   // Demand we could not answer at all. Distinct from the introductions above:
   // those are about someone we have, these are about someone we do not.
-  const virtualQueue = await listVirtualCandidateRequests({ take: 50 });
-  const analytics = await getDemandAnalytics();
+  // Guarded rather than merely hidden: with the flag off the tables may not
+  // exist yet, and a page that queries them would be an error the admin sees
+  // rather than a section they do not.
+  const virtualOn = isVirtualCandidatesEnabled();
+  const virtualQueue = virtualOn
+    ? await listVirtualCandidateRequests({ take: 50 })
+    : null;
+  const analytics = virtualOn ? await getDemandAnalytics() : null;
 
   const engagements = await prisma.talentEngagementRequest.findMany({
     orderBy: [{ submittedAt: "desc" }, { createdAt: "desc" }],
@@ -109,7 +116,7 @@ export default async function AdminHirePage() {
         </p>
       </div>
 
-      {analytics.ok && analytics.data.virtualCandidatesGenerated > 0 && (
+      {analytics?.ok && analytics.data.virtualCandidatesGenerated > 0 && (
         <section className="space-y-3">
           <div>
             <h2 className="font-display text-lg font-semibold">Unmet demand</h2>
@@ -163,6 +170,7 @@ export default async function AdminHirePage() {
         </section>
       )}
 
+      {virtualOn && (
       <section className="space-y-3">
         <div>
           <h2 className="font-display text-lg font-semibold">
@@ -173,7 +181,7 @@ export default async function AdminHirePage() {
             source. Nothing here is a person yet.
           </p>
         </div>
-        {virtualQueue.ok ? (
+        {virtualQueue?.ok ? (
           <VirtualCandidateQueue
             rows={virtualQueue.data.rows.map((r) => ({
               ...r,
@@ -181,9 +189,10 @@ export default async function AdminHirePage() {
             }))}
           />
         ) : (
-          <p className="text-sm text-destructive">{virtualQueue.message}</p>
+          <p className="text-sm text-destructive">{virtualQueue?.message}</p>
         )}
       </section>
+      )}
 
       <section className="space-y-3">
         <h2 className="font-display text-lg font-semibold">

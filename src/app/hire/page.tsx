@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { getRecruiterState } from "@/features/talent-pool/recruiter-registration";
-import { isHireProPreviewEnabled } from "@/lib/feature-flags";
+import { isHireProPreviewEnabled, isVirtualCandidatesEnabled } from "@/lib/feature-flags";
 import { ScoutChat } from "@/components/hire/scout-chat";
 
 export const metadata: Metadata = {
@@ -38,6 +38,7 @@ export default async function HirePage() {
     <ScoutChat
       persist={persist}
       proPreview={isHireProPreviewEnabled()}
+      virtualCandidates={isVirtualCandidatesEnabled()}
       initialRequestId={null}
       initialMessages={[]}
       initialSpec={{}}
