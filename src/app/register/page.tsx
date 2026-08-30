@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { RegistrationForm } from "./registration-form";
 import { studentProfile } from "@/repositories/legacy/student-profile";
+import { findChallengeEnrollment } from "@/repositories/learning";
 
 type PageProps = {
   searchParams: Promise<{ ref?: string; domain?: string }>;
@@ -48,9 +49,8 @@ export default async function RegisterPage({ searchParams }: PageProps) {
   // Registered = has a StudentProfile (registration no longer creates an enrollment).
   if (profile) {
     if (isCoreDomain(requestedDomain)) {
-      const existing = await prisma.enrollment.findFirst({
-        where: { userId: session.user.id, domain: requestedDomain },
-        select: { id: true, status: true },
+      const existing = await findChallengeEnrollment(session.user.id, {
+        domain: requestedDomain,
       });
 
       // ABANDONED blocks this track only — other tracks stay joinable.
@@ -97,7 +97,7 @@ export default async function RegisterPage({ searchParams }: PageProps) {
   const initialName = session.user.name?.trim() ?? "";
 
   return (
-    <div className="theme-abtalks-orange flex min-h-svh flex-col bg-[#FBF9F7]">
+    <div className="theme-abtalks-light theme-abtalks-orange flex min-h-svh flex-col bg-[#FBF9F7]">
       <div className="flex flex-1 flex-col items-center justify-center p-6">
         <Card className="w-full max-w-2xl border-border/60 shadow-md">
           <CardHeader className="space-y-2">

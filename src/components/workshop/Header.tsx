@@ -1,53 +1,66 @@
-import Link from "next/link";
 import { CalendarDays } from "lucide-react";
 import WorkshopLogo from "@/components/workshop/WorkshopLogo";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { NotificationBellButton } from "@/components/shared/notification-bell-button";
 
-export default function WorkshopHeader() {
+/**
+ * Figma node 1:113 — 78px bar, logo left, primary action right.
+ *
+ * The design shows "Login/Sign Up", which is what cold logged-out traffic
+ * gets. A signed-in visitor has nothing to log into, so the same slot becomes
+ * the seat CTA rather than showing them a pointless auth link.
+ */
+export default function WorkshopHeader({ isSignedIn }: { isSignedIn: boolean }) {
   return (
     <header
-      className="sticky top-0 z-50 w-full px-4"
+      className="sticky top-0 z-50 w-full px-4 sm:px-[58px]"
       style={{
-        background: "rgba(5,10,23,0.7)",
+        background: "var(--wk-bar-bg-blur)",
         backdropFilter: "blur(16px)",
         WebkitBackdropFilter: "blur(16px)",
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        borderBottom: "1px solid var(--wk-bar-border)",
       }}
     >
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 py-3">
-        <div className="flex items-center gap-3">
-          <WorkshopLogo />
-          <div className="hidden h-4 w-px bg-white/15 sm:block" />
-          <span
-            className="hidden rounded-md px-2.5 py-1 text-[10px] font-bold uppercase leading-none tracking-widest sm:inline-block"
-            style={{
-              background: "rgba(var(--wk-a1-rgb),0.12)",
-              color: "var(--wk-a1-light)",
-              border: "1px solid rgba(var(--wk-a1-rgb),0.25)",
-            }}
-          >
-            AI Workshop
-          </span>
-        </div>
+      <div className="mx-auto flex h-[78px] w-full max-w-[1920px] items-center justify-between gap-4">
+        <WorkshopLogo />
 
-        <div className="flex items-center gap-1.5 sm:gap-3">
-          <Link
-            href="/ai-workshop/events"
-            className="group inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-medium text-white/60 transition-colors hover:text-white sm:px-3.5"
+        <div className="flex items-center gap-2 sm:gap-4">
+          {/* Jumps to the calendar on this page rather than the separate
+              /ai-workshop/events route. A plain hash, not a full path: this
+              header only renders on /ai-workshop, so the hash stays on-page
+              and picks up the page's smooth scrolling. */}
+          <a
+            href="#events"
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-[14px] font-medium transition-colors hover:text-white"
+            style={{ color: "var(--wk-bar-muted)" }}
           >
             <CalendarDays size={15} strokeWidth={1.75} />
             <span className="hidden sm:inline">Discover events</span>
             <span className="sm:hidden">Events</span>
-          </Link>
+          </a>
+
+          {/* Only for signed-in visitors. The bell self-gates too (it returns
+              null once the feed reports signed-out), but not rendering it at
+              all for anonymous traffic saves the feed fetch entirely. */}
+          {isSignedIn && (
+            <span className="wk-bar-icon inline-flex">
+              <NotificationBellButton className="inline-flex size-9 items-center justify-center transition-colors" />
+            </span>
+          )}
+
+          <span className="wk-bar-toggle inline-flex">
+            <ThemeToggle />
+          </span>
 
           <a
-            href="#register"
-            className="rounded-full px-4 py-2 text-[13px] font-semibold text-white transition-transform hover:-translate-y-0.5"
+            href={isSignedIn ? "#register" : "/login?from=%2Fai-workshop%23register"}
+            className="rounded-[10px] px-5 py-[17px] text-[14px] font-bold leading-[1.1] text-white transition-transform hover:-translate-y-0.5 sm:px-[35px] sm:text-[16px]"
             style={{
-              background: "var(--wk-grad)",
-              boxShadow: "0 6px 20px -6px rgba(var(--wk-a2-rgb),0.6)",
+              background: "var(--wk-a1)",
+              filter: "var(--wk-cta-shadow)",
             }}
           >
-            Reserve seat
+            {isSignedIn ? "Reserve seat" : "Login/Sign Up"}
           </a>
         </div>
       </div>

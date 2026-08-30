@@ -24,7 +24,7 @@ export const metadata = {
 
 const SCORE_COLORS = {
   communication: "#2f6fb0",
-  programming: "#8e3b8e",
+  programming: "#e05226",
   behavior: "#1a9e8f",
 } as const;
 
@@ -215,7 +215,7 @@ export default async function RecruiterProfilePage({
   return (
     <div
       className={cn(
-        "report-light min-h-svh bg-muted/30 text-foreground print:min-h-0 print:bg-white",
+        "report-light theme-abtalks-orange min-h-svh bg-muted/30 text-foreground print:min-h-0 print:bg-white",
         "[print-color-adjust:exact] [-webkit-print-color-adjust:exact]",
       )}
     >

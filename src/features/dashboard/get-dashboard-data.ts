@@ -6,9 +6,11 @@ import type {
 } from "@prisma/client";
 import { getCurrentDayNumber } from "@/lib/date-utils";
 import { resolveDashboardEnrollment } from "@/features/enrollment/resolve-dashboard-enrollment";
-import { getUserWithProfile } from "@/features/user/get-user-with-profile";
+import { getCandidateProfile } from "@/repositories/candidate";
 import { getDailyTasksCached } from "@/features/challenge/get-daily-tasks-cached";
 import { prisma } from "@/lib/db";
+import { getDailyTaskByChallengeDay } from "@/repositories/learning";
+import { listChallengeSubmissions } from "@/repositories/progress";
 
 /** User row missing (deleted) — the page should sign the session out. */
 export type DashboardDataNoUser = {
@@ -97,29 +99,41 @@ export async function getDashboardData(
   userId: string,
   enrollmentId?: string | null,
 ): Promise<DashboardData> {
-  const user = await getUserWithProfile(userId);
+  const [user, candidate] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        studentProfile: { select: { domain: true } },
+      },
+    }),
+    getCandidateProfile(userId),
+  ]);
 
   if (!user) {
     return { hasUser: false };
   }
 
-  if (!user.studentProfile) {
+  if (!user.studentProfile || !candidate) {
     return { hasUser: true, hasEnrollment: false, profile: null, enrollment: null };
   }
 
   const profileSnapshot: DashboardDataWithEnrollment["profile"] = {
-    fullName: user.studentProfile.fullName,
+    fullName: candidate.fullName,
     domain: user.studentProfile.domain,
-    userType: user.studentProfile.userType,
-    college: user.studentProfile.college,
-    organization: user.studentProfile.organization,
-    role: user.studentProfile.role,
-    referralCode: user.studentProfile.referralCode,
-    isReadyForInterview: user.studentProfile.isReadyForInterview,
-    isCampusAmbassadorCandidate: user.studentProfile.isCampusAmbassadorCandidate,
-    ambassadorDismissedAt: user.studentProfile.ambassadorDismissedAt,
-    phone: user.studentProfile.phone,
-    phoneVerified: user.studentProfile.phoneVerified,
+    userType: candidate.userType,
+    college: candidate.college,
+    organization: candidate.organization,
+    role: candidate.role,
+    referralCode: candidate.referralCode,
+    isReadyForInterview: candidate.isReadyForInterview,
+    isCampusAmbassadorCandidate: candidate.isCampusAmbassadorCandidate,
+    ambassadorDismissedAt: candidate.ambassadorDismissedAt,
+    phone: candidate.phone,
+    phoneVerified: candidate.phoneVerified,
   };
 
   const enrollment = await resolveDashboardEnrollment(
@@ -141,18 +155,7 @@ export async function getDashboardData(
   const totalDays = enrollment.challenge.totalDays;
 
   // Single submissions fetch — derives today-completed, recent-7, and the heatmap day map.
-  const allSubmissions = await prisma.submission.findMany({
-    where: { enrollmentId: enrollment.id },
-    orderBy: { submittedAt: "desc" },
-    select: {
-      id: true,
-      dayNumber: true,
-      status: true,
-      submittedAt: true,
-      githubUrl: true,
-      linkedinUrl: true,
-    },
-  });
+  const allSubmissions = await listChallengeSubmissions(enrollment.id);
 
   const isTodayCompleted =
     currentDay >= 1 && allSubmissions.some((s) => s.dayNumber === currentDay);
@@ -172,15 +175,10 @@ export async function getDashboardData(
     const tasks = await getDailyTasksCached(enrollment.challengeId);
     const task = tasks.find((t) => t.dayNumber === currentDay);
     if (task) {
-      const titleRow = await prisma.dailyTask.findUnique({
-        where: {
-          challengeId_dayNumber: {
-            challengeId: enrollment.challengeId,
-            dayNumber: currentDay,
-          },
-        },
-        select: { title: true },
-      });
+      const titleRow = await getDailyTaskByChallengeDay(
+        enrollment.challengeId,
+        currentDay,
+      );
       if (titleRow) {
         todayTask = {
           id: task.id,

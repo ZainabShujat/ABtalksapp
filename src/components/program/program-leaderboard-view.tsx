@@ -13,7 +13,7 @@ function initials(name: string): string {
 const PLACE_STYLES = {
   1: {
     avatar:
-      "size-16 border-[3px] border-yellow-400 bg-[#5B4BDB] text-lg shadow-[0_0_22px_rgba(250,204,21,.45)] sm:size-[4.5rem]",
+      "size-16 border-[3px] border-yellow-400 bg-[#E05226] text-lg shadow-[0_0_22px_rgba(250,204,21,.45)] sm:size-[4.5rem]",
     badge: "size-7 bg-yellow-400 text-black",
     card: "min-h-[14rem] border-yellow-400/40 bg-gradient-to-b from-yellow-400/55 via-yellow-500/25 to-yellow-950/80 shadow-[0_12px_36px_rgba(250,204,21,.22)] sm:min-h-[16rem] lg:min-h-0 lg:flex-1",
     score: "text-2xl font-extrabold text-yellow-200 sm:text-3xl",
@@ -23,7 +23,7 @@ const PLACE_STYLES = {
   },
   2: {
     avatar:
-      "size-14 border-[3px] border-slate-300 bg-[#5B4BDB] text-base sm:size-16",
+      "size-14 border-[3px] border-slate-300 bg-[#E05226] text-base sm:size-16",
     badge: "size-6 bg-slate-200 text-slate-800",
     card: "min-h-[11rem] border-slate-300/35 bg-gradient-to-b from-slate-300/45 via-slate-500/20 to-slate-950/85 sm:min-h-[12.5rem] lg:min-h-0 lg:flex-[0.78]",
     score: "text-xl font-bold text-slate-100 sm:text-2xl",
@@ -33,7 +33,7 @@ const PLACE_STYLES = {
   },
   3: {
     avatar:
-      "size-14 border-[3px] border-orange-400 bg-[#5B4BDB] text-base sm:size-16",
+      "size-14 border-[3px] border-orange-400 bg-[#E05226] text-base sm:size-16",
     badge: "size-6 bg-orange-400 text-black",
     card: "min-h-[9rem] border-orange-400/40 bg-gradient-to-b from-orange-400/50 via-orange-600/20 to-orange-950/85 sm:min-h-[10.5rem] lg:min-h-0 lg:flex-[0.62]",
     score: "text-xl font-bold text-orange-100 sm:text-2xl",
@@ -153,9 +153,9 @@ export function ProgramLeaderboardView({
           <p className="mb-3 shrink-0 text-xs font-semibold tracking-wide text-[#64748B] uppercase">
             Top 3
           </p>
-          <div className="relative flex min-h-[22rem] flex-1 flex-col overflow-hidden rounded-2xl border border-[#8365E3]/35 bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,rgba(115,100,230,0.18),transparent_55%),linear-gradient(180deg,rgba(12,18,36,0.95)_0%,rgba(7,11,20,0.98)_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:min-h-[26rem] sm:p-6 lg:min-h-0">
+          <div className="relative flex min-h-[22rem] flex-1 flex-col overflow-hidden rounded-2xl border border-[#E05226]/35 bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,rgba(224,82,38,0.18),transparent_55%),linear-gradient(180deg,rgba(12,18,36,0.95)_0%,rgba(7,11,20,0.98)_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:min-h-[26rem] sm:p-6 lg:min-h-0">
             <div
-              className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[#968BEC]/50 to-transparent"
+              className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[#FFECE3]/50 to-transparent"
               aria-hidden
             />
             <div className="flex h-full min-h-[18rem] flex-1 items-end justify-between gap-3 pt-8 sm:gap-4 sm:pt-10 lg:min-h-0">
@@ -197,7 +197,7 @@ export function ProgramLeaderboardView({
                         key={row.memberId}
                         className={cn(
                           "border-b border-[#1E293B]/80 last:border-0",
-                          row.isViewer && "bg-[#7364E6]/10",
+                          row.isViewer && "bg-[#E05226]/10",
                         )}
                       >
                         <td className="px-4 py-3 font-semibold text-white">

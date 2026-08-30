@@ -1,7 +1,24 @@
 import { formatInTimeZone } from "date-fns-tz";
 import type { LucideIcon } from "lucide-react";
 import { IST } from "@/lib/date-utils";
-import { BriefcaseBusiness, Clapperboard, GraduationCap, Palette, Trophy } from "lucide-react";
+import {
+  BriefcaseBusiness,
+  CalendarClock,
+  Clapperboard,
+  GraduationCap,
+  Palette,
+  Rocket,
+  Trophy,
+  Users,
+} from "lucide-react";
+
+/** A resource link shown in the past-workshop details modal. */
+export interface WorkshopResource {
+  label: string;
+  href: string;
+  /** `youtube` renders a ▶ marker, `link` renders ↗. */
+  kind: "youtube" | "link";
+}
 
 export interface WorkshopEvent {
   /**
@@ -21,6 +38,12 @@ export interface WorkshopEvent {
   time: string;
   tag: string;
   accent: string;
+  /**
+   * Which product track this belongs to. Drives the calendar tile colour and,
+   * more importantly, what a click does: only `workshop` entries can open the
+   * replay modal — everything else navigates to its own track page.
+   */
+  track: "workshop" | "hackathon" | "cohort" | "challenge";
   /** Import this module only from Client Components — a component reference
    *  cannot be serialized across the Server→Client boundary. */
   Icon: LucideIcon;
@@ -47,27 +70,100 @@ export interface WorkshopEvent {
   href?: string;
   /** Button text for an `href` event. Defaults to "Learn more". */
   ctaLabel?: string;
+
+  // ---------------------------------------------------------------------
+  // Weekly-changing content. Everything below is swapped per workshop: a
+  // new week means a new poster file, new title/desc, new topics/takeaways.
+  // ---------------------------------------------------------------------
+
+  /**
+   * YouTube video id of the recording. A past workshop WITHOUT this stays
+   * un-clickable on the calendar rather than opening an empty player, so an
+   * event can be added before its replay is published.
+   */
+  youtubeId?: string;
+  /**
+   * Substrings of `title` to render in the hero's accent colour. Matched
+   * literally and in order, so each must appear verbatim in `title`; anything
+   * that does not match is simply left unstyled.
+   */
+  titleAccents?: string[];
+  /** Poster image (public/ path). Doubles as the modal's pre-play still. */
+  posterSrc?: string;
+  /** Runtime of the recording, e.g. "01:02:18". Shown on the player still. */
+  duration?: string;
+  /** Modal "Key takeaways" — rendered numbered 01, 02, 03… */
+  takeaways?: string[];
+  /** Modal "Resources" list. */
+  resources?: WorkshopResource[];
+  /**
+   * "What You'll Learn" labels, in display order. Plain strings by design —
+   * TopicsSection owns the colours and the scatter positions, so a weekly
+   * swap is just new text. Falls back to the section default when absent.
+   */
+  topics?: string[];
+  /** True only for auto-generated Saturday placeholders — never for real events. */
+  placeholder?: boolean;
 }
 
 export const EVENTS: WorkshopEvent[] = [
   {
+    id: "claude-challenge-60day",
+    date: "2026-06-01",
+    time: "Day 1",
+    tag: "Challenge",
+    accent: "#c9411c",
+    track: "challenge",
+    Icon: Rocket,
+    title: "60-Day Claude AI Challenge begins",
+    desc: "Daily AI tasks across four domains with GitHub and LinkedIn proof of work, streaks, and recruiter discoverability at the finish.",
+    host: "ABTalks",
+    location: "Online · 60 days",
+    href: "/",
+    ctaLabel: "View challenge",
+  },
+  {
+    id: "ai-cohort-2026-07",
+    date: "2026-07-15",
+    time: "Cohort start",
+    tag: "Cohort",
+    accent: "#c9411c",
+    track: "cohort",
+    Icon: Users,
+    title: "AI Cohort Program — Cohort begins",
+    desc: "31 days of guided missions, concept checks and graded projects for working professionals, ending in a recruiter-facing profile.",
+    host: "ABTalks",
+    location: "Online · 31 days",
+    href: "/program",
+    ctaLabel: "View program",
+  },
+  {
     id: "ai-workshop-live",
+    youtubeId: "ru5mM1ihdRE",
     date: "2026-07-18",
     time: "4:00 PM IST",
     tag: "Live",
-    accent: "#8b5cf6",
+    accent: "#e05226",
+    track: "workshop",
     Icon: GraduationCap,
     title: "FREE AI Bootcamp Live Workshop",
     desc: "Master ChatGPT, Claude & Gemini in one hands-on live hour - prompt engineering, real workflows, and the tools that 10x your output.",
     host: "ABTalks",
     location: "Live · Zoom",
+    takeaways: [
+      "Prompt patterns that carry across ChatGPT, Claude and Gemini",
+      "Pick the right model for the job instead of defaulting to one",
+      "Build a repeatable workflow rather than one-off prompts",
+      "Spot the common failure modes and recover from them",
+    ],
   },
   {
     id: "uiux-ai-workshop",
     date: "2026-08-01",
     time: "6:00 PM IST",
     tag: "Design",
-    accent: "#6366f1",
+    accent: "#a93617",
+    track: "workshop",
     Icon: Palette,
     title: "Figma × Cursor - AI-Powered UI/UX Workshop",
     desc: "Design in Figma, ship with Cursor, MCP servers, AI plugins, and a live run from blank canvas to polished screens to working front-end code.",
@@ -76,13 +172,20 @@ export const EVENTS: WorkshopEvent[] = [
     register: true,
     // No `registrationOpen`: this event is past, so registration is closed.
     // Set it on the next upcoming event to reopen the form.
+    takeaways: [
+      "Wire Figma to Cursor through MCP and drive both from one place",
+      "Go from blank canvas to a usable screen without pixel-pushing",
+      "Turn a finished frame into working front-end code",
+      "Keep design tokens and code in sync as the file changes",
+    ],
   },
   {
     id: "ai-hackathon-48h",
     date: "2026-08-07",
     time: "Starts 8:00 PM IST",
     tag: "Hackathon",
-    accent: "#22d3ee",
+    accent: "#111111",
+    track: "hackathon",
     Icon: Trophy,
     title: "48-Hour AI Hackathon",
     desc: "Build a working AI product in a weekend. Form a team, ship something real, and pitch it to judges for prizes and recruiter visibility.",
@@ -93,29 +196,66 @@ export const EVENTS: WorkshopEvent[] = [
   },
   {
     id: "linkedin-ai-interview",
+    youtubeId: "f4b93W03vaU",
     date: "2026-08-21",
     time: "6:00 PM IST",
     tag: "Career",
-    accent: "#a855f7",
+    accent: "#e05226",
+    track: "workshop",
     Icon: BriefcaseBusiness,
     title: "Enhance LinkedIn & AI Mock Interview",
     desc: "Rebuild your LinkedIn profile so recruiters actually find you, then run live AI mock interviews that grill you and score your answers.",
     host: "ABTalks",
     location: "Live · YouTube",
-    register: true,
-    registrationOpen: true,
+    // Past event (21 Aug): registration closed. The live workshop is
+    // `workshop-2026-09-05` below.
+    posterSrc: "/workshop/posters/linkedin-ai-interview.jpg",
+    takeaways: [
+      "Build a recruiter-friendly LinkedIn profile",
+      "Create content that gets attention",
+      "Use AI to speed up content creation",
+      "Understand growth, analytics & consistency",
+    ],
+    resources: [
+      {
+        label: "Join the WhatsApp community",
+        href: "https://chat.whatsapp.com/LDUvHRIlb5dGHpDJLueR9i?s=cl&p=a&mlu=0&amv=0",
+        kind: "link",
+      },
+    ],
   },
   {
     id: "workshop-2026-09-05",
     date: "2026-09-05",
-    time: "6:00 PM IST",
+    time: "7:00 PM IST",
     tag: "Content",
-    accent: "#ec4899",
+    accent: "#e05226",
+    track: "workshop",
     Icon: Clapperboard,
-    title: "AI Post & Video Generation",
+    title: "Create Anything with AI: From Prompt to Published Content",
+    titleAccents: ["AI", "Published Content"],
     desc: "Turn one idea into a week of content — generate scroll-stopping posts, carousels and short-form videos with AI, then edit and schedule them in minutes.",
     host: "ABTalks",
     location: "Live · YouTube",
+    // The live workshop: hero, countdown, "What You'll Learn" and the
+    // registration form all read off this entry. Supabase `workshop_config`
+    // independently drives the hero chips and countdown — keep its
+    // webinarDate/webinarTime in step with `date`/`time` above.
+    register: true,
+    registrationOpen: true,
+    posterSrc: "/workshop/posters/create-anything-with-ai.jpg",
+    topics: [
+      "Prompt Engineering Fundamentals",
+      "Role, Context & Task",
+      "Style, Constraints & Output",
+      "AI Image Generation",
+      "AI Video Generation",
+      "AI Voice & Audio Creation",
+      "AI Avatar & Digital Presenters",
+      "Script → Avatar → Voice → Video",
+      "AI + MCP Workflows",
+      "Canva AI & Content Publishing",
+    ],
   },
 ];
 
@@ -170,3 +310,107 @@ export const fullDate = (iso: string) =>
     year: "numeric",
     timeZone: "UTC",
   });
+
+// -------------------------------------------------------------------------
+// Calendar helpers. `month` is 0-indexed everywhere below, matching Date.
+// -------------------------------------------------------------------------
+
+/** The weekly Saturday workshop cadence begins here. */
+const SATURDAY_SERIES_START = "2026-09-01";
+
+const isoKey = (d: Date) => d.toISOString().slice(0, 10);
+
+/** Full month name + year, e.g. "August 2026". */
+export const monthLabel = (year: number, month: number) =>
+  new Date(Date.UTC(year, month, 1)).toLocaleString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+
+/**
+ * Synthetic "TBA" workshops for every Saturday of the given month that falls
+ * on or after SATURDAY_SERIES_START and has no real EVENTS entry that day.
+ *
+ * Generated per visible month rather than held as a module-level array: the
+ * cadence has no end date, so a static list would grow without bound as the
+ * user pages forward.
+ */
+export const placeholderSaturdays = (
+  year: number,
+  month: number,
+): WorkshopEvent[] => {
+  const out: WorkshopEvent[] = [];
+  const taken = new Set(EVENTS.map((e) => e.date));
+  const cursor = new Date(Date.UTC(year, month, 1));
+
+  while (cursor.getUTCMonth() === month) {
+    if (cursor.getUTCDay() === 6) {
+      const key = isoKey(cursor);
+      if (key >= SATURDAY_SERIES_START && !taken.has(key)) {
+        out.push({
+          id: `workshop-${key}`,
+          date: key,
+          time: "6:00 PM IST",
+          tag: "Workshop",
+          accent: "#8f8f8f",
+          track: "workshop",
+          Icon: CalendarClock,
+          title: "Workshop — TBA",
+          desc: "Topic announced soon. Register to be notified when this session opens.",
+          host: "ABTalks",
+          location: "Live · YouTube",
+          placeholder: true,
+        });
+      }
+    }
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return out;
+};
+
+/**
+ * Every event falling in the given month — real entries plus generated
+ * Saturday placeholders — keyed by ISO date so the grid can look up a day in
+ * constant time.
+ */
+export const eventsForMonth = (
+  year: number,
+  month: number,
+): Map<string, WorkshopEvent[]> => {
+  const map = new Map<string, WorkshopEvent[]>();
+
+  const push = (ev: WorkshopEvent) => {
+    const list = map.get(ev.date);
+    if (list) list.push(ev);
+    else map.set(ev.date, [ev]);
+  };
+
+  for (const ev of EVENTS) {
+    const d = utc(ev.date);
+    if (d.getUTCFullYear() === year && d.getUTCMonth() === month) push(ev);
+  }
+  for (const ev of placeholderSaturdays(year, month)) push(ev);
+
+  return map;
+};
+
+/**
+ * Any finished real workshop opens the details modal. It deliberately does
+ * NOT require `youtubeId`: the modal renders a "recording coming soon" state,
+ * so takeaways and resources stay reachable while the replay is still being
+ * uploaded. Placeholders and non-workshop tracks never qualify.
+ */
+/**
+ * Pre-play still for a recording, straight from the video id — no per-event
+ * image to upload, so a workshop gets its thumbnail the moment `youtubeId`
+ * is set.
+ *
+ * `maxres` is 1280×720 but only exists for videos published in HD; `hq` is
+ * always present and is the error fallback.
+ */
+export const youtubeThumb = (id: string, quality: "maxres" | "hq" = "maxres") =>
+  `https://i.ytimg.com/vi/${id}/${quality}default.jpg`;
+
+export const hasReplay = (ev: WorkshopEvent, todayKey: string) =>
+  ev.track === "workshop" && !ev.placeholder && isPastEvent(ev, todayKey);

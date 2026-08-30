@@ -1,7 +1,10 @@
 import { cache } from "react";
 import type { Domain } from "@prisma/client";
-import { EnrollmentStatus } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import {
+  resolveChallengeSessionEnrollment,
+  resolveSessionEnrollment,
+  type SessionEnrollment,
+} from "@/repositories/learning";
 
 /** Shared select for dashboard + challenge day data + submissions */
 export const sessionEnrollmentSelect = {
@@ -26,6 +29,8 @@ export const sessionEnrollmentSelect = {
   },
 } as const;
 
+export type DashboardEnrollment = SessionEnrollment;
+
 /**
  * Resolves the enrollment shown on the dashboard.
  * - Optional `enrollmentId` must belong to the user; when present it is honoured
@@ -39,39 +44,8 @@ export const resolveDashboardEnrollment = cache(async function resolveDashboardE
   userId: string,
   enrollmentId: string | undefined,
   profileDomain: Domain | null,
-) {
-  const trimmed = enrollmentId?.trim();
-  if (trimmed) {
-    // Caller named an enrollment (track pages pass the row for their own domain).
-    // Honour it at ANY status — a COMPLETED or ABANDONED track must render its own
-    // data, never silently fall back to a different domain.
-    return prisma.enrollment.findFirst({
-      where: { id: trimmed, userId },
-      select: sessionEnrollmentSelect,
-    });
-  }
-
-  let row = await prisma.enrollment.findFirst({
-    where: { userId, status: EnrollmentStatus.ACTIVE },
-    orderBy: { startedAt: "asc" },
-    select: sessionEnrollmentSelect,
-  });
-  if (row) return row;
-
-  if (profileDomain) {
-    row = await prisma.enrollment.findFirst({
-      where: { userId, domain: profileDomain },
-      orderBy: { startedAt: "desc" },
-      select: sessionEnrollmentSelect,
-    });
-    if (row) return row;
-  }
-
-  return prisma.enrollment.findFirst({
-    where: { userId },
-    orderBy: { startedAt: "desc" },
-    select: sessionEnrollmentSelect,
-  });
+): Promise<SessionEnrollment | null> {
+  return resolveSessionEnrollment(userId, enrollmentId, profileDomain);
 });
 
 /**
@@ -81,30 +55,6 @@ export const resolveDashboardEnrollment = cache(async function resolveDashboardE
 export async function resolveChallengeEnrollment(
   userId: string,
   enrollmentId: string | undefined,
-) {
-  const trimmed = enrollmentId?.trim();
-  if (trimmed) {
-    const picked = await prisma.enrollment.findFirst({
-      where: {
-        id: trimmed,
-        userId,
-        status: { not: EnrollmentStatus.ABANDONED },
-      },
-      select: sessionEnrollmentSelect,
-    });
-    if (picked) return picked;
-  }
-
-  let row = await prisma.enrollment.findFirst({
-    where: { userId, status: EnrollmentStatus.ACTIVE },
-    orderBy: { startedAt: "asc" },
-    select: sessionEnrollmentSelect,
-  });
-  if (row) return row;
-
-  return prisma.enrollment.findFirst({
-    where: { userId, status: { not: EnrollmentStatus.ABANDONED } },
-    orderBy: { startedAt: "desc" },
-    select: sessionEnrollmentSelect,
-  });
+): Promise<SessionEnrollment | null> {
+  return resolveChallengeSessionEnrollment(userId, enrollmentId);
 }

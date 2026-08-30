@@ -1,4 +1,9 @@
 import type { Prisma } from "@prisma/client";
+import {
+  dualWriteCommitDay,
+  dualWriteDeleteMissionAttempt,
+  dualWriteMissionAttempt,
+} from "@/repositories/dual-write";
 import { formatInTimeZone } from "date-fns-tz";
 import {
   addCalendarDaysToKey,
@@ -79,15 +84,24 @@ async function seedEarlyCommitDays(
       const commitDate = parseCalendarKeyToUtcDate(dateKey);
       const existing = existingByIso.get(commitDate.toISOString()) ?? 0;
       const nextCount = Math.max(existing, 1);
-      return tx.programCommitDay.upsert({
-        where: { memberId_date: { memberId, date: commitDate } },
-        create: {
-          memberId,
-          date: commitDate,
-          commitCount: nextCount,
-        },
-        update: { commitCount: nextCount },
-      });
+      return tx.programCommitDay
+        .upsert({
+          where: { memberId_date: { memberId, date: commitDate } },
+          create: {
+            memberId,
+            date: commitDate,
+            commitCount: nextCount,
+          },
+          update: { commitCount: nextCount },
+        })
+        .then((row) =>
+          dualWriteCommitDay(tx, {
+            id: row.id,
+            memberId,
+            date: row.date,
+            commitCount: row.commitCount,
+          }),
+        );
     }),
   );
 
@@ -167,7 +181,7 @@ export async function bootstrapMemberStartDay(
     const [days, existingAttempts] = await Promise.all([
       tx.programDay.findMany({
         where: { dayNumber: { in: missingDays } },
-        select: { dayNumber: true, missionPoints: true },
+        select: { id: true, dayNumber: true, missionPoints: true },
       }),
       tx.programMissionSubmission.findMany({
         where: { memberId, dayNumber: { in: missingDays } },
@@ -212,6 +226,35 @@ export async function bootstrapMemberStartDay(
     });
 
     await tx.programMissionSubmission.createMany({ data: rows });
+    const created = await tx.programMissionSubmission.findMany({
+      where: { memberId, dayNumber: { in: missingDays } },
+      select: {
+        id: true,
+        dayNumber: true,
+        attemptNumber: true,
+        payload: true,
+        verdict: true,
+        passed: true,
+        pointsAwarded: true,
+        createdAt: true,
+      },
+    });
+    const dayIdByNumber = new Map(days.map((d) => [d.dayNumber, d.id]));
+    for (const row of created) {
+      const programDayId = dayIdByNumber.get(row.dayNumber);
+      if (!programDayId) continue;
+      await dualWriteMissionAttempt(tx, {
+        id: row.id,
+        memberId,
+        programDayId,
+        attemptNumber: row.attemptNumber,
+        payload: row.payload as Prisma.InputJsonValue,
+        verdict: row.verdict as Prisma.InputJsonValue,
+        passed: row.passed,
+        pointsAwarded: row.pointsAwarded,
+        createdAt: row.createdAt,
+      });
+    }
   }
 
   const passedRows = await tx.programMissionSubmission.findMany({
@@ -233,6 +276,9 @@ export async function bootstrapMemberStartDay(
   if (staleWaivers.length > 0) {
     pointsRemoved = staleWaivers.reduce((sum, row) => sum + row.pointsAwarded, 0);
     cleanPassesRemoved = staleWaivers.length;
+    for (const row of staleWaivers) {
+      await dualWriteDeleteMissionAttempt(tx, row.id);
+    }
     await tx.programMissionSubmission.deleteMany({
       where: { id: { in: staleWaivers.map((row) => row.id) } },
     });

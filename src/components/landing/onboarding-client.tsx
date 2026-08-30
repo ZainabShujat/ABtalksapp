@@ -160,7 +160,7 @@ export function OnboardingClient() {
                 href="/login"
                 className={cn(
                   buttonVariants(),
-                  "gap-2 bg-gradient-to-r from-primary to-violet-500 text-primary-foreground hover:from-primary/90 hover:to-violet-500/90",
+                  "gap-2 bg-[#E05226] text-primary-foreground hover:bg-[#C9411C]",
                 )}
               >
                 <Rocket className="h-4 w-4" />
@@ -191,7 +191,7 @@ function BackgroundBlobs({ slideIndex }: { slideIndex: number }) {
           y: slideIndex * 20,
         }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className="absolute -right-32 top-60 h-80 w-80 rounded-full bg-violet-500/15 blur-3xl"
+        className="absolute -right-32 top-60 h-80 w-80 rounded-full bg-[#FFECE3] blur-3xl"
       />
       <motion.div
         animate={{

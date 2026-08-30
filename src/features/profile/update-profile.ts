@@ -86,7 +86,15 @@ export async function updateProfile(
             phone: data.phone === "" ? null : data.phone,
           },
         });
-        await dualWriteCandidateIdentity(tx, userId);
+        await dualWriteCandidateIdentity(tx, userId, {
+          fullName: true,
+          education: true,
+          skills: true,
+          linkedinUrl: true,
+          resumeUrl: true,
+          githubUsername: true,
+          phone: true,
+        });
       },
       { maxWait: 10000, timeout: 20000 },
     );
@@ -135,7 +143,15 @@ export async function updateProfile(
           phone: data.phone === "" ? null : data.phone,
         },
       });
-      await dualWriteCandidateIdentity(tx, userId);
+      await dualWriteCandidateIdentity(tx, userId, {
+        fullName: true,
+        experience: true,
+        skills: true,
+        linkedinUrl: true,
+        resumeUrl: true,
+        githubUsername: true,
+        phone: true,
+      });
     },
     { maxWait: 10000, timeout: 20000 },
   );

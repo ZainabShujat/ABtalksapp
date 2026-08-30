@@ -12,7 +12,7 @@
 
 # testing
 /coverage
-
+CLAUDE-local.md 
 # next.js
 /.next/
 /out/

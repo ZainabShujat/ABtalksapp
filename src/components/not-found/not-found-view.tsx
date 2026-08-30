@@ -2,13 +2,24 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { Orbitron } from "next/font/google";
+import localFont from "next/font/local";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-const orbitron = Orbitron({
-  subsets: ["latin"],
-  weight: ["400", "700"],
+const orbitron = localFont({
+  src: [
+    {
+      path: "../../fonts/orbitron/orbitron-latin-400-normal.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/orbitron/orbitron-latin-700-normal.woff2",
+      weight: "700",
+      style: "normal",
+    },
+  ],
+  display: "swap",
 });
 
 type KeycapConfig = {
@@ -47,9 +58,9 @@ const KEYCAPS: KeycapConfig[] = [
   {
     href: "/ai-workshop",
     label: "Workshops",
-    stem: "bg-[#633092]",
+    stem: "bg-[#C9411C]",
     faceClassName:
-      "bg-gradient-to-b from-[#e7d8f5] to-[#935cc7] text-[#503577] uppercase",
+      "bg-gradient-to-b from-[#FFECE3] to-[#E05226] text-[#C9411C] uppercase",
     heightClassName: "h-[88px] md:h-[110px]",
   },
 ];

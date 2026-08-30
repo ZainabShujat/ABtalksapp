@@ -1,30 +1,8 @@
 # Events
 
-Event coverage includes the recurring AI/workshop event series and the Vibe Code Hackathon / ViCodathon series. Status below is derived by comparing each event's date to the current project date (2026-08-10) — the live site's own status badges (e.g. "Coming soon," "Accepting registrations") are not reliable for this and are not used to determine status.
-
-## Live events page listing (abtalks.in/ai-workshop/events, checked 2026-08-10)
-
-Four dated editions are currently listed, in page order:
-
-| Event | Date | Time (IST) | Platform | Status (derived from date) |
-|---|---|---|---|---|
-| FREE AI Bootcamp — Live Workshop | Jul 18, 2026 | 4:00 PM | Zoom | Historical (past) |
-| Figma × Cursor — AI-Powered UI/UX Workshop | Aug 1, 2026 | 6:00 PM | Zoom | Historical (past) |
-| 48-Hour AI Hackathon | Aug 7, 2026 | starts 8:00 PM | Team event, remote/online | Historical (past) |
-| Enhance LinkedIn & AI Mock Interview | Aug 21, 2026 | 6:00 PM | Zoom | Upcoming |
-
-Only "Enhance LinkedIn & AI Mock Interview" (Aug 21, 2026) is upcoming as of the current project date; the other three have already occurred despite any "coming soon"-style label still shown on the live site.
-
-**Note on "FREE AI Bootcamp — Live Workshop":** its relationship to the "AI Tools Workshop" described in `workshops.md` is **unresolved** (see `knowledge/metadata/facts.json`, `free-ai-bootcamp-vs-ai-tools-workshop`). This table records the live-site listing as-is; it does not assert that Free AI Bootcamp is or isn't the same offering as the AI Tools Workshop.
-
-## Enhance LinkedIn & AI Mock Interview
-
-- Date: Friday, August 21, 2026
-- Time: 6:00 PM IST
-- Platform: Zoom
-- Price: free
-- Status: upcoming (as of 2026-08-10)
-- This is a distinct event with its own name — it is not a restatement of the Figma × Cursor workshop, and must not be attributed to it.
+Event coverage includes the recurring AI/workshop event series and the Vibe
+Code Hackathon / ViCodathon series. The live schedule is at
+`/ai-workshop/events`; the current state of that page is reproduced below.
 
 ## 48-Hour AI Hackathon (Aug 7, 2026 edition)
 
@@ -40,3 +18,42 @@ Only "Enhance LinkedIn & AI Mock Interview" (Aug 21, 2026) is upcoming as of the
 - Public GitHub repo, live URL, and AI-usage log required per edition
 - The ViCodathon 2026 edition is historical/completed relative to the current project date
 - See `vicodathon.md` for the ViCodathon 2026 edition and sourcing detail
+
+## Weekly Saturday workshop series (current cadence)
+
+From **1 September 2026** ABTalks runs a **workshop every Saturday**, live on
+YouTube, free. Saturdays with no announced topic yet show on the events
+calendar as "Workshop — TBA", 6:00 PM IST — register to be notified when the
+session opens. Exactly one upcoming event accepts signups at a time.
+
+## Create Anything with AI: From Prompt to Published Content (NEXT / REGISTRATION OPEN)
+
+- Date: Saturday, September 5, 2026
+- Time: **7:00 PM IST**
+- Platform: Live on YouTube
+- Price: free
+- Status: **upcoming, registration OPEN** — this is the one event currently
+  accepting signups. Register from `/ai-workshop` or `/ai-workshop/events`.
+- Description: turn one idea into a week of content — generate
+  scroll-stopping posts, carousels and short-form videos with AI, then edit
+  and schedule them in minutes.
+- Topics: prompt engineering fundamentals; role, context & task; style,
+  constraints & output; AI image generation; AI video generation; AI voice &
+  audio creation; AI avatars & digital presenters; script → avatar → voice →
+  video; AI + MCP workflows; Canva AI & content publishing.
+
+Note: this event was previously listed as "AI Post & Video Generation" at
+6:00 PM IST. The title and time above are the current ones.
+
+## Enhance LinkedIn & AI Mock Interview (past)
+
+- Date: Thursday, August 21, 2026, 6:00 PM IST, live on YouTube — free
+- Registration is closed; the session recording is on the events page.
+- Takeaways covered: building a recruiter-friendly LinkedIn profile,
+  creating content that gets attention, using AI to speed up content
+  creation, and growth/analytics/consistency.
+
+## Program milestones also listed on the events calendar (past)
+
+- **60-Day Claude AI Challenge begins** — 1 June 2026, online, 60 days.
+- **AI Cohort Program — cohort begins** — 15 July 2026, online, 31 days.

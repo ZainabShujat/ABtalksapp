@@ -91,7 +91,7 @@ export async function verifyOtpAction(input: {
           where: { userId },
           data: { phone: e164, phoneVerified: true, phoneVerifiedAt: new Date() },
         });
-        await dualWriteCandidateIdentity(tx, userId);
+        await dualWriteCandidateIdentity(tx, userId, { phone: true });
       }
     });
   } catch (e) {

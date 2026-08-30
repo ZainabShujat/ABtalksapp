@@ -28,7 +28,7 @@ export function ClaudeWelcomeSlide() {
       >
         Master Claude AI
         <br />
-        <span className="bg-gradient-to-r from-orange-500 via-pink-500 to-violet-500 bg-clip-text text-transparent">
+        <span className="text-[#E05226]">
           in 60 Days
         </span>
       </motion.h1>

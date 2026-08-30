@@ -20,7 +20,7 @@ const SIDEBAR_BORDER = "#e5e7eb";
 const SYNERGY_BG = "#fbf6e9";
 const MUTED = "#6b7280";
 const SCORE_COMM = "#2f6fb0";
-const SCORE_PROG = "#8e3b8e";
+const SCORE_PROG = "#e05226";
 const SCORE_BEHAV = "#1a9e8f";
 const PASSED_TEXT = "#8a6310";
 

@@ -44,7 +44,7 @@ const CHALLENGE_CARDS = [
   {
     title: "AI Automations",
     icon: "⚡",
-    bg: "bg-violet-500/10",
+    bg: "bg-[#FFECE3]",
   },
   {
     title: "APIs & Web Apps",
@@ -184,7 +184,7 @@ export function ClaudeChallengeModal({
               Become AI-Ready
               <br />
               in{" "}
-              <span className="bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 bg-clip-text text-transparent">
+              <span className="text-[#E05226]">
                 60 Days
               </span>
             </h2>
@@ -286,7 +286,7 @@ export function ClaudeChallengeModal({
                 onClick={handleRegister}
                 disabled={enrolling}
                 size="lg"
-                className="w-full bg-gradient-to-r from-pink-500 to-violet-500 font-semibold text-white hover:from-pink-600 hover:to-violet-600"
+                className="w-full bg-[#E05226] font-semibold text-white hover:bg-[#C9411C]"
               >
                 <Rocket className="mr-2 h-4 w-4" />
                 {enrolling ? "Joining..." : "Register Now"}

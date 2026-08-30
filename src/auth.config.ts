@@ -35,6 +35,7 @@ export default {
     ...(process.env.ENABLE_DEV_AUTH === "true"
       ? [
           Credentials({
+            id: "dev-credentials",
             name: "Dev Login",
             credentials: {
               email: { label: "Email", type: "email" },

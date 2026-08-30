@@ -5,6 +5,7 @@ import { isUserRegistered } from "@/features/hackathon/registration-status";
 import { resolveProgramMemberForUser } from "@/lib/program-auth";
 import { getProfileSummary } from "@/repositories/candidate";
 import { listChallengeEnrollments } from "@/repositories/learning";
+import { listHubSubmissionTimes } from "@/repositories/progress";
 import {
   getActivityHeatmap,
   type ActivityHeatmap,
@@ -58,7 +59,7 @@ export async function getHubData(
       ? resolveProgramMemberForUser(userId).then((m) => m !== null)
       : Promise.resolve(false),
     isUserRegistered(userId),
-    getActivityHeatmap(userId),
+    listHubSubmissionTimes(userId).then(getActivityHeatmap),
     getProfileSummary(userId),
   ]);
 

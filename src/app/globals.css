@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is(.dark:not(:has(.theme-abtalks-light)) *));
 
 @theme inline {
   --color-background: hsl(var(--background));
@@ -44,8 +44,8 @@
   --color-popover: hsl(var(--popover));
   --color-card-foreground: hsl(var(--card-foreground));
   --color-card: hsl(var(--card));
-  --color-domains-ai: #8b5cf6;
-  --color-domains-ai-bg: #f5f3ff;
+  --color-domains-ai: #e05226;
+  --color-domains-ai-bg: #ffece3;
   --color-domains-ds: #0891b2;
   --color-domains-ds-bg: #ecfeff;
   --color-domains-se: #10b981;
@@ -60,15 +60,15 @@
   --color-ink-700: hsl(0 2% 37%);
   --color-ink-800: hsl(0 2% 26%);
   --color-ink-900: hsl(0 2% 17%);
-  --color-accent-100: hsl(252 100% 97%);
-  --color-accent-200: hsl(254 100% 93%);
-  --color-accent-300: hsl(253 100% 88%);
-  --color-accent-400: hsl(252 100% 80%);
-  --color-accent-500: hsl(252 100% 68%);
-  --color-accent-600: hsl(253 77% 58%);
-  --color-accent-700: hsl(253 61% 47%);
-  --color-accent-800: hsl(254 63% 35%);
-  --color-accent-900: hsl(252 57% 24%);
+  --color-accent-100: #fff5f0;
+  --color-accent-200: #ffece3;
+  --color-accent-300: #ffece3;
+  --color-accent-400: #ffece3;
+  --color-accent-500: #e05226;
+  --color-accent-600: #e05226;
+  --color-accent-700: #c9411c;
+  --color-accent-800: #c9411c;
+  --color-accent-900: #c9411c;
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -104,6 +104,7 @@
     opacity: 0;
     transform: scale(0.92);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -193,27 +194,71 @@
 }
 
 .theme-abtalks-orange {
-  --primary: 14 75% 51%; /* #E05226 */
+  --primary: 14 75% 51%;
+  /* #E05226 */
   --primary-foreground: 0 0% 100%;
   --ring: 14 75% 51%;
 }
 
-/* Theme-independent light surface for shareable recruiter report (/r/[token]) */
-.report-light {
+/*
+ * Fixed light surfaces use the cream/orange design regardless of the user's
+ * root next-themes preference. `report-light` remains the public-report alias.
+ * The `:has` selectors also cover portals and root-level chrome outside a page
+ * component's DOM subtree.
+ */
+.theme-abtalks-light,
+.report-light,
+:root:has(.theme-abtalks-light),
+:root:has(.report-light) {
   --background: 38 38% 98%;
   --foreground: 224 71% 4%;
   --card: 0 0% 100%;
   --card-foreground: 224 71% 4%;
   --popover: 0 0% 100%;
   --popover-foreground: 224 71% 4%;
+  --primary: 239 84% 67%;
+  --primary-foreground: 0 0% 100%;
   --muted: 220 14% 96%;
   --muted-foreground: 220 8% 46%;
   --secondary: 220 14% 96%;
   --secondary-foreground: 224 71% 4%;
   --accent: 220 14% 96%;
   --accent-foreground: 224 71% 4%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
   --border: 220 13% 91%;
   --input: 220 13% 91%;
+  --ring: 239 84% 67%;
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: 38 38% 97%;
+  --sidebar-foreground: 224 71% 4%;
+  --sidebar-primary: 239 84% 67%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 220 14% 96%;
+  --sidebar-accent-foreground: 224 71% 4%;
+  --sidebar-border: 220 13% 91%;
+  --sidebar-ring: 239 84% 67%;
+  --elevation-card: 0 1px 2px -1px hsl(239 30% 20% / 0.08), 0 2px 8px -2px hsl(239 40% 40% / 0.08);
+  --elevation-card-hover: 0 2px 4px -1px hsl(239 30% 20% / 0.10), 0 8px 24px -4px hsl(239 50% 45% / 0.14);
+  --elevation-primary: 0 1px 2px -1px hsl(var(--primary) / 0.20), 0 8px 24px -6px hsl(var(--primary) / 0.25);
+  --elevation-pop: 0 8px 40px -8px hsl(239 40% 20% / 0.22);
+}
+
+.theme-abtalks-light.theme-abtalks-orange,
+.report-light.theme-abtalks-orange,
+:root:has(.theme-abtalks-light.theme-abtalks-orange),
+:root:has(.report-light.theme-abtalks-orange) {
+  --primary: 14 75% 51%;
+  /* #E05226 */
+  --primary-foreground: 0 0% 100%;
+  --ring: 14 75% 51%;
+  --sidebar-primary: 14 75% 51%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-ring: 14 75% 51%;
 }
 
 @layer components {
@@ -225,65 +270,68 @@
   }
 
   /* Thin orange scrollbar — day page left curriculum rail */
-  .scrollbar-program-purple {
+  .scrollbar-program-orange {
     scrollbar-width: thin;
     scrollbar-color: #e05226 transparent;
   }
 
-  .scrollbar-program-purple::-webkit-scrollbar {
+  .scrollbar-program-orange::-webkit-scrollbar {
     width: 5px;
   }
 
-  .scrollbar-program-purple::-webkit-scrollbar-track {
+  .scrollbar-program-orange::-webkit-scrollbar-track {
     background: transparent;
     margin-block: 6px;
   }
 
-  .scrollbar-program-purple::-webkit-scrollbar-thumb {
+  .scrollbar-program-orange::-webkit-scrollbar-thumb {
     background: #e05226;
     border-radius: 999px;
   }
 
-  .scrollbar-program-purple::-webkit-scrollbar-thumb:hover {
+  .scrollbar-program-orange::-webkit-scrollbar-thumb:hover {
     background: #c9411c;
   }
 
-  /* Thin ABTalks purple scrollbar — admin desktop panes */
-  .scrollbar-admin-purple {
+  /* Thin ABTalks orange scrollbar — admin desktop panes */
+  .scrollbar-admin-orange {
     scrollbar-width: thin;
-    scrollbar-color: #7c5cff transparent;
+    scrollbar-color: #e05226 transparent;
   }
 
-  .scrollbar-admin-purple::-webkit-scrollbar {
+  .scrollbar-admin-orange::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
 
-  .scrollbar-admin-purple::-webkit-scrollbar-track {
+  .scrollbar-admin-orange::-webkit-scrollbar-track {
     background: transparent;
     margin-block: 6px;
   }
 
-  .scrollbar-admin-purple::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #9a88ff 0%, #6f56f5 100%);
+  .scrollbar-admin-orange::-webkit-scrollbar-thumb {
+    background: #e05226;
     border-radius: 999px;
   }
 
-  .scrollbar-admin-purple::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #b3a6ff 0%, #7c5cff 100%);
+  .scrollbar-admin-orange::-webkit-scrollbar-thumb:hover {
+    background: #c9411c;
   }
 
   @keyframes spark-pulse {
     0% {
       transform: scale(1);
     }
+
     40% {
       transform: scale(1.14);
     }
+
     100% {
       transform: scale(1);
     }
   }
+
   .spark-pulse {
     animation: spark-pulse var(--dur-3) var(--ease-spark-out);
   }
@@ -306,19 +354,17 @@
     inset: -1px;
     border-radius: inherit;
     padding: 1.5px;
-    background: conic-gradient(
-      from var(--synergy-angle),
-      transparent 0deg,
-      transparent 210deg,
-      hsl(var(--primary)) 290deg,
-      #d8b4fe 320deg,
-      transparent 360deg
-    );
+    background: conic-gradient(from var(--synergy-angle),
+        transparent 0deg,
+        transparent 210deg,
+        hsl(var(--primary)) 290deg,
+        #ffece3 320deg,
+        transparent 360deg);
     -webkit-mask:
       linear-gradient(#000 0 0) content-box,
       linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
-            mask-composite: exclude;
+    mask-composite: exclude;
     animation: synergy-beam 3s linear infinite;
     pointer-events: none;
   }
@@ -330,13 +376,11 @@
     inset: -2px;
     border-radius: inherit;
     z-index: -1;
-    background: conic-gradient(
-      from var(--synergy-angle),
-      transparent 0deg,
-      transparent 230deg,
-      hsl(var(--primary) / 0.65) 295deg,
-      transparent 360deg
-    );
+    background: conic-gradient(from var(--synergy-angle),
+        transparent 0deg,
+        transparent 230deg,
+        hsl(var(--primary) / 0.65) 295deg,
+        transparent 360deg);
     filter: blur(5px);
     opacity: 0.75;
     animation: synergy-beam 3s linear infinite;
@@ -349,9 +393,11 @@
     max-width: 7.125rem;
     transition: max-width var(--dur-3) var(--ease-spark);
   }
+
   .logo-link[data-collapsed="true"] {
     max-width: 2.5rem;
   }
+
   .logo-image {
     display: block;
     height: 2rem;
@@ -361,26 +407,35 @@
     object-position: left center;
     filter: invert(1);
   }
-  .dark .logo-image {
+
+  html.dark:not(:has(.theme-abtalks-light)) .logo-image {
     filter: none;
   }
+
   .logo-image-no-invert {
     filter: none !important;
   }
+
   @media (max-width: 47.9375rem) {
     .logo-link {
-      max-width: 6.4rem; /* 7.125rem − 10% */
+      max-width: 6.4rem;
+      /* 7.125rem − 10% */
     }
+
     .logo-link[data-collapsed="true"] {
-      max-width: 2.25rem; /* 2.5rem − 10% */
+      max-width: 2.25rem;
+      /* 2.5rem − 10% */
     }
+
     .logo-image {
-      height: 1.8rem; /* 2rem − 10% */
+      height: 1.8rem;
+      /* 2rem − 10% */
     }
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -397,6 +452,7 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -405,19 +461,27 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   body.marketplace-page {
     background-color: #030712;
   }
-  body.landing-page { overflow-x: hidden; }
+
+  body.landing-page {
+    overflow-x: hidden;
+  }
+
   body.not-found-page footer {
     display: none;
   }
+
   body.not-found-page main {
     padding-bottom: 0;
   }
+
   html {
     @apply font-sans;
   }

@@ -75,6 +75,22 @@ const MEMBER_USERS: MemberSeed[] = [
     enrolled: true,
   },
   {
+    email: `${EMAIL_PREFIX}day15${TEST_EMAIL_SUFFIX}`,
+    name: "Prog Day Fifteen",
+    status: "ENROLLED",
+    highestUnlockedDay: 15,
+    githubUsername: "prog-day15",
+    enrolled: true,
+  },
+  {
+    email: `${EMAIL_PREFIX}day31${TEST_EMAIL_SUFFIX}`,
+    name: "Prog Day Thirty-One",
+    status: "ENROLLED",
+    highestUnlockedDay: 31,
+    githubUsername: "prog-day31",
+    enrolled: true,
+  },
+  {
     email: `${EMAIL_PREFIX}applied${TEST_EMAIL_SUFFIX}`,
     name: "Prog Applied",
     status: "APPLIED",
@@ -319,12 +335,15 @@ async function seedProgramTestUsers() {
   }
 
   console.log("[program-users] done");
-  console.log("");
-  console.log("Quick starts:");
-  console.log(`  Day 1 member:     ${MEMBER_USERS[0]!.email} / ${DEV_PASSWORD}`);
-  console.log(`  Day 3 member:     ${MEMBER_USERS[1]!.email} / ${DEV_PASSWORD}`);
-  console.log(`  Apply funnel:     ${APPLY_USER.email} / ${DEV_PASSWORD}`);
-  console.log(`  Recruiter pool:   ${RECRUITERS[0]!.email} / ${DEV_PASSWORD}`);
+  console.log(`
+Quick starts:
+  Day 1 member:     ${EMAIL_PREFIX}day1${TEST_EMAIL_SUFFIX} / ${DEV_PASSWORD}
+  Day 3 member:     ${EMAIL_PREFIX}day3${TEST_EMAIL_SUFFIX} / ${DEV_PASSWORD}
+  Day 15 member:    ${EMAIL_PREFIX}day15${TEST_EMAIL_SUFFIX} / ${DEV_PASSWORD}
+  Day 31 member:    ${EMAIL_PREFIX}day31${TEST_EMAIL_SUFFIX} / ${DEV_PASSWORD}
+  Apply funnel:     ${APPLY_USER.email} / ${DEV_PASSWORD}
+  Recruiter pool:   ${RECRUITERS[0]!.email} / ${DEV_PASSWORD}
+`);
 }
 
 seedProgramTestUsers()

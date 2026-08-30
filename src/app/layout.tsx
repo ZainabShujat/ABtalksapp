@@ -1,11 +1,18 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { Fredoka, Instrument_Serif, Outfit, Plus_Jakarta_Sans } from "next/font/google";
+import {
+  Fredoka,
+  Gemunu_Libre,
+  Instrument_Sans,
+  Instrument_Serif,
+  Outfit,
+  Plus_Jakarta_Sans,
+} from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { MotionProvider } from "@/components/shared/motion-provider";
 import { SynergyProvider } from "@/components/shared/synergy-provider";
 import { NotificationProvider } from "@/components/shared/notification-provider";
-import { Toaster } from "@/components/ui/sonner";
+import { RouteThemeToaster } from "@/components/shared/route-theme-toaster";
 import { AppFooter } from "@/components/shared/app-footer";
 import { BottomNavGate } from "@/components/shared/bottom-nav-gate";
 import { MainShell } from "@/components/shared/main-shell";
@@ -205,6 +212,29 @@ const instrumentSerif = Instrument_Serif({
   style: ["normal", "italic"],
 });
 
+/**
+ * Instrument Sans for /ai-workshop.
+ *
+ * The local `hubInstrumentSans` above ships only 400 and 700, but the design
+ * leans on Medium (500) and SemiBold (600) throughout — and a missing 600 gets
+ * substituted with 700, which is wide enough to push the community subhead
+ * onto a third line. Loaded separately so the rest of the app keeps the
+ * self-hosted files and their existing metrics.
+ */
+const workshopSans = Instrument_Sans({
+  subsets: ["latin"],
+  variable: "--font-workshop-sans",
+  weight: ["400", "500", "600", "700"],
+});
+
+// Stat numerals on /ai-workshop — the display face the Figma community
+// section specifies (nodes 1:319-1:321).
+const gemunuLibre = Gemunu_Libre({
+  subsets: ["latin"],
+  variable: "--font-gemunu",
+  weight: ["500", "700"],
+});
+
 const outfit = Outfit({
   subsets: ["latin"],
   variable: "--font-outfit",
@@ -229,6 +259,8 @@ const fontVars = [
   fredoka.variable,
   instrumentSerif.variable,
   outfit.variable,
+  gemunuLibre.variable,
+  workshopSans.variable,
 ].join(" ");
 
 export default function RootLayout({
@@ -256,7 +288,7 @@ export default function RootLayout({
               </SynergyProvider>
               <AppFooter />
               <BottomNavGate />
-              <Toaster />
+              <RouteThemeToaster />
               <CookieConsentModal />
               {isChatbotEnabled() && <ChatWidget />}
             </NotificationProvider>

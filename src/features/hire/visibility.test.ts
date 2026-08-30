@@ -92,11 +92,27 @@ suite("the seam adds the gate with AND, not a spreadable key", () => {
 });
 
 suite("the retiring /talent fragment is still distinct and still narrow", () => {
-  // Left in place only for the legacy /talent ranking. If it ever grows a
-  // second responsibility, that is the drift this catches.
+  // Left in place only as a named leftover. If it ever grows a second
+  // responsibility, that is the drift this catches.
   assert(
     Object.keys(visibleProgramMemberWhere()).length === 1,
     "visibleProgramMemberWhere must stay a single-key fragment",
+  );
+});
+
+suite("/talent pool uses CandidateVisibility, not the legacy consent column", () => {
+  const src = readFileSync(
+    join(process.cwd(), "src/features/talent-pool/pool.ts"),
+    "utf8",
+  );
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  assert(
+    !code.includes("recruiterVisibilityConsentAt"),
+    "/talent must not use recruiterVisibilityConsentAt as visibility",
+  );
+  assert(
+    code.includes("searchableUserWhere()"),
+    "/talent must gate on searchableUserWhere",
   );
 });
 

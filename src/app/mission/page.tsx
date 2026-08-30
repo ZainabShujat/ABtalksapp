@@ -151,7 +151,7 @@ export default async function MissionPage() {
 
         {/* What you're working toward */}
         <section
-          className="rounded-2xl bg-gradient-to-br from-primary to-violet-500 p-6 text-primary-foreground sm:p-8"
+          className="rounded-2xl bg-[#E05226] p-6 text-primary-foreground sm:p-8"
           aria-labelledby="mission-outcome-heading"
         >
           <div className="flex items-start gap-3">
