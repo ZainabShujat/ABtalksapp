@@ -1,5 +1,4 @@
 import "server-only";
-import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { askClaudeJson } from "@/lib/anthropic";
@@ -8,7 +7,6 @@ import { PROGRAM_TOTAL_DAYS } from "@/features/program/constants";
 import { programMember } from "@/repositories/legacy/program-member";
 import {
   collectPassSkipSets,
-  getMemberDayStates,
   getMemberProgressDay,
 } from "@/features/program/progression";
 
@@ -30,20 +28,6 @@ type EvaluateResponse = {
   problemScore: number;
   overallScore: number;
   summary: string;
-};
-
-type MemberContext = {
-  fullName: string;
-  jobRole: string | null;
-  company: string | null;
-  yearsExperience: number | null;
-  missionPoints: number;
-  conceptPoints: number;
-  commitPoints: number;
-  projectPoints: number;
-  aiRecommendation: string | null;
-  moduleScores: { moduleNumber: number; title: string; passed: number; total: number }[];
-  projectTitles: { moduleNumber: number; title: string; score: number | null }[];
 };
 
 function clampScore(score: number): number {
@@ -95,106 +79,6 @@ async function ensureInterviewRecord(memberId: string) {
     }
     throw err;
   }
-}
-
-async function loadMemberContext(memberId: string): Promise<MemberContext | null> {
-  const [member, projects, { modules, days }] = await Promise.all([
-    programMember.findUnique({
-      where: { id: memberId },
-      select: {
-        fullName: true,
-        jobRole: true,
-        company: true,
-        yearsExperience: true,
-        missionPoints: true,
-        conceptPoints: true,
-        commitPoints: true,
-        projectPoints: true,
-        aiRecommendation: true,
-      },
-    }),
-    prisma.programProject.findMany({
-      where: { memberId },
-      select: {
-        moduleNumber: true,
-        writeup: true,
-        aiScore: true,
-        adminScore: true,
-      },
-      orderBy: { moduleNumber: "asc" },
-    }),
-    getMemberDayStates(memberId),
-  ]);
-
-  if (!member) return null;
-
-  const moduleScores = modules.map((mod) => {
-    const modDays = days.filter((d) => d.moduleNumber === mod.number);
-    const passed = modDays.filter((d) => d.state === "PASSED").length;
-    return {
-      moduleNumber: mod.number,
-      title: mod.title,
-      passed,
-      total: modDays.length,
-    };
-  });
-
-  const projectTitles = projects.map((p) => {
-    const firstLine = p.writeup.split("\n")[0]?.trim() || `Module ${p.moduleNumber} project`;
-    return {
-      moduleNumber: p.moduleNumber,
-      title: firstLine.slice(0, 120),
-      score: p.adminScore ?? p.aiScore,
-    };
-  });
-
-  return { ...member, moduleScores, projectTitles };
-}
-
-export function buildInterviewInstructions(member: MemberContext): string {
-  const moduleLines = member.moduleScores
-    .map((m) => `Module ${m.moduleNumber} (${m.title}): ${m.passed}/${m.total} missions passed`)
-    .join("\n");
-  const projectLines =
-    member.projectTitles.length > 0
-      ? member.projectTitles
-          .map(
-            (p) =>
-              `Module ${p.moduleNumber}: ${p.title}${p.score !== null ? ` (score ${p.score}/100)` : ""}`,
-          )
-          .join("\n")
-      : "No Boss Build projects submitted yet.";
-
-  return [
-    "You are a senior technical interviewer for an enterprise AI mastery program.",
-    "Conduct a structured 15-minute voice interview. Be courteous and professional.",
-    "",
-    "Candidate context:",
-    `- Name: ${member.fullName}`,
-    `- Role: ${member.jobRole ?? "—"} at ${member.company ?? "—"}`,
-    `- Experience: ${member.yearsExperience ?? "—"} years`,
-    `- Score components: missions ${member.missionPoints}, concepts ${member.conceptPoints}, commits ${member.commitPoints}, projects ${member.projectPoints}`,
-    moduleLines,
-    "Projects:",
-    projectLines,
-    member.aiRecommendation ? `Prior AI mentor note: ${member.aiRecommendation}` : "",
-    "",
-    "Structure (15 minutes total):",
-    "1. ~2 min — warm intro and background",
-    "2. ~5 min — AI/data fundamentals from Modules 1–2",
-    "3. ~5 min — agents/LLM ops from Modules 3–4",
-    "4. ~3 min — one practical scenario question",
-    "",
-    "Style rules:",
-    "- Ask ONE question at a time.",
-    "- Follow up at most once per topic before moving on.",
-    "- Never reveal scores or grading criteria.",
-    "- At 15 minutes, give a brief closing line and end politely.",
-    "- Never discuss anything outside this interview; if asked, redirect back.",
-    "- Keep responses concise — this is a voice conversation.",
-  ]
-    .filter(Boolean)
-    .join("\n");
 }
 
 export type InterviewEligibility =
@@ -338,108 +222,6 @@ export async function getInterviewDashboardCard(
           : "Completed — evaluation pending",
       };
   }
-}
-
-export async function prepareInterviewStart(
-  memberId: string,
-): Promise<
-  | { ok: true; instructions: string; safetyIdentifier: string }
-  | { ok: false; message: string }
-> {
-  const eligibility = await getInterviewEligibility(memberId);
-  if (
-    eligibility.state !== "ready" &&
-    eligibility.state !== "in_progress"
-  ) {
-    return { ok: false, message: "You are not eligible to start the interview." };
-  }
-
-  const interview = await ensureInterviewRecord(memberId);
-
-  if (interview.status === "IN_PROGRESS") {
-    const ageMs = interview.startedAt
-      ? Date.now() - interview.startedAt.getTime()
-      : IN_PROGRESS_STALE_MS;
-    const stale = ageMs >= IN_PROGRESS_STALE_MS;
-    const nextResetCount = stale
-      ? interview.resetCount
-      : interview.resetCount + 1;
-
-    if (!stale && nextResetCount > MAX_RESETS) {
-      return { ok: false, message: "No interview attempts remaining." };
-    }
-
-    await prisma.programInterview.update({
-      where: { memberId },
-      data: {
-        status: "FAILED",
-        startedAt: null,
-        resetCount: stale ? undefined : { increment: 1 },
-      },
-    });
-  }
-
-  const member = await loadMemberContext(memberId);
-  if (!member) return { ok: false, message: "Member not found." };
-
-  const instructions = buildInterviewInstructions(member);
-  const safetyIdentifier = createHash("sha256")
-    .update(memberId)
-    .digest("hex")
-    .slice(0, 64);
-
-  await prisma.programInterview.update({
-    where: { memberId },
-    data: {
-      status: "IN_PROGRESS",
-      startedAt: new Date(),
-      endedAt: null,
-      durationSec: null,
-      transcript: Prisma.JsonNull,
-      commScore: null,
-      techScore: null,
-      problemScore: null,
-      overallScore: null,
-      summary: null,
-      evaluatedAt: null,
-    },
-  });
-
-  return { ok: true, instructions, safetyIdentifier };
-}
-
-export async function completeInterview(
-  memberId: string,
-  transcript: InterviewTranscriptLine[],
-  durationSec: number,
-): Promise<{ ok: true; interviewId: string } | { ok: false; message: string }> {
-  if (durationSec < INTERVIEW_MIN_DURATION_SEC) {
-    return {
-      ok: false,
-      message: "Interview must be at least 3 minutes to submit.",
-    };
-  }
-
-  const interview = await prisma.programInterview.findUnique({
-    where: { memberId },
-    select: { id: true, status: true },
-  });
-
-  if (!interview || interview.status !== "IN_PROGRESS") {
-    return { ok: false, message: "No interview in progress." };
-  }
-
-  await prisma.programInterview.update({
-    where: { id: interview.id },
-    data: {
-      status: "COMPLETED",
-      endedAt: new Date(),
-      durationSec,
-      transcript: transcript as unknown as Prisma.InputJsonValue,
-    },
-  });
-
-  return { ok: true, interviewId: interview.id };
 }
 
 export async function evaluateInterview(
