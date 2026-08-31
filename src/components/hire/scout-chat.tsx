@@ -32,6 +32,11 @@ import { GapReport } from "@/components/hire/gap-report";
 import { useHireDesk } from "@/components/hire/hire-desk-context";
 import { readGuestCart } from "@/components/hire/guest-cart";
 import { buildSampleCards } from "@/features/hire/sample-card";
+import { hasSufficientRealMatches } from "@/features/hire/match-config";
+import {
+  generateVirtualCandidate,
+  virtualCandidateToCard,
+} from "@/features/hire/virtual-candidate";
 import { buildLockedPreviewCards } from "@/features/hire/locked-preview";
 import type { MatchCardData } from "@/components/hire/match-card";
 import { SearchTabs } from "@/components/hire/search-tabs";
@@ -82,6 +87,7 @@ type Props = {
   initialSearched?: boolean;
   /** Server flag: fill an empty desk with blurred example profiles. */
   proPreview?: boolean;
+  virtualCandidates?: boolean;
 };
 
 const OPENING: Msg = {
@@ -280,6 +286,7 @@ export function ScoutChat({
   alertWhenAvailable = false,
   initialSearched = false,
   proPreview = false,
+  virtualCandidates = false,
 }: Props) {
   const router = useRouter();
   const [requestId, setRequestId] = useState<string | null>(initialRequestId);
@@ -337,11 +344,18 @@ export function ScoutChat({
   // spec-shaped sample card. Both carry `SampleCardNotice`, which is what keeps
   // the page honest that the pool has nobody matching — neither card is
   // inventory, and only the notice says so in words.
-  const deskSamples = !searched || deskMatches.length > 0
+  // "Did the pool answer?" is a threshold question, not a count. A single
+  // 41-scoring near-miss is not an answer, and treating it as one is how a
+  // recruiter concludes we have nobody rather than that we can find somebody.
+  const poolAnswered = hasSufficientRealMatches(deskMatches);
+  const virtualProfile = generateVirtualCandidate(spec);
+  const deskSamples = !searched || poolAnswered
     ? []
     : proPreview
       ? buildLockedPreviewCards(spec)
-      : buildSampleCards(spec);
+      : virtualCandidates && virtualProfile
+        ? [virtualCandidateToCard(virtualProfile)]
+        : buildSampleCards(spec);
 
   useEffect(() => {
     if (persist && (results?.length ?? 0) > 0) {
