@@ -172,6 +172,11 @@ export type ProgramModuleRow = {
   endDay: number;
 };
 
+export type ProgramCurriculumCatalog = {
+  modules: ProgramModuleRow[];
+  days: ProgramDayCatalog[];
+};
+
 export type ProgramDayCatalog = {
   dayNumber: number;
   title: string;
@@ -1154,6 +1159,188 @@ export async function listProgramModules(): Promise<ProgramModuleRow[]> {
     startDay: m.startDay ?? 0,
     endDay: m.endDay ?? 0,
   }));
+}
+
+/**
+ * 078-native curriculum for a LearningProgram.slug.
+ * Not gated on ENABLE_NEW_LEARNING — programs with no legacy table read 078 directly.
+ */
+export async function listCurriculumForProgramSlug(
+  slug: string,
+): Promise<ProgramCurriculumCatalog> {
+  const [modules, activities] = await Promise.all([
+    prisma.module.findMany({
+      where: { programVersion: { program: { slug } } },
+      orderBy: { position: "asc" },
+      select: {
+        position: true,
+        title: true,
+        subtitle: true,
+        colorToken: true,
+        startDay: true,
+        endDay: true,
+      },
+    }),
+    prisma.activity.findMany({
+      where: {
+        dayNumber: { not: null },
+        type: { notIn: [ActivityType.QUIZ, ActivityType.VIDEO] },
+        module: { programVersion: { program: { slug } } },
+      },
+      orderBy: { dayNumber: "asc" },
+      select: {
+        type: true,
+        title: true,
+        dayNumber: true,
+        contentConfig: { select: { missionType: true } },
+        module: { select: { position: true } },
+      },
+    }),
+  ]);
+
+  return {
+    modules: modules.map((m) => ({
+      number: m.position,
+      title: m.title,
+      subtitle: m.subtitle ?? "",
+      color: m.colorToken ?? "",
+      startDay: m.startDay ?? 0,
+      endDay: m.endDay ?? 0,
+    })),
+    days: activities.flatMap((a) => {
+      if (a.dayNumber == null) return [];
+      const missionType =
+        a.contentConfig?.missionType ?? ProgramMissionType.DATA_ROOM;
+      return [
+        {
+          dayNumber: a.dayNumber,
+          title: a.title,
+          missionType,
+          isProjectDay:
+            missionType === ProgramMissionType.BOSS_BUILD ||
+            a.type === ActivityType.PROJECT,
+          moduleNumber: a.module.position,
+        },
+      ];
+    }),
+  };
+}
+
+export type ProgramSlugDayShell = {
+  activityId: string;
+  dayNumber: number;
+  title: string;
+  missionType: ProgramMissionType;
+  briefMd: string;
+  objectives: string[];
+  tools: string[];
+  estimatedMin: number;
+  missionPoints: number;
+  isProjectDay: boolean;
+  module: { number: number; title: string; color: string };
+};
+
+/** Client-safe day content. Deliberately EXCLUDES verificationSpec. */
+export async function getDayShellForProgramSlug(
+  slug: string,
+  dayNumber: number,
+): Promise<ProgramSlugDayShell | null> {
+  const activity = await prisma.activity.findFirst({
+    where: {
+      dayNumber,
+      type: { notIn: [ActivityType.QUIZ, ActivityType.VIDEO] },
+      module: { programVersion: { program: { slug } } },
+    },
+    orderBy: { position: "asc" },
+    select: {
+      id: true,
+      type: true,
+      title: true,
+      dayNumber: true,
+      points: true,
+      estimatedMinutes: true,
+      tags: true,
+      contentConfig: {
+        select: {
+          bodyMarkdown: true,
+          objectives: true,
+          missionType: true,
+        },
+      },
+      module: {
+        select: {
+          position: true,
+          title: true,
+          colorToken: true,
+        },
+      },
+    },
+  });
+  if (activity?.dayNumber == null) return null;
+  const missionType = activity.contentConfig?.missionType;
+  if (!missionType) return null;
+  return {
+    activityId: activity.id,
+    dayNumber: activity.dayNumber,
+    title: activity.title,
+    missionType,
+    briefMd: activity.contentConfig?.bodyMarkdown ?? "",
+    objectives: activity.contentConfig?.objectives ?? [],
+    tools: activity.tags,
+    estimatedMin: activity.estimatedMinutes ?? 60,
+    missionPoints: activity.points,
+    isProjectDay:
+      missionType === ProgramMissionType.BOSS_BUILD ||
+      activity.type === ActivityType.PROJECT,
+    module: {
+      number: activity.module.position,
+      title: activity.module.title,
+      color: activity.module.colorToken ?? "",
+    },
+  };
+}
+
+export type ActivityVerification = {
+  activityId: string;
+  dayNumber: number;
+  missionType: ProgramMissionType;
+  missionSpec: Prisma.JsonValue | null;
+  missionPoints: number;
+  moduleNumber: number;
+};
+
+/** SERVER-ONLY. The verification spec. Never reaches a client component. */
+export async function getActivityVerificationForDay(
+  slug: string,
+  dayNumber: number,
+): Promise<ActivityVerification | null> {
+  const activity = await prisma.activity.findFirst({
+    where: {
+      dayNumber,
+      type: { notIn: [ActivityType.QUIZ, ActivityType.VIDEO] },
+      module: { programVersion: { program: { slug } } },
+    },
+    orderBy: { position: "asc" },
+    select: {
+      id: true,
+      dayNumber: true,
+      points: true,
+      verificationSpec: true,
+      contentConfig: { select: { missionType: true } },
+      module: { select: { position: true } },
+    },
+  });
+  if (activity?.dayNumber == null) return null;
+  const missionType = activity.contentConfig?.missionType;
+  if (!missionType) return null;
+  return {
+    activityId: activity.id,
+    dayNumber: activity.dayNumber,
+    missionType,
+    missionSpec: activity.verificationSpec,
+    missionPoints: activity.points,
+    moduleNumber: activity.module.position,
+  };
 }
 
 async function programDayActivities() {

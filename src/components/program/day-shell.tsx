@@ -16,6 +16,7 @@ export function DayShell({
   modules,
   estimatedMin,
   missionPoints,
+  basePath,
   children,
 }: {
   dayNumber: number;
@@ -26,6 +27,7 @@ export function DayShell({
   modules: CurriculumModule[];
   estimatedMin: number;
   missionPoints: number;
+  basePath?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -38,6 +40,7 @@ export function DayShell({
             moduleTitle={moduleTitle}
             days={days}
             modules={modules}
+            basePath={basePath}
           />
         </div>
 
@@ -56,6 +59,7 @@ export function DayShell({
               moduleTitle={moduleTitle}
               days={days}
               modules={modules}
+              basePath={basePath}
             />
           </div>
 

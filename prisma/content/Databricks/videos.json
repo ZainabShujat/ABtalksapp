@@ -1,0 +1,445 @@
+[
+  {
+    "dayNumber": 1,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Intro to Databricks (Free Edition) | UI Walkthrough",
+        "youtubeId": "fNQRQkx1SIQ",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Introduction to Databricks Free Edition: Features, Sign-Up & Limitations",
+        "youtubeId": "MdHGIcv56hM",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 2,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Databricks Unity Catalog: The Complete Beginner's Guide",
+        "youtubeId": "TAgCzZ2EdwQ",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 3,
+    "videos": [
+      {
+        "order": 1,
+        "title": "PySpark Tutorial | Full Course (From Zero to Pro!)",
+        "youtubeId": "94w6hPk7nkM",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Databricks Tutorial [Full Course]",
+        "youtubeId": "qsjZmhQniwk",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 4,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Databricks tutorial — an intro to the medallion architecture",
+        "youtubeId": "u3MSka3WLpE",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 5,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Delta Lake Databricks (From Zero to Pro) | Delta Lake PySpark",
+        "youtubeId": "O18afGTGoIU",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Delta Lake - EXPLAINED - Full Tutorial",
+        "youtubeId": "fkWxiesfrgk",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 6,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Databricks Tutorial (From Zero to Hero) | Masterclass",
+        "youtubeId": "7pee6_Sq3VY",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 7,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Databricks Tutorial (From Zero to Hero) | Masterclass",
+        "youtubeId": "7pee6_Sq3VY",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 8,
+    "videos": [
+      {
+        "order": 1,
+        "title": "PySpark Tutorial | Full Course (From Zero to Pro!)",
+        "youtubeId": "94w6hPk7nkM",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Databricks Tutorial (From Zero to Hero) | Masterclass",
+        "youtubeId": "7pee6_Sq3VY",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 9,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Databricks Tutorial (From Zero to Hero) | Masterclass",
+        "youtubeId": "7pee6_Sq3VY",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "PySpark Tutorial | Full Course (From Zero to Pro!)",
+        "youtubeId": "94w6hPk7nkM",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 10,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Databricks Data Quality as Code | Expectations",
+        "youtubeId": "CjS6ILJZP7k",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Elevating Data Quality Standards With Databricks DQX",
+        "youtubeId": "e5Qvx_gnxTE",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 11,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Delta Lake Databricks (From Zero to Pro) | Delta Lake PySpark",
+        "youtubeId": "O18afGTGoIU",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 12,
+    "videos": [
+      {
+        "order": 1,
+        "title": "VACUUM, OPTIMIZE and Z-Ordering Explained",
+        "youtubeId": "8e2a1MYgdqU",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Delta Lake Databricks (From Zero to Pro) | Delta Lake PySpark",
+        "youtubeId": "O18afGTGoIU",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 13,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Master Dimensional Modeling — Why Use a Dimensional Model?",
+        "youtubeId": "CZM__QtHCB0",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Data Modeling Tutorial: Star Schema (Kimball Approach)",
+        "youtubeId": "gRE3E7VUzRU",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 14,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Data Modeling Tutorial: Star Schema (Kimball Approach)",
+        "youtubeId": "gRE3E7VUzRU",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Master Dimensional Modeling — Why Use a Dimensional Model?",
+        "youtubeId": "CZM__QtHCB0",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 15,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Databricks Full Course (With Unity Catalog)",
+        "youtubeId": "P5pEeR3xQpI",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Data Modeling Tutorial: Star Schema (Kimball Approach)",
+        "youtubeId": "gRE3E7VUzRU",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 16,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Databricks Full Course (With Unity Catalog)",
+        "youtubeId": "P5pEeR3xQpI",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 17,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Databricks Declarative Pipelines Full Course | Master Delta Live Tables",
+        "youtubeId": "CCc6w8lkAek",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Declarative Pipelines & Lakeflow Designer (2 Hours)",
+        "youtubeId": "nrfP2_frM5k",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 18,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Databricks Declarative Pipelines Full Course | Master Delta Live Tables",
+        "youtubeId": "CCc6w8lkAek",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 19,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Databricks Data Quality as Code | Expectations",
+        "youtubeId": "CjS6ILJZP7k",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 20,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Declarative Pipelines & Lakeflow Designer (2 Hours)",
+        "youtubeId": "nrfP2_frM5k",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Databricks Declarative Pipelines Full Course | Master Delta Live Tables",
+        "youtubeId": "CCc6w8lkAek",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 21,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Databricks Lakeflow Jobs Full Course | From Zero To Pro",
+        "youtubeId": "uNOQTmyeh3k",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Unified orchestration for any workload with Lakeflow Jobs",
+        "youtubeId": "BUFDNFA_AgA",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 22,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Orchestration with Lakeflow Jobs",
+        "youtubeId": "36PKwX60yLQ",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Databricks Lakeflow Jobs Full Course | From Zero To Pro",
+        "youtubeId": "uNOQTmyeh3k",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 23,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Databricks Asset Bundles: A Unifying Tool for Deployment",
+        "youtubeId": "eyZc9I1dGQY",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Introduction to Databricks Asset Bundles",
+        "youtubeId": "ou4W0KNWmuM",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 24,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Databricks Unity Catalog: The Complete Beginner's Guide",
+        "youtubeId": "TAgCzZ2EdwQ",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 25,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Databricks Unity Catalog: The Complete Beginner's Guide",
+        "youtubeId": "TAgCzZ2EdwQ",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 26,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Databricks Unity Catalog: The Complete Beginner's Guide",
+        "youtubeId": "TAgCzZ2EdwQ",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 27,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Databricks Full Course (With Unity Catalog)",
+        "youtubeId": "P5pEeR3xQpI",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 28,
+    "videos": [
+      {
+        "order": 1,
+        "title": "The Basics of Building an AI/BI Dashboard in Databricks",
+        "youtubeId": "mEmnp1B6PUU",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Creating AI/BI Dashboards in Databricks: Step-by-Step",
+        "youtubeId": "NUNQn6ntYK4",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 29,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Databricks Genie Generates KPIs on Demand",
+        "youtubeId": "3eKal2VtlGY",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 30,
+    "videos": [
+      {
+        "order": 1,
+        "title": "The Basics of Building an AI/BI Dashboard in Databricks",
+        "youtubeId": "mEmnp1B6PUU",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 31,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Databricks Live Bootcamp | Full end-to-end project",
+        "youtubeId": "sxYcjDrMyNc",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Databricks Full Course (With Unity Catalog)",
+        "youtubeId": "P5pEeR3xQpI",
+        "durationMin": null
+      }
+    ]
+  }
+]

@@ -49,6 +49,7 @@ const protectedPaths = [
   "/program/ai-cohort/leaderboard",
   "/program/ai-cohort/interview",
   "/program/ai-cohort/cohort-interview",
+  "/program/databricks",
   "/talent",
   "/hire",
   "/hackathon/register",

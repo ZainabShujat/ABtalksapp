@@ -107,6 +107,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         joinedDomains={data.joinedDomains}
         abandonedDomains={data.abandonedDomains}
         hasProgramMembership={data.hasProgramMembership}
+        showDatabricks={data.hasDatabricksAccess}
       />
       <EventsSection />
       

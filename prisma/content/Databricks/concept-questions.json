@@ -1,0 +1,2017 @@
+[
+  {
+    "dayNumber": 1,
+    "questions": [
+      {
+        "order": 1,
+        "question": "What problem does the Lakehouse architecture solve?",
+        "options": [
+          "It replaces Python with SQL",
+          "It removes the need for any storage",
+          "It combines the low-cost open storage of a data lake with the reliability and performance of a data warehouse",
+          "It only stores images"
+        ],
+        "correctIndex": 2,
+        "explanation": "The lakehouse unifies lake and warehouse so one platform serves both BI and data science on open storage."
+      },
+      {
+        "order": 2,
+        "question": "In Databricks, what does 'serverless' compute mean for you?",
+        "options": [
+          "You must buy your own servers",
+          "It runs only on your laptop",
+          "It disables SQL",
+          "Compute is provisioned and managed automatically — you don't create or size clusters"
+        ],
+        "correctIndex": 3,
+        "explanation": "Serverless removes cluster management; Databricks provisions and scales compute for you."
+      },
+      {
+        "order": 3,
+        "question": "What does Databricks Free Edition cost?",
+        "options": [
+          "Nothing — it is free, with no credit card required",
+          "A monthly subscription",
+          "Per-query fees",
+          "A one-time license"
+        ],
+        "correctIndex": 0,
+        "explanation": "Free Edition is permanently free and needs no cloud account or card."
+      },
+      {
+        "order": 4,
+        "question": "In a Python notebook, how do you run a SQL statement in a cell?",
+        "options": [
+          "Rename the file to .sql",
+          "Start the cell with the %sql magic",
+          "Import the sql module",
+          "You cannot mix SQL and Python"
+        ],
+        "correctIndex": 1,
+        "explanation": "The %sql magic switches a single cell to SQL against the same tables."
+      },
+      {
+        "order": 5,
+        "question": "Which is designed to run analytical SQL queries and dashboards?",
+        "options": [
+          "A text editor",
+          "A Git folder",
+          "A SQL warehouse",
+          "A Volume"
+        ],
+        "correctIndex": 2,
+        "explanation": "SQL warehouses are the compute behind Databricks SQL and AI/BI dashboards."
+      }
+    ]
+  },
+  {
+    "dayNumber": 2,
+    "questions": [
+      {
+        "order": 1,
+        "question": "What is the correct order of Unity Catalog's three-level namespace?",
+        "options": [
+          "table → schema → catalog",
+          "schema → catalog → table",
+          "database → table → column",
+          "catalog → schema → table"
+        ],
+        "correctIndex": 3,
+        "explanation": "Objects are addressed as catalog.schema.table."
+      },
+      {
+        "order": 2,
+        "question": "What is a Unity Catalog Volume used for?",
+        "options": [
+          "Governed storage of non-tabular files (e.g. raw CSV/JSON)",
+          "Running notebooks",
+          "Scheduling jobs",
+          "Storing dashboards"
+        ],
+        "correctIndex": 0,
+        "explanation": "Volumes hold files under Unity Catalog governance, e.g. a raw landing zone."
+      },
+      {
+        "order": 3,
+        "question": "How does a managed table differ from an external table?",
+        "options": [
+          "Managed tables cannot be queried",
+          "Databricks manages the underlying storage lifecycle of a managed table",
+          "External tables are always faster",
+          "There is no difference"
+        ],
+        "correctIndex": 1,
+        "explanation": "For managed tables Databricks controls the data files; external tables point at storage you manage."
+      },
+      {
+        "order": 4,
+        "question": "Why keep your cohort project in a Git folder?",
+        "options": [
+          "To make notebooks run faster",
+          "To avoid using Unity Catalog",
+          "For version control, history, and reproducible collaboration",
+          "To hide your code"
+        ],
+        "correctIndex": 2,
+        "explanation": "Git folders connect the workspace to GitHub so work is versioned and submittable."
+      },
+      {
+        "order": 5,
+        "question": "What is a metastore in Unity Catalog?",
+        "options": [
+          "A single table",
+          "A notebook",
+          "A dashboard filter",
+          "The top-level container that holds catalogs and their metadata"
+        ],
+        "correctIndex": 3,
+        "explanation": "The metastore is the root of the governance hierarchy for an account/region."
+      }
+    ]
+  },
+  {
+    "dayNumber": 3,
+    "questions": [
+      {
+        "order": 1,
+        "question": "Which of these is an action (not a transformation) in Spark?",
+        "options": [
+          "count()",
+          "select()",
+          "filter()",
+          "withColumn()"
+        ],
+        "correctIndex": 0,
+        "explanation": "Actions like count()/show()/collect() trigger execution; the others are lazy transformations."
+      },
+      {
+        "order": 2,
+        "question": "What does 'lazy evaluation' mean in Spark?",
+        "options": [
+          "Code never runs",
+          "Transformations are not executed until an action is called",
+          "Spark caches everything by default",
+          "SQL is disabled"
+        ],
+        "correctIndex": 1,
+        "explanation": "Spark builds a plan and only computes when an action requires a result."
+      },
+      {
+        "order": 3,
+        "question": "What does createOrReplaceTempView let you do?",
+        "options": [
+          "Delete a table",
+          "Install a package",
+          "Query a DataFrame using SQL",
+          "Create a Git branch"
+        ],
+        "correctIndex": 2,
+        "explanation": "A temp view exposes a DataFrame to Spark SQL for %sql cells."
+      },
+      {
+        "order": 4,
+        "question": "Which transformation causes a shuffle across the cluster?",
+        "options": [
+          "A narrow transformation such as filter",
+          "Reading a file",
+          "Printing the schema",
+          "A wide transformation such as groupBy"
+        ],
+        "correctIndex": 3,
+        "explanation": "Wide transformations redistribute data (shuffle); narrow ones stay within a partition."
+      },
+      {
+        "order": 5,
+        "question": "What is the Databricks Assistant?",
+        "options": [
+          "A built-in AI helper that explains and generates code",
+          "A billing dashboard",
+          "A cluster manager",
+          "A vector database"
+        ],
+        "correctIndex": 0,
+        "explanation": "The Assistant is your free in-notebook AI pair-programmer."
+      }
+    ]
+  },
+  {
+    "dayNumber": 4,
+    "questions": [
+      {
+        "order": 1,
+        "question": "What does the Bronze layer of the medallion architecture hold?",
+        "options": [
+          "Business-ready aggregates",
+          "Raw ingested data, kept as-is",
+          "Only dashboards",
+          "Deleted records"
+        ],
+        "correctIndex": 1,
+        "explanation": "Bronze preserves raw fidelity; cleaning happens later in Silver."
+      },
+      {
+        "order": 2,
+        "question": "What is the Gold layer for?",
+        "options": [
+          "Raw file landing",
+          "Storing secrets",
+          "Business-ready, aggregated data for analytics and BI",
+          "Cluster logs"
+        ],
+        "correctIndex": 2,
+        "explanation": "Gold serves curated metrics and star-schema tables to consumers."
+      },
+      {
+        "order": 3,
+        "question": "Why do you use synthetic data in this cohort?",
+        "options": [
+          "Because Databricks can't read real data",
+          "To save disk space",
+          "Because SQL requires it",
+          "To avoid handling real member PHI while still practising on realistic data"
+        ],
+        "correctIndex": 3,
+        "explanation": "Synthetic data keeps the exercise safe and compliant — never real records."
+      },
+      {
+        "order": 4,
+        "question": "What is the correct medallion order?",
+        "options": [
+          "Bronze → Silver → Gold",
+          "Gold → Silver → Bronze",
+          "Silver → Bronze → Gold",
+          "Raw → Gold → Bronze"
+        ],
+        "correctIndex": 0,
+        "explanation": "Data flows raw (Bronze) to cleaned (Silver) to business-ready (Gold)."
+      },
+      {
+        "order": 5,
+        "question": "Where do the raw claims files land in this project?",
+        "options": [
+          "In a dashboard",
+          "In a Unity Catalog Volume",
+          "In a Git commit only",
+          "In the SQL warehouse"
+        ],
+        "correctIndex": 1,
+        "explanation": "Raw files are written to the bronze.raw Volume as a landing zone."
+      }
+    ]
+  },
+  {
+    "dayNumber": 5,
+    "questions": [
+      {
+        "order": 1,
+        "question": "What gives Delta Lake its ACID guarantees?",
+        "options": [
+          "A faster CPU",
+          "Compression",
+          "The transaction log (_delta_log)",
+          "The notebook UI"
+        ],
+        "correctIndex": 2,
+        "explanation": "Delta's transaction log records atomic, ordered commits enabling ACID."
+      },
+      {
+        "order": 2,
+        "question": "What does Delta time travel let you do?",
+        "options": [
+          "Speed up writes",
+          "Encrypt data",
+          "Delete the log",
+          "Query a previous version of a table"
+        ],
+        "correctIndex": 3,
+        "explanation": "You can read older versions with VERSION AS OF / TIMESTAMP AS OF."
+      },
+      {
+        "order": 3,
+        "question": "What does schema enforcement do?",
+        "options": [
+          "Rejects writes whose schema doesn't match the table",
+          "Automatically deletes columns",
+          "Disables SQL",
+          "Compresses files"
+        ],
+        "correctIndex": 0,
+        "explanation": "Delta blocks mismatched writes unless you explicitly evolve the schema."
+      },
+      {
+        "order": 4,
+        "question": "Why choose Delta over plain CSV/Parquet?",
+        "options": [
+          "It is the only format Spark reads",
+          "It adds ACID transactions, versioning, and schema management",
+          "It needs no storage",
+          "It removes the need for tables"
+        ],
+        "correctIndex": 1,
+        "explanation": "Delta layers reliability features on top of Parquet."
+      },
+      {
+        "order": 5,
+        "question": "What does the mergeSchema option allow?",
+        "options": [
+          "Deleting the table",
+          "Skipping the transaction log",
+          "Adding new columns to a table on write",
+          "Running SQL only"
+        ],
+        "correctIndex": 2,
+        "explanation": "mergeSchema evolves the schema to accept new columns."
+      }
+    ]
+  },
+  {
+    "dayNumber": 6,
+    "questions": [
+      {
+        "order": 1,
+        "question": "What is the guiding principle of the Bronze layer?",
+        "options": [
+          "Aggregate everything",
+          "Drop all nulls",
+          "Join every table",
+          "Keep the data raw and append-only, adding only metadata"
+        ],
+        "correctIndex": 3,
+        "explanation": "Bronze preserves raw data; transformation is Silver's job."
+      },
+      {
+        "order": 2,
+        "question": "What does input_file_name() return?",
+        "options": [
+          "The path of the source file for each row",
+          "The current user",
+          "A random id",
+          "The table size"
+        ],
+        "correctIndex": 0,
+        "explanation": "It's used to record source-file lineage in Bronze."
+      },
+      {
+        "order": 3,
+        "question": "Why add ingestion metadata columns?",
+        "options": [
+          "To make files bigger",
+          "For lineage and debugging (which file, when, which batch)",
+          "To encrypt data",
+          "To satisfy SQL syntax"
+        ],
+        "correctIndex": 1,
+        "explanation": "_source_file/_ingested_at/_batch_id trace where and when data arrived."
+      },
+      {
+        "order": 4,
+        "question": "What does 'append-only Bronze' imply?",
+        "options": [
+          "You delete old rows each run",
+          "You aggregate on write",
+          "You add new data without overwriting or cleaning it",
+          "You skip metadata"
+        ],
+        "correctIndex": 2,
+        "explanation": "Bronze accumulates raw records; cleaning is deferred to Silver."
+      },
+      {
+        "order": 5,
+        "question": "What is current_timestamp() typically used for in Bronze?",
+        "options": [
+          "Generating a primary key",
+          "Sorting the dashboard",
+          "Setting the schema",
+          "Recording the load/ingestion time"
+        ],
+        "correctIndex": 3,
+        "explanation": "It stamps each row with when it was ingested."
+      }
+    ]
+  },
+  {
+    "dayNumber": 7,
+    "questions": [
+      {
+        "order": 1,
+        "question": "What is 'cloudFiles' in Databricks?",
+        "options": [
+          "The format string that enables Auto Loader for incremental ingestion",
+          "A dashboard type",
+          "A Git command",
+          "A SQL keyword"
+        ],
+        "correctIndex": 0,
+        "explanation": "spark.readStream.format('cloudFiles') is Auto Loader."
+      },
+      {
+        "order": 2,
+        "question": "What do Auto Loader checkpoints guarantee?",
+        "options": [
+          "Faster dashboards",
+          "Exactly-once, idempotent processing of files",
+          "Encrypted storage",
+          "Automatic joins"
+        ],
+        "correctIndex": 1,
+        "explanation": "Checkpoints track processed files so re-runs don't reprocess."
+      },
+      {
+        "order": 3,
+        "question": "What does the _rescued_data column capture?",
+        "options": [
+          "Deleted rows",
+          "The file size",
+          "Data that didn't match the inferred schema",
+          "User names"
+        ],
+        "correctIndex": 2,
+        "explanation": "Rescued data preserves values that don't fit the current schema."
+      },
+      {
+        "order": 4,
+        "question": "What does the availableNow trigger do?",
+        "options": [
+          "Runs forever",
+          "Deletes the checkpoint",
+          "Disables schema inference",
+          "Processes all new files then stops (batch-style incremental)"
+        ],
+        "correctIndex": 3,
+        "explanation": "availableNow gives incremental semantics in a batch run."
+      },
+      {
+        "order": 5,
+        "question": "What is schema evolution in Auto Loader?",
+        "options": [
+          "New columns in incoming files are handled automatically",
+          "The schema can never change",
+          "Columns are always dropped",
+          "It requires manual DDL every time"
+        ],
+        "correctIndex": 0,
+        "explanation": "Auto Loader can evolve the schema as new fields appear."
+      }
+    ]
+  },
+  {
+    "dayNumber": 8,
+    "questions": [
+      {
+        "order": 1,
+        "question": "Converting a string like '2026-01-01' to a date type is called…",
+        "options": [
+          "Deduplication",
+          "Type casting",
+          "Partitioning",
+          "Joining"
+        ],
+        "correctIndex": 1,
+        "explanation": "Casting changes a column's data type."
+      },
+      {
+        "order": 2,
+        "question": "What does dropDuplicates() do?",
+        "options": [
+          "Removes columns",
+          "Sorts the data",
+          "Removes duplicate rows",
+          "Adds a surrogate key"
+        ],
+        "correctIndex": 2,
+        "explanation": "It deduplicates rows, optionally on chosen keys."
+      },
+      {
+        "order": 3,
+        "question": "Why standardize values like state codes to a single case?",
+        "options": [
+          "To use more storage",
+          "To break referential integrity",
+          "To slow queries",
+          "So joins, filters, and grouping behave consistently"
+        ],
+        "correctIndex": 3,
+        "explanation": "Consistent formatting prevents mismatches downstream."
+      },
+      {
+        "order": 4,
+        "question": "What is the purpose of the Silver layer?",
+        "options": [
+          "Cleaned, typed, conformed data",
+          "Raw landing",
+          "Final dashboards",
+          "Cluster configuration"
+        ],
+        "correctIndex": 0,
+        "explanation": "Silver turns raw Bronze into trustworthy, conformed tables."
+      },
+      {
+        "order": 5,
+        "question": "A window function is often used to…",
+        "options": [
+          "Delete all rows",
+          "Keep the latest record per key (partition + order)",
+          "Create a dashboard",
+          "Install a library"
+        ],
+        "correctIndex": 1,
+        "explanation": "Windowing by key/order enables 'keep latest' deduplication."
+      }
+    ]
+  },
+  {
+    "dayNumber": 9,
+    "questions": [
+      {
+        "order": 1,
+        "question": "A LEFT join returns…",
+        "options": [
+          "Only matching rows",
+          "Only unmatched rows",
+          "All rows from the left table plus matching right rows",
+          "The right table only"
+        ],
+        "correctIndex": 2,
+        "explanation": "Left joins preserve every left row, filling nulls where no match."
+      },
+      {
+        "order": 2,
+        "question": "What does an ANTI-join return?",
+        "options": [
+          "All matches",
+          "A cross product",
+          "Only right rows",
+          "Left rows that have no match on the right"
+        ],
+        "correctIndex": 3,
+        "explanation": "Anti-joins are ideal for finding orphan/unmatched records."
+      },
+      {
+        "order": 3,
+        "question": "Why derive a boolean like is_denied?",
+        "options": [
+          "To make filtering and metrics simple and fast",
+          "To increase row count",
+          "To break the schema",
+          "To hide data"
+        ],
+        "correctIndex": 0,
+        "explanation": "Precomputed flags simplify KPI queries."
+      },
+      {
+        "order": 4,
+        "question": "After a join, two columns share a name. What's the fix?",
+        "options": [
+          "Delete the table",
+          "Alias or explicitly select the columns you want",
+          "Restart the cluster",
+          "Ignore the error"
+        ],
+        "correctIndex": 1,
+        "explanation": "Disambiguate by aliasing or selecting specific columns."
+      },
+      {
+        "order": 5,
+        "question": "A referential-integrity check on claims finds…",
+        "options": [
+          "Duplicate dashboards",
+          "Slow queries",
+          "Orphan claims whose member or provider doesn't exist",
+          "Missing notebooks"
+        ],
+        "correctIndex": 2,
+        "explanation": "Anti-joining to dimensions surfaces orphans."
+      }
+    ]
+  },
+  {
+    "dayNumber": 10,
+    "questions": [
+      {
+        "order": 1,
+        "question": "What is the 'quarantine' pattern?",
+        "options": [
+          "Deleting the whole table",
+          "Encrypting rows",
+          "Skipping validation",
+          "Routing failing rows to a separate table instead of dropping them silently"
+        ],
+        "correctIndex": 3,
+        "explanation": "Quarantine keeps bad rows visible for review."
+      },
+      {
+        "order": 2,
+        "question": "A Delta CHECK constraint…",
+        "options": [
+          "Rejects inserts that violate a rule at the table level",
+          "Speeds up reads",
+          "Creates a dashboard",
+          "Adds a surrogate key"
+        ],
+        "correctIndex": 0,
+        "explanation": "CHECK constraints enforce data rules in the table itself."
+      },
+      {
+        "order": 3,
+        "question": "The 'completeness' data-quality dimension checks for…",
+        "options": [
+          "Query speed",
+          "Missing/null values",
+          "File size",
+          "Dashboard color"
+        ],
+        "correctIndex": 1,
+        "explanation": "Completeness is about whether required values are present."
+      },
+      {
+        "order": 4,
+        "question": "Why not silently drop rows that fail rules?",
+        "options": [
+          "It is faster",
+          "It is required by SQL",
+          "You lose visibility into data problems",
+          "It improves lineage"
+        ],
+        "correctIndex": 2,
+        "explanation": "Silent drops hide quality issues; quarantining preserves them."
+      },
+      {
+        "order": 5,
+        "question": "'Validity' as a quality dimension means…",
+        "options": [
+          "Rows are unique",
+          "Files are compressed",
+          "Columns are sorted",
+          "Values fall within an allowed set or range"
+        ],
+        "correctIndex": 3,
+        "explanation": "E.g. status must be one of paid/denied/pending."
+      }
+    ]
+  },
+  {
+    "dayNumber": 11,
+    "questions": [
+      {
+        "order": 1,
+        "question": "What does MERGE INTO do?",
+        "options": [
+          "Insert, update, and delete in a single statement (upsert)",
+          "Only insert",
+          "Only delete",
+          "Create a view"
+        ],
+        "correctIndex": 0,
+        "explanation": "MERGE performs conditional upserts against a target table."
+      },
+      {
+        "order": 2,
+        "question": "SCD Type 1 handles a change by…",
+        "options": [
+          "Keeping full history",
+          "Overwriting the old value (no history)",
+          "Deleting the row",
+          "Creating a new table"
+        ],
+        "correctIndex": 1,
+        "explanation": "Type 1 simply overwrites."
+      },
+      {
+        "order": 3,
+        "question": "SCD Type 2 handles a change by…",
+        "options": [
+          "Overwriting in place",
+          "Dropping the dimension",
+          "Keeping history with effective_from/effective_to and a current flag",
+          "Ignoring the change"
+        ],
+        "correctIndex": 2,
+        "explanation": "Type 2 preserves historical versions."
+      },
+      {
+        "order": 4,
+        "question": "What does an is_current column indicate?",
+        "options": [
+          "The row's size",
+          "The load date only",
+          "The schema version",
+          "Which row is the active/current version"
+        ],
+        "correctIndex": 3,
+        "explanation": "is_current marks the live record in an SCD Type 2 table."
+      },
+      {
+        "order": 5,
+        "question": "Why is an upsert made idempotent?",
+        "options": [
+          "So re-running it doesn't create duplicates",
+          "To run faster",
+          "To disable constraints",
+          "To skip the log"
+        ],
+        "correctIndex": 0,
+        "explanation": "Idempotency lets pipelines safely retry."
+      }
+    ]
+  },
+  {
+    "dayNumber": 12,
+    "questions": [
+      {
+        "order": 1,
+        "question": "What problem does OPTIMIZE address?",
+        "options": [
+          "Missing columns",
+          "The small-files problem, by compacting files",
+          "Access control",
+          "Dashboard layout"
+        ],
+        "correctIndex": 1,
+        "explanation": "OPTIMIZE compacts many small files into fewer larger ones."
+      },
+      {
+        "order": 2,
+        "question": "Liquid clustering / Z-ORDER improves…",
+        "options": [
+          "Encryption",
+          "Notebook UI",
+          "Data skipping for faster filtered queries",
+          "Git history"
+        ],
+        "correctIndex": 2,
+        "explanation": "Clustering co-locates related data so queries scan less."
+      },
+      {
+        "order": 3,
+        "question": "What does VACUUM do?",
+        "options": [
+          "Adds new columns",
+          "Creates a dashboard",
+          "Runs a job",
+          "Removes old, unreferenced data files"
+        ],
+        "correctIndex": 3,
+        "explanation": "VACUUM cleans up files beyond the retention window."
+      },
+      {
+        "order": 4,
+        "question": "What's the trade-off when you VACUUM aggressively?",
+        "options": [
+          "You shorten how far back time travel can go",
+          "Queries get slower",
+          "Schema breaks",
+          "Data is encrypted"
+        ],
+        "correctIndex": 0,
+        "explanation": "Removing old files limits time-travel history."
+      },
+      {
+        "order": 5,
+        "question": "Why do many small files hurt performance?",
+        "options": [
+          "They use no storage",
+          "Per-file overhead makes reads slower",
+          "They improve skipping",
+          "They are always faster"
+        ],
+        "correctIndex": 1,
+        "explanation": "Compaction reduces file-handling overhead."
+      }
+    ]
+  },
+  {
+    "dayNumber": 13,
+    "questions": [
+      {
+        "order": 1,
+        "question": "In a star schema, the fact table stores…",
+        "options": [
+          "Only descriptive text",
+          "Dashboards",
+          "Measures at a defined grain (e.g. amounts per claim)",
+          "Access grants"
+        ],
+        "correctIndex": 2,
+        "explanation": "Facts hold numeric measures and foreign keys to dimensions."
+      },
+      {
+        "order": 2,
+        "question": "A dimension table stores…",
+        "options": [
+          "Aggregated measures",
+          "Cluster logs",
+          "Pipeline code",
+          "Descriptive attributes (member, plan, provider, date)"
+        ],
+        "correctIndex": 3,
+        "explanation": "Dimensions describe the 'who/what/when' around facts."
+      },
+      {
+        "order": 3,
+        "question": "What is the 'grain' of a fact table?",
+        "options": [
+          "The level of detail one fact row represents",
+          "The table's color",
+          "The number of columns",
+          "The storage format"
+        ],
+        "correctIndex": 0,
+        "explanation": "Deciding grain (e.g. one row per claim) is the first modeling step."
+      },
+      {
+        "order": 4,
+        "question": "What shape defines a star schema?",
+        "options": [
+          "A chain of tables",
+          "A central fact table surrounded by dimension tables",
+          "A single flat table",
+          "A graph of vectors"
+        ],
+        "correctIndex": 1,
+        "explanation": "Facts in the center, dimensions radiating out."
+      },
+      {
+        "order": 5,
+        "question": "Why include a dedicated date dimension?",
+        "options": [
+          "To store passwords",
+          "To speed up ingestion",
+          "To support flexible time-based analysis (year, quarter, weekday)",
+          "To replace the fact table"
+        ],
+        "correctIndex": 2,
+        "explanation": "A date dimension standardizes calendar attributes for BI."
+      }
+    ]
+  },
+  {
+    "dayNumber": 14,
+    "questions": [
+      {
+        "order": 1,
+        "question": "What is a surrogate key?",
+        "options": [
+          "The natural business key",
+          "A dashboard filter",
+          "A file path",
+          "A system-generated unique identifier for a dimension row"
+        ],
+        "correctIndex": 3,
+        "explanation": "Surrogate keys decouple the warehouse from source keys."
+      },
+      {
+        "order": 2,
+        "question": "Why generate a dim_date programmatically?",
+        "options": [
+          "To get consistent calendar attributes for every date",
+          "To store claims",
+          "To avoid Delta",
+          "To replace joins"
+        ],
+        "correctIndex": 0,
+        "explanation": "A generated calendar table powers time analysis."
+      },
+      {
+        "order": 3,
+        "question": "A 'conformed' dimension is…",
+        "options": [
+          "Unique to one query",
+          "Shared consistently across multiple facts",
+          "Never joined",
+          "Always Bronze"
+        ],
+        "correctIndex": 1,
+        "explanation": "Conformed dimensions give consistent meaning across the model."
+      },
+      {
+        "order": 4,
+        "question": "age_band on dim_member is an example of…",
+        "options": [
+          "A surrogate key",
+          "A fact measure",
+          "A derived attribute",
+          "A file format"
+        ],
+        "correctIndex": 2,
+        "explanation": "Derived attributes bucket raw values for analysis."
+      },
+      {
+        "order": 5,
+        "question": "Why include only BI-relevant attributes in a dimension?",
+        "options": [
+          "To break lineage",
+          "To hide PHI only",
+          "To increase file count",
+          "For usability and query performance"
+        ],
+        "correctIndex": 3,
+        "explanation": "Lean dimensions are easier and faster to consume."
+      }
+    ]
+  },
+  {
+    "dayNumber": 15,
+    "questions": [
+      {
+        "order": 1,
+        "question": "A fact table links to dimensions using…",
+        "options": [
+          "Surrogate (foreign) keys",
+          "Random numbers",
+          "Dashboard filters",
+          "File names"
+        ],
+        "correctIndex": 0,
+        "explanation": "Facts store the dimensions' surrogate keys."
+      },
+      {
+        "order": 2,
+        "question": "Which is an additive measure?",
+        "options": [
+          "member name",
+          "paid_amount",
+          "plan type",
+          "provider specialty"
+        ],
+        "correctIndex": 1,
+        "explanation": "Additive measures can be summed across dimensions."
+      },
+      {
+        "order": 3,
+        "question": "How are claims with no matching member handled?",
+        "options": [
+          "Deleted",
+          "Duplicated",
+          "Routed to an 'Unknown' dimension member instead of dropped",
+          "Ignored silently"
+        ],
+        "correctIndex": 2,
+        "explanation": "An Unknown member preserves the fact without losing it."
+      },
+      {
+        "order": 4,
+        "question": "Why reconcile fact totals against Silver?",
+        "options": [
+          "To speed up queries",
+          "To encrypt data",
+          "To create a dashboard",
+          "To confirm the fact was built correctly"
+        ],
+        "correctIndex": 3,
+        "explanation": "Totals must match the trusted Silver source."
+      },
+      {
+        "order": 5,
+        "question": "Maintaining fact grain integrity means…",
+        "options": [
+          "Exactly one row per defined grain",
+          "Many rows per claim randomly",
+          "No rows at all",
+          "One table per user"
+        ],
+        "correctIndex": 0,
+        "explanation": "Grain integrity keeps aggregations correct."
+      }
+    ]
+  },
+  {
+    "dayNumber": 16,
+    "questions": [
+      {
+        "order": 1,
+        "question": "Denial rate is best defined as…",
+        "options": [
+          "Total paid amount",
+          "Denied claims divided by total claims",
+          "Average premium",
+          "Number of members"
+        ],
+        "correctIndex": 1,
+        "explanation": "It's a ratio of denied to total claims."
+      },
+      {
+        "order": 2,
+        "question": "What does PMPM stand for?",
+        "options": [
+          "Paid-monthly-per-member-median",
+          "Provider-managed-payment-model",
+          "Per-member-per-month",
+          "Plan-member-premium-metric"
+        ],
+        "correctIndex": 2,
+        "explanation": "PMPM is a core healthcare cost metric."
+      },
+      {
+        "order": 3,
+        "question": "How does a view differ from a materialized view?",
+        "options": [
+          "They are identical",
+          "A view stores data",
+          "A materialized view is slower always",
+          "A view computes on read; a materialized view stores precomputed results"
+        ],
+        "correctIndex": 3,
+        "explanation": "Materialized views trade storage for faster reads."
+      },
+      {
+        "order": 4,
+        "question": "Why define KPIs precisely before building them?",
+        "options": [
+          "So reporting is consistent and unambiguous",
+          "To use more compute",
+          "To avoid Gold",
+          "To hide numbers"
+        ],
+        "correctIndex": 0,
+        "explanation": "Clear definitions prevent conflicting metrics."
+      },
+      {
+        "order": 5,
+        "question": "What is vw_claims_analytics intended for?",
+        "options": [
+          "Raw ingestion",
+          "A readable, joined view for analysts",
+          "Cluster tuning",
+          "Access control"
+        ],
+        "correctIndex": 1,
+        "explanation": "It exposes an analyst-friendly shape over the star schema."
+      }
+    ]
+  },
+  {
+    "dayNumber": 17,
+    "questions": [
+      {
+        "order": 1,
+        "question": "Delta Live Tables is now called…",
+        "options": [
+          "Lakeflow Jobs",
+          "Unity Catalog",
+          "Lakeflow Declarative Pipelines",
+          "Databricks SQL"
+        ],
+        "correctIndex": 2,
+        "explanation": "DLT was rebranded to Lakeflow Declarative Pipelines."
+      },
+      {
+        "order": 2,
+        "question": "What does 'declarative ETL' mean?",
+        "options": [
+          "You write every scheduler by hand",
+          "You avoid SQL",
+          "You disable Delta",
+          "You describe the desired result and the engine manages execution"
+        ],
+        "correctIndex": 3,
+        "explanation": "Declarative pipelines let the engine handle orchestration and incrementality."
+      },
+      {
+        "order": 3,
+        "question": "Which is used to ingest streaming data in a pipeline?",
+        "options": [
+          "A streaming table",
+          "A materialized view",
+          "A dashboard",
+          "A Git folder"
+        ],
+        "correctIndex": 0,
+        "explanation": "Streaming tables ingest; materialized views transform."
+      },
+      {
+        "order": 4,
+        "question": "What does the @dp.table decorator do?",
+        "options": [
+          "Deletes a table",
+          "Defines a dataset in a Lakeflow pipeline",
+          "Creates a Git branch",
+          "Starts a SQL warehouse"
+        ],
+        "correctIndex": 1,
+        "explanation": "Decorators declare pipeline datasets (legacy @dlt still works)."
+      },
+      {
+        "order": 5,
+        "question": "How many active pipelines per type does Free Edition allow?",
+        "options": [
+          "Ten",
+          "Unlimited",
+          "One",
+          "Zero"
+        ],
+        "correctIndex": 2,
+        "explanation": "Free Edition permits a single active pipeline per type."
+      }
+    ]
+  },
+  {
+    "dayNumber": 18,
+    "questions": [
+      {
+        "order": 1,
+        "question": "How does a Lakeflow pipeline determine run order?",
+        "options": [
+          "You number every step manually",
+          "Alphabetically",
+          "Randomly",
+          "It auto-builds the dependency graph (DAG) from dataset references"
+        ],
+        "correctIndex": 3,
+        "explanation": "Referencing one dataset from another builds the DAG automatically."
+      },
+      {
+        "order": 2,
+        "question": "A materialized view in a pipeline is…",
+        "options": [
+          "A precomputed, incrementally maintained transform",
+          "A raw file",
+          "A dashboard",
+          "A cluster"
+        ],
+        "correctIndex": 0,
+        "explanation": "Materialized views hold transform results and refresh incrementally."
+      },
+      {
+        "order": 3,
+        "question": "You chain Silver to Bronze by…",
+        "options": [
+          "Copying files manually",
+          "Reading the Bronze dataset from within the Silver definition",
+          "Using two workspaces",
+          "Disabling lineage"
+        ],
+        "correctIndex": 1,
+        "explanation": "Datasets reference upstream datasets to form the flow."
+      },
+      {
+        "order": 4,
+        "question": "What does incremental processing mean here?",
+        "options": [
+          "Everything is recomputed always",
+          "Nothing runs",
+          "Only new/changed data is processed on each run",
+          "Data is deleted"
+        ],
+        "correctIndex": 2,
+        "explanation": "Incremental refresh avoids full recomputation."
+      },
+      {
+        "order": 5,
+        "question": "A benefit of one pipeline for the whole medallion is…",
+        "options": [
+          "More manual scheduling",
+          "No dependencies",
+          "Slower runs",
+          "Managed lineage and coordinated refresh across layers"
+        ],
+        "correctIndex": 3,
+        "explanation": "A single pipeline coordinates Bronze→Silver→Gold."
+      }
+    ]
+  },
+  {
+    "dayNumber": 19,
+    "questions": [
+      {
+        "order": 1,
+        "question": "What does the expect_or_drop expectation do?",
+        "options": [
+          "Drops rows that fail the rule",
+          "Fails the whole update",
+          "Ignores the rule",
+          "Encrypts rows"
+        ],
+        "correctIndex": 0,
+        "explanation": "expect_or_drop removes bad rows while continuing."
+      },
+      {
+        "order": 2,
+        "question": "What does expect_or_fail do?",
+        "options": [
+          "Silently passes",
+          "Fails the pipeline update when the rule is violated",
+          "Drops the table",
+          "Adds a column"
+        ],
+        "correctIndex": 1,
+        "explanation": "expect_or_fail stops the run on violations."
+      },
+      {
+        "order": 3,
+        "question": "Unity Catalog lineage shows…",
+        "options": [
+          "Only file sizes",
+          "Only dashboards",
+          "Where data comes from and where it flows, table- and column-level",
+          "Only user logins"
+        ],
+        "correctIndex": 2,
+        "explanation": "Lineage traces data end to end for trust and debugging."
+      },
+      {
+        "order": 4,
+        "question": "Where do pipeline data-quality metrics appear?",
+        "options": [
+          "In the Git history",
+          "In the README",
+          "Nowhere",
+          "In the pipeline event log"
+        ],
+        "correctIndex": 3,
+        "explanation": "Expectation pass/fail counts surface in the event log."
+      },
+      {
+        "order": 5,
+        "question": "Why trace lineage for a KPI?",
+        "options": [
+          "To build trust and debug where a number came from",
+          "To slow the pipeline",
+          "To delete data",
+          "To hide sources"
+        ],
+        "correctIndex": 0,
+        "explanation": "Lineage lets you verify a metric back to raw."
+      }
+    ]
+  },
+  {
+    "dayNumber": 20,
+    "questions": [
+      {
+        "order": 1,
+        "question": "A 'full refresh' of a pipeline…",
+        "options": [
+          "Only adds new rows",
+          "Rebuilds the datasets from scratch",
+          "Deletes the pipeline",
+          "Skips Bronze"
+        ],
+        "correctIndex": 1,
+        "explanation": "Full refresh recomputes everything."
+      },
+      {
+        "order": 2,
+        "question": "An 'incremental refresh'…",
+        "options": [
+          "Recomputes everything",
+          "Drops the schema",
+          "Processes only new or changed data",
+          "Runs the entrance exam"
+        ],
+        "correctIndex": 2,
+        "explanation": "Incremental is the efficient default for steady-state runs."
+      },
+      {
+        "order": 3,
+        "question": "Parameterizing a pipeline enables…",
+        "options": [
+          "Hard-coding one environment",
+          "Removing Delta",
+          "Disabling lineage",
+          "Reuse across dev and prod with different config"
+        ],
+        "correctIndex": 3,
+        "explanation": "Parameters make pipelines portable and testable."
+      },
+      {
+        "order": 4,
+        "question": "Splitting a pipeline into modular files improves…",
+        "options": [
+          "Readability and maintenance",
+          "Encryption",
+          "Query speed only",
+          "File count only"
+        ],
+        "correctIndex": 0,
+        "explanation": "Modular bronze/silver/gold files are easier to manage."
+      },
+      {
+        "order": 5,
+        "question": "Testing transforms on a sample first…",
+        "options": [
+          "Is never useful",
+          "Catches errors cheaply before full runs",
+          "Deletes data",
+          "Requires a paid plan"
+        ],
+        "correctIndex": 1,
+        "explanation": "Sampling reduces cost and speeds iteration."
+      }
+    ]
+  },
+  {
+    "dayNumber": 21,
+    "questions": [
+      {
+        "order": 1,
+        "question": "Databricks Workflows is now called…",
+        "options": [
+          "Lakeflow Declarative Pipelines",
+          "Unity Catalog",
+          "Lakeflow Jobs",
+          "AI/BI Genie"
+        ],
+        "correctIndex": 2,
+        "explanation": "Workflows was rebranded to Lakeflow Jobs."
+      },
+      {
+        "order": 2,
+        "question": "A Lakeflow Job is…",
+        "options": [
+          "A single notebook cell",
+          "A dashboard",
+          "A Volume",
+          "A DAG of tasks with dependencies"
+        ],
+        "correctIndex": 3,
+        "explanation": "Jobs orchestrate multiple tasks in order."
+      },
+      {
+        "order": 3,
+        "question": "A task dependency ensures…",
+        "options": [
+          "Tasks run in the correct order",
+          "Tasks run randomly",
+          "Tasks never run",
+          "Tasks are deleted"
+        ],
+        "correctIndex": 0,
+        "explanation": "Dependencies encode execution order."
+      },
+      {
+        "order": 4,
+        "question": "A schedule on a job…",
+        "options": [
+          "Stops the job forever",
+          "Triggers automatic runs at set times",
+          "Encrypts the data",
+          "Creates a Git branch"
+        ],
+        "correctIndex": 1,
+        "explanation": "Schedules automate recurring runs."
+      },
+      {
+        "order": 5,
+        "question": "How many concurrent job tasks does Free Edition allow?",
+        "options": [
+          "50",
+          "Unlimited",
+          "5",
+          "1"
+        ],
+        "correctIndex": 2,
+        "explanation": "Free Edition caps concurrent job tasks at 5."
+      }
+    ]
+  },
+  {
+    "dayNumber": 22,
+    "questions": [
+      {
+        "order": 1,
+        "question": "A 'task value' is used to…",
+        "options": [
+          "Encrypt a task",
+          "Delete a job",
+          "Style a dashboard",
+          "Pass data from one task to another"
+        ],
+        "correctIndex": 3,
+        "explanation": "Task values hand small outputs downstream."
+      },
+      {
+        "order": 2,
+        "question": "A conditional (if/else) task…",
+        "options": [
+          "Branches the job based on a condition",
+          "Always runs both branches",
+          "Cannot be used",
+          "Deletes tasks"
+        ],
+        "correctIndex": 0,
+        "explanation": "Conditionals let the job take different paths."
+      },
+      {
+        "order": 3,
+        "question": "Why configure retries on a task?",
+        "options": [
+          "To slow the job",
+          "To recover from transient failures automatically",
+          "To skip validation",
+          "To remove logs"
+        ],
+        "correctIndex": 1,
+        "explanation": "Retries handle flaky, temporary errors."
+      },
+      {
+        "order": 4,
+        "question": "A timeout on a task prevents…",
+        "options": [
+          "Any task from running",
+          "Scheduling",
+          "A hung task from running indefinitely",
+          "Notifications"
+        ],
+        "correctIndex": 2,
+        "explanation": "Timeouts bound how long a task may run."
+      },
+      {
+        "order": 5,
+        "question": "A file-arrival trigger runs the job when…",
+        "options": [
+          "A user logs in",
+          "A dashboard opens",
+          "Every second",
+          "A new file lands in a monitored location"
+        ],
+        "correctIndex": 3,
+        "explanation": "File-arrival triggers react to new data."
+      }
+    ]
+  },
+  {
+    "dayNumber": 23,
+    "questions": [
+      {
+        "order": 1,
+        "question": "What does databricks.yml define?",
+        "options": [
+          "A Databricks Asset Bundle (resources as code)",
+          "A dashboard",
+          "A SQL query",
+          "A Volume"
+        ],
+        "correctIndex": 0,
+        "explanation": "The bundle manifest declares jobs, pipelines, and config."
+      },
+      {
+        "order": 2,
+        "question": "What does 'databricks bundle validate' do?",
+        "options": [
+          "Deletes the workspace",
+          "Checks the bundle before deploying",
+          "Runs the pipeline",
+          "Opens Genie"
+        ],
+        "correctIndex": 1,
+        "explanation": "Validation catches errors pre-deploy."
+      },
+      {
+        "order": 3,
+        "question": "Databricks Asset Bundles primarily enable…",
+        "options": [
+          "Faster SQL only",
+          "Encryption",
+          "Version-controlled, reproducible deployment of Databricks resources",
+          "Dashboard theming"
+        ],
+        "correctIndex": 2,
+        "explanation": "DABs package project resources as deployable code."
+      },
+      {
+        "order": 4,
+        "question": "A dev vs prod 'target' in a bundle represents…",
+        "options": [
+          "Two dashboards",
+          "Two users",
+          "Two file formats",
+          "Different deployment environments/config"
+        ],
+        "correctIndex": 3,
+        "explanation": "Targets let one bundle deploy to multiple environments."
+      },
+      {
+        "order": 5,
+        "question": "Why package the project as code?",
+        "options": [
+          "Reproducibility and CI/CD",
+          "To hide it",
+          "To avoid Git",
+          "To disable jobs"
+        ],
+        "correctIndex": 0,
+        "explanation": "Code-defined infra can be reviewed and redeployed reliably."
+      }
+    ]
+  },
+  {
+    "dayNumber": 24,
+    "questions": [
+      {
+        "order": 1,
+        "question": "What does the GRANT statement do?",
+        "options": [
+          "Deletes a table",
+          "Gives a principal a privilege on an object",
+          "Creates a dashboard",
+          "Runs a job"
+        ],
+        "correctIndex": 1,
+        "explanation": "GRANT assigns privileges like SELECT."
+      },
+      {
+        "order": 2,
+        "question": "'Least privilege' means…",
+        "options": [
+          "Giving everyone admin",
+          "Removing all access",
+          "Giving only the minimum access needed",
+          "Sharing passwords"
+        ],
+        "correctIndex": 2,
+        "explanation": "Least privilege limits risk by default."
+      },
+      {
+        "order": 3,
+        "question": "In this project, analysts are granted…",
+        "options": [
+          "Full admin on everything",
+          "Access to Bronze only",
+          "No access",
+          "SELECT on the gold schema"
+        ],
+        "correctIndex": 3,
+        "explanation": "Analysts see curated Gold, not raw layers."
+      },
+      {
+        "order": 4,
+        "question": "The Unity Catalog privilege hierarchy is…",
+        "options": [
+          "catalog → schema → table",
+          "table → user → role",
+          "column → row → cell",
+          "job → task → run"
+        ],
+        "correctIndex": 0,
+        "explanation": "Privileges cascade down the object hierarchy."
+      },
+      {
+        "order": 5,
+        "question": "What does SHOW GRANTS return?",
+        "options": [
+          "The table's row count",
+          "The privileges granted on an object",
+          "The cluster size",
+          "The Git log"
+        ],
+        "correctIndex": 1,
+        "explanation": "SHOW GRANTS lists who can do what."
+      }
+    ]
+  },
+  {
+    "dayNumber": 25,
+    "questions": [
+      {
+        "order": 1,
+        "question": "Column-level lineage lets you…",
+        "options": [
+          "Only see table names",
+          "Delete columns",
+          "Trace a specific column back to its source",
+          "Encrypt a dashboard"
+        ],
+        "correctIndex": 2,
+        "explanation": "UC lineage works at both table and column level."
+      },
+      {
+        "order": 2,
+        "question": "Why tag columns like member name and DOB?",
+        "options": [
+          "To make them faster",
+          "To delete them",
+          "To hide the table",
+          "To classify sensitive/PHI data for governance and discovery"
+        ],
+        "correctIndex": 3,
+        "explanation": "Tags drive classification and searchability."
+      },
+      {
+        "order": 3,
+        "question": "AI-generated comments in Catalog Explorer…",
+        "options": [
+          "Help document tables and columns",
+          "Run the pipeline",
+          "Grant access",
+          "Delete data"
+        ],
+        "correctIndex": 0,
+        "explanation": "AI suggestions speed up documentation."
+      },
+      {
+        "order": 4,
+        "question": "Catalog Explorer is mainly used for…",
+        "options": [
+          "Writing dashboards",
+          "Discovering and managing data assets",
+          "Training models",
+          "Managing billing"
+        ],
+        "correctIndex": 1,
+        "explanation": "It's the browse/search/govern surface for UC."
+      },
+      {
+        "order": 5,
+        "question": "A data dictionary documents…",
+        "options": [
+          "Only cluster logs",
+          "Only dashboards",
+          "Tables, columns, and their meanings",
+          "Only Git branches"
+        ],
+        "correctIndex": 2,
+        "explanation": "It's the reference describing your data."
+      }
+    ]
+  },
+  {
+    "dayNumber": 26,
+    "questions": [
+      {
+        "order": 1,
+        "question": "A column mask…",
+        "options": [
+          "Deletes the column",
+          "Speeds up queries",
+          "Creates a dashboard",
+          "Redacts a column's values for unauthorized users"
+        ],
+        "correctIndex": 3,
+        "explanation": "Masks hide sensitive values by group."
+      },
+      {
+        "order": 2,
+        "question": "A row filter…",
+        "options": [
+          "Restricts which rows a principal can see",
+          "Removes columns",
+          "Adds a surrogate key",
+          "Runs a job"
+        ],
+        "correctIndex": 0,
+        "explanation": "Row filters enforce row-level security."
+      },
+      {
+        "order": 3,
+        "question": "is_account_group_member() is used to…",
+        "options": [
+          "Delete a group",
+          "Check a user's group membership in a dynamic view",
+          "Create a table",
+          "Start compute"
+        ],
+        "correctIndex": 1,
+        "explanation": "It powers per-user masking/filtering logic."
+      },
+      {
+        "order": 4,
+        "question": "A dynamic view…",
+        "options": [
+          "Is always static",
+          "Cannot use functions",
+          "Applies masking/filtering logic based on who is querying",
+          "Stores raw files"
+        ],
+        "correctIndex": 2,
+        "explanation": "Dynamic views tailor results to the caller."
+      },
+      {
+        "order": 5,
+        "question": "Why are these controls critical for healthcare data?",
+        "options": [
+          "They speed up dashboards",
+          "They reduce storage",
+          "They replace Delta",
+          "They protect PHI from unauthorized access"
+        ],
+        "correctIndex": 3,
+        "explanation": "Row/column security is essential for PHI compliance."
+      }
+    ]
+  },
+  {
+    "dayNumber": 27,
+    "questions": [
+      {
+        "order": 1,
+        "question": "A Databricks SQL warehouse is…",
+        "options": [
+          "Serverless compute for running SQL queries",
+          "A file store",
+          "A Git repo",
+          "A pipeline"
+        ],
+        "correctIndex": 0,
+        "explanation": "Warehouses run Databricks SQL and dashboards."
+      },
+      {
+        "order": 2,
+        "question": "A SQL alert…",
+        "options": [
+          "Deletes a table",
+          "Notifies you when a metric crosses a threshold",
+          "Creates a dashboard",
+          "Runs a notebook"
+        ],
+        "correctIndex": 1,
+        "explanation": "Alerts watch a query result on a schedule."
+      },
+      {
+        "order": 3,
+        "question": "A query parameter…",
+        "options": [
+          "Encrypts the query",
+          "Deletes rows",
+          "Makes a saved query reusable with different inputs",
+          "Adds compute"
+        ],
+        "correctIndex": 2,
+        "explanation": "Parameters let one query serve many cases."
+      },
+      {
+        "order": 4,
+        "question": "A saved query can be…",
+        "options": [
+          "Only run once",
+          "Never shared",
+          "Only in Python",
+          "Reused and scheduled"
+        ],
+        "correctIndex": 3,
+        "explanation": "Saved queries are reusable and schedulable."
+      },
+      {
+        "order": 5,
+        "question": "A benefit of serverless SQL is…",
+        "options": [
+          "No cluster management for the analyst",
+          "Higher cost always",
+          "Manual scaling",
+          "No SQL support"
+        ],
+        "correctIndex": 0,
+        "explanation": "Serverless removes infra overhead for SQL users."
+      }
+    ]
+  },
+  {
+    "dayNumber": 28,
+    "questions": [
+      {
+        "order": 1,
+        "question": "An AI/BI dashboard is built on top of…",
+        "options": [
+          "Raw files only",
+          "Datasets (queries over your Gold tables)",
+          "Git commits",
+          "Cluster logs"
+        ],
+        "correctIndex": 1,
+        "explanation": "Dashboards visualize datasets defined on your data."
+      },
+      {
+        "order": 2,
+        "question": "A KPI tile shows…",
+        "options": [
+          "A full table dump",
+          "Cluster settings",
+          "A single key metric at a glance",
+          "A Git diff"
+        ],
+        "correctIndex": 2,
+        "explanation": "KPI tiles surface headline numbers like denial rate."
+      },
+      {
+        "order": 3,
+        "question": "A dashboard filter enables…",
+        "options": [
+          "Deleting data",
+          "Encrypting rows",
+          "Running jobs",
+          "Interactive slicing (by date, plan, state)"
+        ],
+        "correctIndex": 3,
+        "explanation": "Filters let viewers explore interactively."
+      },
+      {
+        "order": 4,
+        "question": "Publishing a dashboard…",
+        "options": [
+          "Shares it, typically view-only, with stakeholders",
+          "Deletes it",
+          "Makes it private forever",
+          "Runs a pipeline"
+        ],
+        "correctIndex": 0,
+        "explanation": "Publishing distributes the dashboard to viewers."
+      },
+      {
+        "order": 5,
+        "question": "A .lvdash.json file is…",
+        "options": [
+          "A raw data file",
+          "The exported definition of an AI/BI dashboard",
+          "A pipeline",
+          "A Git branch"
+        ],
+        "correctIndex": 1,
+        "explanation": "Exporting captures the dashboard as committable JSON."
+      }
+    ]
+  },
+  {
+    "dayNumber": 29,
+    "questions": [
+      {
+        "order": 1,
+        "question": "AI/BI Genie lets stakeholders…",
+        "options": [
+          "Only write SQL by hand",
+          "Edit clusters",
+          "Ask questions of the data in natural language",
+          "Deploy bundles"
+        ],
+        "correctIndex": 2,
+        "explanation": "Genie translates plain English to SQL over curated data."
+      },
+      {
+        "order": 2,
+        "question": "Adding instructions to a Genie space…",
+        "options": [
+          "Slows it down",
+          "Deletes tables",
+          "Disables SQL",
+          "Improves accuracy and grounding of answers"
+        ],
+        "correctIndex": 3,
+        "explanation": "Instructions encode definitions and business rules."
+      },
+      {
+        "order": 3,
+        "question": "Why verify the SQL Genie generates?",
+        "options": [
+          "Natural-language-to-SQL can be wrong or ambiguous",
+          "It is always perfect",
+          "To slow analysis",
+          "To delete data"
+        ],
+        "correctIndex": 0,
+        "explanation": "Human verification builds trust in Genie answers."
+      },
+      {
+        "order": 4,
+        "question": "A Genie space is grounded on…",
+        "options": [
+          "Random internet data",
+          "Curated tables and views (your Gold layer)",
+          "Cluster logs",
+          "Git history"
+        ],
+        "correctIndex": 1,
+        "explanation": "Grounding on curated data keeps answers relevant."
+      },
+      {
+        "order": 5,
+        "question": "Certified sample questions are…",
+        "options": [
+          "Deleted questions",
+          "Random prompts",
+          "Trusted example questions that guide Genie",
+          "Billing items"
+        ],
+        "correctIndex": 2,
+        "explanation": "They steer Genie toward reliable answers."
+      }
+    ]
+  },
+  {
+    "dayNumber": 30,
+    "questions": [
+      {
+        "order": 1,
+        "question": "Scheduling a dashboard lets you…",
+        "options": [
+          "Delete it nightly",
+          "Disable filters",
+          "Remove access",
+          "Auto-refresh and email stakeholders on a cadence"
+        ],
+        "correctIndex": 3,
+        "explanation": "Subscriptions keep stakeholders updated automatically."
+      },
+      {
+        "order": 2,
+        "question": "The main cost driver on serverless is…",
+        "options": [
+          "Compute runtime",
+          "The number of dashboards",
+          "Git commits",
+          "Table names"
+        ],
+        "correctIndex": 0,
+        "explanation": "You pay for compute time; idle-efficient design saves money."
+      },
+      {
+        "order": 3,
+        "question": "Result caching improves…",
+        "options": [
+          "Security",
+          "Query speed for repeated queries",
+          "Storage size",
+          "Lineage"
+        ],
+        "correctIndex": 1,
+        "explanation": "Caching avoids recomputing identical queries."
+      },
+      {
+        "order": 4,
+        "question": "Dashboard permissions control…",
+        "options": [
+          "The color palette",
+          "The compute type",
+          "Who can view or edit the dashboard",
+          "The Git branch"
+        ],
+        "correctIndex": 2,
+        "explanation": "Permissions govern access to the published asset."
+      },
+      {
+        "order": 5,
+        "question": "Adding an aggregate table can…",
+        "options": [
+          "Break the pipeline",
+          "Delete the dashboard",
+          "Remove filters",
+          "Speed up a slow chart"
+        ],
+        "correctIndex": 3,
+        "explanation": "Pre-aggregation reduces per-view computation."
+      }
+    ]
+  },
+  {
+    "dayNumber": 31,
+    "questions": [
+      {
+        "order": 1,
+        "question": "What is the correct end-to-end flow of your Lakehouse?",
+        "options": [
+          "Raw → Bronze → Silver → Gold → pipeline → job → BI",
+          "BI → Gold → Bronze → Raw",
+          "Gold → Raw → Silver",
+          "Job → Raw → Dashboard → Bronze"
+        ],
+        "correctIndex": 0,
+        "explanation": "Data flows from raw ingestion through the medallion to BI."
+      },
+      {
+        "order": 2,
+        "question": "A retrospective captures…",
+        "options": [
+          "Only the code",
+          "What worked, what was hard, and what you'd change",
+          "Billing details",
+          "Cluster logs"
+        ],
+        "correctIndex": 1,
+        "explanation": "Retros turn experience into improvement."
+      },
+      {
+        "order": 3,
+        "question": "A good v2 roadmap for this project includes…",
+        "options": [
+          "Deleting the Lakehouse",
+          "Removing governance",
+          "Streaming ingestion and an ML denial-prediction model",
+          "Disabling dashboards"
+        ],
+        "correctIndex": 2,
+        "explanation": "The roadmap extends into ML and streaming."
+      },
+      {
+        "order": 4,
+        "question": "Showing lineage in the demo proves…",
+        "options": [
+          "The cluster size",
+          "The Git author",
+          "The color theme",
+          "A dashboard KPI can be traced back to the raw file"
+        ],
+        "correctIndex": 3,
+        "explanation": "Lineage demonstrates end-to-end trust."
+      },
+      {
+        "order": 5,
+        "question": "Why require a compliance review before using real PHI?",
+        "options": [
+          "Real member data carries legal and privacy obligations (e.g. HIPAA)",
+          "It is faster",
+          "SQL requires it",
+          "To save storage"
+        ],
+        "correctIndex": 0,
+        "explanation": "This cohort is technical practice, not compliance sign-off."
+      }
+    ]
+  }
+]

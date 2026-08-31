@@ -1,0 +1,54 @@
+[
+  {
+    "slug": "claims-count-python",
+    "title": "Count claims (Python)",
+    "language": "PYTHON",
+    "moduleNumber": 1,
+    "order": 1,
+    "description": "Print how many claims are in the list.",
+    "starterCode": "claims = [\"paid\", \"denied\", \"paid\"]\nprint(len(claims))\n",
+    "expectedOutput": "3"
+  },
+  {
+    "slug": "standardize-states",
+    "title": "Standardize state codes (Python)",
+    "language": "PYTHON",
+    "moduleNumber": 2,
+    "order": 2,
+    "description": "Trim whitespace and uppercase each state code.",
+    "starterCode": "states = [\" ny\", \"CA \", \"tx\"]\nprint([s.strip().upper() for s in states])\n",
+    "expectedOutput": "['NY', 'CA', 'TX']"
+  },
+  {
+    "slug": "denial-rate-python",
+    "title": "Compute denial rate (Python)",
+    "language": "PYTHON",
+    "moduleNumber": 3,
+    "order": 3,
+    "description": "Compute the fraction of denied claims, rounded to 2 decimals.",
+    "starterCode": "claims = [\"paid\", \"denied\", \"paid\", \"denied\"]\ndenied = sum(1 for c in claims if c == \"denied\")\nprint(round(denied / len(claims), 2))\n",
+    "expectedOutput": "0.5"
+  },
+  {
+    "slug": "claims-count-sql",
+    "title": "Count claim rows (SQL)",
+    "language": "SQL",
+    "moduleNumber": 1,
+    "order": 4,
+    "description": "Count the rows in the claims table.",
+    "starterCode": "SELECT COUNT(*) AS cnt FROM claims;",
+    "setupSql": "CREATE TABLE claims (id INTEGER, status TEXT);\nINSERT INTO claims VALUES (1,'paid'),(2,'denied'),(3,'paid');",
+    "expectedOutput": "+-----+\n| cnt |\n+-----+\n| 3   |\n+-----+"
+  },
+  {
+    "slug": "denied-count-sql",
+    "title": "Count denied claims (SQL)",
+    "language": "SQL",
+    "moduleNumber": 3,
+    "order": 5,
+    "description": "Count only the claims whose status is 'denied'.",
+    "starterCode": "SELECT COUNT(*) AS denied FROM claims WHERE status = 'denied';",
+    "setupSql": "CREATE TABLE claims (id INTEGER, status TEXT);\nINSERT INTO claims VALUES (1,'paid'),(2,'denied'),(3,'denied');",
+    "expectedOutput": "+--------+\n| denied |\n+--------+\n| 2      |\n+--------+"
+  }
+]

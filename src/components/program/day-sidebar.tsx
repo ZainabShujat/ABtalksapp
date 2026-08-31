@@ -15,12 +15,14 @@ export function DaySidebar({
   moduleTitle,
   days,
   modules,
+  basePath = PROGRAM_AI_COHORT_BASE,
 }: {
   currentDay: number;
   moduleNumber: number;
   moduleTitle: string;
   days: CurriculumDay[];
   modules: CurriculumModule[];
+  basePath?: string;
 }) {
   const activeRef = useRef<HTMLElement | null>(null);
 
@@ -104,7 +106,7 @@ export function DaySidebar({
                   return (
                     <Link
                       key={d.dayNumber}
-                      href={`${PROGRAM_AI_COHORT_BASE}/day/${d.dayNumber}`}
+                      href={`${basePath}/day/${d.dayNumber}`}
                       className={className}
                       aria-current={active ? "page" : undefined}
                       ref={
