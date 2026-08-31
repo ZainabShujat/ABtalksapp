@@ -7,7 +7,7 @@ import { getMissionState } from "@/features/program/missions";
 import { getMissionMentorFeedback } from "@/features/program/mentor";
 import { getMemberDayStates } from "@/features/program/progression";
 import { parseBriefMd } from "@/features/program/parse-brief";
-import { PROGRAM_TOTAL_DAYS } from "@/features/program/constants";
+import { PROGRAM_AI_COHORT_BASE, PROGRAM_TOTAL_DAYS } from "@/features/program/constants";
 import { LiteYoutube } from "@/components/shared/lite-youtube";
 import { MissionPanel } from "@/components/program/mission-panel";
 import { ProgramDayClient } from "@/components/program/program-day-client";
@@ -32,12 +32,12 @@ export default async function ProgramDayPage({ params }: Props) {
     dayNumber < 1 ||
     dayNumber > PROGRAM_TOTAL_DAYS
   ) {
-    redirect("/program/curriculum");
+    redirect(`${PROGRAM_AI_COHORT_BASE}/curriculum`);
   }
 
   const result = await getDayShell(member.id, dayNumber);
   if (!result || result.state === "LOCKED") {
-    redirect("/program/curriculum");
+    redirect(`${PROGRAM_AI_COHORT_BASE}/curriculum`);
   }
 
   const { day } = result;
@@ -51,7 +51,7 @@ export default async function ProgramDayPage({ params }: Props) {
     getMemberDayStates(member.id),
   ]);
 
-  if (!missionState || !memberProfile) redirect("/program/curriculum");
+  if (!missionState || !memberProfile) redirect(`${PROGRAM_AI_COHORT_BASE}/curriculum`);
 
   const initialMentorFeedback =
     missionState.dayState === "PASSED"

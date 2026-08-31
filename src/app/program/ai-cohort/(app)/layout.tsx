@@ -2,11 +2,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { requireProgramMember } from "@/lib/program-auth";
 import { ProgramNav } from "@/components/program/program-nav";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 
 const navItems = [
-  { href: "/program/dashboard", label: "Dashboard" },
-  { href: "/program/videos", label: "Videos" },
-  { href: "/program/leaderboard", label: "Leaderboard" },
+  { href: `${PROGRAM_AI_COHORT_BASE}/dashboard`, label: "Dashboard" },
+  { href: `${PROGRAM_AI_COHORT_BASE}/videos`, label: "Videos" },
+  { href: `${PROGRAM_AI_COHORT_BASE}/leaderboard`, label: "Leaderboard" },
 ];
 
 export default async function ProgramAppLayout({

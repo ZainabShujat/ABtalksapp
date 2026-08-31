@@ -6,6 +6,7 @@ import type {
   CurriculumDay,
   CurriculumModule,
 } from "@/features/program/progression";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import { cn } from "@/lib/utils";
 
 export function DaySidebar({
@@ -103,7 +104,7 @@ export function DaySidebar({
                   return (
                     <Link
                       key={d.dayNumber}
-                      href={`/program/day/${d.dayNumber}`}
+                      href={`${PROGRAM_AI_COHORT_BASE}/day/${d.dayNumber}`}
                       className={className}
                       aria-current={active ? "page" : undefined}
                       ref={

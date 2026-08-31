@@ -97,3 +97,4 @@ rather than deleted without authorization. Cursor appends new lines below.)_
 - 2026-08-28 [schema] Merged PR #197 interview agent 2.0 (GeneralInterview/InterviewTurn/InterviewReport); migrations 20260813000000 and 20260820000000 are in the repo but not applied to production
 - 2026-08-28 [convention] W1-B prep only: User.synergyPoints/SynergyEvent read audit plus PA→User/SP mirror repair script; mirrors still written; W1-B write-stop not started
 - 2026-08-28 [rule|convention] TALENT leftovers: searchableUserWhere is the hire/talent discovery gate; openToWork is an explicit recruiter filter; ProgramMember dual-write opens CandidateVisibility (challenge dual-write does not reopen a closed historical row)
+- 2026-08-31 [convention] Student program app moved from /program to /program/ai-cohort; bare /program redirects to /dashboard (temporary); legacy apply/dashboard/day URLs 308 to the new prefix

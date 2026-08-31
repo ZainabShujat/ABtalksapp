@@ -1,3 +1,6 @@
+/** Student-facing URL prefix for the AI Cohort product. */
+export const PROGRAM_AI_COHORT_BASE = "/program/ai-cohort";
+
 /** Program length and score caps for the AI Cohort curriculum. */
 export const PROGRAM_TOTAL_DAYS = 31;
 

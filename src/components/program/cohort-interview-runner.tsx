@@ -13,6 +13,7 @@ import {
   submitInterviewAnswerAction,
 } from "@/app/actions/interview-actions";
 import { BLUEPRINT_LABEL } from "@/features/interview/cohort/blueprint";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import { InterviewVoiceRunner } from "@/components/program/interview-voice-runner";
 import { CohortInterviewJourney } from "@/components/interview/cohort/cohort-interview-journey";
 import type {
@@ -162,7 +163,7 @@ export function CohortInterviewRunner({
   async function leave() {
     const id = idRef.current;
     if (id) await abandonInterviewAction({ interviewId: id });
-    router.push("/program/dashboard");
+    router.push(`${PROGRAM_AI_COHORT_BASE}/dashboard`);
   }
 
   /* ------------------------------------------------------------- result */
@@ -216,13 +217,13 @@ export function CohortInterviewRunner({
             time from the dashboard.
           */}
           <Link
-            href={`/program/cohort-interview/${blueprint}/report`}
+            href={`${PROGRAM_AI_COHORT_BASE}/cohort-interview/${blueprint}/report`}
             className={cn(buttonVariants({ size: "sm" }))}
           >
             Open full report
           </Link>
           <Link
-            href="/program/dashboard"
+            href={`${PROGRAM_AI_COHORT_BASE}/dashboard`}
             className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
           >
             Back to dashboard
@@ -420,7 +421,7 @@ export function CohortInterviewRunner({
       )}
 
       <Link
-        href="/program/dashboard"
+        href={`${PROGRAM_AI_COHORT_BASE}/dashboard`}
         className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
       >
         Back to dashboard

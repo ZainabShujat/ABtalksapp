@@ -1,5 +1,6 @@
 import { ProgramLanding } from "@/components/program/landing/program-landing";
 import { auth } from "@/auth";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import { getEntryState } from "@/features/program/entry";
 
 export const metadata = {
@@ -10,21 +11,23 @@ export const metadata = {
 
 async function getPrimaryCta(): Promise<{ label: string; href: string }> {
   const session = await auth();
-  if (!session?.user?.id) return { label: "Apply now", href: "/program/apply" };
+  if (!session?.user?.id) {
+    return { label: "Apply now", href: `${PROGRAM_AI_COHORT_BASE}/apply` };
+  }
 
   const state = await getEntryState(session.user.id);
   switch (state.screen) {
     case "enrolled":
-      return { label: "Go to dashboard", href: "/program/dashboard" };
+      return { label: "Go to dashboard", href: `${PROGRAM_AI_COHORT_BASE}/dashboard` };
     case "in_progress":
     case "intro":
-      return { label: "Continue application", href: "/program/apply" };
+      return { label: "Continue application", href: `${PROGRAM_AI_COHORT_BASE}/apply` };
     case "cooldown":
     case "failed":
     case "waitlisted":
-      return { label: "View status", href: "/program/apply" };
+      return { label: "View status", href: `${PROGRAM_AI_COHORT_BASE}/apply` };
     default:
-      return { label: "Apply now", href: "/program/apply" };
+      return { label: "Apply now", href: `${PROGRAM_AI_COHORT_BASE}/apply` };
   }
 }
 

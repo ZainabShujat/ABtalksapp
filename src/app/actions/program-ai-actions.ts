@@ -10,6 +10,7 @@ import {
   listProjectsForAdmin,
 } from "@/features/program/projects";
 import { generateRecommendations } from "@/features/program/recommendations";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import { resolveProgramMemberForUser } from "@/lib/program-auth";
 import {
   generateRecommendationsSchema,
@@ -50,7 +51,7 @@ export async function requestMentorReviewAction(
   );
   if (!result.ok) return { ok: false, message: result.message };
 
-  revalidatePath(`/program/day/${parsed.data.dayNumber}`);
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/day/${parsed.data.dayNumber}`);
   return { ok: true, data: { feedback: result.feedback } };
 }
 
@@ -66,8 +67,8 @@ export async function gradeProjectAction(
   if (!result.ok) return { ok: false, message: result.message };
 
   revalidatePath("/admin/program/projects");
-  revalidatePath("/program/dashboard");
-  revalidatePath("/program/leaderboard");
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/dashboard`);
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/leaderboard`);
   return { ok: true, data: { score: result.score, feedback: result.feedback } };
 }
 
@@ -90,8 +91,8 @@ export async function gradeAllUngradedAction(
   }
 
   revalidatePath("/admin/program/projects");
-  revalidatePath("/program/dashboard");
-  revalidatePath("/program/leaderboard");
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/dashboard`);
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/leaderboard`);
 
   return { ok: true, data: { graded, failed } };
 }
@@ -113,8 +114,8 @@ export async function overrideProjectScoreAction(
   if (!result.ok) return { ok: false, message: result.message };
 
   revalidatePath("/admin/program/projects");
-  revalidatePath("/program/dashboard");
-  revalidatePath("/program/leaderboard");
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/dashboard`);
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/leaderboard`);
   return { ok: true };
 }
 
@@ -130,7 +131,7 @@ export async function generateRecommendationsAction(
 
   const result = await generateRecommendations(parsed.data.cohortId);
 
-  revalidatePath("/program/dashboard");
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/dashboard`);
   revalidatePath("/admin/program/projects");
 
   return { ok: true, data: result };

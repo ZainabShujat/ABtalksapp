@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { BLUEPRINT_LABEL } from "@/features/interview/cohort/blueprint";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import { RUBRIC } from "@/features/interview/rubric";
 import type { FinishInterviewData } from "@/features/interview/provider";
 import type { InterviewBlueprintKey } from "@/features/interview/cohort-eligibility";
@@ -312,7 +313,7 @@ export function StageCohortResult({
           capability.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link href="/program/dashboard" className={buttonVariants()}>
+          <Link href={`${PROGRAM_AI_COHORT_BASE}/dashboard`} className={buttonVariants()}>
             Back to dashboard
           </Link>
         </div>

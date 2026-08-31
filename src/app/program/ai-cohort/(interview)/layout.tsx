@@ -14,7 +14,7 @@ import { requireProgramMember } from "@/lib/program-auth";
  * floating on a black screen.
  *
  * The route group is parenthesised, so the URLs are unchanged —
- * `/program/cohort-interview/[blueprint]` and `.../report` still resolve here.
+ * `/program/ai-cohort/cohort-interview/[blueprint]` and `.../report` still resolve here.
  *
  * The membership guard is repeated because a layout in one group does not run
  * for another. `requireProgramMember()` stays the single gate, exactly as in

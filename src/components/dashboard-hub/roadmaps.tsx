@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Domain } from "@prisma/client";
 import { isProgramEnabled } from "@/lib/feature-flags";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import {
   HUB_BUTTON_CLASS,
   HUB_CARD_HOVER_CLASS,
@@ -96,7 +97,11 @@ export function Roadmaps({
                 </p>
               </div>
               <Link
-                href={hasProgramMembership ? "/program/dashboard" : "/program/apply"}
+                href={
+                  hasProgramMembership
+                    ? `${PROGRAM_AI_COHORT_BASE}/dashboard`
+                    : `${PROGRAM_AI_COHORT_BASE}/apply`
+                }
                 className={cn(HUB_BUTTON_CLASS, "shrink-0")}
               >
                 {hasProgramMembership ? "Continue" : "Start Challenge"}

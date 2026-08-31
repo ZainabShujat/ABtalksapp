@@ -15,6 +15,7 @@ import type {
   CurriculumDay,
   CurriculumModule,
 } from "@/features/program/progression";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -155,7 +156,7 @@ function DayRow({ day }: { day: CurriculumDay }) {
       <div className="flex shrink-0 items-center gap-3">
         {day.state === "AVAILABLE" && (
           <Link
-            href={`/program/day/${day.dayNumber}`}
+            href={`${PROGRAM_AI_COHORT_BASE}/day/${day.dayNumber}`}
             className={startChallengeClass}
           >
             Start Challenge
@@ -168,7 +169,7 @@ function DayRow({ day }: { day: CurriculumDay }) {
               Completed
             </span>
             <Link
-              href={`/program/day/${day.dayNumber}`}
+              href={`${PROGRAM_AI_COHORT_BASE}/day/${day.dayNumber}`}
               className="text-[14px] leading-[21px] text-[#E05226] hover:underline"
             >
               View
@@ -182,7 +183,7 @@ function DayRow({ day }: { day: CurriculumDay }) {
               Skipped
             </span>
             <Link
-              href={`/program/day/${day.dayNumber}`}
+              href={`${PROGRAM_AI_COHORT_BASE}/day/${day.dayNumber}`}
               className="text-[14px] leading-[21px] text-[#E05226] hover:underline"
             >
               View

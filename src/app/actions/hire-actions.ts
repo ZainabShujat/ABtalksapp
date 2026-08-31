@@ -27,6 +27,7 @@ import { searchCandidates } from "@/features/hire/search-candidates";
 import { persistableSource } from "@/features/hire/track-loaders";
 import { explainMatches } from "@/features/hire/explain-matches";
 import { toPublicMatch } from "@/features/hire/to-public-match";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 
 type ActionOk<T> = { ok: true; data: T };
 type ActionErr = { ok: false; message: string };
@@ -501,7 +502,7 @@ export async function saveCandidateAvailabilityAction(
       openToRelocate: v.openToRelocate ?? false,
     });
     revalidatePath("/profile");
-    revalidatePath("/program/dashboard");
+    revalidatePath(`${PROGRAM_AI_COHORT_BASE}/dashboard`);
     return { ok: true, data: { openToWork: v.openToWork } };
   } catch (error) {
     logger.error("[hire] saveCandidateAvailabilityAction", {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import localFont from "next/font/local";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 
 const orbitron = localFont({
   src: [
@@ -40,7 +41,7 @@ const KEYCAPS: KeycapConfig[] = [
     heightClassName: "h-[88px] md:h-[110px]",
   },
   {
-    href: "/program",
+    href: PROGRAM_AI_COHORT_BASE,
     label: "AI COHORT",
     stem: "bg-[#2b7851]",
     faceClassName:

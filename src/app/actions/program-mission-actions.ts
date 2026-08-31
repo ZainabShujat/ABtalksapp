@@ -8,6 +8,7 @@ import {
   submitMissionRun,
   type SubmitMissionOk,
 } from "@/features/program/missions";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import { resolveProgramMemberForUser } from "@/lib/program-auth";
 import {
   missionDaySchema,
@@ -31,10 +32,10 @@ async function requireMemberId(): Promise<
 }
 
 function revalidateMissionPaths(dayNumber: number) {
-  revalidatePath("/program/dashboard");
-  revalidatePath("/program/curriculum");
-  revalidatePath("/program/leaderboard");
-  revalidatePath(`/program/day/${dayNumber}`);
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/dashboard`);
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/curriculum`);
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/leaderboard`);
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/day/${dayNumber}`);
 }
 
 export async function getHiddenTestInputsAction(

@@ -2,6 +2,7 @@ import "server-only";
 import { randomBytes } from "crypto";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import { prisma } from "@/lib/db";
 import {
   findActiveMembership,
@@ -53,10 +54,10 @@ export async function resolveProgramMemberForUser(userId: string) {
  */
 export async function requireProgramMember() {
   const session = await auth();
-  if (!session?.user?.id) redirect("/program");
+  if (!session?.user?.id) redirect(PROGRAM_AI_COHORT_BASE);
 
   const resolved = await resolveProgramMemberForUser(session.user.id);
-  if (!resolved) redirect("/program");
+  if (!resolved) redirect(PROGRAM_AI_COHORT_BASE);
 
   return {
     member: resolved.member,

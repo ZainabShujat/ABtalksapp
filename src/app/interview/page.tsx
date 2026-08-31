@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 
 /**
  * The general (60-day challenge) interview entry point.
@@ -15,5 +16,5 @@ import { redirect } from "next/navigation";
  * a matter of giving them a repository again — see docs/plans/066.
  */
 export default function InterviewPage() {
-  redirect("/program/dashboard");
+  redirect(`${PROGRAM_AI_COHORT_BASE}/dashboard`);
 }
