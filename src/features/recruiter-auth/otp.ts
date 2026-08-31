@@ -44,12 +44,12 @@ export function normaliseEmail(email: string): string {
  * The dev escape hatch: show the code instead of emailing it.
  *
  * Both conditions, always. A deployed environment that happens to be missing
- * the Resend key must not start handing out other people's sign-in codes, so
+ * the mail key must not start handing out other people's sign-in codes, so
  * the NODE_ENV check is the one that actually protects this — the missing key
  * only decides whether it is *needed*.
  */
 export function otpDevFallbackEnabled(): boolean {
-  return process.env.NODE_ENV !== "production" && !process.env.RESEND_API_KEY;
+  return process.env.NODE_ENV !== "production" && !process.env.BREVO_API_KEY;
 }
 
 /** The live seat for this email, or null. Seats are matched exactly, lowercased. */
