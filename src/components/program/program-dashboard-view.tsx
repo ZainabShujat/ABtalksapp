@@ -7,8 +7,6 @@ import { dsButtonVariants } from "@/components/design/ds-button";
 import { ProgramModuleList } from "@/components/program/program-module-list";
 import { ProgramStatsPanel } from "@/components/program/program-stats-panel";
 import { PROGRAM_TOTAL_DAYS } from "@/features/program/constants";
-import type { MemberDashboard } from "@/features/program/dashboard";
-import type { InterviewDashboardCard } from "@/features/program/interview";
 import { CohortInterviewCard } from "@/components/program/cohort-interview-card";
 import type { CohortInterviewState } from "@/features/interview/cohort-eligibility";
 import { cn } from "@/lib/utils";
@@ -26,7 +24,6 @@ type Props = {
   atRisk: { atRisk: boolean; reasons: string[] };
   projects: ProjectRow[];
   aiRec: { recommendation: string | null; generatedAt: string | null };
-  interviewCard: InterviewDashboardCard;
   cohortInterviewState: CohortInterviewState;
   isIshaan?: boolean;
 };
@@ -46,9 +43,6 @@ export function ProgramDashboardView({
   atRisk,
   projects,
   aiRec,
-  // interviewCard is still accepted (and passed by the page) but the body of
-  // the disclosure now renders CohortInterviewCard, which reads live unlock
-  // state. Kept in Props so the page contract is unchanged.
   cohortInterviewState,
   isIshaan,
 }: Props) {
@@ -72,10 +66,6 @@ export function ProgramDashboardView({
               <Link
                 href="/dashboard"
                 className="text-[#8F8F8F] hover:text-[#E05226]"
-              >
-                Dashboard
-              </Link>
-            </li>
             <li aria-hidden className="text-[#8F8F8F]">
              &gt;
             </li>
