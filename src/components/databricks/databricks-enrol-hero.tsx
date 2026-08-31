@@ -2,10 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 
 const ABOUT = [
-  "31-day self-serve Data Engineering track on Databricks Free Edition.",
+  "31-day self-serve Data Engineering track on Databricks.",
   "Build a healthcare-claims Lakehouse from raw files to governed Gold tables.",
-  "Your enrolment date is Day 1 in IST; each mission verifies against your GitHub repo.",
-  "Bring a laptop and a Databricks account — no join code, no waitlist.",
+  "Bring a laptop and a Databricks account.",
 ];
 
 const LEARN = [
@@ -33,9 +32,9 @@ function BulletList({ items }: { items: string[] }) {
 
 export function DatabricksEnrolHero() {
   return (
-    <section className="-mx-4 -mt-6 bg-[#e9e3dd] px-5 py-8 font-content text-[#111111] sm:px-8">
-      <div className="mx-auto w-full max-w-[1500px] space-y-8">
-        <nav aria-label="Breadcrumb">
+    <div className="font-content text-[#111111]">
+      <div className="-mx-4 -mt-6 px-5 pt-8 sm:px-8">
+        <nav className="mx-auto w-full max-w-[1500px]" aria-label="Breadcrumb">
           <ol className="flex flex-wrap items-center gap-2 text-sm">
             <li>
               <Link
@@ -53,35 +52,43 @@ export function DatabricksEnrolHero() {
             </li>
           </ol>
         </nav>
+      </div>
 
-        <div className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
-          <div className="min-w-0 space-y-8">
-            <div>
-              <p className="text-[13px] leading-[18px] font-semibold uppercase text-[#E05226]">
-                About the cohort
-              </p>
-              <BulletList items={ABOUT} />
-            </div>
-            <div>
-              <p className="text-[13px] leading-[18px] font-semibold uppercase text-[#E05226]">
-                What you will learn
-              </p>
-              <BulletList items={LEARN} />
-            </div>
-          </div>
+      <section className="-mx-4 mt-6 bg-[#e9e3dd] px-5 py-8 sm:px-8">
+        <div className="mx-auto w-full max-w-[1500px] space-y-8">
+          <h1 className="font-heading text-[32px] leading-9 font-semibold text-[#111111] md:text-[40px] md:leading-[48px]">
+            Databricks Cohort
+          </h1>
 
-          <div className="flex justify-center md:justify-end">
-            <Image
-              src="/databricks-cohort/DATABRICKS-COHORT-HERO.png"
-              alt="Databricks Cohort"
-              width={640}
-              height={640}
-              priority
-              className="h-auto w-full max-w-[520px] object-contain"
-            />
+          <div className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
+            <div className="min-w-0 space-y-8">
+              <div>
+                <p className="text-[13px] leading-[18px] font-semibold uppercase text-[#E05226]">
+                  About the cohort
+                </p>
+                <BulletList items={ABOUT} />
+              </div>
+              <div>
+                <p className="text-[13px] leading-[18px] font-semibold uppercase text-[#E05226]">
+                  What you will learn
+                </p>
+                <BulletList items={LEARN} />
+              </div>
+            </div>
+
+            <div className="flex justify-center md:justify-end">
+              <Image
+                src="/databricks-cohort/DATABRICKS-COHORT-HERO.png"
+                alt="Databricks Cohort"
+                width={640}
+                height={640}
+                priority
+                className="h-auto w-full max-w-[520px] object-contain"
+              />
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </div>
   );
 }

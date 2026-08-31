@@ -184,7 +184,7 @@ export function DatabricksEnrollForm() {
             })}
           />
           <span>
-            I have a laptop and a Databricks account ready for this cohort
+            I have provided the correct GitHub repository URL which will be used throughout the cohort for verification.
           </span>
         </label>
         <FieldError message={errors.hasLaptopAndAccount?.message} />

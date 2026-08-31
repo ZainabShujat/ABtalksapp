@@ -74,6 +74,20 @@ function activityIdForDay(dayNumber: number): string {
   return `act_dbx_day_${String(dayNumber).padStart(2, "0")}`;
 }
 
+function activityIdForVideo(dayNumber: number, order: number): string {
+  return `act_dbx_vid_${String(dayNumber).padStart(2, "0")}_${String(order).padStart(2, "0")}`;
+}
+
+type VideoJson = {
+  dayNumber: number;
+  videos: {
+    order: number;
+    title: string;
+    youtubeId: string;
+    durationMin?: number | null;
+  }[];
+};
+
 function missionActivityType(
   missionType: ProgramMissionType,
   isProjectDay: boolean,
@@ -102,6 +116,7 @@ async function main(): Promise<void> {
   try {
     const modules = loadJsonFile<ModuleJson[]>("modules.json");
     const days = loadJsonFile<DayJson[]>("days.json");
+    const videoDays = loadJsonFile<VideoJson[]>("videos.json");
 
     const category = await prisma.programCategory.upsert({
       where: { slug: PROGRAM_SLUG },
@@ -243,6 +258,61 @@ async function main(): Promise<void> {
       });
     }
 
+    let videoCount = 0;
+    for (const entry of videoDays) {
+      const dayMeta = days.find((d) => d.dayNumber === entry.dayNumber);
+      if (!dayMeta) {
+        throw new Error(
+          `[databricks-seed] videos: day ${entry.dayNumber} not in days.json`,
+        );
+      }
+      const moduleId = moduleIdByNumber.get(dayMeta.moduleNumber);
+      if (!moduleId) {
+        throw new Error(
+          `[databricks-seed] videos: module ${dayMeta.moduleNumber} not found`,
+        );
+      }
+      for (const v of entry.videos) {
+        const vidId = activityIdForVideo(entry.dayNumber, v.order);
+        await prisma.activity.upsert({
+          where: { id: vidId },
+          create: {
+            id: vidId,
+            moduleId,
+            position: 2000 + entry.dayNumber * 10 + v.order,
+            type: ActivityType.VIDEO,
+            title: v.title,
+            dayNumber: entry.dayNumber,
+            points: 0,
+            isRequired: false,
+            unlockRule: ActivityUnlockRule.SCHEDULED,
+            estimatedMinutes: v.durationMin ?? undefined,
+          },
+          update: {
+            moduleId,
+            title: v.title,
+            dayNumber: entry.dayNumber,
+            estimatedMinutes: v.durationMin ?? undefined,
+          },
+        });
+        await prisma.contentActivityConfig.upsert({
+          where: { activityId: vidId },
+          create: {
+            activityId: vidId,
+            videoProvider: "YOUTUBE",
+            videoRef: v.youtubeId,
+            videoDurationMin: v.durationMin ?? null,
+          },
+          update: {
+            videoProvider: "YOUTUBE",
+            videoRef: v.youtubeId,
+            videoDurationMin: v.durationMin ?? null,
+          },
+        });
+        videoCount += 1;
+      }
+    }
+
     await prisma.programVersion.update({
       where: { id: version.id },
       data: {
@@ -281,7 +351,7 @@ async function main(): Promise<void> {
     });
 
     console.log(
-      `[databricks-seed] upserted program=${PROGRAM_SLUG} modules=${modules.length} days=${days.length} cohort=${COHORT_SLUG}`,
+      `[databricks-seed] upserted program=${PROGRAM_SLUG} modules=${modules.length} days=${days.length} videos=${videoCount} cohort=${COHORT_SLUG}`,
     );
   } finally {
     await prisma.$disconnect();

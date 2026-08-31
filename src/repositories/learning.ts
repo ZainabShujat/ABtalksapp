@@ -1238,6 +1238,7 @@ export type ProgramSlugDayShell = {
   missionPoints: number;
   isProjectDay: boolean;
   module: { number: number; title: string; color: string };
+  videos: DayVideoRow[];
 };
 
 /** Client-safe day content. Deliberately EXCLUDES verificationSpec. */
@@ -1245,40 +1246,69 @@ export async function getDayShellForProgramSlug(
   slug: string,
   dayNumber: number,
 ): Promise<ProgramSlugDayShell | null> {
-  const activity = await prisma.activity.findFirst({
-    where: {
-      dayNumber,
-      type: { notIn: [ActivityType.QUIZ, ActivityType.VIDEO] },
-      module: { programVersion: { program: { slug } } },
-    },
-    orderBy: { position: "asc" },
-    select: {
-      id: true,
-      type: true,
-      title: true,
-      dayNumber: true,
-      points: true,
-      estimatedMinutes: true,
-      tags: true,
-      contentConfig: {
-        select: {
-          bodyMarkdown: true,
-          objectives: true,
-          missionType: true,
+  const [activity, videoRows] = await Promise.all([
+    prisma.activity.findFirst({
+      where: {
+        dayNumber,
+        type: { notIn: [ActivityType.QUIZ, ActivityType.VIDEO] },
+        module: { programVersion: { program: { slug } } },
+      },
+      orderBy: { position: "asc" },
+      select: {
+        id: true,
+        type: true,
+        title: true,
+        dayNumber: true,
+        points: true,
+        estimatedMinutes: true,
+        tags: true,
+        contentConfig: {
+          select: {
+            bodyMarkdown: true,
+            objectives: true,
+            missionType: true,
+          },
+        },
+        module: {
+          select: {
+            position: true,
+            title: true,
+            colorToken: true,
+          },
         },
       },
-      module: {
-        select: {
-          position: true,
-          title: true,
-          colorToken: true,
-        },
+    }),
+    prisma.activity.findMany({
+      where: {
+        dayNumber,
+        type: ActivityType.VIDEO,
+        module: { programVersion: { program: { slug } } },
       },
-    },
-  });
+      orderBy: { position: "asc" },
+      select: {
+        id: true,
+        title: true,
+        estimatedMinutes: true,
+        contentConfig: { select: { videoRef: true, videoDurationMin: true } },
+      },
+    }),
+  ]);
   if (activity?.dayNumber == null) return null;
   const missionType = activity.contentConfig?.missionType;
   if (!missionType) return null;
+  const videos: DayVideoRow[] = videoRows.flatMap((v, index) => {
+    const youtubeId = v.contentConfig?.videoRef;
+    if (!youtubeId) return [];
+    return [
+      {
+        id: v.id,
+        order: index + 1,
+        title: v.title,
+        youtubeId,
+        durationMin: v.contentConfig?.videoDurationMin ?? v.estimatedMinutes,
+      },
+    ];
+  });
   return {
     activityId: activity.id,
     dayNumber: activity.dayNumber,
@@ -1297,6 +1327,7 @@ export async function getDayShellForProgramSlug(
       title: activity.module.title,
       color: activity.module.colorToken ?? "",
     },
+    videos,
   };
 }
 

@@ -10,6 +10,7 @@ import {
 } from "@/components/program/day-section-card";
 import { programMdComponents } from "@/components/program/markdown-code";
 import { ProgramDayClient } from "@/components/program/program-day-client";
+import { LiteYoutube } from "@/components/shared/lite-youtube";
 import { DATABRICKS_BASE, DATABRICKS_TOTAL_DAYS } from "@/features/databricks/constants";
 import { getDatabricksDashboard } from "@/features/databricks/dashboard";
 import { getDatabricksDayShell } from "@/features/databricks/days";
@@ -125,6 +126,32 @@ export default async function DatabricksDayPage({ params }: Props) {
 
       {brief.buildSteps.length > 0 && (
         <DayBuildSteps steps={brief.buildSteps} />
+      )}
+
+      {day.videos.length > 0 && (
+        <DaySectionCard title="Reference Resources" icon="resources">
+          <div className="grid gap-x-5 gap-y-6 sm:grid-cols-2">
+            {day.videos.map((video) => (
+              <div key={video.id} className="max-w-md space-y-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="inline-block size-0 shrink-0 border-y-[6px] border-l-[9px] border-y-transparent border-l-[#E05226]"
+                    aria-hidden
+                  />
+                  <p className="text-sm font-medium text-[#111111]">
+                    {video.title}
+                  </p>
+                </div>
+                <LiteYoutube
+                  youtubeId={video.youtubeId}
+                  title={video.title}
+                  compact
+                  className="border-[#E0E0E0]"
+                />
+              </div>
+            ))}
+          </div>
+        </DaySectionCard>
       )}
 
       <DatabricksMissionPanel
