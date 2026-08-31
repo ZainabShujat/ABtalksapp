@@ -363,7 +363,7 @@ export function WorkshopPromoModal() {
 
                 {/* CTA */}
                 <Link
-                  href="/ai-workshop"
+                  href="/workshop"
                   onClick={closeTemporarily}
                   className="wk-promo-cta group relative mt-7 flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-[15px] font-semibold text-white transition-transform duration-200"
                   style={{ background: "var(--wk-grad)" }}

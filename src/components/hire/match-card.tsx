@@ -13,6 +13,7 @@ import {
 } from "@/components/hire/sample-card-notice";
 import { ShortlistButton } from "@/components/talent/shortlist-button";
 import { cn } from "@/lib/utils";
+import { SKILL_PILL_CAP } from "@/components/hire/hire-card-facts";
 
 /** One ranking dimension as the inspector chart reads it. Null ≠ 0. */
 export type PublicScoreSlice = {
@@ -359,7 +360,7 @@ function RealMatchCard({
             {e.yearsExperience} yrs
           </li>
         )}
-        {skills.slice(0, 4).map((s) => {
+        {skills.slice(0, SKILL_PILL_CAP).map((s) => {
           const hit = skillHighlighted(s, needles);
           return (
             <li

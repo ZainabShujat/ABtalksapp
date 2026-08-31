@@ -5,7 +5,7 @@ import WorkshopLogo from "@/components/workshop/WorkshopLogo";
 import WorkshopThemeStyles from "@/components/workshop/WorkshopThemeStyles";
 
 export const metadata: Metadata = {
-  title: "Upcoming Events | ABTalks AI Workshop",
+  title: "Upcoming Events | ABTalks Workshop",
   description:
     "All upcoming ABTalks live workshops and events — UI/UX design, AI tools, agents, content, SaaS, data and careers.",
 };
@@ -27,12 +27,13 @@ export default function WorkshopEventsPage() {
           className="sticky top-0 z-50 w-full px-4"
           style={{
             background: "var(--wk-bar-bg-blur)",
-            backdropFilter: "blur(16px)",
-            WebkitBackdropFilter: "blur(16px)",
+            backdropFilter: "blur(22px) saturate(170%)",
+            WebkitBackdropFilter: "blur(22px) saturate(170%)",
             borderBottom: "1px solid var(--wk-bar-border)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.07)",
           }}
         >
-          <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 py-3">
+          <div className="mx-auto flex h-[54px] w-full max-w-6xl items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <WorkshopLogo />
               <div
@@ -42,16 +43,18 @@ export default function WorkshopEventsPage() {
               <span
                 className="hidden rounded-md px-2.5 py-1 text-[10px] font-bold uppercase leading-none tracking-widest sm:inline-block"
                 style={{
-                  background: "rgba(var(--wk-a1-rgb),0.12)",
-                  color: "var(--wk-a1)",
-                  border: "1px solid rgba(var(--wk-a1-rgb),0.25)",
+                  // Orange text here measured 1.48:1 against the charcoal
+                  // bar. Bar text on the same tint clears 5:1.
+                  background: "rgba(var(--wk-a1-rgb),0.18)",
+                  color: "var(--wk-bar-text)",
+                  border: "1px solid rgba(var(--wk-a1-rgb),0.35)",
                 }}
               >
-                AI Workshop
+                Workshop
               </span>
             </div>
             <Link
-              href="/ai-workshop"
+              href="/workshop"
               className="text-[13px] font-medium transition-colors hover:text-white"
               style={{ color: "var(--wk-bar-muted)" }}
             >
@@ -68,12 +71,8 @@ export default function WorkshopEventsPage() {
             Don&apos;t miss the next one.
           </p>
           <Link
-            href="/ai-workshop#register"
-            className="mt-4 inline-flex items-center gap-2 rounded-[10px] px-7 py-3 text-[15px] font-bold text-white transition-transform hover:-translate-y-0.5"
-            style={{
-              background: "var(--wk-a1)",
-              filter: "var(--wk-cta-shadow)",
-            }}
+            href="/workshop#register"
+            className="wk-cta mt-4 inline-flex items-center gap-2 rounded-[12px] px-7 py-3.5 text-[15px] font-bold text-white"
           >
             Reserve Your Free Seat →
           </Link>
@@ -105,7 +104,7 @@ export default function WorkshopEventsPage() {
             </Link>
           </nav>
           <p className="text-[13px]" style={{ color: "var(--wk-bar-muted)" }}>
-            © {new Date().getFullYear()} ABTalks · AI Workshop
+            © {new Date().getFullYear()} ABTalks · Workshop
           </p>
         </footer>
       </div>
