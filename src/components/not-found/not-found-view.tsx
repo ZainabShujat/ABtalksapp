@@ -56,7 +56,7 @@ const KEYCAPS: KeycapConfig[] = [
     heightClassName: "h-[88px] md:h-[110px]",
   },
   {
-    href: "/ai-workshop",
+    href: "/workshop",
     label: "Workshops",
     stem: "bg-[#C9411C]",
     faceClassName:
