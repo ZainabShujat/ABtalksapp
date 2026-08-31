@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowRight, ShoppingCart } from "lucide-react";
 import { MatchCard, type MatchCardData } from "@/components/hire/match-card";
 import { DeskMatchCard } from "@/components/hire/desk-match-card";
+import { VirtualCandidateCard } from "@/components/hire/virtual-candidate-card";
 import type { SampleDemand } from "@/components/hire/sample-card-notice";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -64,7 +65,15 @@ export function MatchResults({
 
   return (
     <div className={desk ? "scout-results" : "space-y-4"}>
-      {showSamples && (
+      {showSamples && samples!.some((m) => m.isVirtual) && sampleDemand?.spec && (
+        <VirtualCandidateCard
+          spec={sampleDemand.spec}
+          talentRequestId={sampleDemand.requestId ?? null}
+          alreadyRequested={sampleDemand.alreadyRecorded ?? false}
+        />
+      )}
+
+      {showSamples && !samples!.some((m) => m.isVirtual) && (
         <div className="space-y-3">
           <h3 className={desk ? "scout-results__h" : "font-display text-lg font-semibold"}>
             What a match would look like

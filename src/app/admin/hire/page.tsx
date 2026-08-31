@@ -4,6 +4,10 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
 import { EngagementDecision } from "@/components/admin/engagement-decision";
 import { getDemandBoard } from "@/features/hire/demand-board";
+import { listVirtualCandidateRequests } from "@/features/hire/virtual-candidate-store";
+import { getDemandAnalytics } from "@/features/hire/demand-analytics";
+import { isVirtualCandidatesEnabled } from "@/lib/feature-flags";
+import { VirtualCandidateQueue } from "@/components/admin/virtual-candidate-queue";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -26,6 +30,17 @@ export default async function AdminHirePage() {
   // to. Reading them apart meant deciding an introduction without seeing which
   // stacks keep being asked for.
   const demand = await getDemandBoard();
+
+  // Demand we could not answer at all. Distinct from the introductions above:
+  // those are about someone we have, these are about someone we do not.
+  // Guarded rather than merely hidden: with the flag off the tables may not
+  // exist yet, and a page that queries them would be an error the admin sees
+  // rather than a section they do not.
+  const virtualOn = isVirtualCandidatesEnabled();
+  const virtualQueue = virtualOn
+    ? await listVirtualCandidateRequests({ take: 50 })
+    : null;
+  const analytics = virtualOn ? await getDemandAnalytics() : null;
 
   const engagements = await prisma.talentEngagementRequest.findMany({
     orderBy: [{ submittedAt: "desc" }, { createdAt: "desc" }],
@@ -100,6 +115,84 @@ export default async function AdminHirePage() {
           Recruiters see only the reference ID until you share contact.
         </p>
       </div>
+
+      {analytics?.ok && analytics.data.virtualCandidatesGenerated > 0 && (
+        <section className="space-y-3">
+          <div>
+            <h2 className="font-display text-lg font-semibold">Unmet demand</h2>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Requirements the pool could not answer. This is the list of people
+              we should be onboarding next.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              ["Requirements", analytics.data.virtualCandidatesGenerated],
+              ["Requests", analytics.data.totalRequests],
+              ["Reached sourcing", `${analytics.data.sourcingConversionRate}%`],
+              ["Fulfilled", `${analytics.data.fulfilmentRate}%`],
+              ["Still waiting", analytics.data.unfulfilledRequirements],
+              [
+                "Avg. fulfilment",
+                analytics.data.averageFulfilmentDays === null
+                  ? "—"
+                  : `${analytics.data.averageFulfilmentDays} days`,
+              ],
+            ].map(([label, value]) => (
+              <div key={String(label)} className="rounded-xl border p-3">
+                <p className="text-muted-foreground text-xs uppercase">{label}</p>
+                <p className="font-display text-xl font-bold">{value}</p>
+              </div>
+            ))}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[
+              ["Most requested skills", analytics.data.mostRequestedSkills.map((s) => [s.skill, s.count] as const)],
+              ["Stacks", analytics.data.mostRequestedStacks.map((s) => [s.stack, s.count] as const)],
+              ["Locations", analytics.data.byLocation.map((s) => [s.location, s.count] as const)],
+            ].map(([title, items]) => (
+              <div key={String(title)} className="rounded-xl border p-3">
+                <p className="text-muted-foreground text-xs uppercase">{title}</p>
+                <ul className="mt-2 space-y-1 text-sm">
+                  {(items as readonly (readonly [string, number])[]).slice(0, 6).map(([k, n]) => (
+                    <li key={k} className="flex justify-between gap-3">
+                      <span className="truncate">{k}</span>
+                      <span className="font-semibold">{n}</span>
+                    </li>
+                  ))}
+                  {(items as readonly unknown[]).length === 0 && (
+                    <li className="text-muted-foreground">—</li>
+                  )}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {virtualOn && (
+      <section className="space-y-3">
+        <div>
+          <h2 className="font-display text-lg font-semibold">
+            Virtual candidate requests
+          </h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Requirements the pool could not answer, that a recruiter asked us to
+            source. Nothing here is a person yet.
+          </p>
+        </div>
+        {virtualQueue?.ok ? (
+          <VirtualCandidateQueue
+            rows={virtualQueue.data.rows.map((r) => ({
+              ...r,
+              createdAt: r.createdAt.toISOString(),
+            }))}
+          />
+        ) : (
+          <p className="text-sm text-destructive">{virtualQueue?.message}</p>
+        )}
+      </section>
+      )}
 
       <section className="space-y-3">
         <h2 className="font-display text-lg font-semibold">

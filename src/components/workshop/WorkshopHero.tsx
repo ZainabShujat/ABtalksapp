@@ -273,7 +273,10 @@ export default function WorkshopHero({
           className="relative overflow-hidden rounded-[30px] px-6 py-10"
           style={{ background: "var(--wk-navy)" }}
         >
-          <div className="flex flex-wrap items-center gap-3">
+          {/* One row, always. The pair is ~316px at 12px against a 264px
+              content box on a 320px phone, so the type scales with the
+              viewport instead of wrapping. */}
+          <div className="flex flex-nowrap items-center gap-2">
             <FlowChip text={webinarDate} Icon={CalendarDays} />
             <FlowChip text={webinarTime} Icon={Clock} />
           </div>
@@ -321,21 +324,25 @@ export default function WorkshopHero({
             </div>
           )}
 
-          <div className="mt-6 flex flex-wrap gap-3">
+          {/* 2x2. Labels wrap to a second line rather than being forced onto
+              one, which is what lets the long ones fit: only the widest WORD
+              has to fit the cell (~54px against 67px at 320px), not the whole
+              string. Grid stretch keeps all four the same height. */}
+          <div className="mt-6 grid grid-cols-2 gap-2.5">
             {PILLS.map((p) => (
               <span
                 key={p.label}
-                className="inline-flex h-[52px] items-center gap-3 rounded-[10px] px-4 text-[15px] font-semibold text-white"
+                className="flex h-full min-h-[50px] w-full items-center gap-2 rounded-[10px] px-3 py-2 text-[13px] font-semibold leading-tight text-white"
                 style={{
                   background: "linear-gradient(180deg, #e05226 0%, #c9411c 100%)",
                   boxShadow: "0 4px 7px rgba(var(--wk-ink-a),0.5)",
                 }}
               >
                 <span
-                  className="flex h-[30px] w-[36px] shrink-0 items-center justify-center rounded-[10px] bg-white"
+                  className="flex size-7 shrink-0 items-center justify-center rounded-[8px] bg-white"
                   aria-hidden
                 >
-                  <p.Icon size={18} strokeWidth={2.25} color="var(--wk-a1)" />
+                  <p.Icon size={16} strokeWidth={2.25} color="var(--wk-a1)" />
                 </span>
                 {p.label}
               </span>
@@ -411,14 +418,14 @@ function Chip({
 function FlowChip({ text, Icon }: { text: string; Icon: LucideIcon }) {
   return (
     <span
-      className="inline-flex items-center gap-2.5 rounded-[8px] py-[6px] pl-[9px] pr-4 text-[12px] font-medium text-white"
+      className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[8px] py-[6px] pl-[7px] pr-2.5 text-[clamp(10px,3.1vw,12px)] font-medium text-white"
       style={{ background: "var(--wk-navy-chip)" }}
     >
       <span
-        className="flex size-[22px] items-center justify-center rounded-[10px] bg-white"
+        className="flex size-[19px] shrink-0 items-center justify-center rounded-[7px] bg-white"
         aria-hidden
       >
-        <Icon size={13} strokeWidth={2.25} color="var(--wk-a1)" />
+        <Icon size={12} strokeWidth={2.25} color="var(--wk-a1)" />
       </span>
       {text}
     </span>
