@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireProgramMember } from "@/lib/program-auth";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import { parseBlueprintParam, BLUEPRINT_LABEL } from "@/features/interview/cohort/blueprint";
 import { getCohortInterviewOverview } from "@/features/interview/service";
 import { toProgramMemberId } from "@/features/interview/provider";
@@ -28,7 +29,7 @@ export default async function CohortInterviewPage({
   params: Promise<{ blueprint: string }>;
 }) {
   // Authenticate BEFORE looking at the URL. Middleware already gates
-  // /program/*, but ordering it this way means an unauthenticated request never
+  // /program/ai-cohort/*, but ordering it this way means an unauthenticated request never
   // reaches request-parameter handling even if that matcher changes.
   const { member, userId } = await requireProgramMember();
 
@@ -53,7 +54,7 @@ export default async function CohortInterviewPage({
         blueprint: blueprint as any,
       }
     });
-    redirect(`/program/cohort-interview/${blueprint}`);
+    redirect(`${PROGRAM_AI_COHORT_BASE}/cohort-interview/${blueprint}`);
   }
 
   if (!overview.ok) {
@@ -74,7 +75,7 @@ export default async function CohortInterviewPage({
       <Notice
         blueprint={blueprint}
         message="You have already completed this interview."
-        reportHref={`/program/cohort-interview/${blueprint}/report`}
+        reportHref={`${PROGRAM_AI_COHORT_BASE}/cohort-interview/${blueprint}/report`}
         reattemptAction={isIshaan ? reattemptAction : undefined}
       />
     );
@@ -124,7 +125,7 @@ function Notice({
           </Link>
         ) : null}
         <Link
-          href="/program/dashboard"
+          href={`${PROGRAM_AI_COHORT_BASE}/dashboard`}
           className="text-[14px] text-[#4B4B4B] underline underline-offset-4 transition-colors hover:text-[#111111]"
         >
           Back to dashboard

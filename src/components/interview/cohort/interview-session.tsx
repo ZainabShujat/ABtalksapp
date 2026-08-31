@@ -9,6 +9,7 @@ import {
   BLUEPRINT_LABEL,
   type InterviewBlueprintKey,
 } from "@/features/interview/cohort/blueprint";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import type {
   ClientQuestion,
   FinishInterviewData,
@@ -157,7 +158,7 @@ export function InterviewSession({
             )}
           </button>
           <Link
-            href="/program/dashboard"
+            href={`${PROGRAM_AI_COHORT_BASE}/dashboard`}
             className="text-[14px] text-[var(--iv-text-muted)] underline underline-offset-4 transition-colors hover:text-[var(--iv-text)]"
           >
             Not now
@@ -219,13 +220,13 @@ export function InterviewSession({
 
       <div className="mt-8 flex flex-wrap items-center gap-3">
         <Link
-          href={`/program/cohort-interview/${blueprint}/report`}
+          href={`${PROGRAM_AI_COHORT_BASE}/cohort-interview/${blueprint}/report`}
           className="inline-flex h-11 items-center rounded-[12px] border border-[var(--iv-accent)]/50 bg-[var(--iv-accent)]/15 px-5 text-[14px] font-semibold text-[var(--iv-text)] transition-colors hover:bg-[var(--iv-accent)]/25"
         >
           View interview report
         </Link>
         <Link
-          href="/program/dashboard"
+          href={`${PROGRAM_AI_COHORT_BASE}/dashboard`}
           className="text-[14px] text-[var(--iv-text-muted)] underline underline-offset-4 transition-colors hover:text-[var(--iv-text)]"
         >
           Back to dashboard

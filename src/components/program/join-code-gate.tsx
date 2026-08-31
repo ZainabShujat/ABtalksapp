@@ -8,6 +8,7 @@ import { validateJoinCodeAction } from "@/app/actions/program-entry-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 
 export function JoinCodeGate({
   initialCode = "",
@@ -28,7 +29,9 @@ export function JoinCodeGate({
         toast.error(res.message);
         return;
       }
-      router.push(`/program/apply?code=${encodeURIComponent(res.data.joinCode)}`);
+      router.push(
+        `${PROGRAM_AI_COHORT_BASE}/apply?code=${encodeURIComponent(res.data.joinCode)}`,
+      );
     } finally {
       setBusy(false);
     }

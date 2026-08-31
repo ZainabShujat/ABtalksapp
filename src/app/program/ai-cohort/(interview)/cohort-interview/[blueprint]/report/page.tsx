@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireProgramMember } from "@/lib/program-auth";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import { toProgramMemberId } from "@/features/interview/provider";
 import {
   parseBlueprintParam,
@@ -56,7 +57,7 @@ export default async function CohortInterviewReportPage({
         blueprint: blueprint as any,
       }
     });
-    redirect(`/program/cohort-interview/${blueprint}`);
+    redirect(`${PROGRAM_AI_COHORT_BASE}/cohort-interview/${blueprint}`);
   }
 
   if (!result.ok) {
@@ -70,7 +71,7 @@ export default async function CohortInterviewReportPage({
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <Link
-            href="/program/dashboard"
+            href={`${PROGRAM_AI_COHORT_BASE}/dashboard`}
             className="inline-flex h-10 items-center rounded-[10px] border border-[var(--iv-border)] px-4 text-[14px] text-[var(--iv-text-muted)] transition-colors hover:border-[#8F8F8F] hover:text-[var(--iv-text)]"
           >
             Back to dashboard
@@ -99,7 +100,7 @@ export default async function CohortInterviewReportPage({
       <div className="interview-room mx-auto max-w-4xl pb-10">
         <div className="flex flex-wrap items-center gap-3">
           <Link
-            href="/program/dashboard"
+            href={`${PROGRAM_AI_COHORT_BASE}/dashboard`}
             className="inline-flex h-10 items-center rounded-[10px] border border-[var(--iv-border)] px-4 text-[14px] text-[var(--iv-text-muted)] transition-colors hover:border-[#8F8F8F] hover:text-[var(--iv-text)]"
           >
             Back to dashboard

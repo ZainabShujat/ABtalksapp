@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CheckCircle2, Circle, Lock, SkipForward } from "lucide-react";
 import type { ProgramMissionType } from "@prisma/client";
 import type { CurriculumDay, DayState } from "@/features/program/progression";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import { cn } from "@/lib/utils";
 
 const MISSION_LABEL: Record<ProgramMissionType, string> = {
@@ -128,7 +129,7 @@ export function CurriculumMap({
                 return (
                   <Link
                     key={day.dayNumber}
-                    href={`/program/day/${day.dayNumber}`}
+                    href={`${PROGRAM_AI_COHORT_BASE}/day/${day.dayNumber}`}
                     className="focus-spark"
                   >
                     {inner}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Lock, Mic, Trophy } from "lucide-react";
 import { requireProgramMember } from "@/lib/program-auth";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import { getInterviewMemberView } from "@/features/program/interview";
 import { InterviewClient } from "@/components/program/interview-client";
 import { buttonVariants } from "@/components/ui/button";
@@ -33,7 +34,7 @@ export default async function ProgramInterviewPage() {
               {eligibility.reason}
             </p>
             <Link
-              href="/program/curriculum"
+              href={`${PROGRAM_AI_COHORT_BASE}/curriculum`}
               className={cn(buttonVariants({ variant: "outline", size: "sm" }), "mt-4 inline-flex")}
             >
               View curriculum

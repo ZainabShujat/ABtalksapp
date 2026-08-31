@@ -4,6 +4,7 @@ import type { ComponentType } from "react";
 import Link from "next/link";
 import { Mail } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import { cn } from "@/lib/utils";
 
 function InstagramIcon({ className }: { className?: string }) {
@@ -169,9 +170,9 @@ export function AppFooter() {
   // that strip is themed with `border-border`/`text-muted-foreground`, which
   // rendered as a dark band under the interview pages.
   if (
-    pathname === "/program/dashboard" ||
-    pathname.startsWith("/program/day") ||
-    pathname.startsWith("/program/cohort-interview")
+    pathname === `${PROGRAM_AI_COHORT_BASE}/dashboard` ||
+    pathname.startsWith(`${PROGRAM_AI_COHORT_BASE}/day`) ||
+    pathname.startsWith(`${PROGRAM_AI_COHORT_BASE}/cohort-interview`)
   ) {
     const year = new Date().getFullYear();
     return (

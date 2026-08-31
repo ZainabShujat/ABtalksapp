@@ -13,6 +13,7 @@ import {
   startInterviewSchema,
   submitInterviewAnswerSchema,
 } from "@/lib/validations/interview";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 
 /**
  * Server Actions for the AI Cohort milestone interview.
@@ -65,7 +66,7 @@ export async function startInterviewAction(
     parsed.data.blueprint,
   );
 
-  revalidatePath("/program/dashboard");
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/dashboard`);
   return started;
 }
 
@@ -107,7 +108,7 @@ export async function finishInterviewAction(
     parsed.data.interviewId,
   );
 
-  revalidatePath("/program/dashboard");
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/dashboard`);
   return finished;
 }
 
@@ -126,7 +127,7 @@ export async function abandonInterviewAction(
     parsed.data.interviewId,
   );
 
-  revalidatePath("/program/dashboard");
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/dashboard`);
   return result;
 }
 
@@ -151,6 +152,6 @@ export async function resetDemoInterviewAction(
     },
   });
 
-  revalidatePath("/program/dashboard");
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/dashboard`);
   return { ok: true, data: null };
 }

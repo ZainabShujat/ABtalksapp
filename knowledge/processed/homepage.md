@@ -19,7 +19,7 @@ about stats, cohort names or pricing wording, this file wins.
 - **60 Day Coding Challenge** (`/challenges`) — choose AI, Data Science or
   Software Engineering; one task a day for 60 days; proof of work on GitHub
   and LinkedIn.
-- **31 Days AI Cohort** (`/program`) — ship a production-grade AI chatbot;
+- **31 Days AI Cohort** (`/program/ai-cohort`) — ship a production-grade AI chatbot;
   RAG, agents, MCP and deploy; recruiter-visible after you finish.
 - **Databricks Cohort** — Spark, lakehouse and production pipelines; build
   against a real data brief; **dates announced to the waitlist**. This is a

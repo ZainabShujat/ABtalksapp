@@ -14,7 +14,7 @@ import { CheckList, type CheckItem } from "@/components/program/workbench/check-
 import { DaySectionIcon } from "@/components/program/day-section-card";
 import { programMdComponents } from "@/components/program/markdown-code";
 import type { MissionState } from "@/features/program/missions";
-import { PROGRAM_TOTAL_DAYS } from "@/features/program/constants";
+import { PROGRAM_AI_COHORT_BASE, PROGRAM_TOTAL_DAYS } from "@/features/program/constants";
 import {
   submitMissionRunAction,
 } from "@/app/actions/program-mission-actions";
@@ -196,7 +196,7 @@ export function MissionPanel({
         {passedBanner?.unlockedDay &&
           passedBanner.unlockedDay <= PROGRAM_TOTAL_DAYS && (
             <Link
-              href={`/program/day/${passedBanner.unlockedDay}`}
+              href={`${PROGRAM_AI_COHORT_BASE}/day/${passedBanner.unlockedDay}`}
               className={ctaClass}
             >
               Continue to Day {passedBanner.unlockedDay}
@@ -265,7 +265,7 @@ export function MissionPanel({
           {passedBanner.unlockedDay &&
             passedBanner.unlockedDay <= PROGRAM_TOTAL_DAYS && (
               <Link
-                href={`/program/day/${passedBanner.unlockedDay}`}
+                href={`${PROGRAM_AI_COHORT_BASE}/day/${passedBanner.unlockedDay}`}
                 className={cn(ctaClass, "mt-3")}
               >
                 Go to Day {passedBanner.unlockedDay}

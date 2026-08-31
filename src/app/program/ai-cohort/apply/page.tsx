@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { ApplyForm } from "@/components/program/apply-form";
 import { JoinCodeGate } from "@/components/program/join-code-gate";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import { getEntryState } from "@/features/program/entry";
 import { getCandidateProfile } from "@/repositories/candidate";
 import { studentProfile } from "@/repositories/legacy/student-profile";
@@ -36,8 +37,8 @@ export default async function ProgramApplyPage({ searchParams }: Props) {
 
   if (!session?.user?.id) {
     const from = code
-      ? `/program/apply?code=${encodeURIComponent(code)}`
-      : "/program/apply";
+      ? `${PROGRAM_AI_COHORT_BASE}/apply?code=${encodeURIComponent(code)}`
+      : `${PROGRAM_AI_COHORT_BASE}/apply`;
     redirect(`/login?from=${encodeURIComponent(from)}`);
   }
 
@@ -116,7 +117,7 @@ export default async function ProgramApplyPage({ searchParams }: Props) {
           </CardHeader>
           <CardContent>
             <Link
-              href="/program/dashboard"
+              href={`${PROGRAM_AI_COHORT_BASE}/dashboard`}
               className={cn(buttonVariants(), "w-full sm:w-auto")}
             >
               Go to dashboard
@@ -180,7 +181,7 @@ export default async function ProgramApplyPage({ searchParams }: Props) {
           <p className="mt-2 text-sm text-muted-foreground">
             Applying to a different cohort?{" "}
             <Link
-              href="/program/apply?gate=1"
+              href={`${PROGRAM_AI_COHORT_BASE}/apply?gate=1`}
               className="underline underline-offset-4"
             >
               Enter a join code

@@ -8,6 +8,7 @@ import {
   evaluateInterview,
   adminResetInterview,
 } from "@/features/program/interview";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import { resolveProgramMemberForUser } from "@/lib/program-auth";
 import {
   adminEvaluateInterviewSchema,
@@ -50,16 +51,16 @@ export async function completeInterviewAction(
 
   const evaluated = await evaluateInterview(completed.interviewId);
   if (!evaluated.ok) {
-    revalidatePath("/program/interview");
-    revalidatePath("/program/dashboard");
+    revalidatePath(`${PROGRAM_AI_COHORT_BASE}/interview`);
+    revalidatePath(`${PROGRAM_AI_COHORT_BASE}/dashboard`);
     return {
       ok: true,
       data: { evaluated: false },
     };
   }
 
-  revalidatePath("/program/interview");
-  revalidatePath("/program/dashboard");
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/interview`);
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/dashboard`);
   return { ok: true, data: { evaluated: true } };
 }
 
@@ -75,8 +76,8 @@ export async function adminEvaluateInterviewAction(
   if (!result.ok) return { ok: false, message: result.message };
 
   revalidatePath("/admin/program/interviews");
-  revalidatePath("/program/interview");
-  revalidatePath("/program/dashboard");
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/interview`);
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/dashboard`);
   return { ok: true };
 }
 
@@ -96,7 +97,7 @@ export async function adminResetInterviewAction(
   if (!result.ok) return { ok: false, message: result.message };
 
   revalidatePath("/admin/program/interviews");
-  revalidatePath("/program/interview");
-  revalidatePath("/program/dashboard");
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/interview`);
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/dashboard`);
   return { ok: true };
 }
