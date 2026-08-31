@@ -3,17 +3,15 @@ import { getMemberDashboard } from "@/features/program/dashboard";
 import { getMemberAtRiskStatus } from "@/features/program/commits";
 import { getMemberProjectsSummary } from "@/features/program/projects";
 import { getMemberRecommendation } from "@/features/program/recommendations";
-import { getInterviewDashboardCard } from "@/features/program/interview";
 import { ProgramDashboardView } from "@/components/program/program-dashboard-view";
 
 export default async function ProgramDashboardPage() {
   const { member, cohort } = await requireProgramMember();
-  const [data, atRisk, projects, aiRec, interviewCard] = await Promise.all([
+  const [data, atRisk, projects, aiRec] = await Promise.all([
     getMemberDashboard(member.id, cohort.id),
     getMemberAtRiskStatus(member.id, cohort.id),
     getMemberProjectsSummary(member.id),
     getMemberRecommendation(member.id),
-    getInterviewDashboardCard(member.id),
   ]);
 
   if (!data) {
@@ -28,7 +26,6 @@ export default async function ProgramDashboardPage() {
       atRisk={atRisk}
       projects={projects}
       aiRec={aiRec}
-      interviewCard={interviewCard}
     />
   );
 }

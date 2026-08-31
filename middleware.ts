@@ -46,7 +46,6 @@ const protectedPaths = [
   "/program/curriculum",
   "/program/videos",
   "/program/leaderboard",
-  "/program/interview",
   "/talent",
   "/hackathon/register",
   "/hackathon/dashboard",

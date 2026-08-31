@@ -27,7 +27,7 @@ import {
   PROGRAM_TOTAL_DAYS,
 } from "@/features/program/constants";
 import type { MemberDashboard } from "@/features/program/dashboard";
-import type { InterviewDashboardCard } from "@/features/program/interview";
+
 import { MissionHeatmap } from "@/components/program/mission-heatmap";
 import { cn } from "@/lib/utils";
 
@@ -44,7 +44,6 @@ type Props = {
   atRisk: { atRisk: boolean; reasons: string[] };
   projects: ProjectRow[];
   aiRec: { recommendation: string | null; generatedAt: string | null };
-  interviewCard: InterviewDashboardCard;
 };
 
 const AT_RISK_LABEL: Record<string, string> = {
@@ -152,7 +151,6 @@ export function ProgramDashboardView({
   atRisk,
   projects,
   aiRec,
-  interviewCard,
 }: Props) {
   return (
     <div className="-mx-4 -my-6 min-h-[calc(100svh-3.5rem)] bg-[#040A12] px-4 py-6 text-white md:px-6">
@@ -259,43 +257,7 @@ export function ProgramDashboardView({
             )}
           </section>
 
-          <section
-            className={cn(
-              cardClass,
-              "group flex flex-1 flex-col md:min-h-[140px]",
-            )}
-          >
-            <SectionHeading icon={Mic}>Voice Interview</SectionHeading>
-            <div className="mt-auto flex flex-wrap items-end justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-[#E9E9E9] md:text-[15px]">
-                  Scored separately, not part of your leaderboard total.
-                </p>
-                {interviewCard.state === "locked" ? (
-                  <span className="mt-4 mb-4 inline-flex rounded-[4px] border border-[#6B78F0] bg-[rgba(93,8,183,0.2)] px-3 py-1 text-xs text-[#B9B2F3] transition-colors duration-300 ease-out hover:border-[#968BEC]/80">
-                    Locked until program end
-                  </span>
-                ) : interviewCard.state !== "exhausted" ? (
-                  <Link href="/program/interview" className={cn(figmaBtn, "mt-3")}>
-                    {interviewCard.state === "completed"
-                      ? "View results"
-                      : "Open →"}
-                  </Link>
-                ) : (
-                  <p className="mt-2.5 text-xs text-[#9CA3AF]">{interviewCard.label}</p>
-                )}
-              </div>
-              <div className="relative size-[72px] shrink-0 transition-opacity duration-300 ease-out group-hover:opacity-95 sm:size-[88px]">
-                <Image
-                  src="/program/interview-key.png"
-                  alt=""
-                  fill
-                  className="object-contain"
-                  sizes="88px"
-                />
-              </div>
-            </div>
-          </section>
+
         </div>
       </div>
 
