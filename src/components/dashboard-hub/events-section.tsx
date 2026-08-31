@@ -72,7 +72,7 @@ function EventCard({
   const Icon = event.Icon;
   const href =
     event.href ??
-    (event.register ? `/ai-workshop/events#${event.id}` : "/ai-workshop/events");
+    (event.register ? `/workshop/events#${event.id}` : "/workshop/events");
   const ctaLabel = event.ctaLabel ?? (event.register ? "Register" : "View");
 
   return (

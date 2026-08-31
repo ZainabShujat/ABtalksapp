@@ -10,7 +10,7 @@ import RegistrationForm from "@/components/workshop/RegistrationForm";
  *
  * Driving it off the hash rather than a callback means every existing entry
  * point keeps working untouched — the hero CTA, the sticky header button, the
- * calendar tiles, and cross-page links like `/ai-workshop#register` from the
+ * calendar tiles, and cross-page links like `/workshop#register` from the
  * events page — none of which can carry an onClick, since several live in
  * Server Components.
  */

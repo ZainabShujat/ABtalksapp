@@ -213,7 +213,7 @@ const instrumentSerif = Instrument_Serif({
 });
 
 /**
- * Instrument Sans for /ai-workshop.
+ * Instrument Sans for /workshop.
  *
  * The local `hubInstrumentSans` above ships only 400 and 700, but the design
  * leans on Medium (500) and SemiBold (600) throughout — and a missing 600 gets
@@ -227,7 +227,7 @@ const workshopSans = Instrument_Sans({
   weight: ["400", "500", "600", "700"],
 });
 
-// Stat numerals on /ai-workshop — the display face the Figma community
+// Stat numerals on /workshop — the display face the Figma community
 // section specifies (nodes 1:319-1:321).
 const gemunuLibre = Gemunu_Libre({
   subsets: ["latin"],
