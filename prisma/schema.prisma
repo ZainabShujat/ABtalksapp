@@ -229,7 +229,7 @@ model StudentProfile {
   organization                String?
   role                        String?
   yearsExperience             Int?
-  domain                      Domain?   // null until the user joins their first track
+  domain                      Domain? // null until the user joins their first track
   skills                      String[]  @default([])
   resumeUrl                   String?
   phone                       String?
@@ -275,52 +275,52 @@ model Submission {
 }
 
 model User {
-  id                    String                   @id @default(cuid())
-  email                 String                   @unique
-  emailVerified         DateTime?
-  name                  String?
-  image                 String?
-  password              String?
-  role                  Role                     @default(STUDENT)
-  synergyPoints         Int                      @default(0)
+  id                      String                   @id @default(cuid())
+  email                   String                   @unique
+  emailVerified           DateTime?
+  name                    String?
+  image                   String?
+  password                String?
+  role                    Role                     @default(STUDENT)
+  synergyPoints           Int                      @default(0)
   /// Soft delete. Set instead of DELETE; PII is scrubbed by the anonymizer.
-  deletedAt             DateTime?
-  anonymizedAt          DateTime?
-  createdAt             DateTime                 @default(now())
-  updatedAt             DateTime                 @updatedAt
-  accounts              Account[]
-  enrollments           Enrollment[]
-  quizAttempts          QuizAttempt[]
-  adminActionsPerformed AdminAction[]            @relation("AdminActor")
-  adminActionsReceived  AdminAction[]            @relation("AdminTarget")
-  referredBy            Referral?                @relation("Referral_referredIdToUser")
-  referralsMade         Referral[]               @relation("Referral_referrerIdToUser")
-  sessions              Session[]
-  studentProfile        StudentProfile?
-  phoneVerification     PhoneVerification?
-  recruiterReview       RecruiterReview?
-  submissions           Submission[]
-  synergyEvents         SynergyEvent[]
-  jobApplications       JobApplication[]
-  redemptions           Redemption[]
-  remarksReceived       AdminRemark[]            @relation("RemarkStudent")
-  remarksAuthored       AdminRemark[]            @relation("RemarkAdmin")
-  programMembers        ProgramMember[]
-  programEntryAttempts  ProgramEntryAttempt[]
-  recruiterProfile      RecruiterProfile?
-  shortlistItems        RecruiterShortlistItem[]
-  hackathonParticipant  HackathonParticipant?
-  hackathonRemovals     HackathonRemoval[]       @relation("HackathonRemoved")
+  deletedAt               DateTime?
+  anonymizedAt            DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  accounts                Account[]
+  enrollments             Enrollment[]
+  quizAttempts            QuizAttempt[]
+  adminActionsPerformed   AdminAction[]            @relation("AdminActor")
+  adminActionsReceived    AdminAction[]            @relation("AdminTarget")
+  referredBy              Referral?                @relation("Referral_referredIdToUser")
+  referralsMade           Referral[]               @relation("Referral_referrerIdToUser")
+  sessions                Session[]
+  studentProfile          StudentProfile?
+  phoneVerification       PhoneVerification?
+  recruiterReview         RecruiterReview?
+  submissions             Submission[]
+  synergyEvents           SynergyEvent[]
+  jobApplications         JobApplication[]
+  redemptions             Redemption[]
+  remarksReceived         AdminRemark[]            @relation("RemarkStudent")
+  remarksAuthored         AdminRemark[]            @relation("RemarkAdmin")
+  programMembers          ProgramMember[]
+  programEntryAttempts    ProgramEntryAttempt[]
+  recruiterProfile        RecruiterProfile?
+  shortlistItems          RecruiterShortlistItem[]
+  hackathonParticipant    HackathonParticipant?
+  hackathonRemovals       HackathonRemoval[]       @relation("HackathonRemoved")
   newsletterSubscriptions NewsletterSubscription[]
-  certificates          Certificate[]
-  workshopRegistrations WorkshopRegistration[]
-  legalConsents         LegalConsent[]
-  dataRightsRequests    DataRightsRequest[]
-  notificationReads     NotificationRead[]
+  certificates            Certificate[]
+  workshopRegistrations   WorkshopRegistration[]
+  legalConsents           LegalConsent[]
+  dataRightsRequests      DataRightsRequest[]
+  notificationReads       NotificationRead[]
 
   // Plan 078 Phase 1 — new identity / learning / talent relations (legacy fields above stay).
-  roleAssignments            UserRoleAssignment[]    @relation("RoleSubject")
-  rolesGranted               UserRoleAssignment[]    @relation("RoleGranter")
+  roleAssignments            UserRoleAssignment[]   @relation("RoleSubject")
+  rolesGranted               UserRoleAssignment[]   @relation("RoleGranter")
   candidateProfile           CandidateProfile?
   visibility                 CandidateVisibility?
   pointsAccount              PointsAccount?
@@ -328,19 +328,19 @@ model User {
   credentials                Credential[]
   achievements               CandidateAchievement[]
   programEnrollments         ProgramEnrollment[]
-  evaluationsGiven           ActivityEvaluation[]    @relation("Evaluator")
+  evaluationsGiven           ActivityEvaluation[]   @relation("Evaluator")
   orgMemberships             OrganizationMember[]
   talentListItems            TalentListItem[]
-  candidateNotes             CandidateNote[]         @relation("NoteSubject")
-  notesAuthored              CandidateNote[]         @relation("NoteAuthor")
-  assessmentReports          AssessmentReport[]      @relation("AssessedCandidate")
-  jobsCreated                Job[]                   @relation("JobCreator")
-  recruitersApproved         RecruiterProfile[]      @relation("RecruiterApprover")
-  notificationsCreated       Notification[]          @relation("NotificationAuthor")
-  hackathonRemovalsPerformed HackathonRemoval[]      @relation("HackathonRemover")
+  candidateNotes             CandidateNote[]        @relation("NoteSubject")
+  notesAuthored              CandidateNote[]        @relation("NoteAuthor")
+  assessmentReports          AssessmentReport[]     @relation("AssessedCandidate")
+  jobsCreated                Job[]                  @relation("JobCreator")
+  recruitersApproved         RecruiterProfile[]     @relation("RecruiterApprover")
+  notificationsCreated       Notification[]         @relation("NotificationAuthor")
+  hackathonRemovalsPerformed HackathonRemoval[]     @relation("HackathonRemover")
 
   // hire — Scout engagements, requests and availability
-  talentRequests        TalentRequest[]
+  talentRequests         TalentRequest[]
   engagementsAsRecruiter TalentEngagementRequest[] @relation("RecruiterEngagements")
   engagementsAsCandidate TalentEngagementRequest[] @relation("CandidateEngagements")
   candidateMatches       TalentRequestMatch[]      @relation("CandidateMatches")
@@ -416,14 +416,14 @@ model NewsletterSubscription {
 }
 
 model DataRightsRequest {
-  id        String                   @id @default(cuid())
+  id        String                  @id @default(cuid())
   userId    String?
   email     String
   type      DataRightsRequestType
   message   String?
-  status    DataRightsRequestStatus  @default(PENDING)
-  createdAt DateTime                 @default(now())
-  user      User?                    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  status    DataRightsRequestStatus @default(PENDING)
+  createdAt DateTime                @default(now())
+  user      User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt(sort: Desc)])
   @@index([email, createdAt(sort: Desc)])
@@ -728,54 +728,54 @@ model ProgramCohort {
 }
 
 model ProgramMember {
-  id                  String                      @id @default(cuid())
-  userId              String
-  cohortId            String
-  status              ProgramMemberStatus         @default(APPLIED)
+  id                           String                      @id @default(cuid())
+  userId                       String
+  cohortId                     String
+  status                       ProgramMemberStatus         @default(APPLIED)
   // professional profile (deliberately NOT StudentProfile)
-  fullName            String
-  jobRole             String?
-  company             String?
-  yearsExperience     Int?
-  education           String?
-  university          String?
-  graduationYear      Int?
-  skills              String[]                    @default([])
-  linkedinUrl         String?
-  resumeUrl           String?
-  phone               String? // admin-only, NEVER shown to recruiters
-  githubUsername      String
-  githubRepoUrl       String // dedicated public repo for the program
+  fullName                     String
+  jobRole                      String?
+  company                      String?
+  yearsExperience              Int?
+  education                    String?
+  university                   String?
+  graduationYear               Int?
+  skills                       String[]                    @default([])
+  linkedinUrl                  String?
+  resumeUrl                    String?
+  phone                        String? // admin-only, NEVER shown to recruiters
+  githubUsername               String
+  githubRepoUrl                String // dedicated public repo for the program
   /// Legacy talent-gate timestamp. New applications stamp this automatically
   /// (platform default). Existing rows are not rewritten. Not a user toggle.
   recruiterVisibilityConsentAt DateTime?
   // progression + denormalized scores
-  highestUnlockedDay  Int                         @default(1)
-  skipTokensUsed      Int                         @default(0) // max 2 per member
-  missionPoints       Int                         @default(0)
-  conceptPoints       Int                         @default(0)
-  commitPoints        Int                         @default(0)
-  projectPoints       Int                         @default(0)
-  totalScore          Int                         @default(0)
-  cleanPassCount      Int                         @default(0) // missions passed on 1st verification run
-  aiRecommendation    String?
-  aiRecommendationAt  DateTime?
-  enrolledAt          DateTime?
-  completedAt         DateTime?
-  createdAt           DateTime                    @default(now())
-  updatedAt           DateTime                    @updatedAt
-  user                User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  cohort              ProgramCohort               @relation(fields: [cohortId], references: [id], onDelete: Cascade)
-  missionSubmissions  ProgramMissionSubmission[]
-  conceptAttempts     ProgramConceptAttempt[]
-  commitDays          ProgramCommitDay[]
-  exerciseCompletions ProgramExerciseCompletion[]
-  projects            ProgramProject[]
+  highestUnlockedDay           Int                         @default(1)
+  skipTokensUsed               Int                         @default(0) // max 2 per member
+  missionPoints                Int                         @default(0)
+  conceptPoints                Int                         @default(0)
+  commitPoints                 Int                         @default(0)
+  projectPoints                Int                         @default(0)
+  totalScore                   Int                         @default(0)
+  cleanPassCount               Int                         @default(0) // missions passed on 1st verification run
+  aiRecommendation             String?
+  aiRecommendationAt           DateTime?
+  enrolledAt                   DateTime?
+  completedAt                  DateTime?
+  createdAt                    DateTime                    @default(now())
+  updatedAt                    DateTime                    @updatedAt
+  user                         User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cohort                       ProgramCohort               @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  missionSubmissions           ProgramMissionSubmission[]
+  conceptAttempts              ProgramConceptAttempt[]
+  commitDays                   ProgramCommitDay[]
+  exerciseCompletions          ProgramExerciseCompletion[]
+  projects                     ProgramProject[]
   /// Legacy end-of-cohort voice interview. Retained during the migration to
   /// GeneralInterview — do not delete until the DAY_31 replacement is verified.
-  interview           ProgramInterview?
-  generalInterviews   GeneralInterview[]
-  shortlistedBy       RecruiterShortlistItem[]
+  interview                    ProgramInterview?
+  generalInterviews            GeneralInterview[]
+  shortlistedBy                RecruiterShortlistItem[]
 
   @@unique([userId, cohortId])
   @@index([cohortId, totalScore(sort: Desc)])
@@ -975,17 +975,17 @@ model ProgramInterview {
 }
 
 model RecruiterProfile {
-  id                String    @id @default(cuid())
-  userId            String    @unique
+  id                String       @id @default(cuid())
+  userId            String       @unique
   fullName          String
   company           String
   phone             String?
-  approved          Boolean   @default(false)
+  approved          Boolean      @default(false)
   approvedAt        DateTime?
   approvedByAdminId String?
-  createdAt         DateTime  @default(now())
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  approvedByAdmin   User?     @relation("RecruiterApprover", fields: [approvedByAdminId], references: [id], onDelete: SetNull)
+  createdAt         DateTime     @default(now())
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approvedByAdmin   User?        @relation("RecruiterApprover", fields: [approvedByAdminId], references: [id], onDelete: SetNull)
   talentLists       TalentList[]
 }
 
@@ -1041,39 +1041,39 @@ enum TalentMatchTier {
 
 /// Recruiter requirement gathered by Scout. Survives zero matches (demand signal).
 model TalentRequest {
-  id                 String               @id @default(cuid())
+  id                 String                    @id @default(cuid())
   recruiterUserId    String
-  status             TalentRequestStatus  @default(DRAFT)
+  status             TalentRequestStatus       @default(DRAFT)
   title              String
   seniority          TalentSeniority?
-  openings           Int                  @default(1)
-  mustHaveStack      String[]             @default([])
-  niceToHaveStack    String[]             @default([])
+  openings           Int                       @default(1)
+  mustHaveStack      String[]                  @default([])
+  niceToHaveStack    String[]                  @default([])
   /// Ordered evidence dimensions; reweights scoring (e.g. consistency, projects).
-  evidencePriority   String[]             @default([])
+  evidencePriority   String[]                  @default([])
   salaryMin          Int?
   salaryMax          Int?
-  salaryCurrency     String               @default("INR")
-  salaryPeriod       String               @default("ANNUAL")
+  salaryCurrency     String                    @default("INR")
+  salaryPeriod       String                    @default("ANNUAL")
   workMode           TalentWorkMode?
   locationCity       String?
   employmentType     TalentEmploymentType?
   noticePeriodDays   Int?
   minExperience      Int?
   maxExperience      Int?
-  requiresDegree     Boolean              @default(false)
+  requiresDegree     Boolean                   @default(false)
   /// Free-form extras Scout captured; never used for matching.
   extra              Json?
-  alertWhenAvailable Boolean              @default(false)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  recruiter          User                 @relation(fields: [recruiterUserId], references: [id], onDelete: Cascade)
+  alertWhenAvailable Boolean                   @default(false)
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  recruiter          User                      @relation(fields: [recruiterUserId], references: [id], onDelete: Cascade)
   messages           TalentRequestMessage[]
   matches            TalentRequestMatch[]
+  engagements        TalentEngagementRequest[]
 
   @@index([recruiterUserId, createdAt(sort: Desc)])
   @@index([status, createdAt(sort: Desc)])
-  engagements TalentEngagementRequest[]
 }
 
 model TalentRequestMessage {
@@ -1097,7 +1097,7 @@ model TalentRequestMessage {
 /// cohort row the evidence was read from, has no foreign key, and must never be
 /// used to identify or look up the candidate.
 model TalentRequestMatch {
-  id                  String          @id @default(cuid())
+  id                  String                @id @default(cuid())
   requestId           String
   candidateUserId     String
   /// Provenance only. No FK, never an identity. See the note above.
@@ -1107,12 +1107,12 @@ model TalentRequestMatch {
   scoreBreakdown      Json
   evidence            Json
   rationale           String?
-  gaps                String[]        @default([])
-  availabilityUnknown Boolean         @default(true)
+  gaps                String[]              @default([])
+  availabilityUnknown Boolean               @default(true)
   source              TalentCandidateSource @default(PROGRAM)
-  createdAt           DateTime        @default(now())
-  request             TalentRequest   @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  candidate           User            @relation("CandidateMatches", fields: [candidateUserId], references: [id], onDelete: Cascade)
+  createdAt           DateTime              @default(now())
+  request             TalentRequest         @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  candidate           User                  @relation("CandidateMatches", fields: [candidateUserId], references: [id], onDelete: Cascade)
 
   @@index([requestId, score(sort: Desc)])
   @@index([candidateUserId])
@@ -1343,7 +1343,7 @@ model GeneralInterview {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  member ProgramMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member ProgramMember    @relation(fields: [memberId], references: [id], onDelete: Cascade)
   turns  InterviewTurn[]
   report InterviewReport?
 
@@ -1546,6 +1546,40 @@ enum SkillProficiency {
   INTERMEDIATE
   ADVANCED
   EXPERT
+}
+
+/// How a `CandidateEducation.grade` value should be read. Institutions in India
+/// report on all of these, so the number is meaningless without the scale.
+enum GradeType {
+  PERCENTAGE
+  CGPA_10
+  GPA_4
+  GRADE
+  OTHER
+}
+
+/// Well-known destinations for `CandidateLink`. `OTHER` carries a free label.
+enum CandidateLinkType {
+  PORTFOLIO
+  LINKEDIN
+  GITHUB
+  LEETCODE
+  CODECHEF
+  CODEFORCES
+  KAGGLE
+  BEHANCE
+  DRIBBBLE
+  OTHER
+}
+
+/// What kind of engagement a candidate is open to. Multi-select on
+/// `CandidatePreference`, not a column per type.
+enum OpportunityType {
+  INTERNSHIP
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  FREELANCE
 }
 
 enum ProgramFormat {
@@ -1782,6 +1816,7 @@ model CandidateProfile {
   projects       CandidateProjectEntry[]
   certifications CandidateCertification[]
   skills         CandidateSkill[]
+  links          CandidateLink[]
   preference     CandidatePreference?
 
   // SQL: CREATE INDEX ... USING gin ("fullName" gin_trgm_ops);
@@ -1822,7 +1857,7 @@ model CandidateVisibility {
 }
 
 model CandidateEducation {
-  id              String   @id @default(cuid())
+  id              String     @id @default(cuid())
   userId          String
   institutionName String
   /// Soft reference to College.id — stays FK-free.
@@ -1831,11 +1866,18 @@ model CandidateEducation {
   fieldOfStudy    String?
   startYear       Int?
   graduationYear  Int?
+  /// 1-12. Pairs with startYear; null keeps the pre-existing year-only precision.
+  startMonth      Int?
+  /// 1-12. Pairs with graduationYear.
+  endMonth        Int?
   grade           String?
-  isCurrent       Boolean  @default(false)
-  sortOrder       Int      @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  /// The scale `grade` is on. Null on rows migrated before month precision.
+  gradeType       GradeType?
+  description     String?
+  isCurrent       Boolean    @default(false)
+  sortOrder       Int        @default(0)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
   profile CandidateProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
@@ -1878,9 +1920,32 @@ model CandidateProjectEntry {
   description String?
   repoUrl     String?
   liveUrl     String?
+  /// Free-text stack labels. Not normalized against `Skill` — a project's stack
+  /// is a description, not a skill claim, and must not become evidence.
+  techStack   String[] @default([])
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  profile CandidateProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([userId, sortOrder])
+}
+
+/// Arbitrary professional links (LeetCode, Kaggle, a personal site). The three
+/// first-class ones — LinkedIn, GitHub, portfolio — stay as `CandidateProfile`
+/// columns because recruiter surfaces and the legacy mirror both read them
+/// directly; this table holds everything beyond those.
+model CandidateLink {
+  id        String            @id @default(cuid())
+  userId    String
+  type      CandidateLinkType @default(OTHER)
+  /// Display name. Required in practice for OTHER, optional for known types.
+  label     String?
+  url       String
+  sortOrder Int               @default(0)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
 
   profile CandidateProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
@@ -1909,22 +1974,24 @@ model CandidateCertification {
 /// not actively looking. NEVER joined by a recruiter-facing query unless
 /// openToWork is true (and the visibility gate already passed).
 model CandidatePreference {
-  id                 String    @id @default(cuid())
-  userId             String    @unique
-  openToWork         Boolean   @default(false)
-  availableFrom      DateTime? @db.Date
+  id                 String            @id @default(cuid())
+  userId             String            @unique
+  openToWork         Boolean           @default(false)
+  availableFrom      DateTime?         @db.Date
   noticePeriodDays   Int?
-  preferredRoles     String[]  @default([])
-  preferredLocations String[]  @default([])
-  willingToRelocate  Boolean   @default(false)
+  preferredRoles     String[]          @default([])
+  preferredLocations String[]          @default([])
+  /// Multi-select. Empty = unstated, which is not the same as "any".
+  opportunityTypes   OpportunityType[] @default([])
+  willingToRelocate  Boolean           @default(false)
   remotePreference   String?
   /// Private. Exposed only to admins, never on any recruiter or public surface.
   expectedSalaryMin  Int?
   expectedSalaryMax  Int?
-  salaryCurrency     String?   @db.Char(3)
+  salaryCurrency     String?           @db.Char(3)
   currentSalary      Int?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
   profile CandidateProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
@@ -1932,10 +1999,10 @@ model CandidatePreference {
 }
 
 model SkillCategory {
-  id        String   @id @default(cuid())
-  slug      String   @unique
+  id        String  @id @default(cuid())
+  slug      String  @unique
   name      String
-  sortOrder Int      @default(0)
+  sortOrder Int     @default(0)
   skills    Skill[]
 }
 
@@ -1965,18 +2032,22 @@ model Skill {
 /// A candidate's claim on a skill. `evidenceScore` and `verified` are CACHES,
 /// recomputed whenever a SkillEvidence row is inserted.
 model CandidateSkill {
-  id             String            @id @default(cuid())
-  userId         String
-  skillId        String
-  selfRated      SkillProficiency?
+  id                 String            @id @default(cuid())
+  userId             String
+  skillId            String
+  selfRated          SkillProficiency?
+  /// Whether the candidate still asserts this skill. False = the claim was
+  /// withdrawn but `SkillEvidence` was kept, so the row survives un-deleted.
+  /// Evidence cascades off this row; deleting it would destroy history.
+  claimedByCandidate Boolean           @default(true)
   /// Cached 0–100 strength derived from SkillEvidence. Source of truth is the evidence rows.
-  evidenceScore  Int               @default(0)
+  evidenceScore      Int               @default(0)
   /// Cached: true when at least one non-SELF evidence row exists.
-  verified       Boolean           @default(false)
-  evidenceCount  Int               @default(0)
-  lastEvidenceAt DateTime?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  verified           Boolean           @default(false)
+  evidenceCount      Int               @default(0)
+  lastEvidenceAt     DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
   profile  CandidateProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
   skill    Skill            @relation(fields: [skillId], references: [id], onDelete: Restrict)
@@ -2271,8 +2342,8 @@ model ProjectActivityConfig {
 
 /// Reading / video content. Replaces ProgramVideo and DailyTask.dayContent.
 model ContentActivityConfig {
-  id               String   @id @default(cuid())
-  activityId       String   @unique
+  id               String              @id @default(cuid())
+  activityId       String              @unique
   bodyMarkdown     String?
   /// Kept for rich structured day pages that do not reduce to markdown.
   contentJson      Json?
@@ -2281,8 +2352,8 @@ model ContentActivityConfig {
   videoProvider    String?
   videoRef         String?
   videoDurationMin Int?
-  resources        String[] @default([])
-  objectives       String[] @default([])
+  resources        String[]            @default([])
+  objectives       String[]            @default([])
   /// Exact ProgramDay.missionType. Null on non-program-day content configs.
   missionType      ProgramMissionType?
 
@@ -2292,15 +2363,15 @@ model ContentActivityConfig {
 /// GitHub / LinkedIn / URL proof requirements. Replaces Submission's hard-coded
 /// githubUrl / linkedinUrl columns.
 model ExternalSubmissionConfig {
-  id                           String  @id @default(cuid())
-  activityId                   String  @unique
-  requiresGithubUrl            Boolean @default(false)
-  requiresLinkedinUrl          Boolean @default(false)
-  requiresLiveUrl              Boolean @default(false)
+  id                         String  @id @default(cuid())
+  activityId                 String  @unique
+  requiresGithubUrl          Boolean @default(false)
+  requiresLinkedinUrl        Boolean @default(false)
+  requiresLiveUrl            Boolean @default(false)
   /// Enforce global URL uniqueness for this activity (plagiarism guard).
-  enforceGlobalUrlUniqueness   Boolean @default(true)
-  linkedinTemplate             String?
-  solutionApproach             String?
+  enforceGlobalUrlUniqueness Boolean @default(true)
+  linkedinTemplate           String?
+  solutionApproach           String?
 
   activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
 }
@@ -2576,10 +2647,10 @@ model Organization {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  members    OrganizationMember[]
+  members     OrganizationMember[]
   talentLists TalentList[]
-  notes      CandidateNote[]
-  experience CandidateExperience[]
+  notes       CandidateNote[]
+  experience  CandidateExperience[]
 
   // SQL: CREATE INDEX ... USING gin (name gin_trgm_ops);
   @@index([isVerified])
@@ -2754,8 +2825,8 @@ model MigrationRun {
   counts     Json?
   error      String?
 
-  conflicts   MigrationConflict[]
-  quarantine  MigrationQuarantine[]
+  conflicts  MigrationConflict[]
+  quarantine MigrationQuarantine[]
 
   @@index([step, startedAt(sort: Desc)])
 }
@@ -2793,9 +2864,9 @@ model MigrationQuarantine {
 }
 
 enum TalentEngagementStatus {
-  DRAFT          // sitting in the recruiter's shortlist, not sent
-  SUBMITTED      // request placed, waiting on the ABTalks team
-  IN_REVIEW      // team working it
+  DRAFT // sitting in the recruiter's shortlist, not sent
+  SUBMITTED // request placed, waiting on the ABTalks team
+  IN_REVIEW // team working it
   CONTACT_SHARED // contact released to this recruiter for this candidate
   DECLINED
   CLOSED
@@ -2817,32 +2888,32 @@ enum TalentCandidateSource {
 /// derived from this status and never stored as a separate flag, so there is
 /// no second field a bug can leave switched on.
 model TalentEngagementRequest {
-  id               String                 @id @default(cuid())
-  recruiterUserId  String
-  requestId        String?
-  source           TalentCandidateSource  @default(PROGRAM)
+  id                String                 @id @default(cuid())
+  recruiterUserId   String
+  requestId         String?
+  source            TalentCandidateSource  @default(PROGRAM)
   /// Provenance only. No FK, never an identity — the candidate is `candidateUserId`.
-  programMemberId  String?
-  candidateUserId  String
+  programMemberId   String?
+  candidateUserId   String
   /// Denormalised AB-#### as shown to the recruiter, so admin and the
   /// recruiter are demonstrably talking about the same candidate.
   candidatePublicId String
-  note             String?
-  status           TalentEngagementStatus @default(DRAFT)
-  submittedAt      DateTime?
-  decidedAt        DateTime?
-  decidedByAdminId String?
-  createdAt        DateTime               @default(now())
-  updatedAt        DateTime               @updatedAt
+  note              String?
+  status            TalentEngagementStatus @default(DRAFT)
+  submittedAt       DateTime?
+  decidedAt         DateTime?
+  decidedByAdminId  String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
 
-  recruiter     User                      @relation("RecruiterEngagements", fields: [recruiterUserId], references: [id], onDelete: Cascade)
+  recruiter User                      @relation("RecruiterEngagements", fields: [recruiterUserId], references: [id], onDelete: Cascade)
   /// Restrict, not SetNull: an engagement is the record of a recruiter having
   /// been given access to a person. It must not quietly detach from them.
   /// Matches the 078 Phase 1 posture on Certificate / SynergyEvent /
   /// RecruiterShortlistItem.
-  candidate     User                      @relation("CandidateEngagements", fields: [candidateUserId], references: [id], onDelete: Restrict)
-  request       TalentRequest?            @relation(fields: [requestId], references: [id], onDelete: SetNull)
-  messages      TalentEngagementMessage[]
+  candidate User                      @relation("CandidateEngagements", fields: [candidateUserId], references: [id], onDelete: Restrict)
+  request   TalentRequest?            @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  messages  TalentEngagementMessage[]
 
   @@index([recruiterUserId, status])
   @@index([status, submittedAt])

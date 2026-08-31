@@ -774,39 +774,69 @@ async function resolveOrCreateSkillId(
   }
 }
 
+/**
+ * Mirror `StudentProfile.skills` into `CandidateSkill`. ADDITIVE ONLY.
+ *
+ * This used to delete any CandidateSkill missing from the legacy array when it
+ * carried no evidence. That was safe while the legacy string array was the only
+ * way to declare a skill; it stopped being safe the moment the detailed profile
+ * could hold more skills than the legacy form's ten-item cap, because a legacy
+ * save would then silently destroy the candidate's own claims.
+ *
+ * `CandidateSkill` is authoritative. Removing a claim happens in exactly one
+ * place — `saveSkillClaims` in `repositories/candidate-detail.ts` — which also
+ * protects the evidence attached to it. Nothing is deleted here, and neither
+ * `selfRated` nor `claimedByCandidate` is overwritten on an existing row: the
+ * legacy array carries neither, so it has nothing to say about them.
+ */
 export async function syncCandidateSkillsFromLegacy(
   tx: Tx,
   userId: string,
   declared: string[],
 ): Promise<void> {
-  const declaredIds = new Set<string>();
   for (const raw of declared) {
     const skillId = await resolveOrCreateSkillId(tx, raw);
     if (!skillId) continue;
-    declaredIds.add(skillId);
     await tx.candidateSkill.upsert({
       where: { userId_skillId: { userId, skillId } },
-      create: { userId, skillId },
+      create: { userId, skillId, claimedByCandidate: true },
       update: {},
     });
   }
-
-  const existing = await tx.candidateSkill.findMany({
-    where: { userId },
-    select: {
-      id: true,
-      skillId: true,
-      evidenceCount: true,
-      _count: { select: { evidence: true } },
-    },
-  });
-  for (const row of existing) {
-    if (declaredIds.has(row.skillId)) continue;
-    if (row.evidenceCount > 0 || row._count.evidence > 0) continue;
-    await tx.candidateSkill.delete({ where: { id: row.id } });
-  }
 }
 
+/**
+ * True when the candidate has education/experience rows of their own, i.e. any
+ * row that is not the deterministic Phase 2 compatibility singleton.
+ */
+async function hasCandidateAuthoredEducation(
+  tx: Tx,
+  userId: string,
+): Promise<boolean> {
+  const count = await tx.candidateEducation.count({
+    where: { userId, id: { not: educationIdForStudentProfile(userId) } },
+  });
+  return count > 0;
+}
+
+async function hasCandidateAuthoredExperience(
+  tx: Tx,
+  userId: string,
+): Promise<boolean> {
+  const count = await tx.candidateExperience.count({
+    where: { userId, id: { not: experienceIdForStudentProfile(userId) } },
+  });
+  return count > 0;
+}
+
+/**
+ * Keep the Phase 2 compatibility education row in step with `StudentProfile`.
+ *
+ * Skipped once the candidate owns real education rows. That snapshot holds one
+ * college; the detailed profile holds a list, and letting a legacy form push its
+ * single value back over structured data would make `edu_sp_*` the source of
+ * truth again — the opposite of the direction this migration is going.
+ */
 export async function syncProfileOwnedEducation(
   tx: Tx,
   userId: string,
@@ -817,6 +847,7 @@ export async function syncProfileOwnedEducation(
   },
 ): Promise<void> {
   if (!sp.college && !sp.collegeId && sp.graduationYear == null) return;
+  if (await hasCandidateAuthoredEducation(tx, userId)) return;
   await tx.candidateEducation.upsert({
     where: { id: educationIdForStudentProfile(userId) },
     create: {
@@ -835,6 +866,7 @@ export async function syncProfileOwnedEducation(
   });
 }
 
+/** Same rule as education: the legacy snapshot yields to structured rows. */
 export async function syncProfileOwnedExperience(
   tx: Tx,
   userId: string,
@@ -845,6 +877,7 @@ export async function syncProfileOwnedExperience(
   },
 ): Promise<void> {
   if (!sp.organization && !sp.role && sp.yearsExperience == null) return;
+  if (await hasCandidateAuthoredExperience(tx, userId)) return;
   const years = sp.yearsExperience ?? 0;
   await tx.candidateExperience.upsert({
     where: { id: experienceIdForStudentProfile(userId) },

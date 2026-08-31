@@ -60,6 +60,7 @@
     "test:078-dual-write": "NODE_OPTIONS=--conditions=react-server tsx src/repositories/dual-write.test.ts",
     "test:078-points-writes": "NODE_OPTIONS=--conditions=react-server tsx src/repositories/points-writes.test.ts",
     "test:078-progress": "NODE_OPTIONS=--conditions=react-server tsx src/repositories/progress.test.ts",
+    "test:profile": "NODE_OPTIONS=--conditions=react-server tsx src/features/profile/profile.test.ts",
     "db:repair:078:one-claude-pe:production": "cross-env PHASE2_ALLOW_PRODUCTION=1 tsx prisma/scripts/repair-078-one-claude-pe.ts",
     "db:backfill:078:program-day-mission-type": "tsx prisma/scripts/backfill-078-program-day-mission-type.ts",
     "db:backfill:078:program-day-mission-type:production": "cross-env PHASE2_ALLOW_PRODUCTION=1 tsx prisma/scripts/backfill-078-program-day-mission-type.ts",

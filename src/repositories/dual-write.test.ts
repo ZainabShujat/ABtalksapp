@@ -301,10 +301,18 @@ suite("program apply prefill through getCandidateProfile", () => {
 
 suite("candidate flag ON reads only new candidate tables", () => {
   const src = source("src/repositories/candidate.ts");
-  assert(src.includes("educationIdForStudentProfile"), "edu_sp_");
-  assert(src.includes("experienceIdForStudentProfile"), "exp_sp_");
-  assert(src.includes('startsWith: "edu_sp_"'), "profile-owned education only");
-  assert(src.includes('startsWith: "exp_sp_"'), "profile-owned experience only");
+  // Was: education/experience filtered to the deterministic `edu_sp_` /
+  // `exp_sp_` rows Phase 2 minted. The detailed profile lets a candidate own
+  // many rows, so the single value legacy surfaces need is now chosen by
+  // `pickPrimary*` and those ids are no longer special here.
+  assert(!src.includes('startsWith: "edu_sp_"'), "no singleton education filter");
+  assert(!src.includes('startsWith: "exp_sp_"'), "no singleton experience filter");
+  assert(src.includes("pickPrimaryEducation"), "primary education precedence");
+  assert(src.includes("pickPrimaryExperience"), "primary experience precedence");
+  assert(
+    src.includes("claimedByCandidate: true"),
+    "withdrawn claims do not read back as declared skills",
+  );
   assert(src.includes("isNewCandidateRepoEnabled"), "flag");
   assert(src.includes("return viewFromNew(row)"), "genuine new view");
   assert(!src.includes("function liveView"), "no SP overlay");
