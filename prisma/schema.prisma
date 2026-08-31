@@ -317,6 +317,9 @@ model User {
   legalConsents           LegalConsent[]
   dataRightsRequests      DataRightsRequest[]
   notificationReads       NotificationRead[]
+  /// Interview platform attempts (plan 103). Direct User relation: a mock
+  /// interview needs registration only, never cohort enrollment.
+  mockInterviews          MockInterview[]
 
   // Plan 078 Phase 1 — new identity / learning / talent relations (legacy fields above stay).
   roleAssignments            UserRoleAssignment[]   @relation("RoleSubject")

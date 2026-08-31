@@ -841,6 +841,86 @@ async function dbChecks(): Promise<void> {
       assert.equal(historyB.ok, true);
       if (historyB.ok) assert.equal(historyB.data.length, 0);
     });
+
+    /* ------------------------------------------------- voice line resolution */
+
+    // The TTS route's whole security property is that it takes a line KIND and
+    // composes the text itself. These check the composer, which is the part
+    // that can leak or be abused; synthesis is a vendor call and is not
+    // exercised here.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const voice =
+      require("../src/features/interview/platform/voice") as typeof import("../src/features/interview/platform/voice");
+
+    const voiceStart = await service.startAttempt(userA.id, "ai-fluency");
+    if (!voiceStart.ok) throw new Error("voice-test start failed");
+    const voiceAttempt = voiceStart.data.attemptId;
+
+    const latest = await voice.resolvePlatformSpeakableLine(
+      voiceAttempt,
+      userA.id,
+      "latest",
+    );
+    check("'latest' speaks the interviewer's most recent persisted line", () => {
+      assert.equal(latest.ok, true, latest.ok ? "" : latest.message);
+      if (!latest.ok) return;
+      // The opening line, which is what the room plays first.
+      assert.equal(latest.data.text, voiceStart.data.prompt);
+      assert.equal(latest.data.text.length <= 4000, true);
+    });
+
+    const repeated = await voice.resolvePlatformSpeakableLine(
+      voiceAttempt,
+      userA.id,
+      "repeat",
+    );
+    check("'repeat' restates the question the SERVER has on the floor", () => {
+      assert.equal(repeated.ok, true, repeated.ok ? "" : repeated.message);
+      if (!repeated.ok) return;
+      assert.equal(
+        repeated.data.text.includes(voiceStart.data.question.text),
+        true,
+        "repeat did not contain the open question",
+      );
+    });
+
+    const authored = await Promise.all(
+      (["waiting", "retry", "time_up", "moving_on", "language"] as const).map(
+        (kind) =>
+          voice.resolvePlatformSpeakableLine(voiceAttempt, userA.id, kind, 1),
+      ),
+    );
+    check("room-composed lines resolve from authored constants", () => {
+      for (const r of authored) {
+        assert.equal(r.ok, true, r.ok ? "" : r.message);
+        if (r.ok) assert.equal(r.data.text.trim().length > 0, true);
+      }
+    });
+
+    const voiceAsB = await voice.resolvePlatformSpeakableLine(
+      voiceAttempt,
+      userB.id,
+      "latest",
+    );
+    check("another user cannot make this attempt speak", () => {
+      assert.equal(
+        voiceAsB.ok,
+        false,
+        "userB resolved a spoken line for userA's attempt",
+      );
+      if (!voiceAsB.ok) assert.equal(voiceAsB.status, 404);
+    });
+
+    await service.abandonAttempt(userA.id, voiceAttempt);
+    const afterClose = await voice.resolvePlatformSpeakableLine(
+      voiceAttempt,
+      userA.id,
+      "latest",
+    );
+    check("a closed attempt cannot be made to speak", () => {
+      assert.equal(afterClose.ok, false);
+      if (!afterClose.ok) assert.equal(afterClose.status, 404);
+    });
   } finally {
     // Cascades to turns and reports.
     await prisma.mockInterview.deleteMany({
