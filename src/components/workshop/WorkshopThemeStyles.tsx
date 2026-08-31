@@ -1,5 +1,5 @@
 /**
- * Brand tokens + colour utilities for the `/ai-workshop` surfaces.
+ * Brand tokens + colour utilities for the `/workshop` surfaces.
  *
  * Palette comes from `docs/design-system.md` — the orange/cream system
  * (#E05226 on #FBF9F7), which is also what the workshop poster uses. It
@@ -17,7 +17,7 @@
  * src/app/layout.tsx), so `.dark .wk-root` is all that is needed to flip.
  * The spec defines no dark mode; this is a derived warm-neutral counterpart.
  *
- * Rendered by both `/ai-workshop` and `/ai-workshop/events`.
+ * Rendered by both `/workshop` and `/workshop/events`.
  */
 export default function WorkshopThemeStyles() {
   return (
@@ -64,7 +64,10 @@ export default function WorkshopThemeStyles() {
            text tokens because the page-level ones flip with the theme and
            would go dark-on-dark. */
         --wk-bar-bg: #111111;
-        --wk-bar-bg-blur: rgba(17, 17, 17, 0.86);
+        /* 0.64 is as sheer as this can go: against a pale cream page scrolling
+           under, bar text still clears AA at 5.5:1, while 0.58 drops to 4.47
+           and fails. */
+        --wk-bar-bg-blur: rgba(17, 17, 17, 0.64);
         --wk-bar-border: #302a27;
         --wk-bar-text: #faf7f5;
         --wk-bar-muted: #b3aaa4;

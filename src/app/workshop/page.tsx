@@ -65,15 +65,15 @@ export default async function AIWorkshopPage() {
         webinarTargetUtc={config.webinarTargetUtc}
       />
 
-      <div id="curriculum" className="scroll-mt-24">
+      <div id="curriculum" className="scroll-mt-16">
         <TopicsSection />
       </div>
 
       <CommunityStats />
 
-      {/* `scroll-mt-24` clears the 78px sticky header so the calendar's
+      {/* `scroll-mt-16` clears the 54px sticky header so the calendar's
           heading is not hidden under it when "Discover events" jumps here. */}
-      <div id="events" className="scroll-mt-24">
+      <div id="events" className="scroll-mt-16">
         <EventsCalendar />
       </div>
 

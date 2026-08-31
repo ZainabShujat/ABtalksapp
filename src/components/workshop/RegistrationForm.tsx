@@ -299,7 +299,7 @@ export default function RegistrationForm({
           {state === "signedOut" && (
             <div className="text-center">
               <a
-                href="/login?from=%2Fai-workshop%23register"
+                href="/login?from=%2Fworkshop%23register"
                 className="register-btn inline-block w-full cursor-pointer rounded-full py-3.5 text-base font-semibold text-white"
               >
                 Continue with Google to reserve your seat

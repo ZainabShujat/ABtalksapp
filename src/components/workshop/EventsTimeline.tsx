@@ -59,14 +59,14 @@ export default function EventsTimeline() {
 
       {/* Header */}
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+        <h1 className="text-3xl font-extrabold tracking-tight wk-t sm:text-4xl">
           Events
         </h1>
         <div
           className="inline-flex rounded-full p-1"
           style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            background: "var(--wk-chip)",
+            border: "1px solid var(--wk-card-border)",
           }}
         >
           {(["upcoming", "past"] as const).map((t) => (
@@ -77,11 +77,11 @@ export default function EventsTimeline() {
               style={
                 tab === t
                   ? {
-                      background: "rgba(255,255,255,0.1)",
-                      color: "#fff",
-                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.1)",
+                      background: "var(--wk-a1)",
+                      color: "#ffffff",
+                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.22)",
                     }
-                  : { color: "rgba(255,255,255,0.45)" }
+                  : { color: "var(--wk-muted)" }
               }
             >
               {t}
@@ -94,27 +94,27 @@ export default function EventsTimeline() {
         <div
           className="rounded-3xl px-6 py-20 text-center"
           style={{
-            background: "rgba(255,255,255,0.02)",
-            border: "1px solid rgba(255,255,255,0.07)",
+            background: "var(--wk-card-bg)",
+            border: "1px solid var(--wk-hairline)",
           }}
         >
           {isPastTab ? (
             <CalendarX2
               size={36}
               strokeWidth={1.5}
-              className="mx-auto mb-3 block text-white/30"
+              className="mx-auto mb-3 block wk-faint"
             />
           ) : (
             <CalendarClock
               size={36}
               strokeWidth={1.5}
-              className="mx-auto mb-3 block text-white/30"
+              className="mx-auto mb-3 block wk-faint"
             />
           )}
-          <p className="text-[15px] font-semibold text-white/70">
+          <p className="text-[15px] font-semibold wk-dim">
             {isPastTab ? "No past events yet" : "No upcoming events right now"}
           </p>
-          <p className="mt-1 text-[13px] text-white/40">
+          <p className="mt-1 text-[13px] wk-faint">
             {isPastTab
               ? "Our journey is just getting started — check back soon."
               : "The next one is being planned — check back soon."}
@@ -130,13 +130,13 @@ export default function EventsTimeline() {
             >
               {/* date column */}
               <div className="w-14 shrink-0 pt-1 text-right sm:w-16">
-                <div className="text-lg font-extrabold leading-none text-white sm:text-xl">
+                <div className="text-lg font-extrabold leading-none wk-t sm:text-xl">
                   {dayNum(ev.date)}
                 </div>
-                <div className="mt-1 text-[11px] font-medium text-white/40">
+                <div className="mt-1 text-[11px] font-medium wk-faint">
                   {monthAbbr(ev.date)}
                 </div>
-                <div className="mt-0.5 hidden text-[11px] text-white/30 sm:block">
+                <div className="mt-0.5 hidden text-[11px] wk-faint sm:block">
                   {weekday(ev.date)}
                 </div>
               </div>
@@ -154,7 +154,7 @@ export default function EventsTimeline() {
                   className="absolute top-6 bottom-[-24px] w-px"
                   style={{
                     background:
-                      "linear-gradient(to bottom, rgba(255,255,255,0.14), rgba(255,255,255,0.02))",
+                      "linear-gradient(to bottom, var(--wk-card-border), var(--wk-card-bg))",
                   }}
                 />
               </div>
@@ -171,8 +171,8 @@ export default function EventsTimeline() {
                   isLinked ? " cursor-pointer" : ""
                 }`;
                 const cardStyle: React.CSSProperties = {
-                  background: "rgba(255,255,255,0.03)",
-                  border: `1px solid ${isLinked ? `${ev.accent}45` : "rgba(255,255,255,0.08)"}`,
+                  background: "var(--wk-chip)",
+                  border: `1px solid ${isLinked ? `${ev.accent}45` : "var(--wk-card-border)"}`,
                   backdropFilter: "blur(12px)",
                   WebkitBackdropFilter: "blur(12px)",
                 };
@@ -185,7 +185,7 @@ export default function EventsTimeline() {
                   e.currentTarget.style.transform = "translateY(0)";
                   e.currentTarget.style.borderColor = isLinked
                     ? `${ev.accent}45`
-                    : "rgba(255,255,255,0.08)";
+                    : "var(--wk-card-border)";
                   e.currentTarget.style.boxShadow = "none";
                 };
 
@@ -198,14 +198,14 @@ export default function EventsTimeline() {
                       >
                         {ev.time} · {fullDate(ev.date)}
                       </div>
-                      <h3 className="mt-1.5 text-[17px] font-bold leading-snug tracking-tight text-white sm:text-lg">
+                      <h3 className="mt-1.5 text-[17px] font-bold leading-snug tracking-tight wk-t sm:text-lg">
                         {ev.title}
                       </h3>
-                      <p className="mt-1.5 line-clamp-2 text-[12.5px] font-medium leading-relaxed text-white/45">
+                      <p className="mt-1.5 line-clamp-2 text-[12.5px] font-medium leading-relaxed wk-faint">
                         {ev.desc}
                       </p>
 
-                      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-white/50">
+                      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] wk-faint">
                         <span className="inline-flex items-center gap-1.5">
                           <span
                             className="flex h-4 w-4 items-center justify-center rounded-full text-[9px]"
@@ -225,9 +225,9 @@ export default function EventsTimeline() {
                         <span
                           className="mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
                           style={{
-                            background: "rgba(255,255,255,0.04)",
-                            color: "rgba(255,255,255,0.5)",
-                            border: "1px solid rgba(255,255,255,0.08)",
+                            background: "var(--wk-chip)",
+                            color: "var(--wk-muted)",
+                            border: "1px solid var(--wk-card-border)",
                           }}
                         >
                           <Check size={11} strokeWidth={2.5} />
@@ -269,9 +269,9 @@ export default function EventsTimeline() {
                         <span
                           className="mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
                           style={{
-                            background: "rgba(255,255,255,0.04)",
-                            color: "rgba(255,255,255,0.6)",
-                            border: "1px solid rgba(255,255,255,0.08)",
+                            background: "var(--wk-chip)",
+                            color: "var(--wk-text-faint)",
+                            border: "1px solid var(--wk-card-border)",
                           }}
                         >
                           <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
@@ -317,7 +317,7 @@ export default function EventsTimeline() {
 
                 return canRegister ? (
                   <Link
-                    href="/ai-workshop#register"
+                    href="/workshop#register"
                     className={cardClass}
                     style={cardStyle}
                     onMouseEnter={onEnter}
@@ -346,7 +346,7 @@ export default function EventsTimeline() {
             <div className="relative flex w-3 shrink-0 justify-center">
               <span
                 className="absolute top-3 h-2.5 w-2.5 rounded-full border"
-                style={{ borderColor: "rgba(255,255,255,0.3)", background: "transparent" }}
+                style={{ borderColor: "var(--wk-card-border)", background: "transparent" }}
               />
             </div>
             <div className="flex-1">

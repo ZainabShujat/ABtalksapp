@@ -312,6 +312,7 @@ export function ScoutChat({
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const promptRef = useRef<HTMLTextAreaElement>(null);
+  const criteriaRef = useRef<HTMLUListElement>(null);
 
   useLayoutEffect(() => {
     const el = promptRef.current;
@@ -676,6 +677,26 @@ export function ScoutChat({
     },
   ] as const;
 
+  /**
+   * Keep the newest tick in view.
+   *
+   * The checklist is one horizontal strip, so on a narrow screen the items that
+   * just got ticked are usually the ones off the right edge — exactly the
+   * feedback the recruiter is looking for after answering. Scroll the last
+   * ticked item into view whenever the ticks change. `inline: "end"` because
+   * the list fills left to right, and "nearest" block so the page itself never
+   * jumps while someone is typing.
+   */
+  const tickSignature = criteria.map((c) => (c.on ? "1" : "0")).join("");
+  useEffect(() => {
+    const list = criteriaRef.current;
+    if (!list) return;
+    const ticked = list.querySelectorAll<HTMLLIElement>(".scout-criterion.is-on");
+    const last = ticked[ticked.length - 1];
+    if (!last) return;
+    last.scrollIntoView({ behavior: "smooth", inline: "end", block: "nearest" });
+  }, [tickSignature]);
+
   const REQUIREMENT_ASK: Record<(typeof criteria)[number]["key"], string> = {
     Role: "Let's cover the role — what are you hiring for?",
     "Years of Experience": "What years of experience should they have?",
@@ -1027,6 +1048,20 @@ export function ScoutChat({
           else runSearch();
         }}
       >
+        <ul
+          className="scout-criteria"
+          aria-label="Requirement checklist"
+          ref={criteriaRef}
+        >
+          {criteria.map((c) => (
+            <li key={c.key} className={cn("scout-criterion", c.on && "is-on")}>
+              <span className="scout-criterion__box" aria-hidden="true">
+                ✓
+              </span>
+              <span>{c.key}</span>
+            </li>
+          ))}
+        </ul>
         <div className="scout-composer__row">
           <div className="scout-field">
             <label className="sr-only" htmlFor="scout-prompt">
@@ -1058,19 +1093,6 @@ export function ScoutChat({
             {pending ? "…" : "Search"}
           </button>
         </div>
-        <ul className="scout-criteria" aria-label="Requirement checklist">
-          {criteria.map((c) => (
-            <li
-              key={c.key}
-              className={cn("scout-criterion", c.on && "is-on")}
-            >
-              <span className="scout-criterion__box" aria-hidden="true">
-                ✓
-              </span>
-              <span>{c.key}</span>
-            </li>
-          ))}
-        </ul>
       </form>
     </section>
   );

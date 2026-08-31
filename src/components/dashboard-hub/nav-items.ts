@@ -46,7 +46,7 @@ export const SIDEBAR_FOOTER_ROW_CLASS =
 
 export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "grid" },
-  { label: "Workshops", href: "/ai-workshop/events", icon: "presentation" },
+  { label: "Workshops", href: "/workshop/events", icon: "presentation" },
   { label: "Marketplace", href: "/marketplace", icon: "store" },
   { label: "Jobs", href: "/jobs", icon: "briefcase" },
   { label: "Achievements", href: "/achievements", icon: "award" },

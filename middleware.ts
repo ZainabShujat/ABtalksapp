@@ -130,9 +130,9 @@ export default auth((req) => {
   const hasAttributionCookies =
     req.cookies.has(REF_COOKIE_NAME) || alreadyAttributed;
 
-  // Exact match only — `/ai` must not capture `/ai-workshop`,
-  // `/ai-cohort-*` or `/ai-talent-hunt`, and `/claude` must not
-  // capture `/claude-signup`. All of those are public.
+  // Exact match only — `/ai` must not capture `/ai-cohort-*` or
+  // `/ai-talent-hunt`, and `/claude` must not capture `/claude-signup`.
+  // Both of those are public.
   const exactProtectedPaths = ["/ai", "/ds", "/se", "/claude"];
 
   // Scout itself is public. Auth is a dialog on this page, or a dedicated

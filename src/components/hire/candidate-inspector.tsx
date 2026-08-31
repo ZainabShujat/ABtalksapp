@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { ChevronLeft, Download, ExternalLink } from "lucide-react";
+import { ChevronLeft, ExternalLink } from "lucide-react";
 import { refPublicId, type CandidateSource } from "@/features/hire/candidate-ref";
 import { isLockedPreview } from "@/features/hire/locked-preview";
 import {
@@ -236,9 +236,13 @@ export function CandidateInspector({
         </div>
 
         {!sample && (
-          <Link href={resumeHref} className="hire-detail__resume">
-            <Download className="size-3.5" aria-hidden="true" />
-            Resume
+          <Link
+            href={resumeHref}
+            className="hire-detail__resume"
+            target="_blank"
+          >
+            <ExternalLink className="size-3.5" aria-hidden="true" />
+            View full evidence profile
           </Link>
         )}
 
@@ -249,12 +253,6 @@ export function CandidateInspector({
         </p>
 
         <div className="hire-detail__topcta">
-          {!sample && (
-            <Link href={resumeHref} className="desk-ghost" target="_blank">
-              Full evidence profile
-              <ExternalLink className="size-3.5" aria-hidden="true" />
-            </Link>
-          )}
           <button type="button" className="desk-ghost" onClick={onClose}>
             See less details
             <ChevronLeft className="size-3.5" aria-hidden="true" />

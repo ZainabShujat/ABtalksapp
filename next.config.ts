@@ -48,7 +48,18 @@ const nextConfig: NextConfig = {
   // Kept as a redirect rather than a 404 because the old path is in bookmarks,
   // in the footer of older emails, and was the recruiter's door for months.
   async redirects() {
-    return [{ source: "/talent", destination: "/hire", permanent: true }];
+    return [
+      { source: "/talent", destination: "/hire", permanent: true },
+      // /ai-workshop was renamed to /workshop. The old path is in confirmation
+      // emails already sent, WhatsApp shares and bookmarks, so it has to keep
+      // resolving rather than 404.
+      { source: "/ai-workshop", destination: "/workshop", permanent: true },
+      {
+        source: "/ai-workshop/:path*",
+        destination: "/workshop/:path*",
+        permanent: true,
+      },
+    ];
   },
 };
 
