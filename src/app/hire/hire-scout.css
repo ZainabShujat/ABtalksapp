@@ -110,6 +110,26 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-hbtn__icon img {
   text-decoration: none;
 }
 
+/* The wordmark is text, not the cropped logo sprite, because the brand sets
+   "AB" and "talks" apart and an image cannot be asked for a gap. The rest of
+   the site already writes it as text (site-footer, keep-three-dashboard). */
+.hire-app__wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  flex: none;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  color: var(--h-ink);
+  white-space: nowrap;
+}
+
+.hire-app__wordmark-gap {
+  display: inline-block;
+  width: 0.16em;
+}
+
 .hire-app__logo {
   position: relative;
   width: 108px;
@@ -2168,10 +2188,6 @@ body:has(.hire-app--desk) button.fixed.bottom-4.right-4 {
   }
 
   .hire-scout-region,
-  .hire-pod-region {
-    padding: 6px 12px 12px;
-  }
-
   .scout {
     border-radius: 16px;
   }
@@ -2288,22 +2304,6 @@ body:has(.hire-app--desk) button.fixed.bottom-4.right-4 {
 
   .hire-detail__scroll {
     padding: 16px 14px 24px;
-  }
-
-  .hire-pod__title {
-    font-size: 22px;
-    line-height: 28px;
-  }
-
-  .hire-pod__main {
-    grid-template-columns: 1fr;
-    gap: 16px;
-    overflow-y: auto;
-  }
-
-  .hire-pod__card {
-    grid-template-columns: minmax(0, 1fr);
-    padding: 14px;
   }
 
   .hire-pod__card .desk-card__score {
@@ -3857,4 +3857,285 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
   font-weight: 500;
   cursor: pointer;
   color: var(--h-gray-700);
+}
+
+/* ---------------------------------------------------------------------------
+   Pod (Shortlist / Saved for later) — mobile.
+
+   These four rules live here, at the end, and not in the @media block near
+   line 2100 with the rest of the mobile styles. They were there, and they did
+   nothing: the pod's base rules are declared *after* that block, carry the same
+   specificity, and so won every time. The media query matched at 390px and the
+   grid stayed two-column with the list column computing to 0px, which is why
+   the Shortlist and Saved-for-later views rendered as an empty strip under the
+   request panel. Anything added for the pod at a breakpoint has to sit below
+   the base rules it is overriding.
+   --------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .hire-pod-region {
+    padding: 6px 12px 12px;
+  }
+
+  .hire-pod__title {
+    font-size: 22px;
+    line-height: 28px;
+  }
+
+  /* One column: the list, then the request panel under it. */
+  .hire-pod__main {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    overflow-y: auto;
+  }
+
+  .hire-pod__card {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 14px;
+  }
+
+  /* The desk is a desktop app shell: it fills the viewport and each column
+     scrolls inside its own pane. On a phone that leaves the candidate list
+     whatever height is left over — measured at 77px holding 1822px of cards,
+     so one card showed, cut in half. Let the content size itself here and let
+     the page scroll instead, which is what a phone reader expects anyway. */
+  /* One scroller for the whole pod, and it is the region.
+
+     The desk shell is deliberately locked to the viewport — html, body and
+     .hire-app--desk are all height:100dvh, overflow:hidden — because Scout is a
+     chat: the thread scrolls and the composer stays pinned. That is right, and
+     it stays. But it means the pod's content cannot escape, so letting the
+     inner boxes grow to their natural height just buried 2479px of cards in an
+     844px box with no way to reach them.
+
+     So the region scrolls instead of the page, and everything inside it sizes
+     to content and hands its overflow upward. Scout is untouched. */
+  .hire-pod-region {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .hire-pod,
+  .hire-pod__col {
+    min-height: auto;
+  }
+
+  .hire-pod__main {
+    overflow: visible;
+  }
+
+  .hire-pod__list {
+    flex: none;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  /* Same cut, on the request panel: 273px of box around 433px of content. */
+  .hire-pod__request {
+    overflow: visible;
+  }
+
+  /* The composer keeps its shape on a phone.
+
+     Mobile stacked Search under the field and stretched it full width, which
+     cost a whole row of height on the screen with the least of it and put the
+     button where nothing else in the product puts it. Beside the field is
+     where it sits everywhere else, so it sits there here too — the field
+     flexes and the button takes only what it needs. */
+  .hire-app .scout-composer__row,
+  .scout-composer__row {
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 8px;
+  }
+
+  .hire-app .scout-send,
+  .scout-send {
+    width: auto;
+    min-width: 84px;
+    height: 44px;
+    padding: 0 16px;
+  }
+
+  /* The checklist is one horizontal strip that scrolls, not a block that wraps.
+
+     Wrapping turned nine criteria into four stacked rows directly above the
+     keyboard — the tallest thing on the screen, for the least important. As a
+     strip it costs one row, and scout-chat scrolls the newest tick into view
+     so the item that just changed is the one you see. */
+  .scout-criteria {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 14px;
+    margin: 0 0 8px;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding-inline-end: 12px;
+  }
+
+  .scout-criteria::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* "View more details" becomes a sheet, not a slot in the chat.
+
+     The inspector is a side panel, and on a phone the grid handed it the whole
+     column — which put a 1729px profile inside a 442px window wedged under the
+     Scout toolbar, with the composer, the checklist and the shortlist bar all
+     still fighting it for the screen. Nothing about that reads as "details".
+
+     Full screen, its own scroll, above everything including the shortlist bar
+     at z-index 90. It already carries its own Back button, so there is a way
+     out. The desk underneath keeps its state; this only covers it. */
+  .scout__body.is-open .hire-detail {
+    position: fixed;
+    inset: 0;
+    z-index: 95;
+    border-left: 0;
+    background: var(--h-surface);
+  }
+
+  .scout__body.is-open .hire-detail__scroll {
+    padding: 16px 16px calc(28px + env(safe-area-inset-bottom));
+    overscroll-behavior: contain;
+  }
+
+  /* Stacked, full width and thumb-height — they were a right-aligned row that
+     wrapped into an awkward staircase at this width. */
+  .scout__body.is-open .hire-detail__actions {
+    justify-content: stretch;
+    gap: 8px;
+  }
+
+  .scout__body.is-open .hire-detail__actions > * {
+    flex: 1 1 100%;
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  /* The shortlist pill stays a pill, and stops sitting on the input.
+
+     Two faults at 390px. Its label wrapped to two lines, which turned a
+     999px-radius pill into a 58px lozenge with the text stacked inside it —
+     the count is one short line or it is nothing. And it floats at
+     bottom:22px, which put it straight over the composer: the bar spanned
+     764-822 while the composer ran 709-823, so it covered the field someone
+     was about to type into.
+
+     The label now truncates instead of wrapping — the tail it drops,
+     "saved for later", is the half that matters least — and the composer
+     reserves the pill's height underneath itself, but only while the pill is
+     actually on screen. */
+  .hire-podbar {
+    padding: 8px 8px 8px 14px;
+    gap: 10px;
+  }
+
+  .hire-podbar > span:not(.hire-podbar__icon) {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hire-app .hire-podbar button:not(.hire-podbar__close) {
+    flex: none;
+    white-space: nowrap;
+    padding: 0 14px;
+  }
+
+  .hire-podbar__close {
+    flex: none;
+    width: 28px;
+    height: 28px;
+  }
+
+  .hire-app--desk:has(.hire-podbar) .scout-composer {
+    padding-bottom: 74px;
+  }
+
+  /* Card pills line up instead of drifting.
+
+     They are a wrap row of wildly different widths — "US cohort" next to
+     "4 of 31 missions passed" next to a comma-joined skill list — so at this
+     width they broke into ragged rows with orphans stranded mid-line. One
+     height, a tighter rhythm, and a pill that would still be too long
+     truncates rather than pushing everything after it onto its own line. */
+  /* Two to a row, and the odd one out sits centred rather than stranded.
+
+     Free wrapping gave rows of 2, then 4, then 3, then a single pill alone on
+     the last line — the widths are too unequal for wrapping to look deliberate.
+     A two-column grid makes every row the same shape, and an odd final pill
+     spans both columns and centres itself instead of hugging the left edge. */
+  .desk-card__facts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    align-items: start;
+    justify-items: stretch;
+  }
+
+  .desk-card__facts .desk-pill {
+    height: 24px;
+    min-width: 0;
+    max-width: 100%;
+    padding: 0 8px;
+    justify-content: center;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .desk-card__facts .desk-pill:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    justify-self: center;
+    max-width: 70%;
+  }
+
+  .hire-app__wordmark {
+    font-size: 17px;
+  }
+
+  /* The card's actions: one centred above, two sharing the row below.
+
+     They were a wrap row of three buttons that agree on nothing — 38px, 40px
+     and 38px tall, each only as wide as its own label — so they broke into a
+     ragged left-aligned staircase. A two-column grid fixes the shape without
+     inflating them: the first action spans both columns and centres itself at
+     its own width, and the two that follow take one column each. Their own
+     heights are left alone. */
+  .desk-card__cta,
+  .hire-pod__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    justify-content: stretch;
+  }
+
+  .desk-card__cta > *,
+  .hire-app .desk-card__cta > *,
+  .hire-pod__actions > * {
+    width: 100%;
+    height: 38px;
+    justify-content: center;
+    padding: 0 8px;
+    /* One line each. Half a column is not much room, and a label that wraps
+       breaks out of a fixed-height button — "Remove from Shortlist" did. */
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .desk-card__cta > *:first-child,
+  .hire-app .desk-card__cta > *:first-child,
+  .hire-pod__actions > *:first-child {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: auto;
+    padding: 0 18px;
+  }
 }
