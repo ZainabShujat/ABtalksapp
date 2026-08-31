@@ -1,12 +1,30 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { Domain, UserType } from "@prisma/client";
-import { ExternalLink, Users } from "lucide-react";
+import { CandidatePersona } from "@prisma/client";
+import { Users } from "lucide-react";
 import { auth } from "@/auth";
-import { getProfile } from "@/features/profile/get-profile";
+import { prisma } from "@/lib/db";
+import { cn } from "@/lib/utils";
+import { getCandidateDetail } from "@/repositories/candidate-detail";
+import { getProfileEvidence } from "@/features/profile/get-evidence";
+import { computeCompleteness } from "@/features/profile/completeness";
+import { getPopularSkills } from "@/features/skill/search-skills";
+import { getMyRedemptions } from "@/features/marketplace/get-my-redemptions";
 import { DashboardShell } from "@/components/dashboard-hub/dashboard-shell";
 import { CopyReferralLinkButton } from "@/components/profile/copy-referral-link-button";
+import { SoundPreferences } from "@/components/profile/sound-preferences";
+import { ProfileStrength } from "@/components/profile/profile-strength";
+import { ProfileSection } from "@/components/profile/profile-section";
+import { BasicInfoSection } from "@/components/profile/basic-info-section";
+import { ExperienceSection } from "@/components/profile/experience-section";
+import { EducationSection } from "@/components/profile/education-section";
+import { ProjectsSection } from "@/components/profile/projects-section";
+import { SkillsSection } from "@/components/profile/skills-section";
+import { CertificationsSection } from "@/components/profile/certifications-section";
+import { LinksSection } from "@/components/profile/links-section";
+import { PreferencesSection } from "@/components/profile/preferences-section";
+import { EvidenceSection } from "@/components/profile/evidence-section";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -17,28 +35,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { prisma } from "@/lib/db";
-import { SoundPreferences } from "@/components/profile/sound-preferences";
-import { ProfileForm } from "./profile-form";
-import type { ProfileFormValues } from "@/lib/validations/profile";
-import { userTypeLabel } from "@/lib/profile-display";
-import { isOtpVerificationRequired } from "@/lib/feature-flags";
-import { getMyRedemptions } from "@/features/marketplace/get-my-redemptions";
+import { PERSONA_LABELS } from "@/lib/candidate-vocab";
 
-function domainDisplayName(domain: Domain | null) {
-  if (!domain) return "—";
-  switch (domain) {
-    case Domain.SE:
-      return "Software Engineering";
-    case Domain.DS:
-      return "Data Science";
-    case Domain.AI:
-      return "Artificial Intelligence";
-    default:
-      return domain;
-  }
-}
+/** Nulls become "" so every input stays controlled from first render. */
+const s = (v: string | null | undefined) => v ?? "";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/);
@@ -54,28 +54,28 @@ export default async function ProfilePage() {
     redirect("/login");
   }
 
-  const userExists = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { id: true },
+  const userId = session.user.id;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, image: true },
   });
 
-  if (!userExists) {
+  if (!user) {
     redirect("/api/auth/signout?callbackUrl=/login");
   }
 
-  const userId = session.user.id;
-  const [bundle, myRedemptions] = await Promise.all([
-    getProfile(userId),
-    getMyRedemptions(userId),
-  ]);
-
   const shellUser = {
-    name: session.user.name ?? session.user.email ?? "",
-    email: session.user.email ?? "",
-    image: session.user.image ?? null,
+    name: session.user.name ?? user.email ?? "",
+    email: user.email ?? "",
+    image: user.image ?? null,
   };
 
-  if (!bundle.profile) {
+  // Canonical: the 078 candidate tables, read directly. These sections have no
+  // legacy equivalent, so nothing here branches on ENABLE_NEW_CANDIDATE.
+  const detail = await getCandidateDetail(userId);
+
+  if (!detail) {
     return (
       <DashboardShell
         user={shellUser}
@@ -87,8 +87,8 @@ export default async function ProfilePage() {
             Complete your registration first
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Your student profile is not set up yet. Registration will be available
-            soon. For now you can return to the dashboard.
+            Your candidate profile is not set up yet. Once you have registered
+            for a track you can build out your full profile here.
           </p>
           <Link
             href="/dashboard"
@@ -101,229 +101,392 @@ export default async function ProfilePage() {
     );
   }
 
-  const { user, profile } = bundle;
+  const [evidence, popularSkills, myRedemptions, referralCount, headersList] =
+    await Promise.all([
+      getProfileEvidence(userId),
+      getPopularSkills(10),
+      getMyRedemptions(userId),
+      prisma.referral.count({ where: { referrerId: userId } }),
+      headers(),
+    ]);
 
-  const headersList = await headers();
+  const completeness = computeCompleteness(detail, { hasAny: evidence.hasAny });
+  const status = new Map(completeness.sections.map((x) => [x.key, x]));
+  const sectionOf = (key: string) => status.get(key as never);
+
   const host = headersList.get("host") ?? "abtalks.in";
   const protocol = host.includes("localhost") ? "http" : "https";
-  const baseUrl = `${protocol}://${host}`;
-  const referralLink = `${baseUrl}/?ref=${profile.referralCode}`;
+  const referralLink = `${protocol}://${host}/?ref=${detail.referralCode}`;
 
-  const commonFields = {
-    fullName: profile.fullName,
-    skills: [...profile.skills],
-    linkedinUrl: profile.linkedinUrl ?? "",
-    resumeUrl: profile.resumeUrl ?? "",
-    phone: profile.phone ?? "",
-    githubUsername: profile.githubUsername ?? "",
-  };
-
-  const formDefaults: ProfileFormValues =
-    profile.userType === UserType.STUDENT
-      ? {
-          userType: "STUDENT",
-          ...commonFields,
-          college: profile.college ?? "",
-          collegeId: profile.collegeId ?? "",
-          graduationYear: profile.graduationYear ?? 2026,
-        }
-      : {
-          userType: "PROFESSIONAL",
-          ...commonFields,
-          organization: profile.organization ?? "",
-          role: profile.role ?? "",
-          yearsExperience: profile.yearsExperience ?? 0,
-        };
+  const claimedSkills = detail.skills.filter((x) => x.claimedByCandidate);
 
   return (
     <DashboardShell
-      user={{ ...shellUser, name: profile.fullName || shellUser.name }}
+      user={{ ...shellUser, name: detail.fullName || shellUser.name }}
       isAdmin={session.user.isAdmin ?? false}
       showSectionNav={false}
     >
-      <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 space-y-5 px-4 py-5 sm:space-y-8 sm:py-8">
-        <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">Profile</h1>
-
-        <SoundPreferences />
-
-        <div className="grid min-w-0 gap-5 sm:gap-8 lg:grid-cols-2 lg:items-start">
-          <Card className="min-w-0">
-            <CardContent className="flex flex-row items-center gap-3 p-4 text-left sm:items-start sm:gap-4 sm:p-6">
-              <Avatar size="lg" className="size-14 text-base sm:size-20 sm:text-lg">
-                {user.image ? (
-                  <AvatarImage src={user.image} alt="" />
-                ) : null}
-                <AvatarFallback>{initials(profile.fullName)}</AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1 space-y-1 sm:space-y-2">
-                <p className="text-lg font-semibold tracking-tight sm:text-2xl">
-                  {profile.fullName}
-                </p>
-                <p className="break-words text-xs text-muted-foreground sm:text-sm">
-                  {user.email}
-                </p>
-                <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                  <Badge variant="outline">{userTypeLabel(profile.userType)}</Badge>
-                  <Badge variant="secondary">
-                    {domainDisplayName(profile.domain)}
+      <main className="mx-auto w-full min-w-0 max-w-4xl flex-1 space-y-5 px-4 py-5 sm:space-y-6 sm:py-8">
+        {/* ── Header ─────────────────────────────────────────────────── */}
+        <Card className="min-w-0">
+          <CardContent className="flex flex-row items-start gap-4 p-4 sm:p-6">
+            <Avatar size="lg" className="size-14 text-base sm:size-20 sm:text-lg">
+              {user.image ? <AvatarImage src={user.image} alt="" /> : null}
+              <AvatarFallback>{initials(detail.fullName)}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">
+                {detail.fullName}
+              </h1>
+              {detail.headline ? (
+                <p className="text-sm text-foreground/80">{detail.headline}</p>
+              ) : null}
+              <p className="break-words text-xs text-muted-foreground sm:text-sm">
+                {user.email}
+                {detail.locationCity ? ` · ${detail.locationCity}` : null}
+              </p>
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                <Badge variant="outline">
+                  {PERSONA_LABELS[detail.primaryPersona] ??
+                    detail.primaryPersona}
+                </Badge>
+                {detail.isReadyForInterview ? (
+                  <Badge className="bg-green-600 text-white hover:bg-green-600/90">
+                    Ready for interview
                   </Badge>
-                  {profile.isReadyForInterview ? (
-                    <Badge className="bg-green-600 text-white hover:bg-green-600/90">
-                      Ready for interview
-                    </Badge>
-                  ) : null}
+                ) : null}
+                {evidence.verifiedSkills.length > 0 ? (
+                  <Badge className="bg-emerald-600 text-white hover:bg-emerald-600/90">
+                    {evidence.verifiedSkills.length} verified skill
+                    {evidence.verifiedSkills.length === 1 ? "" : "s"}
+                  </Badge>
+                ) : null}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <ProfileStrength data={completeness} />
+
+        {/* ── Editable sections ──────────────────────────────────────── */}
+        <div className="space-y-3">
+          <ProfileSection
+            title="Basic information"
+            description="How you are introduced across the platform."
+            complete={sectionOf("basic")?.complete ?? false}
+            hint={sectionOf("basic")?.hint}
+            defaultOpen={!(sectionOf("basic")?.complete ?? false)}
+            summary={detail.headline}
+          >
+            <BasicInfoSection
+              phoneVerified={detail.phoneVerified}
+              initial={{
+                fullName: detail.fullName,
+                phone: s(detail.phone),
+                headline: s(detail.headline),
+                summary: s(detail.summary),
+                locationCity: s(detail.locationCity),
+                locationRegion: s(detail.locationRegion),
+                countryCode: s(detail.countryCode),
+                primaryPersona: detail.primaryPersona ?? CandidatePersona.STUDENT,
+              }}
+            />
+          </ProfileSection>
+
+          <ProfileSection
+            title="Experience"
+            description="Roles, internships, and freelance work."
+            complete={sectionOf("experience")?.complete ?? false}
+            hint={sectionOf("experience")?.hint}
+            summary={
+              detail.experience.length > 0
+                ? `${detail.experience.length} role${detail.experience.length === 1 ? "" : "s"}`
+                : null
+            }
+          >
+            <ExperienceSection
+              initial={detail.experience.map((e) => ({
+                companyName: e.companyName,
+                title: e.title,
+                employmentType: s(e.employmentType),
+                locationCity: s(e.locationCity),
+                startMonth: e.startMonth,
+                startYear: e.startYear,
+                endMonth: e.endMonth,
+                endYear: e.endYear,
+                isCurrent: e.isCurrent,
+                description: s(e.description),
+              }))}
+            />
+          </ProfileSection>
+
+          <ProfileSection
+            title="Education"
+            description="College, school, and any additional qualifications."
+            complete={sectionOf("education")?.complete ?? false}
+            hint={sectionOf("education")?.hint}
+            summary={
+              detail.education.length > 0
+                ? `${detail.education.length} entr${detail.education.length === 1 ? "y" : "ies"}`
+                : null
+            }
+          >
+            <EducationSection
+              initial={detail.education.map((e) => ({
+                institutionName: e.institutionName,
+                collegeId: s(e.collegeId),
+                degree: s(e.degree),
+                fieldOfStudy: s(e.fieldOfStudy),
+                startMonth: e.startMonth,
+                startYear: e.startYear,
+                endMonth: e.endMonth,
+                graduationYear: e.graduationYear,
+                isCurrent: e.isCurrent,
+                gradeType: e.gradeType ?? "",
+                grade: s(e.grade),
+                description: s(e.description),
+              }))}
+            />
+          </ProfileSection>
+
+          <ProfileSection
+            title="Projects"
+            description="Things you have built, with links a recruiter can open."
+            complete={sectionOf("projects")?.complete ?? false}
+            hint={sectionOf("projects")?.hint}
+            summary={
+              detail.projects.length > 0
+                ? `${detail.projects.length} project${detail.projects.length === 1 ? "" : "s"}`
+                : null
+            }
+          >
+            <ProjectsSection
+              initial={detail.projects.map((p) => ({
+                title: p.title,
+                description: s(p.description),
+                techStack: p.techStack,
+                repoUrl: s(p.repoUrl),
+                liveUrl: s(p.liveUrl),
+              }))}
+            />
+          </ProfileSection>
+
+          <ProfileSection
+            title="Skills"
+            description="What you claim, kept separate from what the platform can verify."
+            complete={sectionOf("skills")?.complete ?? false}
+            hint={sectionOf("skills")?.hint}
+            summary={
+              claimedSkills.length > 0
+                ? `${claimedSkills.length} skill${claimedSkills.length === 1 ? "" : "s"}`
+                : null
+            }
+          >
+            <SkillsSection
+              popular={popularSkills}
+              initial={claimedSkills.map((sk) => ({
+                skillId: sk.skillId,
+                name: sk.name,
+                categoryName: sk.categoryName,
+                selfRated: sk.selfRated,
+                verified: sk.verified,
+                evidenceCount: sk.evidenceCount,
+              }))}
+            />
+          </ProfileSection>
+
+          <ProfileSection
+            title="Certifications"
+            description="External certifications you hold."
+            complete={sectionOf("certifications")?.complete ?? false}
+            hint={sectionOf("certifications")?.hint}
+            summary={
+              detail.certifications.length > 0
+                ? `${detail.certifications.length} certification${detail.certifications.length === 1 ? "" : "s"}`
+                : null
+            }
+          >
+            <CertificationsSection
+              initial={detail.certifications.map((c) => ({
+                name: c.name,
+                issuer: c.issuer,
+                issuedMonth: c.issuedMonth,
+                issuedYear: c.issuedYear,
+                expiresMonth: c.expiresMonth,
+                expiresYear: c.expiresYear,
+                credentialUrl: s(c.credentialUrl),
+              }))}
+            />
+          </ProfileSection>
+
+          <ProfileSection
+            title="Links"
+            description="Where your work lives."
+            complete={sectionOf("links")?.complete ?? false}
+            hint={sectionOf("links")?.hint}
+            summary={
+              detail.githubUsername ? `github.com/${detail.githubUsername}` : null
+            }
+          >
+            <LinksSection
+              initial={{
+                linkedinUrl: s(detail.linkedinUrl),
+                githubUsername: s(detail.githubUsername),
+                portfolioUrl: s(detail.portfolioUrl),
+                resumeUrl: s(detail.resumeUrl),
+                extra: detail.links.map((l) => ({
+                  type: l.type,
+                  label: s(l.label),
+                  url: l.url,
+                })),
+              }}
+            />
+          </ProfileSection>
+
+          <ProfileSection
+            title="Career preferences"
+            description="What you are looking for. Separate from recruiter visibility."
+            complete={sectionOf("preferences")?.complete ?? false}
+            hint={sectionOf("preferences")?.hint}
+            summary={
+              detail.preference?.openToWork ? "Open to work" : null
+            }
+          >
+            <PreferencesSection
+              initial={{
+                openToWork: detail.preference?.openToWork ?? false,
+                preferredRoles: detail.preference?.preferredRoles ?? [],
+                preferredLocations: detail.preference?.preferredLocations ?? [],
+                opportunityTypes: detail.preference?.opportunityTypes ?? [],
+                remotePreference: s(detail.preference?.remotePreference),
+                willingToRelocate:
+                  detail.preference?.willingToRelocate ?? false,
+                noticePeriodDays:
+                  detail.preference?.noticePeriodDays === null ||
+                  detail.preference?.noticePeriodDays === undefined
+                    ? ""
+                    : String(detail.preference.noticePeriodDays),
+                availableFromMonth:
+                  detail.preference?.availableFromMonth ?? null,
+                availableFromYear: detail.preference?.availableFromYear ?? null,
+              }}
+            />
+          </ProfileSection>
+
+          <ProfileSection
+            title="Evidence & achievements"
+            description="What the platform can attest to. Earned, not entered."
+            complete={sectionOf("evidence")?.complete ?? false}
+            defaultOpen={evidence.hasAny}
+            summary={
+              evidence.hasAny
+                ? `${evidence.verifiedSkills.length} verified · ${evidence.credentials.length} credential${evidence.credentials.length === 1 ? "" : "s"}`
+                : "Nothing recorded yet"
+            }
+          >
+            <EvidenceSection evidence={evidence} />
+          </ProfileSection>
+        </div>
+
+        {/* ── Account ────────────────────────────────────────────────── */}
+        <div className="space-y-4 pt-2 sm:space-y-6">
+          <h2 className="font-display text-lg font-semibold tracking-tight">
+            Account
+          </h2>
+
+          <SoundPreferences />
+
+          <Card className="min-w-0">
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle>Refer &amp; earn</CardTitle>
+              <CardDescription>
+                Share your link. When someone signs up with it, they show up
+                here.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 p-4 sm:p-6">
+              <div className="flex min-w-0 items-center gap-2 rounded-lg border bg-muted/30 p-3">
+                <code className="min-w-0 flex-1 truncate font-mono text-xs md:text-sm">
+                  {referralLink}
+                </code>
+                <CopyReferralLinkButton link={referralLink} />
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Or share your code:{" "}
+                <code className="font-mono font-semibold">
+                  {detail.referralCode}
+                </code>
+              </div>
+              <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                  <Users className="h-5 w-5 text-primary" aria-hidden />
                 </div>
-                {profile.userType === UserType.STUDENT ? (
-                  <p className="text-xs text-muted-foreground sm:text-sm">
-                    {profile.college}
-                    {profile.graduationYear != null
-                      ? ` · Class of ${profile.graduationYear}`
-                      : null}
-                  </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground sm:text-sm">
-                    {profile.role}
-                    {profile.organization ? ` at ${profile.organization}` : null}
-                    {profile.yearsExperience != null
-                      ? ` · ${profile.yearsExperience} yr${profile.yearsExperience === 1 ? "" : "s"} experience`
-                      : null}
-                  </p>
-                )}
+                <div>
+                  <div className="font-display text-xl font-bold">
+                    {referralCount}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {referralCount === 1 ? "person" : "people"} signed up using
+                    your link
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <div className="min-w-0 space-y-4 sm:space-y-6">
-            <Card className="min-w-0">
-              <CardHeader className="pb-3 sm:pb-4">
-                <CardTitle>Your information</CardTitle>
-                <CardDescription>
-                  Domain and email cannot be changed here.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6">
-                <ProfileForm
-                  initialProfile={formDefaults}
-                  phoneVerified={profile.phoneVerified}
-                  otpVerificationRequired={isOtpVerificationRequired()}
-                />
-              </CardContent>
-            </Card>
+          <Card className="min-w-0">
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle>My redemptions</CardTitle>
+              <CardDescription>
+                Items you have redeemed with synergy points.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-6">
+              {myRedemptions.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No redemptions yet. Visit the{" "}
+                  <Link href="/marketplace" className="text-primary underline">
+                    marketplace
+                  </Link>{" "}
+                  to spend your points.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {myRedemptions.map((r) => (
+                    <li
+                      key={r.id}
+                      className="flex items-center justify-between rounded-lg border p-3 text-sm"
+                    >
+                      <div>
+                        <p className="font-medium">{r.itemTitle}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {r.dateIso.split("T")[0]} · {r.costSP} SP
+                        </p>
+                      </div>
+                      <Badge>{r.status}</Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
 
-            <Card className="min-w-0">
-              <CardHeader className="pb-3 sm:pb-4">
-                <CardTitle>Resume</CardTitle>
-                <CardDescription>Visible to you and admins only.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6">
-                {profile.resumeUrl ? (
-                  <Link
-                    href={profile.resumeUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 font-medium text-primary underline"
-                  >
-                    View Resume <ExternalLink className="size-3.5" />
-                  </Link>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No resume link added yet
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="min-w-0">
-              <CardHeader className="pb-3 sm:pb-4">
-                <CardTitle>Your Achievements</CardTitle>
-                <CardDescription>Certificates and milestones you&apos;ve earned.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6">
-                <Link href="/achievements" className={cn(buttonVariants({ variant: "outline" }))}>
-                  View achievements
-                </Link>
-              </CardContent>
-            </Card>
-
-            <Card className="min-w-0">
-              <CardHeader className="pb-3 sm:pb-4">
-                <CardTitle>My Redemptions</CardTitle>
-                <CardDescription>
-                  Items you&apos;ve redeemed with synergy points.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6">
-                {myRedemptions.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No redemptions yet. Visit the{" "}
-                    <Link href="/marketplace" className="text-primary underline">
-                      marketplace
-                    </Link>{" "}
-                    to spend your points.
-                  </p>
-                ) : (
-                  <ul className="space-y-2">
-                    {myRedemptions.map((r) => (
-                      <li
-                        key={r.id}
-                        className="flex items-center justify-between rounded-lg border p-3 text-sm"
-                      >
-                        <div>
-                          <p className="font-medium">{r.itemTitle}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {r.dateIso.split("T")[0]} · {r.costSP} SP
-                          </p>
-                        </div>
-                        <Badge>{r.status}</Badge>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="min-w-0">
-              <CardHeader className="pb-3 sm:pb-4">
-                <CardTitle>Refer &amp; Earn</CardTitle>
-                <CardDescription>
-                  Share your link with friends. When they sign up using it, they
-                  show up here.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 p-4 sm:p-6">
-                <div className="flex min-w-0 items-center gap-2 rounded-lg border bg-muted/30 p-3">
-                  <code className="min-w-0 flex-1 truncate font-mono text-xs md:text-sm">
-                    {referralLink}
-                  </code>
-                  <CopyReferralLinkButton link={referralLink} />
-                </div>
-
-                <div className="text-xs text-muted-foreground">
-                  Or share your code:{" "}
-                  <code className="font-mono font-semibold">
-                    {profile.referralCode}
-                  </code>
-                </div>
-
-                <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                    <Users className="h-5 w-5 text-primary" aria-hidden />
-                  </div>
-                  <div>
-                    <div className="font-display text-xl font-bold">
-                      {profile.referralCount}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {profile.referralCount === 1
-                        ? "person signed up"
-                        : "people signed up"}{" "}
-                      using your link
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <Card className="min-w-0">
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle>Your achievements</CardTitle>
+              <CardDescription>
+                Certificates and milestones you have earned.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-6">
+              <Link
+                href="/achievements"
+                className={cn(buttonVariants({ variant: "outline" }))}
+              >
+                View achievements
+              </Link>
+            </CardContent>
+          </Card>
         </div>
       </main>
     </DashboardShell>
