@@ -7,6 +7,7 @@ import { dsButtonVariants } from "@/components/design/ds-button";
 import { ProgramModuleList } from "@/components/program/program-module-list";
 import { ProgramStatsPanel } from "@/components/program/program-stats-panel";
 import { PROGRAM_TOTAL_DAYS } from "@/features/program/constants";
+import type { MemberDashboard } from "@/features/program/dashboard";
 import { CohortInterviewCard } from "@/components/program/cohort-interview-card";
 import type { CohortInterviewState } from "@/features/interview/cohort-eligibility";
 import { cn } from "@/lib/utils";
@@ -66,6 +67,10 @@ export function ProgramDashboardView({
               <Link
                 href="/dashboard"
                 className="text-[#8F8F8F] hover:text-[#E05226]"
+              >
+                Dashboard
+              </Link>
+            </li>
             <li aria-hidden className="text-[#8F8F8F]">
              &gt;
             </li>
