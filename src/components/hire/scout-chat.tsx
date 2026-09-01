@@ -1062,20 +1062,6 @@ export function ScoutChat({
           else runSearch();
         }}
       >
-        <ul
-          className="scout-criteria"
-          aria-label="Requirement checklist"
-          ref={criteriaRef}
-        >
-          {criteria.map((c) => (
-            <li key={c.key} className={cn("scout-criterion", c.on && "is-on")}>
-              <span className="scout-criterion__box" aria-hidden="true">
-                ✓
-              </span>
-              <span>{c.key}</span>
-            </li>
-          ))}
-        </ul>
         <div className="scout-composer__row">
           <div className="scout-field">
             <label className="sr-only" htmlFor="scout-prompt">
@@ -1107,6 +1093,20 @@ export function ScoutChat({
             {pending ? "…" : "Search"}
           </button>
         </div>
+        <ul
+          className="scout-criteria"
+          aria-label="Requirement checklist"
+          ref={criteriaRef}
+        >
+          {criteria.map((c) => (
+            <li key={c.key} className={cn("scout-criterion", c.on && "is-on")}>
+              <span className="scout-criterion__box" aria-hidden="true">
+                ✓
+              </span>
+              <span>{c.key}</span>
+            </li>
+          ))}
+        </ul>
       </form>
     </section>
   );

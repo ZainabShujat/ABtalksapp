@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import { RecruiterAccountMenu } from "@/components/hire/recruiter-account-menu";
@@ -81,8 +82,14 @@ export function HireChrome({
     <div className={cn("hire-app", desk && "hire-app--desk")}>
       <header className="hire-app__header">
         <Link href="/" className="hire-app__brand" aria-label="ABTalks home">
-          <span className="hire-app__wordmark">
-            AB<i className="hire-app__wordmark-gap" aria-hidden="true" />talks
+          <span className="hire-app__logo">
+            <Image
+              src="/landing/abtalks-logo-mark.png"
+              alt="ABTalks"
+              width={561}
+              height={168}
+              priority
+            />
           </span>
           <span className="hire-app__badge">Hire</span>
         </Link>
