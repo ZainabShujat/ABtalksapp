@@ -1,5 +1,6 @@
 "use client";
 
+import type { MouseEvent } from "react";
 import { ChevronRight, UserRound } from "lucide-react";
 import { refPublicId } from "@/features/hire/candidate-ref";
 import { RequestIntroButton } from "@/components/hire/request-intro-button";
@@ -56,10 +57,27 @@ export function DeskMatchCard({
   const publicId = refPublicId(match.candidateRef);
   const skills = e.skills ?? [];
 
+  // The card is the click target, not just the "View more details" link.
+  // Everything interactive inside it — the two shortlist buttons, the intro
+  // button, the locked-field reveals — must keep its own click, and a click that
+  // ends a text selection is a read, not a request to open the panel.
+  function openFromCard(event: MouseEvent<HTMLElement>) {
+    if (!onOpen) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("button, a, input, label, select, textarea, [role='button']")) {
+      return;
+    }
+    if ((window.getSelection()?.toString() ?? "").length > 0) return;
+    onOpen();
+  }
+
   if (preview) {
     const p = preview;
     return (
-      <article className="desk-card desk-card--locked">
+      <article
+        className={cn("desk-card", "desk-card--locked", onOpen && "desk-card--clickable")}
+        onClick={openFromCard}
+      >
         {sampleDemand && <SampleCardNotice {...sampleDemand} />}
         <div className="desk-card__head" style={{ marginTop: 12 }}>
           <div className="desk-card__who">
@@ -137,7 +155,10 @@ export function DeskMatchCard({
 
   if (sample) {
     return (
-      <article className="desk-card desk-card--sample">
+      <article
+        className={cn("desk-card", "desk-card--sample", onOpen && "desk-card--clickable")}
+        onClick={openFromCard}
+      >
         {sampleDemand && <SampleCardNotice {...sampleDemand} />}
         <h3 className="desk-card__role" style={{ marginTop: 12 }}>
           {match.jobRole}
@@ -175,7 +196,9 @@ export function DeskMatchCard({
         "desk-card",
         rank === 1 && "desk-card--top",
         selected && "is-selected",
+        onOpen && "desk-card--clickable",
       )}
+      onClick={openFromCard}
     >
       <header className="desk-card__head">
         <div className="desk-card__who">
