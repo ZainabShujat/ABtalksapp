@@ -769,6 +769,17 @@ export function ScoutChat({
     setOpenMatch(null);
   }
 
+  // The strip is feedback, not a form. Nine grey labels under an empty composer
+  // tell the recruiter nothing and cost the field a row of height, so the strip
+  // only appears once something has actually been captured, and only shows what
+  // was captured. `criteria` itself stays whole — the Requirement menu still
+  // lists all nine with their on/off state.
+  const metCriteria = criteria.filter((c) => c.on);
+  const stripOpen = metCriteria.length > 0;
+  const stripItemsRef = useRef(metCriteria);
+  if (stripOpen) stripItemsRef.current = metCriteria;
+  const stripItems = stripOpen ? metCriteria : stripItemsRef.current;
+
   return (
     <section className={cn("scout", expanded && "is-expanded")} aria-label="Scout assistant">
       <div className="scout__bar">
@@ -1093,20 +1104,27 @@ export function ScoutChat({
             {pending ? "…" : "Search"}
           </button>
         </div>
-        <ul
-          className="scout-criteria"
-          aria-label="Requirement checklist"
-          ref={criteriaRef}
-        >
-          {criteria.map((c) => (
-            <li key={c.key} className={cn("scout-criterion", c.on && "is-on")}>
-              <span className="scout-criterion__box" aria-hidden="true">
-                ✓
-              </span>
-              <span>{c.key}</span>
-            </li>
-          ))}
-        </ul>
+        <div className={cn("scout-criteria-slot", stripOpen && "is-open")}>
+          <div className="scout-criteria-slot__clip">
+            {stripItems.length > 0 && (
+              <ul
+                className="scout-criteria"
+                aria-label="Requirements captured"
+                aria-hidden={!stripOpen}
+                ref={criteriaRef}
+              >
+                {stripItems.map((c) => (
+                  <li key={c.key} className="scout-criterion is-on">
+                    <span className="scout-criterion__box" aria-hidden="true">
+                      ✓
+                    </span>
+                    <span>{c.key}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
       </form>
     </section>
   );
