@@ -163,9 +163,7 @@ export async function overlayChallengeProgressFields<
   );
 }
 
-export async function listHubSubmissionTimes(
-  userId: string,
-): Promise<Date[]> {
+async function listChallengeSubmissionTimes(userId: string): Promise<Date[]> {
   if (!isNewProgressRepoEnabled()) {
     const rows = await prisma.submission.findMany({
       where: { enrollment: { userId } },
@@ -190,6 +188,55 @@ export async function listHubSubmissionTimes(
   return rows
     .map((r) => r.submittedAt)
     .filter((d): d is Date => d instanceof Date);
+}
+
+/**
+ * Skip tokens and enrollment waivers create ProgramMissionSubmission rows the
+ * member never submitted — they are bookkeeping, not activity.
+ * Local copy of the feature-layer predicates: features/program/progression
+ * imports this file, so importing it back would cycle.
+ */
+function isBookkeepingMissionPayload(payload: Prisma.JsonValue | null): boolean {
+  const obj = jsonObject(payload);
+  return obj.skipped === true || obj.waived === true;
+}
+
+/** AI Cohort mission runs — every verification run, pass or fail. */
+async function listProgramMissionTimes(userId: string): Promise<Date[]> {
+  const rows = await prisma.programMissionSubmission.findMany({
+    where: { member: { userId } },
+    select: { createdAt: true, payload: true },
+  });
+  return rows
+    .filter((r) => !isBookkeepingMissionPayload(r.payload))
+    .map((r) => r.createdAt);
+}
+
+/** Databricks mission runs — every verification run, pass or fail. */
+async function listDatabricksAttemptTimes(userId: string): Promise<Date[]> {
+  const rows = await prisma.activityAttempt.findMany({
+    where: {
+      enrollment: { userId },
+      activityId: { startsWith: "act_dbx_day_" },
+    },
+    select: { submittedAt: true, createdAt: true },
+  });
+  return rows.map((r) => r.submittedAt ?? r.createdAt);
+}
+
+/**
+ * Every submission the hub heatmap and streak card count, across all three
+ * tracks the user can be in: 60-Day Challenge, AI Cohort, Databricks.
+ */
+export async function listHubSubmissionTimes(
+  userId: string,
+): Promise<Date[]> {
+  const [challenge, program, databricks] = await Promise.all([
+    listChallengeSubmissionTimes(userId),
+    listProgramMissionTimes(userId),
+    listDatabricksAttemptTimes(userId),
+  ]);
+  return [...challenge, ...program, ...databricks];
 }
 
 export async function listChallengeSubmissions(
