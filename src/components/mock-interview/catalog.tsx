@@ -126,7 +126,7 @@ function DomainCard({
       <div className="mt-5">
         {live ? (
           <Link href={`/mock-interviews/${entry.slug}`} className={cn(BTN, "w-full")}>
-            View interview &rarr;
+            Take interview &rarr;
           </Link>
         ) : (
           <span className="inline-flex h-11 w-full items-center justify-center rounded-[12px] border border-[#E0E0E0] bg-[#F5F5F5] px-6 text-sm font-semibold text-[#8F8F8F]">
