@@ -520,6 +520,8 @@ box-shadow: 0 2px 10px rgba(17, 17, 17, 0.04);
 
 Respect `prefers-reduced-motion`: wrap non-essential transforms (arrow nudge, icon scale) in `motion-safe:`.
 
+Docked-field height shifts (a search field or composer making room for a content row) use **layout-reveal** in §31, not this card-hover recipe (`--dur-2` / no translate).
+
 ---
 
 ## 17. Border Radius System
@@ -926,14 +928,31 @@ Mobile gutter       16px
 | Card hover surface | `#FFF5F0` |
 | Background cream   | `#FBF9F7` |
 
-### Motion (cream-surface cards)
+### Motion
 
-| Token        | Value                                      |
-| ------------ | ------------------------------------------ |
-| Duration     | `200ms` (`--dur-2`)                        |
-| Easing       | `--ease-spark`                             |
-| Card hover   | bg `#FFF5F0` + shadow `0 2px 10px rgba(17,17,17,0.04)` |
-| Card motion  | no translate / scale on the card container |
+Canonical tokens (already in `src/app/globals.css`). Do **not** invent a new curve.
+
+| Token | Value | Usage |
+| ----- | ----- | ----- |
+| `--ease-spark` | `cubic-bezier(0.22, 1, 0.36, 1)` | Settle, no overshoot. Default for UI motion. |
+| `--ease-spark-soft` | `cubic-bezier(0.33, 1, 0.68, 1)` | Gentler sheets / routes. |
+| `--ease-spark-out` | `cubic-bezier(0.34, 1.4, 0.64, 1)` | SPARK pulse only; do not use for layout. |
+| `--dur-1` | `120ms` | Taps / micro. |
+| `--dur-2` | `200ms` | Hover / state. |
+| `--dur-3` | `320ms` | Entrances **and layout-reveal**. |
+| `--dur-4` | `480ms` | Celebration. |
+
+**Cream-surface card hover** (see §16): `--dur-2` / `--ease-spark`. Background `#FFF5F0` + shadow `0 2px 10px rgba(17,17,17,0.04)`. No translate or scale on the card container.
+
+**Layout-reveal:** when a docked control (search field, composer) must make room for a content row beneath it, animate the **row’s height**, not a `translate` on the field (a transform would slide the field over content instead of reflowing). Technique: a grid slot `grid-template-rows: 0fr → 1fr` with `overflow: hidden` on the inner clip:
+
+```css
+transition: grid-template-rows var(--dur-3) var(--ease-spark);
+```
+
+Companion fixed UI that tracks the same height (e.g. a floating pill’s `bottom`) uses the same duration and easing on that property.
+
+Prefer `transform` / `opacity` for decoration. Layout-reveal is the allowed exception when height must actually change. Honor `prefers-reduced-motion` (already a global snap in `globals.css` — do not add a second global catch-all). This is the rule for **new** UI; do not restyle existing screens to it unless explicitly asked. First use: `/hire` Scout composer checklist strip.
 
 ```text
 Primary          #E05226
