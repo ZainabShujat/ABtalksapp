@@ -1,10 +1,44 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { useHireDesk } from "@/components/hire/hire-desk-context";
 
 export function HireJourney() {
   const { step, matchCount, gap } = useHireDesk();
+  const railRef = useRef<HTMLElement>(null);
+  const [trackEnd, setTrackEnd] = useState<number | null>(null);
+
+  /**
+   * Stop the rail at the last node.
+   *
+   * The line was `top: 48px; bottom: 48px`, both measured from the aside. The
+   * top happened to land on node 1; the bottom did not land on node 3 — it ran
+   * 50px past it, because what sits under the last node is its own paragraph,
+   * not 48px of nothing.
+   *
+   * A different constant would only be wrong somewhere else: the stages are
+   * `justify-content: space-between`, so the gaps between them are whatever is
+   * left over, and step 2's text is replaced by the search's gap report, which
+   * changes every height below it. So measure the node instead of predicting
+   * where it will be, and re-measure whenever the text or the width changes.
+   */
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail) return;
+    const measure = () => {
+      const nodes = rail.querySelectorAll(".hire-node");
+      const last = nodes[nodes.length - 1];
+      if (!last) return;
+      const r = rail.getBoundingClientRect();
+      const n = last.getBoundingClientRect();
+      setTrackEnd(Math.max(0, Math.round(r.bottom - (n.top + n.height / 2))));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(rail);
+    return () => ro.disconnect();
+  }, [step, matchCount, gap]);
   const countLabel =
     matchCount == null
       ? "Matched candidates"
@@ -14,8 +48,17 @@ export function HireJourney() {
 
   return (
     <>
-      <aside className="hire-journey" aria-label="Hiring workflow" data-step={step}>
-        <span className="hire-journey__track" aria-hidden="true">
+      <aside
+        className="hire-journey"
+        aria-label="Hiring workflow"
+        data-step={step}
+        ref={railRef}
+      >
+        <span
+          className="hire-journey__track"
+          aria-hidden="true"
+          style={trackEnd == null ? undefined : { bottom: `${trackEnd}px` }}
+        >
           <span className="hire-journey__track-fill" />
         </span>
         <div className={`hire-journey__stage ${step === 1 ? "is-active" : ""}`}>
