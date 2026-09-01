@@ -5,6 +5,7 @@ import type {
 } from "@/features/interview/platform/types";
 import { AI_FLUENCY_V1 } from "@/features/interview/platform/packs/ai-fluency/v1";
 import { BEHAVIORAL_V1 } from "@/features/interview/platform/packs/behavioral/v1";
+import { AGENTIC_CODING_V1 } from "@/features/interview/platform/packs/agentic-coding/v1";
 
 /**
  * The published interview packs, keyed by `${packId}@${version}`.
@@ -189,6 +190,7 @@ export function assertPackIntegrity(pack: InterviewPack): void {
 
 register(AI_FLUENCY_V1);
 register(BEHAVIORAL_V1);
+register(AGENTIC_CODING_V1);
 
 for (const pack of Object.values(PACKS)) assertPackIntegrity(pack);
 

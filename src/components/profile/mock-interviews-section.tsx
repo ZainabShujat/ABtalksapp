@@ -10,6 +10,15 @@ const STATUS_LABEL: Record<string, string> = {
   INVALID: "Not scored",
 };
 
+/**
+ * How many attempts the profile shows before deferring to the history page.
+ *
+ * The profile is a summary surface: a candidate with fifteen attempts should
+ * see that they have fifteen, not scroll through fifteen. The full list has its
+ * own page and this links to it.
+ */
+const PREVIEW_COUNT = 2;
+
 type Props = {
   /** Newest first. Already user-scoped by the caller. */
   attempts: HistoryEntry[];
@@ -46,10 +55,21 @@ export function MockInterviewsSection({ attempts }: Props) {
     );
   }
 
+  const recent = attempts.slice(0, PREVIEW_COUNT);
+  const hidden = attempts.length - recent.length;
+
   return (
     <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        {attempts.length} interview{attempts.length === 1 ? "" : "s"} taken
+        {recent.length < attempts.length
+          ? ` — showing the ${recent.length} most recent`
+          : ""}
+        .
+      </p>
+
       <ul className="space-y-3">
-        {attempts.map((a) => (
+        {recent.map((a) => (
           <li
             key={a.id}
             className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/20 p-3"
@@ -104,7 +124,9 @@ export function MockInterviewsSection({ attempts }: Props) {
           href="/mock-interviews/history"
           className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
         >
-          Full practice history
+          {hidden > 0
+            ? `All ${attempts.length} interviews and reports`
+            : "Full practice history"}
         </Link>
       </div>
     </div>

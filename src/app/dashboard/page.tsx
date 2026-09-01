@@ -12,7 +12,11 @@ import { EventsSection } from "@/components/dashboard-hub/events-section";
 import { FaqSection } from "@/components/dashboard-hub/faq-section";
 import { HUB_CARD_HOVER_CLASS } from "@/components/dashboard-hub/nav-items";
 import { getHubData } from "@/features/dashboard/get-hub-data";
-import { getCatalogue } from "@/features/interview/platform/service";
+import { getHistory } from "@/features/interview/platform/service";
+import {
+  listLiveDomains,
+  toDomainSummary,
+} from "@/features/interview/platform/domains";
 import { getCohortInterviewState } from "@/features/interview/cohort-eligibility";
 import { resolveProgramMemberForUser } from "@/lib/program-auth";
 import { toProgramMemberId } from "@/features/interview/provider";
@@ -62,7 +66,7 @@ const COHORT_MILESTONES = [
  * Kept here rather than in `getHubData` because it spans two subsystems the
  * hub data layer knows nothing about, and it must not be able to take the hub
  * down: the MockInterview tables exist on demo but the migration has not been
- * applied to production, so `getCatalogue` throws there until it is. Each half
+ * applied to production, so `getHistory` throws there until it is. Each half
  * degrades independently — a broken platform must not also hide an eligible
  * cohort interview.
  */
@@ -70,29 +74,57 @@ async function loadAvailableInterviews(userId: string): Promise<{
   mock: AvailableMockInterview[];
   cohort: AvailableCohortInterview[];
 }> {
-  const mock = await getCatalogue(userId)
-    .then((r) =>
-      r.ok
-        ? r.data
-            // LIVE only: the catalogue lists COMING_SOON domains because the
-            // roadmap is part of what that page is for, but this section is an
-            // offer and must contain nothing the candidate cannot open.
-            .filter((d) => d.status === "LIVE")
-            .map((d) => ({
-              slug: d.slug,
-              label: d.label,
-              blurb: d.blurb,
-              durationSec: d.durationSec,
-              questionCount: d.questionCount,
-              completedAttempts: d.completedAttempts,
-            }))
-        : [],
-    )
+  // LIVE only: the catalogue page lists COMING_SOON domains because the roadmap
+  // is part of what that page is for, but this section is an OFFER and must
+  // contain nothing the candidate cannot open.
+  //
+  // One history read serves all three per-domain facts below, which is why this
+  // does not call `getCatalogue`: that answers only the count, and the report
+  // link would need a second pass over the same rows.
+  const mock = await getHistory(userId)
+    .then((r): AvailableMockInterview[] => {
+      const history = r.ok ? r.data : [];
+      return listLiveDomains().map((domain) => {
+        const mine = history.filter((a) => a.domainSlug === domain.slug);
+        const completedAttempts = mine.filter(
+          (a) => a.status === "COMPLETED",
+        ).length;
+        const summary = toDomainSummary(domain);
+        return {
+          slug: summary.slug,
+          label: summary.label,
+          blurb: summary.blurb,
+          durationSec: summary.durationSec,
+          questionCount: summary.questionCount,
+          completedAttempts,
+          attemptsLeft:
+            domain.maxAttempts === null
+              ? null
+              : Math.max(0, domain.maxAttempts - completedAttempts),
+          // History is newest first, so the first hit is the latest report.
+          latestReportAttemptId: mine.find((a) => a.hasReport)?.id ?? null,
+        };
+      });
+    })
     .catch((e: unknown) => {
-      logger.warn("[dashboard] mock interview catalogue unavailable", {
+      logger.warn("[dashboard] mock interview history unavailable", {
         message: e instanceof Error ? e.message : String(e),
       });
-      return [] as AvailableMockInterview[];
+      // The domains are static, so the offer survives a database failure --
+      // only the per-candidate facts are lost.
+      return listLiveDomains().map((domain) => {
+        const summary = toDomainSummary(domain);
+        return {
+          slug: summary.slug,
+          label: summary.label,
+          blurb: summary.blurb,
+          durationSec: summary.durationSec,
+          questionCount: summary.questionCount,
+          completedAttempts: 0,
+          attemptsLeft: domain.maxAttempts,
+          latestReportAttemptId: null,
+        };
+      });
     });
 
   const cohort = await (async (): Promise<AvailableCohortInterview[]> => {

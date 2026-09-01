@@ -33,6 +33,20 @@ const FULL_REPORT: ReportProfile = {
   agentInsights: true,
 };
 
+/**
+ * Attempts allowed per domain, per candidate.
+ *
+ * Finite rather than unlimited: every attempt is a live model conversation plus
+ * speech-to-text and speech synthesis, so an unbounded retake loop is an
+ * unbounded bill. Three is enough to practise properly — a first run to see
+ * the shape of it, and two to actually improve — without the interview
+ * becoming something to grind until the score comes out right.
+ *
+ * Reports are unaffected: every attempt keeps its own, and they all stay
+ * readable from the practice history after the cap is reached.
+ */
+const ATTEMPT_LIMIT = 3;
+
 const DOMAINS: readonly InterviewDomain[] = [
   {
     slug: "ai-fluency",
@@ -50,32 +64,33 @@ const DOMAINS: readonly InterviewDomain[] = [
     capabilities: ["VOICE"],
     reportProfile: FULL_REPORT,
     resumable: false,
-    maxAttempts: null,
+    maxAttempts: ATTEMPT_LIMIT,
   },
   {
-    // The SLUG stays `behavioral` while the label changes. The slug is identity,
-    // not copy: it is persisted on every attempt row, pinned by the pack, and
-    // baked into report URLs. Renaming a display name is a copy change; renaming
-    // an identity key is a migration, and the two should never ride together.
-    slug: "behavioral",
-    label: "Workplace Situations",
+    // Capabilities are VOICE only, though this is the domain that will one day
+    // want CODE_SANDBOX. Pack v1 does not need one: what separates people who
+    // build well with an agent from people who merely build fast with one is
+    // what they hand over, what they check and whether they can still explain
+    // what shipped — all of which is spoken. Declaring a capability the room
+    // cannot mount would break the interview to advertise a roadmap.
+    slug: "agentic-coding",
+    label: "Vibe Coding",
     blurb:
-      "The people side of working: how you handle pressure, disagreement, ownership and change, told through real examples.",
+      "Building with an AI coding agent: what you hand over, what you check, and whether you could still explain what shipped.",
     purpose:
-      "A professional and people-situations interview. It asks about real situations you have been in and listens for communication, ownership, decision-making, adaptability, problem-solving and self-awareness. There is nothing technical in it and nothing about AI — it is deliberately separate from AI Fluency, and the two assess different things. Take this one to practise the round where you are asked to talk about yourself and your work rather than about a technology.",
-    family: "General",
+      "A practical interview about working with AI coding agents. It asks what you have actually built with one, how you set it up, how you establish that what it wrote is correct, and where you draw the line. It is spoken — you will not be asked to write code — and it takes no position on whether heavy delegation is good, only on whether you stay responsible for what ships.",
+    family: "AI",
     status: "LIVE",
-    rubricId: "behavioral-v1",
+    rubricId: "agentic-coding-v1",
     strategy: "AUTHORED_PACK",
-    packRef: { packId: "behavioral", version: 1 },
+    packRef: { packId: "agentic-coding", version: 1 },
     durationSec: 900,
     capabilities: ["VOICE"],
     reportProfile: FULL_REPORT,
     resumable: false,
-    maxAttempts: null,
+    maxAttempts: ATTEMPT_LIMIT,
   },
-
-  /* ------------------------------------------------------------------------
+/* ------------------------------------------------------------------------
    * COMING_SOON. Registered so the catalogue is honest about the roadmap and
    * so the config layer is exercised by more than the two live entries.
    *
@@ -105,7 +120,7 @@ const DOMAINS: readonly InterviewDomain[] = [
     capabilities: ["VOICE"],
     reportProfile: FULL_REPORT,
     resumable: false,
-    maxAttempts: null,
+    maxAttempts: ATTEMPT_LIMIT,
   },
   {
     slug: "technical-screen",
@@ -121,7 +136,7 @@ const DOMAINS: readonly InterviewDomain[] = [
     capabilities: ["VOICE"],
     reportProfile: FULL_REPORT,
     resumable: false,
-    maxAttempts: null,
+    maxAttempts: ATTEMPT_LIMIT,
   },
   {
     slug: "ai-system-design",
@@ -137,23 +152,7 @@ const DOMAINS: readonly InterviewDomain[] = [
     capabilities: ["VOICE", "WHITEBOARD"],
     reportProfile: FULL_REPORT,
     resumable: false,
-    maxAttempts: null,
-  },
-  {
-    slug: "agentic-coding",
-    label: "Agentic / AI-assisted Coding",
-    blurb:
-      "Working with an AI coding agent: what you delegate, what you verify, and how you stay in control.",
-    family: "AI",
-    status: "COMING_SOON",
-    rubricId: null,
-    strategy: "AUTHORED_PACK",
-    packRef: null,
-    durationSec: 1800,
-    capabilities: ["VOICE", "CODE_SANDBOX"],
-    reportProfile: FULL_REPORT,
-    resumable: false,
-    maxAttempts: null,
+    maxAttempts: ATTEMPT_LIMIT,
   },
   {
     slug: "coding-dsa",
@@ -169,7 +168,7 @@ const DOMAINS: readonly InterviewDomain[] = [
     capabilities: ["VOICE", "CODE_SANDBOX"],
     reportProfile: FULL_REPORT,
     resumable: false,
-    maxAttempts: null,
+    maxAttempts: ATTEMPT_LIMIT,
   },
   {
     slug: "forward-deployed-ai-engineer",
@@ -185,7 +184,29 @@ const DOMAINS: readonly InterviewDomain[] = [
     capabilities: ["VOICE"],
     reportProfile: FULL_REPORT,
     resumable: false,
-    maxAttempts: null,
+    maxAttempts: ATTEMPT_LIMIT,
+  },
+  {
+    // The SLUG stays `behavioral` while the label changes. The slug is identity,
+    // not copy: it is persisted on every attempt row, pinned by the pack, and
+    // baked into report URLs. Renaming a display name is a copy change; renaming
+    // an identity key is a migration, and the two should never ride together.
+    slug: "behavioral",
+    label: "Workplace Situations",
+    blurb:
+      "The people side of working: how you handle pressure, disagreement, ownership and change, told through real examples.",
+    purpose:
+      "A professional and people-situations interview. It asks about real situations you have been in and listens for communication, ownership, decision-making, adaptability, problem-solving and self-awareness. There is nothing technical in it and nothing about AI — it is deliberately separate from AI Fluency, and the two assess different things. Take this one to practise the round where you are asked to talk about yourself and your work rather than about a technology.",
+    family: "General",
+    status: "LIVE",
+    rubricId: "behavioral-v1",
+    strategy: "AUTHORED_PACK",
+    packRef: { packId: "behavioral", version: 1 },
+    durationSec: 900,
+    capabilities: ["VOICE"],
+    reportProfile: FULL_REPORT,
+    resumable: false,
+    maxAttempts: ATTEMPT_LIMIT,
   },
 ];
 

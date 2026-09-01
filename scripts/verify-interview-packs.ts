@@ -58,9 +58,9 @@ function expectThrows(label: string, fn: () => void): void {
 
 console.log("\nplatform packs");
 
-check("both packs are registered", () => {
+check("every published pack is registered", () => {
   const ids = allPacks().map((p) => `${p.id}@${p.version}`).sort();
-  assert.deepEqual(ids, ["ai-fluency@1", "behavioral@1"]);
+  assert.deepEqual(ids, ["agentic-coding@1", "ai-fluency@1", "behavioral@1"]);
 });
 
 check("every question id is unique across all packs", () => {
@@ -249,13 +249,13 @@ check("eight domains are registered", () => {
   assert.equal(listDomains().length, 8);
 });
 
-check("exactly two are LIVE", () => {
+check("exactly three are LIVE", () => {
   const live = listLiveDomains().map((d) => d.slug).sort();
-  assert.deepEqual(live, ["ai-fluency", "behavioral"]);
+  assert.deepEqual(live, ["agentic-coding", "ai-fluency", "behavioral"]);
 });
 
-check("six are COMING_SOON", () => {
-  assert.equal(listDomains().filter((d) => d.status === "COMING_SOON").length, 6);
+check("five are COMING_SOON", () => {
+  assert.equal(listDomains().filter((d) => d.status === "COMING_SOON").length, 5);
 });
 
 check("every LIVE domain is startable, no COMING_SOON one is", () => {

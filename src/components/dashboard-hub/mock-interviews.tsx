@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { History, Mic } from "lucide-react";
+import { FileText, History, Mic } from "lucide-react";
 import {
   HUB_BUTTON_CLASS,
   HUB_CARD_HOVER_CLASS,
@@ -13,8 +13,19 @@ export type AvailableMockInterview = {
   blurb: string;
   durationSec: number;
   questionCount: number;
-  /** Completed attempts so far — drives "Take again" vs "Start". */
+  /** Completed attempts so far — drives "Take again" vs "Start interview". */
   completedAttempts: number;
+  /** Attempts remaining under the domain's cap. `null` means uncapped. */
+  attemptsLeft: number | null;
+  /**
+   * The newest attempt of this domain that has a report, if any.
+   *
+   * Carried so the card can offer the report alongside a retake: a candidate
+   * who has done this interview usually wants to read what it said before
+   * deciding to sit it again, and making them go via the history page to do
+   * that is a detour through a list they did not need.
+   */
+  latestReportAttemptId: string | null;
 };
 
 /**
@@ -129,14 +140,40 @@ export function MockInterviews({ mock, cohort }: Props) {
                   {m.completedAttempts > 0
                     ? ` · ${m.completedAttempts} taken`
                     : ""}
+                  {m.attemptsLeft !== null && m.attemptsLeft > 0
+                    ? ` · ${m.attemptsLeft} left`
+                    : ""}
                 </p>
               </div>
-              <Link
-                href={`/mock-interviews/${m.slug}`}
-                className={cn(HUB_BUTTON_CLASS, "mt-4 w-full")}
-              >
-                {m.completedAttempts > 0 ? "Take again" : "Start interview"}
-              </Link>
+              <div className="mt-4 flex flex-col gap-2">
+                {m.latestReportAttemptId ? (
+                  <Link
+                    href={`/mock-interviews/${m.slug}/attempt/${m.latestReportAttemptId}/report`}
+                    className={cn(HUB_BUTTON_CLASS, "w-full")}
+                  >
+                    <FileText
+                      className="mr-1.5 size-4"
+                      strokeWidth={2}
+                      aria-hidden
+                    />
+                    View last report
+                  </Link>
+                ) : null}
+
+                {m.attemptsLeft === null || m.attemptsLeft > 0 ? (
+                  <Link
+                    href={`/mock-interviews/${m.slug}`}
+                    className={cn(HUB_BUTTON_CLASS, "w-full")}
+                  >
+                    {m.completedAttempts > 0 ? "Take again" : "Start interview"}
+                  </Link>
+                ) : (
+                  <p className="text-[13px] text-[#8F8F8F]">
+                    You have used all {m.completedAttempts} attempts. Your
+                    reports stay available.
+                  </p>
+                )}
+              </div>
             </li>
           ))}
         </ul>

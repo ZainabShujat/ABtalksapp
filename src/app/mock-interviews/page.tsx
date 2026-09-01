@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Mic, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Mic, ShieldCheck } from "lucide-react";
 import { auth } from "@/auth";
 import {
   listDomains,
@@ -55,8 +55,19 @@ export default async function MockInterviewsPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 md:py-14">
+      {/* The only entry point into this section that is not reached FROM
+          somewhere, so it is the only one that needs its own way back. The
+          detail and report pages already carry theirs. */}
+      <Link
+        href={signedIn ? "/dashboard" : "/"}
+        className="inline-flex items-center gap-1.5 text-[13px] text-[#4B4B4B] transition-colors hover:text-[#111111]"
+      >
+        <ArrowLeft className="size-3.5" strokeWidth={2} />
+        {signedIn ? "Back to dashboard" : "Back to ABTalks"}
+      </Link>
+
       {/* ------------------------------------------------------------ hero */}
-      <header className="max-w-2xl">
+      <header className="mt-5 max-w-2xl">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8F8F8F]">
           ABTalks Practice
         </p>

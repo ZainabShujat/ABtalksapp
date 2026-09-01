@@ -111,11 +111,61 @@ const BEHAVIORAL_V1: RubricDefinition = {
   ],
 };
 
+/**
+ * Vibe Coding — what the report is actually claiming.
+ *
+ * The thing worth measuring is NOT how much someone uses an agent. It is
+ * whether they stay responsible for what ships. So the heaviest weight sits on
+ * verification, and `control` is observed across the whole conversation rather
+ * than asked about directly — a candidate who is genuinely in control shows it
+ * in how they talk about every task, and a candidate who is not cannot recover
+ * it by answering one question well.
+ */
+const AGENTIC_CODING_V1: RubricDefinition = {
+  id: "agentic-coding-v1",
+  label: "Vibe Coding",
+  competencies: [
+    {
+      id: "delegation",
+      label: "What they hand over",
+      weight: 25,
+      expectations:
+        "Draws a real line between work they give the agent and work they keep, and can say what the line is based on rather than describing it as a mood.",
+      observedAcrossAnswers: false,
+    },
+    {
+      id: "direction",
+      label: "How they set the agent up",
+      weight: 25,
+      expectations:
+        "Describes what they actually give the agent — context, constraints, how the task is broken up — and what changes when the first attempt is wrong.",
+      observedAcrossAnswers: false,
+    },
+    {
+      id: "verification",
+      label: "How they check the output",
+      weight: 30,
+      expectations:
+        "Names a concrete way they establish that generated code is correct, beyond it running, and gives a real instance of something that looked right and was not.",
+      observedAcrossAnswers: false,
+    },
+    {
+      id: "control",
+      label: "Ownership of what ships",
+      weight: 20,
+      expectations:
+        "Talks about the codebase as something they remain answerable for — knows roughly what is in it, and does not describe shipping work they could not explain.",
+      observedAcrossAnswers: true,
+    },
+  ],
+};
+
 /* -------------------------------------------------------------- registry */
 
 const RUBRICS: Record<string, RubricDefinition> = {
   [AI_FLUENCY_V1.id]: AI_FLUENCY_V1,
   [BEHAVIORAL_V1.id]: BEHAVIORAL_V1,
+  [AGENTIC_CODING_V1.id]: AGENTIC_CODING_V1,
 };
 
 /**
