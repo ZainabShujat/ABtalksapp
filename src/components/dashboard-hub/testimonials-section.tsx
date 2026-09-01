@@ -4,6 +4,8 @@ import {
   TESTIMONIALS,
   type Testimonial,
 } from "@/components/landing/testimonials-carousel";
+import { HUB_CARD_HOVER_CLASS } from "@/components/dashboard-hub/nav-items";
+import { cn } from "@/lib/utils";
 
 function initials(name: string) {
   return name
@@ -15,7 +17,12 @@ function initials(name: string) {
 
 function TestimonialCard({ name, org, photo, quote }: Testimonial) {
   return (
-    <figure className="flex h-auto w-[300px] shrink-0 snap-start flex-col rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm sm:w-[360px]">
+    <figure
+      className={cn(
+        "flex h-auto w-[300px] shrink-0 snap-start flex-col rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm sm:w-[360px]",
+        HUB_CARD_HOVER_CLASS,
+      )}
+    >
       <span
         className="font-heading text-4xl leading-none text-neutral-300"
         aria-hidden
