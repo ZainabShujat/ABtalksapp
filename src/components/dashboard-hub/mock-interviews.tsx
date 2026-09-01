@@ -1,40 +1,67 @@
 import Link from "next/link";
-import { FileText, History, Mic } from "lucide-react";
-import type { HistoryEntry } from "@/features/interview/platform/service";
+import { History, Mic } from "lucide-react";
 import {
   HUB_BUTTON_CLASS,
   HUB_CARD_HOVER_CLASS,
 } from "@/components/dashboard-hub/nav-items";
 import { cn } from "@/lib/utils";
 
-/** How many recent attempts the dashboard shows before deferring to history. */
-const PREVIEW_COUNT = 3;
-
-const STATUS_LABEL: Record<string, string> = {
-  COMPLETED: "Completed",
-  ABANDONED: "Left early",
-  INVALID: "Not scored",
-};
-
-type Props = {
-  /** Newest first. Already user-scoped by the caller. */
-  attempts: HistoryEntry[];
+/** A mock interview this user can open right now. */
+export type AvailableMockInterview = {
+  slug: string;
+  label: string;
+  blurb: string;
+  durationSec: number;
+  questionCount: number;
+  /** Completed attempts so far — drives "Take again" vs "Start". */
+  completedAttempts: number;
 };
 
 /**
- * Mock interviews on the hub, directly under the heatmap.
+ * A cohort interview this user is eligible for right now.
  *
- * The heatmap and Continue your journey are both about the 60-day tracks; this
- * is the one surface on the hub for the AI agent interviews, which are open to
- * every registered user and belong to no track. It carries both entry points —
- * the catalogue and the history — because those answer different questions
- * ("what can I practise" vs "how did the last one go") and neither is reachable
- * from the sidebar today.
- *
- * Server Component: it renders data and links, nothing interactive.
+ * Only ever built for milestones that are unlocked and not yet taken, because
+ * a cohort interview is one-shot: a taken one is not something the candidate
+ * "can give", and a locked one is not either.
  */
-export function MockInterviews({ attempts }: Props) {
-  const recent = attempts.slice(0, PREVIEW_COUNT);
+export type AvailableCohortInterview = {
+  key: string;
+  label: string;
+  blurb: string;
+  href: string;
+  /** An attempt is already open — the CTA resumes rather than starts. */
+  inProgress: boolean;
+};
+
+type Props = {
+  mock: AvailableMockInterview[];
+  cohort: AvailableCohortInterview[];
+};
+
+function minutes(sec: number): string {
+  return `${Math.round(sec / 60)} min`;
+}
+
+const CARD_CLASS =
+  "flex w-[min(100%,320px)] shrink-0 snap-start flex-col rounded-2xl border border-neutral-200 bg-white p-5 sm:w-[300px] 2xl:w-full 2xl:max-w-none 2xl:shrink";
+
+/**
+ * Interviews the candidate can take, on the hub, directly under the heatmap.
+ *
+ * This is an OFFER, not a record: it lists what is open to them right now.
+ * Past attempts live on the practice history page, linked from the header —
+ * showing them here answered "what have I done" when the question the hub is
+ * asking is "what can I do next".
+ *
+ * Cohort milestones are listed alongside the open mock interviews because from
+ * the candidate's side they are the same act. They are filtered by the caller
+ * to the ones actually startable, so a locked or already-taken milestone never
+ * appears — this section must never look like a gate.
+ *
+ * Server Component: data and links only.
+ */
+export function MockInterviews({ mock, cohort }: Props) {
+  const hasAny = mock.length > 0 || cohort.length > 0;
 
   return (
     <section
@@ -48,7 +75,7 @@ export function MockInterviews({ attempts }: Props) {
         <div className="flex flex-wrap items-center gap-2">
           <Link href="/mock-interviews" className={HUB_BUTTON_CLASS}>
             <Mic className="mr-1.5 size-4" strokeWidth={2} aria-hidden />
-            Start a mock interview
+            All mock interviews
           </Link>
           <Link href="/mock-interviews/history" className={HUB_BUTTON_CLASS}>
             <History className="mr-1.5 size-4" strokeWidth={2} aria-hidden />
@@ -57,7 +84,7 @@ export function MockInterviews({ attempts }: Props) {
         </div>
       </div>
 
-      {recent.length === 0 ? (
+      {!hasAny ? (
         <div
           className={cn(
             "mt-4 rounded-2xl border border-neutral-200 bg-white p-6",
@@ -72,53 +99,44 @@ export function MockInterviews({ attempts }: Props) {
         </div>
       ) : (
         <ul className="no-scrollbar mt-4 flex gap-4 overflow-x-auto pb-1 snap-x snap-mandatory 2xl:grid 2xl:grid-cols-3 2xl:overflow-visible 2xl:pb-0 2xl:snap-none">
-          {recent.map((a) => (
-            <li
-              key={a.id}
-              className={cn(
-                "flex w-[min(100%,320px)] shrink-0 snap-start flex-col rounded-2xl border border-neutral-200 bg-white p-5 sm:w-[300px] 2xl:w-full 2xl:max-w-none 2xl:shrink",
-                HUB_CARD_HOVER_CLASS,
-              )}
-            >
-              <div className="flex min-h-0 flex-1 items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-inter font-bold text-black">
-                    {a.domainLabel}
-                  </p>
-                  <p className="mt-1 text-sm text-[#555555]">
-                    Attempt {a.attemptNumber}
-                    {" · "}
-                    {a.createdAt.toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                    })}
-                    {" · "}
-                    {STATUS_LABEL[a.status] ?? a.status}
-                  </p>
-                </div>
-                {a.status === "COMPLETED" && a.overallScore !== null ? (
-                  <span className="shrink-0 text-[15px] font-bold text-black">
-                    {(a.overallScore / 10).toFixed(1)}
-                    <span className="text-[13px] font-normal text-[#8F8F8F]">
-                      /10
-                    </span>
-                  </span>
-                ) : null}
+          {/* Cohort milestones first: they are time-bound and one-shot, so a
+              candidate who is eligible for one should not have to scroll. */}
+          {cohort.map((c) => (
+            <li key={c.key} className={cn(CARD_CLASS, HUB_CARD_HOVER_CLASS)}>
+              <div className="min-h-0 flex-1">
+                <span className="inline-flex rounded-[4px] border border-[#E05226]/40 bg-[#FFF5F0] px-2 py-0.5 text-[11px] font-semibold text-[#E05226]">
+                  AI Cohort
+                </span>
+                <p className="mt-2 font-inter font-bold text-black">{c.label}</p>
+                <p className="mt-1 text-sm text-[#555555]">{c.blurb}</p>
               </div>
+              <Link
+                href={c.href}
+                className={cn(HUB_BUTTON_CLASS, "mt-4 w-full")}
+              >
+                {c.inProgress ? "Resume interview" : "Start interview"}
+              </Link>
+            </li>
+          ))}
 
-              {a.hasReport ? (
-                <Link
-                  href={`/mock-interviews/${a.domainSlug}/attempt/${a.id}/report`}
-                  className={cn(HUB_BUTTON_CLASS, "mt-4 w-full")}
-                >
-                  <FileText className="mr-1.5 size-4" strokeWidth={2} aria-hidden />
-                  View report
-                </Link>
-              ) : (
-                <p className="mt-4 text-sm text-[#8F8F8F]">
-                  This attempt wasn&rsquo;t scored.
+          {mock.map((m) => (
+            <li key={m.slug} className={cn(CARD_CLASS, HUB_CARD_HOVER_CLASS)}>
+              <div className="min-h-0 flex-1">
+                <p className="font-inter font-bold text-black">{m.label}</p>
+                <p className="mt-1 text-sm text-[#555555]">{m.blurb}</p>
+                <p className="mt-2 text-[13px] text-[#8F8F8F]">
+                  {minutes(m.durationSec)} · {m.questionCount} questions
+                  {m.completedAttempts > 0
+                    ? ` · ${m.completedAttempts} taken`
+                    : ""}
                 </p>
-              )}
+              </div>
+              <Link
+                href={`/mock-interviews/${m.slug}`}
+                className={cn(HUB_BUTTON_CLASS, "mt-4 w-full")}
+              >
+                {m.completedAttempts > 0 ? "Take again" : "Start interview"}
+              </Link>
             </li>
           ))}
         </ul>
