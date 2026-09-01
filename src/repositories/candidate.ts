@@ -1,6 +1,6 @@
 import "server-only";
 import { CandidatePersona, UserType, type Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma, writeClient } from "@/lib/db";
 import { isNewCandidateRepoEnabled } from "@/lib/feature-flags";
 import {
   pickPrimaryEducation,
@@ -291,6 +291,36 @@ export async function updateStudentFields(
   data: Prisma.StudentProfileUpdateInput,
 ) {
   return studentProfile.update({ where: { userId }, data });
+}
+
+export async function updateCandidateLinks(
+  userId: string,
+  data: { linkedinUrl: string; githubUsername: string; skills: string[] },
+): Promise<void> {
+  await writeClient().$transaction(async (tx) => {
+    await ensureCandidateProfile(tx, userId);
+    await tx.candidateProfile.update({
+      where: { userId },
+      data: {
+        linkedinUrl: data.linkedinUrl,
+        githubUsername: data.githubUsername,
+      },
+    });
+  });
+  const sp = await studentProfile.findUnique({
+    where: { userId },
+    select: { userId: true },
+  });
+  if (sp) {
+    await studentProfile.update({
+      where: { userId },
+      data: {
+        linkedinUrl: data.linkedinUrl,
+        githubUsername: data.githubUsername,
+        skills: data.skills,
+      },
+    });
+  }
 }
 
 /* ─── Candidate availability (078 `CandidatePreference`) ────────────────────

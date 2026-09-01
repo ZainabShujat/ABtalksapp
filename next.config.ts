@@ -50,6 +50,27 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/talent", destination: "/hire", permanent: true },
+      // Temporary: /program is a parent namespace with no index yet.
+      { source: "/program", destination: "/dashboard", permanent: false },
+      // Legacy AI Cohort URLs (bookmarks, login ?from=, emails). Explicit
+      // sources only — a /program/:path* catch-all would steal public/program/*.png.
+      { source: "/program/apply", destination: "/program/ai-cohort/apply", permanent: true },
+      { source: "/program/assessment", destination: "/program/ai-cohort/assessment", permanent: true },
+      { source: "/program/dashboard", destination: "/program/ai-cohort/dashboard", permanent: true },
+      { source: "/program/day/:day", destination: "/program/ai-cohort/day/:day", permanent: true },
+      { source: "/program/curriculum", destination: "/program/ai-cohort/curriculum", permanent: true },
+      { source: "/program/videos", destination: "/program/ai-cohort/videos", permanent: true },
+      { source: "/program/leaderboard", destination: "/program/ai-cohort/leaderboard", permanent: true },
+      {
+        source: "/program/cohort-interview/:blueprint",
+        destination: "/program/ai-cohort/cohort-interview/:blueprint",
+        permanent: true,
+      },
+      {
+        source: "/program/cohort-interview/:blueprint/report",
+        destination: "/program/ai-cohort/cohort-interview/:blueprint/report",
+        permanent: true,
+      },
       // /ai-workshop was renamed to /workshop. The old path is in confirmation
       // emails already sent, WhatsApp shares and bookmarks, so it has to keep
       // resolving rather than 404.

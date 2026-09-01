@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Domain } from "@prisma/client";
 import { isProgramEnabled } from "@/lib/feature-flags";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import {
   HUB_BUTTON_CLASS,
   HUB_CARD_HOVER_CLASS,
@@ -17,12 +18,14 @@ type RoadmapsProps = {
   joinedDomains: Domain[];
   abandonedDomains: Domain[];
   hasProgramMembership: boolean;
+  showDatabricks?: boolean;
 };
 
 export function Roadmaps({
   joinedDomains,
   abandonedDomains,
   hasProgramMembership,
+  showDatabricks = false,
 }: RoadmapsProps) {
   const joined = new Set(joinedDomains);
   const abandoned = new Set(abandonedDomains);
@@ -80,14 +83,14 @@ export function Roadmaps({
           <h2 className="font-heading text-xl font-semibold uppercase text-[#e05226] lg:ml-2">
             Prep Kit
           </h2>
-          <div
-            className={cn(
-              "mt-4 rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6",
-              HUB_CARD_HOVER_CLASS,
-            )}
-          >
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div
+              className={cn(
+                "flex flex-col rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6",
+                HUB_CARD_HOVER_CLASS,
+              )}
+            >
+              <div className="min-w-0 flex-1">
                 <p className="font-inter text-lg font-bold text-black">
                   31 Days AI Cohort
                 </p>
@@ -96,12 +99,40 @@ export function Roadmaps({
                 </p>
               </div>
               <Link
-                href={hasProgramMembership ? "/program/dashboard" : "/program/apply"}
-                className={cn(HUB_BUTTON_CLASS, "shrink-0")}
+                href={
+                  hasProgramMembership
+                    ? `${PROGRAM_AI_COHORT_BASE}/dashboard`
+                    : `${PROGRAM_AI_COHORT_BASE}/apply`
+                }
+                className={cn(HUB_BUTTON_CLASS, "mt-4 w-full")}
               >
                 {hasProgramMembership ? "Continue" : "Start Challenge"}
               </Link>
             </div>
+            {showDatabricks ? (
+              <div
+                className={cn(
+                  "flex flex-col rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6",
+                  HUB_CARD_HOVER_CLASS,
+                )}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="font-inter text-lg font-bold text-black">
+                    31 Days Databricks
+                  </p>
+                  <p className="mt-1 text-sm text-[#555555]">
+                    Build a healthcare-claims Lakehouse on Databricks
+                    in 31 days.
+                  </p>
+                </div>
+                <Link
+                  href="/program/databricks"
+                  className={cn(HUB_BUTTON_CLASS, "mt-4 w-full")}
+                >
+                  Open
+                </Link>
+              </div>
+            ) : null}
           </div>
         </section>
       ) : null}

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { isProgramEnabled } from "@/lib/feature-flags";
 import { logger } from "@/lib/logger";
 import { resolveProgramMemberForUser } from "@/lib/program-auth";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import { isUserRegistered } from "@/features/hackathon/registration-status";
 import { findChallengeEnrollment } from "@/repositories/learning";
 
@@ -77,7 +78,7 @@ export async function getLandingState(): Promise<LandingState> {
           }
         : null,
       programCta: programMember
-        ? { href: "/program/dashboard", ctaLabel: "Open dashboard" }
+        ? { href: `${PROGRAM_AI_COHORT_BASE}/dashboard`, ctaLabel: "Open dashboard" }
         : null,
       hackathonCta: hackathonRegistered
         ? { href: "/hackathon/dashboard", ctaLabel: "Open dashboard" }

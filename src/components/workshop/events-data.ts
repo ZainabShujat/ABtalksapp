@@ -1,6 +1,7 @@
 import { formatInTimeZone } from "date-fns-tz";
 import type { LucideIcon } from "lucide-react";
 import { IST } from "@/lib/date-utils";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import {
   BriefcaseBusiness,
   CalendarClock,
@@ -134,7 +135,7 @@ export const EVENTS: WorkshopEvent[] = [
     desc: "31 days of guided missions, concept checks and graded projects for working professionals, ending in a recruiter-facing profile.",
     host: "ABTalks",
     location: "Online · 31 days",
-    href: "/program",
+    href: PROGRAM_AI_COHORT_BASE,
     ctaLabel: "View program",
   },
   {

@@ -131,7 +131,7 @@ Four distinct products. Each has its own tagline, audience, cadence, and success
 
 ---
 
-### 3.3 31-Day AI Cohort — `/program`
+### 3.3 31-Day AI Cohort — `/program/ai-cohort`
 - **Status:** Applications open
 - **Tagline:** Production-grade enterprise AI chatbot in 31 days.
 - **Cost:** Free (requires cohort join code)
@@ -517,14 +517,14 @@ A: Anthropic (Claude is the primary AI stack — programs are Claude-native). Br
 **Public (no login required):**
 - `/` — Home
 - `/challenges` — 60-Day Coding Challenge
-- `/program` — 31-Day AI Cohort
+- `/program/ai-cohort` — 31-Day AI Cohort
 - `/hackathon` — Vibe Code Hackathon (ViCodathon)
 - `/claude-signup` — 60-Day Claude AI Challenge
 
 **Auth-walled (Google OAuth):**
 - `/login`
 - `/register?domain=SE|DS|AI`
-- `/program/apply`
+- `/program/ai-cohort/apply`
 - `/hackathon/register`
 - (Presumed) `/dashboard`, `/profile`, `/leaderboard`
 

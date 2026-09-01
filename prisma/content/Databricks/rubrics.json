@@ -1,0 +1,106 @@
+[
+  {
+    "moduleNumber": 1,
+    "title": "Module 1 — Ingestion & the Bronze Layer",
+    "criteria": [
+      {
+        "name": "Medallion & architecture design",
+        "weight": 25,
+        "description": "Clear raw→Bronze design, sensible Volume/catalog layout, README explains the data flow."
+      },
+      {
+        "name": "Ingestion implementation",
+        "weight": 30,
+        "description": "Working ingestion (batch + Auto Loader), incremental/idempotent, metadata columns present."
+      },
+      {
+        "name": "Delta & data handling",
+        "weight": 25,
+        "description": "Correct use of Delta tables, schema handling, and preservation of raw fidelity in Bronze."
+      },
+      {
+        "name": "Documentation & ops",
+        "weight": 20,
+        "description": "Data dictionary, setup notes, and evidence the pipeline runs without guesswork."
+      }
+    ]
+  },
+  {
+    "moduleNumber": 2,
+    "title": "Module 2 — Modeling: Silver & Gold",
+    "criteria": [
+      {
+        "name": "Cleaning & data quality",
+        "weight": 30,
+        "description": "Typed, deduplicated Silver with explicit quality rules and a quarantine path."
+      },
+      {
+        "name": "Dimensional model",
+        "weight": 30,
+        "description": "Coherent star schema (fact + dimensions), surrogate keys, defined grain."
+      },
+      {
+        "name": "Correctness & reconciliation",
+        "weight": 20,
+        "description": "Gold totals reconcile with Silver; KPIs defined precisely and computed correctly."
+      },
+      {
+        "name": "Documentation",
+        "weight": 20,
+        "description": "Design doc, KPI definitions, and readable, well-structured notebooks."
+      }
+    ]
+  },
+  {
+    "moduleNumber": 3,
+    "title": "Module 3 — Pipelines & Orchestration",
+    "criteria": [
+      {
+        "name": "Pipeline design",
+        "weight": 30,
+        "description": "Declarative Bronze→Silver→Gold pipeline with clean dataset boundaries."
+      },
+      {
+        "name": "Reliability & quality",
+        "weight": 25,
+        "description": "Expectations, retries, timeouts, and notifications configured sensibly."
+      },
+      {
+        "name": "Reproducibility",
+        "weight": 25,
+        "description": "Orchestrated job + Asset Bundle deploy the project from code."
+      },
+      {
+        "name": "Write-up & repo hygiene",
+        "weight": 20,
+        "description": "Write-up matches the repo; structure is navigable and versioned."
+      }
+    ]
+  },
+  {
+    "moduleNumber": 4,
+    "title": "Module 4 — Governance, BI & Capstone",
+    "criteria": [
+      {
+        "name": "Governance & security",
+        "weight": 30,
+        "description": "Unity Catalog grants, lineage, and row filters/column masks protect PHI appropriately."
+      },
+      {
+        "name": "Analytics & AI/BI",
+        "weight": 30,
+        "description": "Databricks SQL queries, a clear AI/BI dashboard, and a grounded Genie space."
+      },
+      {
+        "name": "End-to-end demo",
+        "weight": 20,
+        "description": "Live walkthrough from raw file to dashboard/Genie, with lineage traced back to source."
+      },
+      {
+        "name": "Repo hygiene & roadmap",
+        "weight": 20,
+        "description": "Clean repo, retrospective, and a prioritized v2 roadmap."
+      }
+    ]
+  }
+]

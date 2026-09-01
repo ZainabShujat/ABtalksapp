@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { LandingUser } from "@/features/landing/get-landing-state";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import { LandingUserMenu } from "../landing-user-menu";
 
 const NAV_LINKS = [
@@ -46,7 +47,7 @@ export function HubNav({ user }: Props) {
         {user ? (
           <LandingUserMenu user={user} />
         ) : (
-          <Link href="/program" className="hub-nav-cta">
+          <Link href={PROGRAM_AI_COHORT_BASE} className="hub-nav-cta">
             Get Started
           </Link>
         )}
@@ -81,7 +82,7 @@ export function HubNav({ user }: Props) {
               Sign in
             </Link>
             <Link
-              href="/program"
+              href={PROGRAM_AI_COHORT_BASE}
               className="hub-btn hub-btn-primary"
               onClick={close}
             >

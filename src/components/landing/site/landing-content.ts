@@ -1,3 +1,5 @@
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
+
 export const WHATSAPP_INVITE =
   "https://chat.whatsapp.com/LSru1BgvifpEB4OMZsaZEi";
 
@@ -321,7 +323,7 @@ export const COHORT_DEFAULTS: readonly Omit<
   {
     key: "program",
     title: "31 Days AI Cohort",
-    href: "/program",
+    href: PROGRAM_AI_COHORT_BASE,
     order: 1,
     bullets: [
       "Ship a production-grade healthcare chatbot",
@@ -448,7 +450,7 @@ export const FOOTER_COLUMNS = [
     title: "Programs",
     links: [
       { href: "/challenges", label: "60-Day Challenge" },
-      { href: "/program", label: "AI Cohort" },
+      { href: PROGRAM_AI_COHORT_BASE, label: "AI Cohort" },
       { href: "/hackathon", label: "Hackathon" },
       { href: "/claude-signup", label: "Claude Challenge" },
     ],

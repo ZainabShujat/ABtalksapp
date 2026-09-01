@@ -6,6 +6,7 @@ import { getRecruiterState } from "@/features/talent-pool/recruiter-registration
 import { prisma } from "@/lib/db";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 
 export default async function TalentPendingPage() {
   const session = await auth();
@@ -53,7 +54,7 @@ export default async function TalentPendingPage() {
           once you are approved.
         </p>
       )}
-      <Link href="/program" className={cn(buttonVariants({ variant: "outline" }))}>
+      <Link href={PROGRAM_AI_COHORT_BASE} className={cn(buttonVariants({ variant: "outline" }))}>
         Back to program
       </Link>
     </div>
