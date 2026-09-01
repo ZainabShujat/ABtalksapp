@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isKnownTrack } from "@/features/hire/track-registry";
 
 export const talentCandidateSourceSchema = z.enum([
   "PROGRAM",
@@ -26,7 +27,28 @@ export const talentEngagementStatusSchema = z.enum([
  */
 export const candidateRefSchema = z
   .string()
-  .regex(/^(PROGRAM|CLAUDE):c[a-z0-9]{6,}$/, "Invalid candidate reference.");
+  .superRefine((value, ctx) => {
+    const at = value.indexOf(":");
+    const source = at === -1 ? "" : value.slice(0, at);
+    const id = at === -1 ? "" : value.slice(at + 1);
+    // The track list lives in one place. This used to be a hardcoded
+    // `(PROGRAM|CLAUDE)` regex, written when those were the only two tracks —
+    // so once the pool widened, a CHALLENGE_60 or HACKATHON candidate could be
+    // shortlisted but never requested. The array parse failed on that one
+    // element and the recruiter was told "Select at least one candidate",
+    // which is the one thing they had definitely done.
+    if (!isKnownTrack(source)) {
+      ctx.addIssue({ code: "custom", message: "Invalid candidate reference." });
+      return;
+    }
+    // Ids are cuids, whatever the track. Kept strict: this is the string that
+    // addresses a person, and a loose shape here is a loose shape everywhere
+    // downstream. Eligibility is still re-checked against the source's own
+    // table in the action — a well-formed ref proves nothing about access.
+    if (!/^c[a-z0-9]{6,}$/.test(id)) {
+      ctx.addIssue({ code: "custom", message: "Invalid candidate reference." });
+    }
+  });
 
 /** A recruiter asking to be introduced to one candidate. */
 export const placeEngagementRequestSchema = z.object({
