@@ -76,15 +76,14 @@ export function ShortlistButton({
     );
     setInCart(next);
     onToggle?.(next);
-    toast.success(
-      next
-        ? podLabel
-          ? "Added to Shortlist"
-          : "Added to cart"
-        : podLabel
-          ? "Removed from Shortlist"
-          : "Removed from cart",
-    );
+    // Nothing on add. The shortlist bar appears with the count the moment a
+    // candidate goes in, and it is the designed confirmation — a toast on top
+    // of it is the same news twice, in a style the desk does not use anywhere
+    // else. Removal still speaks, because the bar only shrinks and has no way
+    // to say which row left.
+    if (!next) {
+      toast.success(podLabel ? "Removed from Shortlist" : "Removed from cart");
+    }
   }
 
   function toggle() {
@@ -100,15 +99,9 @@ export function ShortlistButton({
       }
       setInCart(result.data.shortlisted);
       onToggle?.(result.data.shortlisted);
-      toast.success(
-        result.data.shortlisted
-          ? podLabel
-            ? "Added to Shortlist"
-            : "Added to cart"
-          : podLabel
-            ? "Removed from Shortlist"
-            : "Removed from cart",
-      );
+      if (!result.data.shortlisted) {
+        toast.success(podLabel ? "Removed from Shortlist" : "Removed from cart");
+      }
     });
   }
 
