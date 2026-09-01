@@ -1,12 +1,17 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { clamp, norm } from "./motion/scroll-engine";
 import { useScrollScene } from "./motion/use-scroll-scene";
 import { PIPELINE } from "./landing-content";
 import { KeepThreeDashboard } from "./keep-three-dashboard";
 
-export function KeepThreeSection() {
+export function KeepThreeSection({
+  getStartedHref,
+}: {
+  getStartedHref: string;
+}) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [activeStage, setActiveStage] = useState(0);
 
@@ -22,7 +27,7 @@ export function KeepThreeSection() {
         <div className="keep__pin">
           <div className="container keep__grid">
             <div className="keep__text">
-              <p className="section-label">Keep the three Worth your time</p>
+              <p className="section-label">The platform and the process</p>
               <h2 className="h2">Get to know the elements!</h2>
 
               <ol className="pipeline" id="pipeline">
@@ -45,6 +50,12 @@ export function KeepThreeSection() {
                   </li>
                 ))}
               </ol>
+
+              <div className="keep__actions">
+                <Link href={getStartedHref} className="btn btn--primary">
+                  Get Started
+                </Link>
+              </div>
             </div>
 
             <KeepThreeDashboard activeStage={activeStage} />

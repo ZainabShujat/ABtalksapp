@@ -112,8 +112,10 @@ export function ActivityHeatmap({ cells, embedded = false }: ActivityHeatmapProp
   const clearTooltip = () => setTooltip(null);
 
   const Wrapper = embedded ? "div" : "section";
+  // lg/xl (laptop) trims the grid ~10% inside its own column — the dashboard
+  // grid columns are untouched, so the streak card never moves. 2xl opts out.
   const wrapperClass = embedded
-    ? "w-full min-w-0 flex flex-col lg:min-h-[350px]"
+    ? "w-full min-w-0 flex flex-col lg:min-h-[350px] lg:max-w-[90%] 2xl:max-w-none"
     : "scroll-mt-20 px-4 py-8 sm:px-6";
 
   return (
