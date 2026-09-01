@@ -69,7 +69,6 @@ function EventCard({
   event: (typeof EVENTS)[number];
   past?: boolean;
 }) {
-  const Icon = event.Icon;
   const href =
     event.href ??
     (event.register ? `/workshop/events#${event.id}` : "/workshop/events");
@@ -80,22 +79,10 @@ function EventCard({
       className={cn(
         "flex w-[280px] shrink-0 snap-start flex-col rounded-2xl border border-neutral-200 p-5 sm:w-[300px]",
         HUB_CARD_HOVER_CLASS,
-        past ? "bg-neutral-50 opacity-90" : "bg-white shadow-sm",
+        past ? "bg-white" : "bg-white shadow-sm",
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <span
-          className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-neutral-700"
-          aria-hidden
-        >
-          <Icon className="size-5" />
-        </span>
-        <span className="rounded-full border border-neutral-200 px-2.5 py-0.5 text-[10px] font-semibold tracking-wide text-neutral-600 uppercase">
-          {event.tag}
-        </span>
-      </div>
-
-      <h4 className="mt-4 font-inter text-base font-bold leading-snug text-black">
+      <h4 className="font-inter text-base font-bold leading-snug text-black">
         {event.title}
       </h4>
       <p className="mt-2 text-xs text-[#555555]">

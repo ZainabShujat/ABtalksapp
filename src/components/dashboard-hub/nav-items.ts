@@ -24,9 +24,9 @@ export const HUB_NAV_ACTIVE_CLASS = "bg-[#e05226]/10 text-[#e05226]";
 export const HUB_NAV_IDLE_CLASS =
   "text-[#555555] transition-colors duration-200 ease-[var(--ease-spark)] hover:bg-[#e05226]/10 hover:text-[#e05226]";
 
-/** Card hover — subtle peach tint and soft shadow only (no lift or border change). */
+/** Card hover — peach tint and soft shadow (no border change, no lift). */
 export const HUB_CARD_HOVER_CLASS =
-  "transition-[box-shadow,background-color] duration-200 ease-[var(--ease-spark)] hover:bg-[#FFF5F0] hover:shadow-[0_2px_10px_rgba(17,17,17,0.04)]";
+  "transition-[box-shadow,background-color] duration-[180ms] ease-in-out hover:bg-[#FFFAF8] hover:shadow-[0_8px_24px_rgba(0,0,0,0.05)]";
 
 export const HUB_TEXT_LINK_CLASS =
   "group inline-flex items-center gap-1 text-sm font-medium text-black transition-colors duration-200 ease-[var(--ease-spark)] hover:text-[#e05226]";
