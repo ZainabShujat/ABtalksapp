@@ -21,6 +21,7 @@ import {
 import { MIN_AUDIO_BYTES } from "@/features/interview/voice-contract";
 import {
   COHORT_INTERVIEW_DURATION_SEC,
+  INTERVIEW_SILENCE_MS,
   MAX_ANSWER_MS,
   MAX_LANGUAGE_RETRIES_PER_QUESTION,
   PROCESSING_WATCHDOG_MS,
@@ -45,9 +46,65 @@ import {
   submitInterviewAnswerAction,
 } from "@/app/actions/interview-actions";
 import type {
+  AnswerTurnData,
   ClientQuestion,
   FinishInterviewData,
 } from "@/features/interview/service";
+
+/**
+ * What an injected action must resolve to.
+ *
+ * Structural, not nominal: the platform's actions return their own data types,
+ * and the room only ever reads the fields named here. Widening `data` to
+ * `unknown` on finish is what lets `onFinishedAction` stay the caller's concern.
+ */
+type RoomAnswerResult =
+  | { ok: true; data: AnswerTurnData }
+  | { ok: false; message: string };
+type RoomFinishResult<T> = { ok: true; data: T } | { ok: false; message: string };
+
+/**
+ * The sentences that differ between one kind of interview and another.
+ *
+ * Everything else in this room is domain-blind, but a handful of lines were
+ * written for the cohort and are FALSE anywhere else: a mock candidate has
+ * submitted no work to read through, holds no milestone, and does not return to
+ * the programme dashboard. Copy that confidently describes something the
+ * candidate never did is worse than generic copy, so the strings are injected.
+ *
+ * Defaults are the cohort's existing wording, verbatim.
+ */
+export type RoomCopy = {
+  /** Spoken-position placeholder while the first question is prepared. */
+  preparing: string;
+  /** What ending early costs, when past the halfway mark. */
+  endPastHalfway: string;
+  /** Where an abandoned attempt leaves the candidate. */
+  endBeforeHalfway: string;
+  /** Shown when the attempt failed and was not scored. */
+  notScored: string;
+  /**
+   * Status shown while the answer is being processed.
+   *
+   * The cohort says "Evaluating your answer", which narrates the pipeline at the
+   * candidate: it tells them they are being assessed at the exact moment a real
+   * interviewer would just be thinking. Overridable so a conversational
+   * interview can say something a person would.
+   */
+  processingLabel: string;
+};
+
+export const COHORT_ROOM_COPY: RoomCopy = {
+  preparing:
+    "Hang tight — I'm reading through the work you submitted and putting your questions together.",
+  endPastHalfway:
+    "You're more than halfway through this assessment, so ending now will score what you've answered and generate your report. Questions you haven't reached count as unanswered, and this milestone will be marked complete.",
+  endBeforeHalfway:
+    "Your milestone stays open, so you can start a fresh interview from the dashboard whenever you're ready.",
+  notScored:
+    "This attempt was not scored, so it has not been counted. You can start a fresh interview from the dashboard.",
+  processingLabel: "Evaluating your answer",
+};
 
 /**
  * The interview room.
@@ -235,13 +292,30 @@ function formatClock(totalSeconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export function InterviewRoom({
+export function InterviewRoom<TFinish = FinishInterviewData>({
   interviewId,
   title,
   firstQuestion,
   openingPrompt,
   onFinishedAction,
   onAbandonedAction,
+  // Dependency injection, so the interview platform can reuse this room rather
+  // than fork 2,000 lines of audio and turn-taking. Every default is the cohort
+  // behaviour that existed before these props, so a caller that passes none is
+  // byte-for-byte unchanged.
+  submitAnswerAction = submitInterviewAnswerAction,
+  // Cast because a default value cannot be typed against an unbound generic.
+  // It is only ever reached when `TFinish` is its default, `FinishInterviewData`
+  // — which is exactly what this action returns.
+  finishAction = finishInterviewAction as unknown as (input: {
+    interviewId: string;
+  }) => Promise<RoomFinishResult<TFinish>>,
+  abandonAction = abandonInterviewAction,
+  ttsEndpoint = "/api/interview/tts",
+  durationSec = COHORT_INTERVIEW_DURATION_SEC,
+  minAnsweredToScore,
+  silenceMs = INTERVIEW_SILENCE_MS,
+  roomCopy = COHORT_ROOM_COPY,
 }: {
   interviewId: string;
   title: string;
@@ -259,8 +333,59 @@ export function InterviewRoom({
    * shows interviewer lines only, so there is no candidate label to print.
    */
   candidateName?: string;
-  onFinishedAction: (data: FinishInterviewData) => void;
+  /**
+   * Handed whatever `finishAction` resolved to. Generic so the platform can
+   * return its own result shape instead of fabricating a cohort one; the
+   * default keeps every existing cohort call site typed exactly as before.
+   */
+  onFinishedAction: (data: TFinish) => void;
   onAbandonedAction: () => void;
+
+  /* --- injection seams (plan 103 §4.1). Cohort passes none. --------------- */
+
+  /**
+   * Submits one answer. The shape is the cohort action's, and the platform's
+   * action matches it deliberately: the room must not know which interview it
+   * is conducting.
+   */
+  submitAnswerAction?: (input: {
+    interviewId: string;
+    questionId: string;
+    answerText: string;
+  }) => Promise<RoomAnswerResult>;
+  /** Scores the attempt. Whatever it resolves to is handed to `onFinishedAction`. */
+  finishAction?: (input: {
+    interviewId: string;
+  }) => Promise<RoomFinishResult<TFinish>>;
+  /** Closes the attempt without scoring it. */
+  abandonAction?: (input: { interviewId: string }) => Promise<unknown>;
+  /**
+   * Where to POST for speech. The body is always `{interviewId, line, variant}`
+   * — a KIND, never text — so whichever endpoint serves it can only voice what
+   * that interview would have said to that candidate.
+   */
+  ttsEndpoint?: string;
+  /** Session length. Per-domain on the platform; fixed on the cohort. */
+  durationSec?: number;
+  /**
+   * Answers required before finishing can produce a report. Supplied by the
+   * platform from its own exported constant so the number lives in one place;
+   * the cohort omits it and keeps its halfway rule alone.
+   */
+  minAnsweredToScore?: number;
+  /**
+   * How long a pause ends the candidate's turn.
+   *
+   * Defaults to `INTERVIEW_SILENCE_MS` (10s), the cohort's current value. That
+   * was raised from 4.5s to 5s to 10s over time, the last bump in a commit
+   * called "fixed all audio errors" — so it is load-bearing for the cohort and
+   * is not changed here. A conversational interview wants a much shorter pause:
+   * ten seconds of dead air after someone finishes a sentence is the single
+   * thing that makes the exchange feel least like a conversation.
+   */
+  silenceMs?: number;
+  /** Interview-specific wording. Defaults to the cohort's, unchanged. */
+  roomCopy?: RoomCopy;
 }) {
   const opening = openingPrompt?.trim() || firstQuestion.text;
   const [turns, setTurns] = useState<Turn[]>([
@@ -460,6 +585,39 @@ export function InterviewRoom({
    * without muting a genuine repeat.
    */
   const speakingRef = useRef<string | null>(null);
+
+  /**
+   * Which `speak()` call currently owns the floor.
+   *
+   * Bumped on every entry. Each call captures its own number and re-checks it
+   * after every await, so a slow earlier call that resolves late cannot write
+   * to the transcript, start audio, or hand the floor back once a newer line
+   * has taken over.
+   */
+  const speakGenRef = useRef(0);
+
+  /**
+   * Stops whatever the interviewer is currently saying, immediately.
+   *
+   * Both channels have to be cut: the server-audio element AND the browser
+   * speech-synthesis fallback, because either may be the one actually making
+   * sound. Pausing without clearing `audioRef` would leave a stopped element
+   * that a later `stopReveal` still reads from.
+   *
+   * This is deliberately a standalone primitive rather than inline cleanup:
+   * barge-in needs exactly this call the instant the candidate starts speaking.
+   */
+  const cancelSpeech = useCallback(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.onended = null;
+      audio.onerror = null;
+      audioRef.current = null;
+    }
+    if (typeof window !== "undefined") window.speechSynthesis?.cancel();
+    speakingRef.current = null;
+  }, []);
   /**
    * How many room-composed lines have been spoken this interview.
    *
@@ -605,11 +763,28 @@ export function InterviewRoom({
    */
   const speak = useCallback(
     async (text: string, kind: RoomLineKind = "latest", variant = 0) => {
-      // Re-entrancy guard: the same line already has audio in flight (a
+      // Re-entrancy guard: the SAME line already has audio in flight (a
       // double-invoked effect, a re-render). Return without touching the phase —
       // the call that is already running owns it, and stamping "idle" here would
       // hand the floor back underneath a line still being spoken.
       if (speakingRef.current === text) return;
+
+      // A DIFFERENT line takes over, and must stop the current one first.
+      //
+      // This guard used to be text-only, which meant two different lines could
+      // both be in flight: each fetched its own audio, each called
+      // `new Audio()`, and the second overwrote `audioRef.current` so the first
+      // was never stopped. Both then played at once — the interviewer talking
+      // over itself. It showed up most at completion, where a closing line can
+      // arrive while the previous turn is still speaking.
+      cancelSpeech();
+
+      // Every await below re-checks this. A slower earlier call that resolves
+      // after a newer one has started must not write its text into the
+      // transcript or hand the floor back.
+      const generation = ++speakGenRef.current;
+      const stale = () => speakGenRef.current !== generation;
+
       speakingRef.current = text;
       setPhase("speaking");
       // Hide the line until audio actually starts. Otherwise the full prompt
@@ -654,7 +829,7 @@ export function InterviewRoom({
         // otherwise leave the room in "speaking" forever with no question
         // audible and no way forward. Past this we stop waiting and let the
         // browser voice read the line instead.
-        const res = await fetch("/api/interview/tts", {
+        const res = await fetch(ttsEndpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           // The KIND of line, never its text. Lines the room composes itself —
@@ -666,11 +841,19 @@ export function InterviewRoom({
           signal: AbortSignal.timeout(TTS_TIMEOUT_MS),
         });
 
+        if (stale()) return;
+
         if (res.ok) {
           const reported = decodeSpokenLine(res.headers.get("X-Interview-Line"));
           if (reported) spoken = reported;
 
           const url = URL.createObjectURL(await res.blob());
+          // Superseded while the audio was downloading. Drop it rather than
+          // starting a second voice on top of the one now speaking.
+          if (stale()) {
+            URL.revokeObjectURL(url);
+            return;
+          }
           const audio = new Audio(url);
           audioRef.current = audio;
           await audio.play();
@@ -688,6 +871,11 @@ export function InterviewRoom({
         /* browser voice fallback */
         await viaBrowser();
       } finally {
+        // Only the generation that still owns the floor may finish the turn. A
+        // superseded call falling through here would stamp "idle" underneath a
+        // line that is currently being spoken.
+        if (stale()) return;
+
         // Whatever happened, the full line ends up visible: a reader must never
         // be left with a half-sentence because audio failed midway.
         stopReveal();
@@ -708,7 +896,7 @@ export function InterviewRoom({
         setPhase("idle");
       }
     },
-    [interviewId, startReveal, stopReveal],
+    [interviewId, ttsEndpoint, startReveal, stopReveal, cancelSpeech],
   );
 
 
@@ -778,7 +966,7 @@ export function InterviewRoom({
       setPhase("processing");
       setError(null);
 
-      const turn = await submitInterviewAnswerAction({
+      const turn = await submitAnswerAction({
         interviewId,
         questionId: question.id,
         answerText: text,
@@ -808,7 +996,7 @@ export function InterviewRoom({
 
       if (turn.data.finished) {
         setClosing(true);
-        const finished = await finishInterviewAction({ interviewId });
+        const finished = await finishAction({ interviewId });
         setClosing(false);
         if (finished.ok) {
           onFinishedAction(finished.data);
@@ -828,7 +1016,14 @@ export function InterviewRoom({
         void speak(turn.data.prompt);
       } else setPhase("idle");
     },
-    [interviewId, question, onFinishedAction, speak],
+    [
+      interviewId,
+      question,
+      onFinishedAction,
+      speak,
+      submitAnswerAction,
+      finishAction,
+    ],
   );
 
   async function startRecording() {
@@ -1192,6 +1387,7 @@ export function InterviewRoom({
           rms,
           now,
           muted: mutedRef.current,
+          silenceMs,
         });
         turnCtxRef.current = step.context;
         hasSpokenRef.current = step.context.hasSpoken;
@@ -1527,8 +1723,16 @@ export function InterviewRoom({
     // the candidate had earned a report. `finalizeInterview` still gates on
     // having enough evidence, so a session too thin to be meaningful cannot
     // produce one — in that case we fall back to abandoning.
-    if (progress.total > 0 && progress.ratio >= 0.5) {
-      const finished = await finishInterviewAction({ interviewId });
+    // Below the floor the server will refuse to score anyway, so attempting to
+    // finish would burn a round trip to be told no and then abandon regardless.
+    // `minAnsweredToScore` is supplied by the caller from its own exported
+    // constant — never written as a literal here, so the two cannot drift.
+    const scorable =
+      minAnsweredToScore === undefined ||
+      progress.answered >= minAnsweredToScore;
+
+    if (progress.total > 0 && progress.ratio >= 0.5 && scorable) {
+      const finished = await finishAction({ interviewId });
       if (finished.ok) {
         setClosing(false);
         onFinishedAction(finished.data);
@@ -1536,7 +1740,7 @@ export function InterviewRoom({
       }
     }
 
-    await abandonInterviewAction({ interviewId });
+    await abandonAction({ interviewId });
     setClosing(false);
     onAbandonedAction();
   }
@@ -1556,7 +1760,14 @@ export function InterviewRoom({
   // explicitly instead of the single vague sentence it used to show. It also
   // says how far they actually are: "not halfway" means nothing without the
   // number behind it.
-  const pastHalfway = progress.total > 0 && progress.ratio >= 0.5;
+  // Ending here CONSUMES the attempt: it is scored, recorded and cannot be
+  // resumed. Below halfway — or below the scoring floor — ending abandons
+  // instead, which leaves no record and permits a fresh attempt.
+  const pastHalfway =
+    progress.total > 0 &&
+    progress.ratio >= 0.5 &&
+    (minAnsweredToScore === undefined ||
+      progress.answered >= minAnsweredToScore);
 
   // The orb has no state machine of its own: it mirrors the phase the room
   // already tracks. "listening" is the only mode that reads the microphone.
@@ -1605,7 +1816,7 @@ export function InterviewRoom({
   // Counts DOWN. A candidate needs to know how long is left, not how long they
   // have been going — the same number read the other way round is the one that
   // lets them decide whether to keep elaborating.
-  const remainingSec = Math.max(0, COHORT_INTERVIEW_DURATION_SEC - elapsed);
+  const remainingSec = Math.max(0, durationSec - elapsed);
 
   useEffect(() => {
     if (remainingSec > 0 || closing || fatal) return;
@@ -1619,7 +1830,7 @@ export function InterviewRoom({
       setClosing(true);
       cancelRecording();
       void speak(TIME_UP_LINE, "time_up").finally(async () => {
-        const finished = await finishInterviewAction({ interviewId });
+        const finished = await finishAction({ interviewId });
         setClosing(false);
         if (finished.ok) onFinishedAction(finished.data);
         else setFatal(finished.message);
@@ -1629,7 +1840,10 @@ export function InterviewRoom({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remainingSec === 0]);
 
-  const copy = PHASE_COPY[phase];
+  const copy =
+    phase === "processing"
+      ? { ...PHASE_COPY.processing, label: roomCopy.processingLabel }
+      : PHASE_COPY[phase];
   // The machine's own view, so the status the candidate reads comes from the
   // same place the turn decisions do rather than from a parallel phase flag.
   const statusLabel =
@@ -1666,15 +1880,14 @@ export function InterviewRoom({
               {fatal}
             </p>
             <p className="mt-3 text-[13px] leading-relaxed text-[var(--iv-text-faint)]">
-              This attempt was not scored, so it has not been counted. You can
-              start a fresh interview from the dashboard.
+              {roomCopy.notScored}
             </p>
             <div className="mt-6">
               <button
                 type="button"
                 onClick={() => {
                   cancelRecording();
-                  void abandonInterviewAction({ interviewId }).finally(
+                  void Promise.resolve(abandonAction({ interviewId })).finally(
                     onAbandonedAction,
                   );
                 }}
@@ -1704,10 +1917,7 @@ export function InterviewRoom({
 
             {pastHalfway ? (
               <p className="mt-3 text-[14px] leading-relaxed text-[var(--iv-text-muted)]">
-                You&apos;re more than halfway through this assessment, so ending
-                now will score what you&apos;ve answered and generate your
-                report. Questions you haven&apos;t reached count as unanswered,
-                and this milestone will be marked complete.
+                {roomCopy.endPastHalfway}
               </p>
             ) : (
               <>
@@ -1724,8 +1934,7 @@ export function InterviewRoom({
                   <li>Nothing you have said so far will be assessed.</li>
                 </ul>
                 <p className="mt-3 text-[14px] leading-relaxed text-[var(--iv-text-muted)]">
-                  Your milestone stays open, so you can start a fresh interview
-                  from the dashboard whenever you&apos;re ready.
+                  {roomCopy.endBeforeHalfway}
                 </p>
               </>
             )}
@@ -1830,8 +2039,7 @@ export function InterviewRoom({
                 Preparing
               </span>
               <p className="text-[17px] leading-[1.65] text-[var(--iv-text-muted)] md:text-[19px]">
-                Hang tight — I&apos;m reading through the work you submitted and
-                putting your questions together.
+                {roomCopy.preparing}
               </p>
             </div>
           ) : null}

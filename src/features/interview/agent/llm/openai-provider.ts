@@ -33,7 +33,7 @@ const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 export const DEFAULT_OPENAI_MODEL = "gpt-4o";
 
 type ChatCompletion = {
-  choices?: { message?: { content?: string } }[];
+  choices?: { message?: { content?: string }; finish_reason?: string }[];
   usage?: {
     prompt_tokens?: number;
     completion_tokens?: number;
@@ -161,7 +161,26 @@ export function createOpenAiInterviewLLM(
           json.usage?.prompt_tokens ?? 0,
           json.usage?.completion_tokens ?? 0,
         );
-        const content = json.choices?.[0]?.message?.content ?? "";
+        const choice = json.choices?.[0];
+        const content = choice?.message?.content ?? "";
+
+        // TRUNCATION IS ITS OWN FAILURE, and must say so.
+        //
+        // A response cut off at `max_tokens` has no closing brace, so
+        // `extractJson` returns null and the turn degrades — reported until now
+        // as the same opaque "no JSON object" a genuinely malformed reply
+        // produces. Those need different fixes: one is a token budget, the
+        // other is a prompt. Naming it is what makes "3 of 6 answers could not
+        // be judged" diagnosable instead of a mystery.
+        if (choice?.finish_reason === "length") {
+          return {
+            ok: false,
+            message:
+              `OpenAI response hit max_tokens (${maxTokens}) and was truncated ` +
+              `mid-JSON. Raise the budget for this call.`,
+          };
+        }
+
         const slice = extractJson(content);
         if (!slice) return { ok: false, message: "OpenAI returned no JSON object." };
 

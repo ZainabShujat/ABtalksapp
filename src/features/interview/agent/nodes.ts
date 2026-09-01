@@ -182,6 +182,21 @@ export function createAnalyzeAnswer(llm: InterviewLLM) {
         state.plan.contextSummary.kind === "COHORT"
           ? (state.plan.contextSummary.progressContext ?? null)
           : null,
+      // Who the candidate says they are. Platform only: the cohort grounds
+      // questions in submitted work instead, at plan time. CONTEXT, never
+      // evidence — nothing in the scoring path can read this.
+      profileContext:
+        state.plan.contextSummary.kind === "PLATFORM"
+          ? (state.plan.contextSummary.profileContext ?? null)
+          : null,
+      // The last few interviewer openings, so the model can avoid starting
+      // three turns running the same way. Read off the transcript rather than
+      // tracked separately, so it cannot drift from what was actually said.
+      recentOpeners: state.interviewState.transcript
+        .filter((l) => l.role === "interviewer")
+        .slice(-3)
+        .map((l) => l.text.replace(/\s+/g, " ").trim().slice(0, 60))
+        .filter((l) => l.length > 0),
     });
 
     logger.info("[interview-agent] answer analyzed", {
@@ -190,6 +205,12 @@ export function createAnalyzeAnswer(llm: InterviewLLM) {
       provider: llm.name,
       proposed: decision.action,
       degraded: decision.degraded,
+      // The conversational layer's own trace. If follow-ups start reading as
+      // generic again this is where it shows: a FOLLOW_UP with no reason and no
+      // target is the model skipping the step that makes a probe specific.
+      followUpReason: decision.followUpReason ?? null,
+      hasTarget: Boolean(decision.targetDetail),
+      acknowledged: Boolean((decision.acknowledgement ?? "").trim()),
     });
 
     return { decision };
@@ -407,6 +428,10 @@ export function updateState(state: InterviewAgentState): NodeUpdate {
     state.decision.evidence,
     proposed,
     view.evidenceKey,
+    state.targetSelector,
+    // The candidate's own words, handed to the planner. This is the connection
+    // that lets what someone just said decide what they are asked next.
+    state.candidateAnswer,
   );
 
   let nextState: InterviewState = prior

@@ -17,6 +17,7 @@
     "db:bootstrap:program-start-day": "tsx prisma/scripts/bootstrap-program-start-day.ts",
     "db:seed:marketplace": "tsx prisma/seed-marketplace.ts",
     "db:seed:test-users": "tsx prisma/seed-test-users.ts",
+    "db:seed:demo-profile": "tsx scripts/seed-demo-profile.ts",
     "db:seed:claude-test": "tsx prisma/seed-claude-test-users.ts",
     "db:seed:hackathon-links": "tsx prisma/seed-hackathon-links.ts",
     "db:seed:hackathon-problems": "tsx prisma/seed-hackathon-problems.ts",

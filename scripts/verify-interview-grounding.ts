@@ -1,212 +1,263 @@
 /**
- * Grounding and generation checks. Deterministic, offline, no provider.
+ * Phase A behavioural checks: profile grounding, and the boundary that keeps a
+ * profile claim from becoming demonstrated evidence.
  *
- *   npm run test:interview:grounding
+ * Pure — no database, no model, no network. `formatProfileContext` takes a
+ * `CandidateContext` object, so the whole grounding layer is testable by
+ * constructing one, which is the point of reusing the existing builder rather
+ * than writing a second profile system that would need a database to exercise.
  *
- * Exercises the whole phrasing path with a mock LLM: curriculum context, the
- * generation call, validation, and what ends up frozen in the plan.
- *
- * THE CONDITIONS FLAG IS REQUIRED, not optional. `generate-phrasing.ts` is
- * `server-only`, and that package resolves to an entry that throws on import
- * unless the `react-server` condition is set — so a plain `npx tsx` run of this
- * file dies at import and reports zero checks rather than failing one.
- *
- * The npm script above passes it to `tsx` directly rather than through
- * NODE_OPTIONS, which is how the older `test:scout` style scripts do it: npm
- * runs scripts through cmd.exe on Windows, where a `VAR=value command` prefix
- * is not shell syntax and the run dies before node starts.
- *
- * Nothing about the production boundary changes: `generate-phrasing.ts` keeps
- * its `server-only` import and still cannot be pulled into a client bundle.
+ * Run: npx tsx scripts/verify-interview-grounding.ts
  */
 import assert from "node:assert/strict";
-import { describeCurriculum } from "@/features/interview/cohort/curriculum-context";
-import { generateCohortPhrasing } from "@/features/interview/cohort/generate-phrasing";
-import { planCohortInterview } from "@/features/interview/cohort/planner";
-import { getQuestionBank } from "@/features/interview/cohort/question-bank";
-import { FRAMING } from "@/features/interview/cohort/question-phrasing";
-import type {
-  InterviewLLM,
-  PhraseQuestionsInput,
-} from "@/features/interview/agent/llm/provider";
 
-let passed = 0;
-let failed = 0;
+import {
+  formatProfileContext,
+  hasUsableProfile,
+} from "../src/features/interview/platform/profile-context";
+import { getStartableDomain } from "../src/features/interview/platform/domains";
+import {
+  buildPlatformPlan,
+  platformContextOf,
+  platformOpeningLine,
+} from "../src/features/interview/platform/planner";
+import { assessPlatformCompetencies } from "../src/features/interview/platform/scoring";
+import { createInitialState } from "../src/features/interview/state";
+import type { CandidateContext } from "../src/features/interview/types";
 
-async function check(name: string, fn: () => Promise<void> | void) {
-  try {
-    await fn();
-    console.log(`  ok   ${name}`);
-    passed += 1;
-  } catch (err) {
-    console.log(`  FAIL ${name}`);
-    console.log(`       ${err instanceof Error ? err.message : String(err)}`);
-    failed += 1;
-  }
+let checks = 0;
+function check(label: string, fn: () => void): void {
+  fn();
+  checks += 1;
+  console.log(`  ok  ${label}`);
 }
 
-/** A provider that phrases every target however the test tells it to. */
-function phrasingLLM(reply: (id: string, authored: string) => string): InterviewLLM {
+/** A candidate context with only the fields a test cares about. */
+function candidate(patch: Partial<CandidateContext> = {}): CandidateContext {
   return {
-    name: "mock-phrasing",
-    async analyzeAnswer() {
-      throw new Error("not used in this suite");
+    userId: "u1",
+    fullName: "Zainab Shujat",
+    domain: "",
+    role: null,
+    organization: null,
+    yearsExperience: null,
+    college: null,
+    challenge: {
+      enrollments: [],
+      tasks: [],
+      totalCompletedDays: 0,
+      completedSubmissionIds: [],
     },
-    async phraseQuestions(input: PhraseQuestionsInput) {
-      const out: Record<string, string> = {};
-      for (const t of input.targets) out[t.id] = reply(t.id, t.authored);
-      return out;
+    resume: {
+      hasStructuredResume: false,
+      headline: null,
+      summary: null,
+      targetRole: null,
+      skills: [],
+      experience: [],
+      projects: [],
+      resumeUrl: null,
     },
-  } as unknown as InterviewLLM;
+    ...patch,
+  };
 }
 
-async function main() {
-  console.log("\nCurriculum grounding");
+const RICH = candidate({
+  role: "Data Analyst",
+  organization: "Acme",
+  yearsExperience: 3,
+  resume: {
+    hasStructuredResume: true,
+    headline: "Python developer moving into AI engineering",
+    summary: null,
+    targetRole: null,
+    skills: ["Python", "RAG", "Chroma", "FastAPI"],
+    experience: [
+      { title: "Analyst", company: "Acme", highlights: ["Built internal tooling"] },
+    ],
+    projects: ["A RAG chatbot over our internal documentation"],
+    resumeUrl: null,
+  },
+});
 
-  await check("curriculum text is real, scoped, and never invented", () => {
-    const day2 = describeCurriculum([2]);
-    assert.ok(day2.includes("Day 2"), "must name the day");
-    assert.ok(/Ollama/i.test(day2), "must carry the day's real tools");
-    // Scoped to the days asked for: a question about day 2 must not drag the
-    // whole cohort into its prompt.
-    assert.ok(!/Day 11/.test(day2));
-    assert.equal(describeCurriculum([999]), "", "an unknown day yields nothing");
+/* ------------------------------------------------------- profile formatting */
+
+console.log("\nprofile grounding");
+
+check("a rich profile produces usable context", () => {
+  const text = formatProfileContext(RICH);
+  assert.equal(text.length > 0, true);
+  assert.match(text, /Data Analyst at Acme/);
+  assert.match(text, /Python, RAG, Chroma, FastAPI/);
+  assert.match(text, /RAG chatbot/);
+  assert.equal(hasUsableProfile(RICH), true);
+});
+
+check("an empty profile produces NO context rather than a hedge", () => {
+  assert.equal(formatProfileContext(candidate()), "");
+  assert.equal(formatProfileContext(null), "");
+  assert.equal(hasUsableProfile(candidate()), false);
+  assert.equal(hasUsableProfile(null), false);
+});
+
+check("nothing is invented from a missing field", () => {
+  // Only a role. Every other line must be absent, not guessed at.
+  const text = formatProfileContext(candidate({ role: "Backend Engineer" }));
+  assert.match(text, /Backend Engineer/);
+  assert.equal(/skills/i.test(text), false);
+  assert.equal(/built/i.test(text), false);
+  assert.equal(/challenge/i.test(text), false);
+  assert.equal(text.includes("null"), false);
+  assert.equal(text.includes("undefined"), false);
+});
+
+check("completed challenge work reads as history, not as capability", () => {
+  const text = formatProfileContext(
+    candidate({
+      challenge: {
+        enrollments: [],
+        tasks: [],
+        totalCompletedDays: 12,
+        completedSubmissionIds: [],
+      },
+    }),
+  );
+  assert.match(text, /completed 12 days/i);
+  // It must not claim they KNOW anything.
+  assert.equal(/demonstrated|proficient|knows|expert/i.test(text), false);
+});
+
+check("long fields are capped so context cannot crowd out the answer", () => {
+  const text = formatProfileContext(
+    candidate({
+      resume: {
+        ...candidate().resume,
+        skills: Array.from({ length: 40 }, (_, i) => `skill${i}`),
+        projects: Array.from({ length: 20 }, (_, i) => `project ${i} `.repeat(40)),
+      },
+    }),
+  );
+  assert.equal(text.length < 2000, true, `context was ${text.length} chars`);
+  assert.equal(text.includes("skill30"), false, "skills were not capped");
+});
+
+/* ------------------------------------------- profile is CONTEXT, not EVIDENCE */
+
+console.log("\nprofile is context, never evidence");
+
+const domain = getStartableDomain("ai-fluency")!;
+
+check("the profile reaches the plan as context only", () => {
+  const plan = buildPlatformPlan(domain, {
+    candidateFirstName: "Zainab",
+    profileContext: formatProfileContext(RICH),
   });
+  const ctx = platformContextOf(plan)!;
+  assert.match(ctx.profileContext ?? "", /RAG chatbot/);
 
-  await check("every bank question maps onto real curriculum days", () => {
-    for (const blueprint of ["DAY_15", "DAY_31"] as const) {
-      for (const q of getQuestionBank(blueprint).questions) {
-        assert.ok(
-          describeCurriculum(q.sourceDays).length > 0,
-          `${q.id} references days with no curriculum entry`,
-        );
-      }
-    }
-  });
-
-  console.log("\nGeneration end to end");
-
-  await check("accepted wording is frozen into spokenText", async () => {
-    const bank = getQuestionBank("DAY_15");
-    const llm = phrasingLLM((_id, authored) => `So, ${authored.toLowerCase()}`);
-    const phrasing = await generateCohortPhrasing(llm, "DAY_15", null);
-    assert.ok(Object.keys(phrasing).length > 0, "some questions must be phrased");
-
-    const plan = planCohortInterview("DAY_15", null, phrasing);
-    const q = plan.questions.find((x) => phrasing[x.id]);
-    assert.ok(q, "a phrased question must appear in the plan");
-    assert.ok(
-      q!.spokenText?.includes(phrasing[q!.id]!),
-      "spokenText must carry the frozen wording",
-    );
-    assert.equal(q!.phrasedByModel, true, "the plan must record it was generated");
-
-    // The GRADING target is untouched — this is the whole guarantee.
-    const authored = bank.questions.find((b) => b.id === q!.id)!;
-    assert.equal(q!.text, authored.text, "the authored target must not move");
-  });
-
-  await check("invalid wording falls back to the bank text", async () => {
-    const llm = phrasingLLM(() => "How did you handle billing and invoicing?");
-    const phrasing = await generateCohortPhrasing(llm, "DAY_15", null);
-    assert.equal(Object.keys(phrasing).length, 0, "off-target wording is dropped");
-
-    const plan = planCohortInterview("DAY_15", null, phrasing);
-    for (const q of plan.questions) {
-      assert.ok(!q.phrasedByModel, `${q.id} should not be marked generated`);
-    }
-  });
-
-  await check("a compound generation is dropped, not asked", async () => {
-    const llm = phrasingLLM(
-      (_id, authored) => `${authored} And what would you change now?`,
-    );
+  // It must not have leaked into anything the scorer reads.
+  for (const q of plan.questions) {
     assert.equal(
-      Object.keys(await generateCohortPhrasing(llm, "DAY_15", null)).length,
-      0,
+      JSON.stringify(q).includes("RAG chatbot"),
+      false,
+      `${q.id} carries profile text`,
     );
+  }
+});
+
+check("a candidate who says nothing scores nothing, however strong the profile", () => {
+  const plan = buildPlatformPlan(domain, {
+    profileContext: formatProfileContext(RICH),
   });
+  const ctx = platformContextOf(plan)!;
+  // No answers at all — only a profile claiming RAG, Chroma and Python.
+  const comps = assessPlatformCompetencies(
+    plan,
+    createInitialState(),
+    ctx.rubric.id,
+  );
+  assert.equal(
+    comps.every((c) => c.unassessed && c.score === 0),
+    true,
+    "a profile claim produced a score",
+  );
+  assert.equal(
+    comps.every((c) => c.evidenceRefs.length === 0),
+    true,
+    "a profile claim produced evidence refs",
+  );
+});
 
-  await check("a provider without phrasing support changes nothing", async () => {
-    const bare = {
-      name: "bare",
-      async analyzeAnswer() {
-        throw new Error("x");
-      },
-    } as unknown as InterviewLLM;
-    assert.deepEqual(await generateCohortPhrasing(bare, "DAY_15", null), {});
+check("an identical plan is produced with and without a profile", () => {
+  const withProfile = buildPlatformPlan(domain, {
+    profileContext: formatProfileContext(RICH),
   });
+  const without = buildPlatformPlan(domain, {});
+  // Grounding may change what is ASKED ABOUT conversationally, but it must never
+  // change the assessment instrument: same questions, same order, same evidence.
+  assert.deepEqual(
+    withProfile.questions.map((q) => q.id),
+    without.questions.map((q) => q.id),
+  );
+  assert.deepEqual(
+    withProfile.questions.map((q) => q.expectedEvidence),
+    without.questions.map((q) => q.expectedEvidence),
+  );
+});
 
-  await check("calibration changes the framing handed to the model", async () => {
-    const seen: string[] = [];
-    const spy = {
-      name: "spy",
-      async analyzeAnswer() {
-        throw new Error("x");
-      },
-      async phraseQuestions(input: PhraseQuestionsInput) {
-        seen.push(input.framing);
-        return {};
-      },
-    } as unknown as InterviewLLM;
+/* --------------------------------------------------------------- the opening */
 
-    await generateCohortPhrasing(spy, "DAY_15", null, "FOUNDATIONS");
-    await generateCohortPhrasing(spy, "DAY_15", null, "ADVANCED");
-    await generateCohortPhrasing(spy, "DAY_15", null, null);
+console.log("\nprofile-aware opening");
 
-    assert.equal(seen[0], FRAMING.FOUNDATIONS);
-    assert.equal(seen[1], FRAMING.ADVANCED);
-    assert.equal(seen[2], FRAMING.WORKING, "no calibration yet means WORKING");
-    assert.equal(new Set(seen).size, 3, "the three levels must differ");
+check("an opening acknowledges context when there is some", () => {
+  const withProfile = platformOpeningLine({
+    domain,
+    firstName: "Zainab",
+    hasProfile: true,
+    seed: "s1",
   });
+  assert.match(withProfile, /profile|background/i);
+  assert.match(withProfile, /Zainab/);
+});
 
-  await check("the model is given curriculum AND candidate work per target", async () => {
-    let captured: PhraseQuestionsInput | null = null;
-    const spy = {
-      name: "spy",
-      async analyzeAnswer() {
-        throw new Error("x");
-      },
-      async phraseQuestions(input: PhraseQuestionsInput) {
-        captured = input;
-        return {};
-      },
-    } as unknown as InterviewLLM;
-
-    await generateCohortPhrasing(spy, "DAY_15", null);
-    assert.ok(captured, "the provider must be called");
-    const input = captured as unknown as PhraseQuestionsInput;
-    assert.ok(input.targets.length > 0);
-    for (const t of input.targets) {
-      assert.ok(t.authored.length > 0, "every target carries its authored text");
-      assert.ok(t.curriculum.length > 0, "every target carries curriculum");
-      // With no candidate context there is nothing to ground on, and the
-      // prompt must say so rather than let the model imagine something.
-      assert.equal(t.candidateWork, "", "no context means no claimed work");
-    }
+check("an opening claims nothing when there is no profile", () => {
+  const bare = platformOpeningLine({
+    domain,
+    firstName: "Zainab",
+    hasProfile: false,
+    seed: "s1",
   });
+  assert.equal(
+    /profile|background/i.test(bare),
+    false,
+    "claimed to have read a profile that does not exist",
+  );
+  assert.equal(bare.length > 0, true);
+});
 
-  console.log("\nMilestone scope");
+check("the opening never states a specific profile fact", () => {
+  // It must not promise a direction the authored first question cannot deliver.
+  for (let i = 0; i < 12; i += 1) {
+    const line = platformOpeningLine({
+      domain,
+      firstName: "Zainab",
+      hasProfile: true,
+      seed: `s${i}`,
+    });
+    assert.equal(/RAG|Python|Chroma|Acme|Analyst/i.test(line), false, line);
+  }
+});
 
-  await check("DAY_15 stays days 1-15 whatever the live progress", async () => {
-    const plan = planCohortInterview("DAY_15", null, {});
-    const core = plan.questions.filter((q) => (q.tier ?? "CORE") === "CORE");
-    for (const q of getQuestionBank("DAY_15").questions) {
-      for (const day of q.sourceDays) {
-        assert.ok(day <= 15, `${q.id} reaches day ${day}, outside the milestone`);
-      }
-    }
-    assert.equal(
-      plan.contextSummary.kind === "COHORT"
-        ? plan.contextSummary.questionCount
-        : -1,
-      core.length,
-      "the comparable count is CORE only",
-    );
-  });
+check("openings stay reproducible per seed and vary across seeds", () => {
+  const a = platformOpeningLine({ domain, hasProfile: true, seed: "x" });
+  const b = platformOpeningLine({ domain, hasProfile: true, seed: "x" });
+  assert.equal(a, b);
+  const many = new Set(
+    Array.from({ length: 24 }, (_, i) =>
+      platformOpeningLine({ domain, hasProfile: true, seed: `v${i}` }),
+    ),
+  );
+  assert.equal(many.size > 1, true);
+});
 
-  console.log(`\n${passed} checks passed, ${failed} failed.\n`);
-  if (failed > 0) process.exitCode = 1;
-}
-
-void main();
+console.log(`\n${checks} checks passed.\n`);

@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
-import { Sparkles } from "lucide-react";
+import { Lock, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type {
   BlueprintState,
@@ -111,14 +110,14 @@ function MilestoneRow({
       </div>
 
       {!state.taken && !state.unlocked && (
-        <div className="relative size-[64px] shrink-0 opacity-80 sm:size-[72px]">
-          <Image
-            src="/program/interview-key.png"
-            alt="Locked"
-            fill
-            className="object-contain"
-            sizes="72px"
-          />
+        // Was a purple PNG padlock, which was the one element on this card that
+        // did not belong to the ABTalks palette. A lucide icon in the brand
+        // orange also scales crisply and drops an image request.
+        <div
+          className="flex size-[56px] shrink-0 items-center justify-center rounded-[12px] bg-[#FFECE3] sm:size-[64px]"
+          aria-hidden="true"
+        >
+          <Lock className="size-6 text-[#E05226] sm:size-7" strokeWidth={1.75} />
         </div>
       )}
     </div>

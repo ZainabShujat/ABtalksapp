@@ -12,6 +12,19 @@ import type {
 } from "@/features/interview/types";
 
 /**
+ * Chooses which target the interview moves to next.
+ *
+ * Returns `questionId: null` to end the interview. Must be PURE: given the same
+ * plan, state and answer it must return the same target, or a replayed attempt
+ * would diverge from the transcript it produced.
+ */
+export type TargetSelector = (
+  plan: InterviewPlan,
+  state: InterviewState,
+  answerText: string,
+) => { questionId: string | null; index: number };
+
+/**
  * Deterministic interview state. The LLM proposes a turn action; this module
  * decides what actually happens, so budget and termination rules cannot be
  * talked around by a model.
@@ -96,6 +109,24 @@ export function advanceTurn(
    * two are separate parameters rather than one.
    */
   evidenceKey: string = questionId,
+  /**
+   * How the NEXT assessment target is chosen once this question is finished.
+   *
+   * THE SEAM THAT LETS TWO INTERVIEWS DIFFER WITHOUT TWO STATE MACHINES.
+   * Omitted — which is what the cohort does — selection is
+   * `currentQuestionIndex + 1`, byte-for-byte the behaviour that existed before
+   * this parameter. The interview platform passes an adaptive planner instead.
+   *
+   * Everything else in this function is shared: budgets, the stuck rule,
+   * escalation, counter resets and termination are identical for both, which is
+   * the point of a seam rather than a fork.
+   */
+  selectTarget?: TargetSelector,
+  /**
+   * What the candidate just said, handed to the selector. Empty is normal and
+   * simply means authored order governs.
+   */
+  answerText: string = "",
 ): { state: InterviewState; action: TurnAction } {
   const stuck = evidence.flaggedIssues.includes("stuck_or_evasive");
   const consecutiveStuckAnswers = stuck ? state.consecutiveStuckAnswers + 1 : 0;
@@ -149,10 +180,20 @@ export function advanceTurn(
     };
   }
 
-  const nextIndex = next.currentQuestionIndex + 1;
-  if (nextIndex >= plan.questions.length) {
+  // Sequential unless a selector was supplied. The cohort supplies none.
+  const chosen = selectTarget
+    ? selectTarget(plan, next, answerText)
+    : sequentialTarget(plan, next);
+
+  const asked = next.askedQuestionIds ?? [];
+
+  if (chosen.questionId === null) {
     return {
-      state: { ...next, currentQuestionIndex: nextIndex, status: "COMPLETED" },
+      state: {
+        ...next,
+        currentQuestionIndex: plan.questions.length,
+        status: "COMPLETED",
+      },
       action: "END_INTERVIEW",
     };
   }
@@ -162,7 +203,12 @@ export function advanceTurn(
   return {
     state: {
       ...next,
-      currentQuestionIndex: nextIndex,
+      currentQuestionIndex: chosen.index,
+      // Only tracked once a selector is in play. The cohort's states stay
+      // exactly as they were, so nothing about them changes shape.
+      ...(selectTarget
+        ? { askedQuestionIds: [...asked, chosen.questionId] }
+        : {}),
       followUpsAsked: 0,
       redirectsAsked: 0,
       repeatsAsked: 0,
@@ -172,6 +218,16 @@ export function advanceTurn(
     },
     action: "NEXT_QUESTION",
   };
+}
+
+/** The original behaviour: the next question in authored order. */
+function sequentialTarget(
+  plan: InterviewPlan,
+  state: InterviewState,
+): { questionId: string | null; index: number } {
+  const index = state.currentQuestionIndex + 1;
+  const question = plan.questions[index];
+  return { questionId: question?.id ?? null, index };
 }
 
 export function transcriptToText(state: InterviewState): string {
