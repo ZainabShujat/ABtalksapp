@@ -8,8 +8,16 @@ import { cn } from "@/lib/utils";
 type Props = {
   title: string;
   description?: string;
-  /** Drives the header icon only. Never a permission or a gate. */
-  complete: boolean;
+  /**
+   * Drives the header icon only. Never a permission or a gate.
+   *
+   * `null` means this section is not a completeness item at all — it is a
+   * record of activity rather than a field to fill in — so it shows no status
+   * icon. Without this, a section like mock interviews would wear an amber
+   * warning on every profile that had simply never used the feature, which
+   * reads as "your profile is incomplete" and is untrue.
+   */
+  complete: boolean | null;
   /** Shown next to the title when incomplete. */
   hint?: string | null;
   defaultOpen?: boolean;
@@ -48,7 +56,9 @@ export function ProfileSection({
           "hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-primary/30",
         )}
       >
-        {complete ? (
+        {complete === null ? (
+          <span className="size-5 shrink-0" aria-hidden />
+        ) : complete ? (
           <CheckCircle2
             className="size-5 shrink-0 text-emerald-500"
             aria-hidden
@@ -67,7 +77,7 @@ export function ProfileSection({
           >
             {title}
           </span>
-          {!open && (summary || (!complete && hint)) ? (
+          {!open && (summary || (complete === false && hint)) ? (
             <span className="mt-0.5 block truncate text-xs text-muted-foreground">
               {summary ?? hint}
             </span>
@@ -79,7 +89,9 @@ export function ProfileSection({
           ) : null}
         </span>
 
-        <span className="sr-only">{complete ? "Complete" : "Incomplete"}</span>
+        {complete === null ? null : (
+          <span className="sr-only">{complete ? "Complete" : "Incomplete"}</span>
+        )}
         <ChevronDown
           className={cn(
             "size-5 shrink-0 text-muted-foreground transition-transform duration-200",
