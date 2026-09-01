@@ -146,6 +146,8 @@ function validate(
     action: parsed.data.action,
     reason: parsed.data.reason,
     evidence: { ...parsed.data.evidence, matchedEvidence },
+    followUpReason: parsed.data.followUpReason ?? null,
+    targetDetail: (parsed.data.targetDetail ?? "").trim() || null,
     followUpQuestion: followUp.length > 0 ? followUp : null,
     acknowledgement: (parsed.data.acknowledgement ?? "").trim() || null,
     clarification: (parsed.data.clarification ?? "").trim() || null,
@@ -159,7 +161,14 @@ function validate(
 export function createJsonInterviewLLM(
   options: JsonProviderOptions,
 ): InterviewLLM {
-  const { name, askJson, maxTokens = 700, retries = 1 } = options;
+  // 1100, not 700. The decision envelope grew in Phase A — `followUpReason` and
+  // `targetDetail` joined an object that already carried the evidence block, a
+  // follow-up question, an acknowledgement, a bridge, a clarification and a
+  // simplified question. At 700 a talkative turn ran out of budget mid-JSON,
+  // the brace matcher found no object, and the turn degraded to keyword rules.
+  // That is what produced "could not be judged" on answers the candidate had
+  // actually given well.
+  const { name, askJson, maxTokens = 1100, retries = 1 } = options;
 
   return {
     name,
@@ -215,6 +224,12 @@ export function createJsonInterviewLLM(
     async analyzeAnswer(input: AnalyzeAnswerInput): Promise<InterviewDecision> {
       const user = buildAnalyzeUserMessage(input);
 
+      // Why each attempt failed, so the fallback line below can name the cause.
+      // Without this the only trace of "the evaluator was unavailable" was a
+      // separate earlier warning, several lines up and easy to miss — which is
+      // exactly what made this hard to diagnose from a live interview.
+      const attemptFailures: string[] = [];
+
       for (let attempt = 0; attempt <= retries; attempt++) {
         const system =
           attempt === 0
@@ -231,6 +246,7 @@ export function createJsonInterviewLLM(
         }
 
         if (!result.ok) {
+          attemptFailures.push(result.message);
           logger.warn("[interview-agent] llm call failed", {
             provider: name,
             attempt,
@@ -252,6 +268,7 @@ export function createJsonInterviewLLM(
           return decision;
         }
 
+        attemptFailures.push("response did not match the decision schema");
         logger.warn("[interview-agent] llm returned malformed decision", {
           provider: name,
           attempt,
@@ -259,9 +276,15 @@ export function createJsonInterviewLLM(
         });
       }
 
-      logger.warn("[interview-agent] falling back to deterministic decision", {
+      // ERROR, not warn: this is the line that becomes "the evaluator was
+      // unavailable" on someone's report, and it costs them a judged answer.
+      // It carries every attempt's reason, so one line explains the whole
+      // failure instead of sending a reader hunting for an earlier warning.
+      logger.error("[interview-agent] EVALUATOR UNAVAILABLE — answer unjudged", {
         provider: name,
         questionId: input.question.id,
+        attempts: attemptFailures.length,
+        reasons: attemptFailures,
       });
       return fallbackDecision(input);
     },

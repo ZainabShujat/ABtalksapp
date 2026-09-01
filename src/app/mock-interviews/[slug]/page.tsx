@@ -7,6 +7,7 @@ import { getDomain, getStartableDomain } from "@/features/interview/platform/dom
 import { getPack } from "@/features/interview/platform/packs";
 import { getRubric } from "@/features/interview/platform/rubrics";
 import { MIN_ANSWERED_TO_SCORE } from "@/features/interview/platform/service";
+import { MockInterviewSession } from "@/components/mock-interview/session";
 
 export const dynamic = "force-dynamic";
 
@@ -80,9 +81,12 @@ export default async function MockInterviewDomainPage({
         <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-[#111111]">
           {domain.label}
         </h1>
-        <p className="mt-3 text-[15px] leading-relaxed text-[#4B4B4B]">
-          {domain.blurb}
-        </p>
+        {/*
+          `domain.blurb` is deliberately NOT rendered here. It is the catalogue
+          card's one-line teaser, and the "What this interview is for" panel
+          below says the same thing at more length — showing both made the page
+          state its premise twice within a screen.
+        */}
 
         <dl className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-[#4B4B4B]">
           <div className="flex items-center gap-1.5">
@@ -188,10 +192,10 @@ export default async function MockInterviewDomainPage({
             </h2>
             <ul className="mt-2.5 space-y-1.5 text-sm leading-relaxed text-[#4B4B4B]">
               <li>
-                &bull; You&rsquo;ll need a working microphone.{" "}
+                &bull; You&rsquo;ll need a working microphone
                 {usesEditor
-                  ? "You speak your reasoning and type your code in the editor."
-                  : "This interview is spoken."}
+                  ? ", and you type your code in the editor as you talk."
+                  : "."}
               </li>
               <li>
                 &bull; Answer at least {MIN_ANSWERED_TO_SCORE} questions to get a
@@ -204,25 +208,30 @@ export default async function MockInterviewDomainPage({
             </ul>
           </section>
 
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            {/*
-              Not wired to `startMockInterviewAction` yet: the interview ROOM is
-              the remaining Phase 4 work, and a Start button that opens an
-              attempt with nowhere to conduct it would create rows and abandon
-              them. Deliberately inert rather than deceptively live.
-            */}
-            <span
-              aria-disabled="true"
-              className="inline-flex h-11 cursor-not-allowed items-center justify-center rounded-[12px] border border-[#E0E0E0] bg-[#F5F5F5] px-6 text-sm font-semibold text-[#8F8F8F]"
-            >
-              Start interview
-            </span>
-            <span className="text-[13px] text-[#8F8F8F]">
-              {signedIn
-                ? "The interview room is the next piece of work."
-                : "Sign in to practise once the room is live."}
-            </span>
-          </div>
+          <section className="mt-9" aria-labelledby="start">
+            <h2 id="start" className="sr-only">
+              Start this interview
+            </h2>
+            {signedIn ? (
+              <MockInterviewSession
+                domainSlug={domain.slug}
+                domainLabel={domain.label}
+                minAnsweredToScore={MIN_ANSWERED_TO_SCORE}
+              />
+            ) : (
+              <div className="flex flex-wrap items-center gap-3">
+                <Link
+                  href="/login"
+                  className="inline-flex h-11 items-center justify-center rounded-[12px] bg-[#E05226] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#C9411C]"
+                >
+                  Sign in to practise
+                </Link>
+                <span className="text-[13px] text-[#8F8F8F]">
+                  Free with any ABTalks account.
+                </span>
+              </div>
+            )}
+          </section>
         </>
       )}
     </div>

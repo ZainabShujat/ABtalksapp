@@ -29,7 +29,13 @@ export const dynamic = "force-dynamic";
  * ABTalks account — and unlike the cohort path, that is every registered user.
  */
 const bodySchema = z.object({
-  attemptId: z.string().min(1).max(64),
+  /**
+   * The MockInterview attempt id. Named `interviewId` on the wire, not
+   * `attemptId`, because `InterviewRoom` is shared with the cohort and posts one
+   * body shape for both. The room must not know which interview it is
+   * conducting — that is the whole point of the injection seam.
+   */
+  interviewId: z.string().min(1).max(64),
   line: z
     .enum([
       "latest",
@@ -77,7 +83,7 @@ export async function POST(request: Request) {
 
   const resolveStartedMs = Date.now();
   const line = await resolvePlatformSpeakableLine(
-    parsed.data.attemptId,
+    parsed.data.interviewId,
     userId,
     parsed.data.line,
     parsed.data.variant,

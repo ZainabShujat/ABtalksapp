@@ -74,6 +74,20 @@ export type AnalyzeAnswerInput = {
    * technical evidence read or score.
    */
   progressContext?: string | null;
+  /**
+   * Who the candidate says they are, from their own profile. Shapes what is
+   * asked; never evidence of what they know. See `platform/profile-context.ts`.
+   */
+  profileContext?: string | null;
+  /**
+   * How the interviewer opened its last few turns.
+   *
+   * Passed so the model can avoid starting three turns running with "That's
+   * interesting" or "Can you walk me through". Variety by awareness rather than
+   * by randomisation: the alternative is a shuffled phrase bank, which reads as
+   * arbitrary because it is.
+   */
+  recentOpeners?: string[];
 };
 
 export interface InterviewLLM {

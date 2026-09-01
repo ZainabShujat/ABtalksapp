@@ -286,6 +286,16 @@ export type PlatformPlanContext = {
   capabilities: string[];
   /** First name for the spoken opening. Null degrades to a nameless greeting. */
   candidateFirstName?: string | null;
+  /**
+   * Compact, deterministic description of the candidate, built from their own
+   * profile at plan time. Frozen here so a profile edited mid-interview cannot
+   * change the conversation underneath them.
+   *
+   * CONTEXT FOR THE CONVERSATION ONLY. It shapes what the interviewer asks and
+   * must never reach scoring, evidence or the report as a demonstrated skill.
+   * A claim in a profile is a reason to ask a better question, never a mark.
+   */
+  profileContext?: string | null;
 };
 
 export type InterviewPlan = {
@@ -387,6 +397,16 @@ export type InterviewStatus =
 export type InterviewState = {
   status: InterviewStatus;
   currentQuestionIndex: number;
+  /**
+   * Targets already put to the candidate, in the order asked.
+   *
+   * What makes non-sequential selection safe: with an index cursor, "already
+   * asked" was implied by being behind the cursor, and that stops being true
+   * the moment the interview can jump. Optional because the cohort never jumps
+   * and its persisted states have no such field — read it through
+   * `askedIds()`, which backfills from `currentQuestionIndex`.
+   */
+  askedQuestionIds?: string[];
   followUpsAsked: number;
   consecutiveStuckAnswers: number;
   /**

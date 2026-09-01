@@ -35,6 +35,9 @@ import {
   resolvePlatformCandidate,
 } from "@/features/interview/platform/provider";
 import * as repo from "@/features/interview/platform/repository";
+import { selectNextPlatformTarget } from "@/features/interview/platform/target-planner";
+import { buildCandidateContext } from "@/features/interview/candidate-context";
+import { formatProfileContext } from "@/features/interview/platform/profile-context";
 import type { DomainSummary, TurnSubmission } from "@/features/interview/platform/types";
 import type { PlannedQuestion } from "@/features/interview/types";
 
@@ -95,6 +98,22 @@ const STALE_ATTEMPT_MS = 30 * 60 * 1000;
  * being burned by a thin session.
  */
 export const MIN_ANSWERED_TO_SCORE = 3;
+
+/**
+ * How much time a NEW assessment target needs to be worth opening.
+ *
+ * A new question has to be spoken (several seconds of audio), understood,
+ * answered, and then judged. Below roughly a minute none of that fits, so
+ * asking is worse than not asking: the candidate is cut off mid-answer, the
+ * question is recorded as reached, and the evidence is thinner than if it had
+ * never been put.
+ *
+ * This is enforced in code rather than asked of the model. The prompt is told
+ * to wind down too, but an instruction is a suggestion — a candidate should not
+ * be handed a fresh question with eleven seconds left because a model felt
+ * optimistic.
+ */
+const WIND_DOWN_SEC = 60;
 
 /**
  * What the client is allowed to see about a question.
@@ -242,12 +261,23 @@ export async function startAttempt(
     });
   }
 
-  const candidate = await resolvePlatformCandidate(userId);
-  const attemptNumber = await repo.nextAttemptNumber(userId, domain.slug);
+  // Reuses the EXISTING candidate-context builder (plan 066) rather than a
+  // second profile system: it already composes StudentProfile + challenge
+  // submissions + resume fields, and it is keyed on userId, which is exactly
+  // what the platform has. Failure is not fatal — a missing profile produces a
+  // perfectly good interview with a generic opening, which is the common case
+  // for a new account.
+  const [candidate, attemptNumber, profile] = await Promise.all([
+    resolvePlatformCandidate(userId),
+    repo.nextAttemptNumber(userId, domain.slug),
+    buildCandidateContext(userId).catch(() => null),
+  ]);
+  const profileContext = formatProfileContext(profile);
 
   // Everything below is server-derived. The client contributed only the slug.
   const plan = buildPlatformPlan(domain, {
     candidateFirstName: candidate.firstName,
+    profileContext: profileContext || null,
   });
   const context = platformContextOf(plan);
   if (!context) {
@@ -262,6 +292,7 @@ export async function startAttempt(
   const opening = platformOpeningLine({
     domain,
     firstName: candidate.firstName,
+    hasProfile: profileContext.length > 0,
     // Seeded per attempt so no two open with the same sentence, and so two
     // users starting in the same second still differ.
     seed: `${userId}:${domain.slug}:${attemptNumber}:${Date.now()}`,
@@ -269,7 +300,13 @@ export async function startAttempt(
   const prompt = `${opening}\n\n${first.text}`;
 
   const state = appendLine(
-    startInterview(createInitialState()),
+    {
+      ...startInterview(createInitialState()),
+      // The opening question counts as asked. Without this the planner would
+      // see it as an unassessed target and could route straight back to the one
+      // question we know for certain has already been put.
+      askedQuestionIds: [first.id],
+    },
     "interviewer",
     prompt,
     first.id,
@@ -292,6 +329,7 @@ export async function startAttempt(
     domainSlug: domain.slug,
     attemptNumber,
     packVersion: context.packVersion,
+    grounded: profileContext.length > 0,
   });
 
   return {
@@ -353,6 +391,42 @@ export async function recordAnswer(
   const domain = getDomain(attempt.domainSlug);
   const startedMs = Date.now();
 
+  // Remaining time, from the PERSISTED start. Computed once and used for both
+  // the model's pacing hint and the wind-down guard below, so the two can never
+  // disagree about how long is left.
+  const remainingSec =
+    attempt.startedAt && domain
+      ? Math.max(
+          0,
+          Math.round(
+            (domain.durationSec * 1000 -
+              (Date.now() - attempt.startedAt.getTime())) /
+              1000,
+          ),
+        )
+      : null;
+
+  /**
+   * The planner, with a clock in front of it.
+   *
+   * Returning `questionId: null` is how a selector says "there is nothing left
+   * to ask", which `advanceTurn` turns into END_INTERVIEW. Out of time is
+   * exactly that situation, so the wind-down needs no new mechanism — it is the
+   * Phase B seam used for its second obvious purpose.
+   */
+  const targetSelector: typeof selectNextPlatformTarget = (p, st, answer) => {
+    if (remainingSec !== null && remainingSec < WIND_DOWN_SEC) {
+      return {
+        questionId: null,
+        index: p.questions.length,
+        reason: `Only ${remainingSec}s left; not opening a new target.`,
+        raised: [],
+        considered: [],
+      };
+    }
+    return selectNextPlatformTarget(p, st, answer);
+  };
+
   // Started before the model call and awaited after it: the next turn index
   // depends only on the attempt, never on the answer, so waiting for the model
   // first would add a round trip to the gap the candidate hears as silence.
@@ -366,21 +440,14 @@ export async function recordAnswer(
     blueprint: attempt.domainSlug,
     // Minutes left from the PERSISTED start time. Taking it from the client
     // would let a candidate claim they had all day.
-    minutesLeft:
-      attempt.startedAt && domain
-        ? Math.max(
-            0,
-            Math.round(
-              (domain.durationSec * 1000 -
-                (Date.now() - attempt.startedAt.getTime())) /
-                60_000,
-            ),
-          )
-        : null,
+    minutesLeft: remainingSec === null ? null : Math.round(remainingSec / 60),
     plan: attempt.plan,
     state: attempt.state,
     questionId,
     answerText: submission.text,
+    // ADAPTIVE TARGET SELECTION, wrapped in the wind-down guard. The cohort
+    // passes none and keeps authored order.
+    targetSelector,
   });
 
   if (!turn.ok) return turn;

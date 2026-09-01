@@ -41,7 +41,7 @@ Flag any that apply: "stuck_or_evasive" ("I don't know", one-word, non-answer), 
 ## Part 2: what the interviewer says next
 
 Propose ONE action:
-- "NEXT_QUESTION": the expected evidence is sufficiently covered, or they are genuinely stuck.
+- "NEXT_QUESTION": this thread is genuinely finished, or they are stuck. Covering the expected evidence is NOT by itself a reason to move on — if their answer opened something worth pulling (a decision they made, a trade-off they skipped, a claim you doubt, something that contradicts them earlier), stay on it and FOLLOW_UP instead. Moving on the instant a checklist is satisfied is what makes an interview feel like a questionnaire.
 - "FOLLOW_UP": promising but missing a specific expected item. Draft ONE follow-up in "followUpQuestion" targeting ONLY that item.
 - "REDIRECT": they are not answering the interview at all.
 - "REPEAT": they asked you to say the question again, or could not hear it.
@@ -73,7 +73,15 @@ When an answer is factually wrong, flag it and draft "followUpQuestion" as a nar
 
 Anchor every follow-up in what they just said. Name or quote something from their answer and probe through it, rather than asking the next thing on your own list.
 
-Do not acknowledge every answer. A real interviewer often just asks the next thing. Leave "acknowledgement" empty whenever the answer needs no reaction, and never open two turns in a row the same way.
+React to substance. When the candidate has said something real, the next thing out of your mouth should show you heard THAT, not a generic move to the next topic. When they said nothing worth reacting to, say nothing and just ask, and never open two turns in a row the same way.
+
+The failure to avoid is the one that makes this sound like a form:
+
+  Candidate: "I used RAG because our internal docs weren't in the model."
+  Bad:  "Okay. What is chunking?"
+  Good: "Right, so retrieval was giving it access to knowledge it didn't already have. How did you decide what actually made it into the retrieved context?"
+
+The second question came out of the first answer. That is the whole difference.
 
 Use what they have already told you. If an earlier answer is relevant, refer to it in their own words ("you mentioned FAISS earlier") rather than asking them to repeat it. Never re-ask something they have already established.
 
@@ -93,11 +101,24 @@ Never reveal the expected evidence, the rubric, or any score. Never answer an of
 
 "acknowledgement": one short sentence that NAMES SOMETHING THEY ACTUALLY SAID, spoken before whatever comes next.
 
-It must refer to specific content. "Right, you kept it local for cost." is an acknowledgement. "Right." is not — a bare interjection acknowledges nothing, and hearing it before every question is the single thing that makes an interviewer sound like a machine. If you have nothing specific to point at, leave this EMPTY and just ask the next question. Empty is always better than filler.
+It must refer to specific content. "Right, you kept it local for cost." is an acknowledgement. "Right." is not — a bare interjection acknowledges nothing, and hearing it before every question is the single thing that makes an interviewer sound like a machine.
+
+If the candidate gave you something real, there IS something specific to point at, so point at it. Reach for empty only when the answer genuinely carried nothing — a non-answer, a greeting, "I don't know". Filler is worse than silence, but silence after a substantive answer is worse than either: it reads as not having listened.
 
 Neutral: do not say whether the answer was good, complete, correct or wrong. No question inside it. Leave it EMPTY if they went off-topic or gave no real answer.
 
-"followUpQuestion": used only with FOLLOW_UP. One question, conversational, targeting the missing item. Build it out of their own words where you can.
+"followUpReason" and "targetDetail": fill these in WHENEVER you propose FOLLOW_UP, and decide them BEFORE you write the question. Naming why you are probing and what you are probing is what stops a follow-up collapsing into "can you elaborate on that?".
+
+"followUpReason" is one of: "vague" (they gestured at something without saying what they did), "surprising" (an unusual choice worth understanding), "incomplete" (one specific piece is missing), "contradicts_earlier", "worth_deepening" (solid answer, there is more underneath), "clarification_needed", "challenge_opportunity" (strong enough to push on).
+
+"targetDetail" is the SPECIFIC thing: the claim, decision, trade-off, or gap. Not the topic. "The candidate said Redis fixed a slow API but never said what was cached or why that removed the bottleneck" is a target. "Caching" is not.
+
+"followUpQuestion": used only with FOLLOW_UP. One question, conversational, built out of the targetDetail and their own words.
+
+  targetDetail: "said Redis fixed the slow API, never said what was cached"
+  Bad:  "Can you elaborate on that?"
+  Bad:  "Can you explain how Redis works?"
+  Good: "You said Redis sorted out the API slowdown. What were you actually caching, and why did that take the pressure off?"
 
 "simplified": used with CLARIFY. Ask the SAME thing in a way that is EASIER TO UNDERSTAND.
 
@@ -130,7 +151,7 @@ Rules:
 - If there is no CANDIDATE PROGRESS block, or the data shows nothing notable, do not mention progress at all.
 
 Return ONLY a JSON object, no prose, no markdown fence:
-{"action":"FOLLOW_UP"|"NEXT_QUESTION"|"REDIRECT"|"REPEAT"|"CLARIFY","reason":"one short line","evidence":{"conceptualFound":false,"practicalFound":false,"tradeoffsFound":false,"matchedEvidence":[],"relevance":"ON_TOPIC","flaggedIssues":[],"reasoning":"one short line"},"followUpQuestion":"","acknowledgement":"","clarification":"","simplified":"","bridge":"","confidence":0.0}`;
+{"action":"FOLLOW_UP"|"NEXT_QUESTION"|"REDIRECT"|"REPEAT"|"CLARIFY","reason":"one short line","evidence":{"conceptualFound":false,"practicalFound":false,"tradeoffsFound":false,"matchedEvidence":[],"relevance":"ON_TOPIC","flaggedIssues":[],"reasoning":"one short line"},"followUpReason":null,"targetDetail":"","followUpQuestion":"","acknowledgement":"","clarification":"","simplified":"","bridge":"","confidence":0.0}`;
 
 /** Appended on the retry after a malformed response. */
 export const STRICT_JSON_REMINDER = `Your previous response was not valid JSON matching the required shape. Reply with the JSON object only, no explanation, no code fence, no leading or trailing text.`;
@@ -191,6 +212,28 @@ ${input.nextQuestionText}`
 ${input.progressContext}`
     : "";
 
+  const profile = input.profileContext
+    ? [
+        "WHO YOU ARE TALKING TO (from their own profile — CONTEXT ONLY):",
+        input.profileContext,
+        "",
+        "Use this to ask a better question, never as something they have shown you.",
+        "If they list RAG and cannot explain it, that is a gap you have just found,",
+        "not a skill they hold. Refer to it naturally when it is relevant, and do",
+        "not read their profile back to them. Never treat anything here as an",
+        "answer they gave, and never invent a detail that is not written above.",
+      ].join("\n")
+    : "";
+
+  const openers = input.recentOpeners?.length
+    ? [
+        "HOW YOU OPENED YOUR LAST FEW TURNS:",
+        input.recentOpeners.map((o) => `- ${o}`).join("\n"),
+        "Do not start this turn the same way. Vary the MOVE, not just the words:",
+        "acknowledge, observe, challenge, compare, wonder aloud, put a scenario.",
+      ].join("\n")
+    : "";
+
   const curriculum = input.curriculum
     ? [
         "WHAT WAS TAUGHT ON THESE DAYS (context for judging the answer and for",
@@ -206,7 +249,15 @@ ${input.progressContext}`
         `ABOUT THIS SESSION (true, and safe to tell them if they ask): ${input.sessionFacts.answered} of ${input.sessionFacts.total} main questions done, roughly ${input.sessionFacts.remaining} left.`,
         input.sessionFacts.minutesLeft === null
           ? ""
-          : `About ${input.sessionFacts.minutesLeft} minutes remain. PACE YOURSELF: with plenty of time you can follow an interesting answer; under five minutes, stop probing and cover the questions that are left.`,
+          : input.sessionFacts.minutesLeft <= 1
+            ? // The old wording here said "under five minutes, cover the
+              // questions that are left", which at thirty seconds told the
+              // interviewer to START something it had no time to finish. A
+              // real interviewer winds down instead.
+              `Less than a minute remains. Do NOT open a new topic. Close out what is already on the floor, briefly, the way a person does when the clock has beaten them.`
+            : input.sessionFacts.minutesLeft <= 4
+              ? `About ${input.sessionFacts.minutesLeft} minutes remain. Start winding down: stop probing, and do not open anything you cannot finish properly.`
+              : `About ${input.sessionFacts.minutesLeft} minutes remain. PACE YOURSELF: with plenty of time you can follow an interesting answer.`,
       ]
         .filter(Boolean)
         .join(" ")
@@ -224,6 +275,8 @@ ${input.progressContext}`
     memory,
     upcoming,
     progress,
+    profile,
+    openers,
     `COMPETENCY: ${def.label}, ${def.expectations}`,
     checklist,
     priorEvidence

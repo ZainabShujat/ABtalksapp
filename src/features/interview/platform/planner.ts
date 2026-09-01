@@ -67,9 +67,26 @@ const PERMISSIONS = [
   "I'd rather hear your thinking than a polished answer. Stop me any time if you want a question again, and saying you don't know is completely fine.",
 ] as const;
 
+/**
+ * Said only when the candidate actually has a profile worth acknowledging.
+ *
+ * Deliberately vague about WHAT it read. The first question is authored and
+ * fixed, so a specific promise ("let's start with your RAG work") would be a
+ * lie. This claims only what is true — that the interviewer arrived informed —
+ * and leaves the specifics to the turns, where the model has the profile in
+ * front of it and a real answer to attach them to.
+ */
+const CONTEXT_CLAUSES = [
+  "I've had a look at your profile, so I have some idea of what you've been working on.",
+  "I've read through your profile beforehand, so I know roughly where you've been working.",
+  "I had a look at your background before we started.",
+] as const;
+
 export function platformOpeningLine(params: {
   domain: InterviewDomain;
   firstName?: string | null;
+  /** True when there is a real profile behind this attempt. */
+  hasProfile?: boolean;
   /** Unique per attempt in production; tests pass a constant to pin the output. */
   seed?: string;
 }): string {
@@ -81,14 +98,26 @@ export function platformOpeningLine(params: {
   const shape = pickFor(SHAPES, `p:shape:${seed}`)(params.domain.label, minutes);
   const permission = pickFor(PERMISSIONS, `p:perm:${seed}`);
 
-  return `${greeting} ${shape}\n\n${permission}`;
+  const context = params.hasProfile
+    ? ` ${pickFor(CONTEXT_CLAUSES, `p:ctx:${seed}`)}`
+    : "";
+
+  return `${greeting}${context} ${shape}\n\n${permission}`;
 }
 
 /* --------------------------------------------------------------- the plan */
 
 export function buildPlatformPlan(
   domain: InterviewDomain,
-  context: { candidateFirstName?: string | null } = {},
+  context: {
+    candidateFirstName?: string | null;
+    /**
+     * Compact description of the candidate from their own profile. Frozen into
+     * the plan so a profile edited mid-interview cannot change the conversation
+     * underneath them. CONTEXT ONLY — see `platform/profile-context.ts`.
+     */
+    profileContext?: string | null;
+  } = {},
 ): InterviewPlan {
   if (!domain.packRef || !domain.rubricId) {
     throw new Error(
@@ -119,6 +148,7 @@ export function buildPlatformPlan(
     rubric: rubricSnapshotFor(domain.rubricId),
     capabilities: [...domain.capabilities],
     candidateFirstName: context.candidateFirstName ?? null,
+    profileContext: context.profileContext ?? null,
   };
 
   return {

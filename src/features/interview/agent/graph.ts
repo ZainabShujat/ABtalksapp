@@ -1,7 +1,10 @@
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { logger } from "@/lib/logger";
-import type { InterviewBlueprintKey } from "@/features/interview/cohort/blueprint";
-import { followUpBudgetFor, getCurrentQuestion } from "@/features/interview/state";
+import {
+  followUpBudgetFor,
+  getCurrentQuestion,
+  type TargetSelector,
+} from "@/features/interview/state";
 import type {
   AnswerEvidence,
   InterviewPlan,
@@ -88,6 +91,7 @@ const InterviewAnnotation = Annotation.Root({
   finished: Annotation<boolean>,
   status: Annotation<InterviewStatus>,
   error: Annotation<string | null>,
+  targetSelector: Annotation<TargetSelector | undefined>,
 });
 
 /** Branch taken straight after `receiveAnswer` rejects a turn. */
@@ -182,6 +186,11 @@ export type RunTurnInput = {
   state: InterviewState;
   questionId: string;
   answerText: string;
+  /**
+   * How to choose the next target. Omitted keeps authored order, which is what
+   * the cohort wants; the platform passes its adaptive planner.
+   */
+  targetSelector?: TargetSelector;
 };
 
 export type RunTurnResult =
@@ -253,6 +262,7 @@ export async function runInterviewTurn(
     finished: false,
     status: input.state.status,
     error: null,
+    targetSelector: input.targetSelector,
   };
 
   let final: InterviewAgentState = initial;
