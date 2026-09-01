@@ -33,8 +33,8 @@ type KeycapConfig = {
 
 const KEYCAPS: KeycapConfig[] = [
   {
-    href: "/challenges",
-    label: "60-DAY CHALLENGE",
+    href: "/databricks",
+    label: "DATABRICKS COHORT",
     stem: "bg-[#276eb4]",
     faceClassName:
       "bg-gradient-to-b from-[#d7e6f5] to-[#5fa3e8] text-[#2c4970]",
@@ -67,8 +67,8 @@ const KEYCAPS: KeycapConfig[] = [
 ];
 
 const HOMEPAGE_KEY: KeycapConfig = {
-  href: "/",
-  label: "HOMEPAGE",
+  href: "/dashboard",
+  label: "DASHBOARD",
   stem: "bg-[#a0846a]",
   faceClassName:
     "bg-[linear-gradient(180deg,#f2e1d1_1.58%,#d6a97f_112.91%)] text-[#4c4336]",

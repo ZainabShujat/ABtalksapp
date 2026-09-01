@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import {
   HUB_ARROW_HOVER_CLASS,
-  HUB_CARD_HOVER_CLASS,
   HUB_TEXT_LINK_CLASS,
 } from "@/components/dashboard-hub/nav-items";
 import { StreakRing } from "@/components/dashboard-hub/streak-ring";
@@ -72,12 +71,7 @@ export function StreakCard({ streak, restartHref }: StreakCardProps) {
   const unit = streak.currentStreak === 1 ? "day" : "days";
 
   return (
-    <div
-      className={cn(
-        "rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm",
-        HUB_CARD_HOVER_CLASS,
-      )}
-    >
+    <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
       <StreakHeader
         title={title}
         headline={headline}

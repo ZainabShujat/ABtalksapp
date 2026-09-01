@@ -578,7 +578,7 @@ path it still requires `ProgramMember.recruiterVisibilityConsentAt` to be set.
 ## 7. Routing structure
 
 ### Public
-- `/` — the marketing landing site, rebuilt from the final static build as `src/components/landing/site/` (page-scoped `--lp-*` CSS, a shared `ScrollEngine`, contact form → team@abtalks.in). The earlier three-track `landing-hub` is retired. It renders for **signed-in users too** — no redirect to `/dashboard`; track cards show "Open dashboard" per track via `features/landing/get-landing-state.ts`. `/login` bounces signed-in users to `/`.
+- `/` — the marketing landing site, rebuilt from the final static build as `src/components/landing/site/` (page-scoped `--lp-*` CSS, a shared `ScrollEngine`, contact form → team@abtalks.in). It renders for signed-out visitors only. Signed-in accounts with a `RecruiterProfile` (including pending applicants) redirect to Scout at `/hire`; every other signed-in account redirects to `/dashboard`, whose existing guard handles profileless enrollment flows. `/login` bounces signed-in users to `/`, which then resolves that home destination.
 - `/challenges` — public 60-day challenge overview (domain picker, streak grid, FAQ)
 - `/login`
 - `/students/[id]` — public student profile (basic info only)

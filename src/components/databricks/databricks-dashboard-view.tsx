@@ -28,7 +28,7 @@ export function DatabricksDashboardView({ data }: Props) {
   const [interviewOpen, setInterviewOpen] = useState(false);
 
   return (
-    <div className="-mx-4 -my-6 min-h-[calc(100svh-4.25rem)] bg-[#FBF9F7] px-5 py-8 font-content text-[#111111] sm:px-8">
+    <div className="-mx-4 -my-6 min-h-[calc(100svh-4.25rem)] bg-[#FBF9F7] px-5 py-8 font-content text-[#111111] md:px-[50px]">
       <div className="mx-auto w-full max-w-[1500px] space-y-8">
         <nav aria-label="Breadcrumb">
           <ol className="flex flex-wrap items-center gap-2 text-sm">

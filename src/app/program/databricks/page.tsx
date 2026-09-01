@@ -19,7 +19,7 @@ export const metadata = {
 
 function PageFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="-mx-4 -my-6 min-h-[calc(100svh-4.25rem)] bg-[#FBF9F7] px-5 py-8 font-content text-[#111111] sm:px-8">
+    <div className="-mx-4 -my-6 min-h-[calc(100svh-4.25rem)] bg-[#FBF9F7] px-5 py-8 font-content text-[#111111] md:px-[50px]">
       <div className="mx-auto w-full max-w-[1500px] space-y-8">{children}</div>
     </div>
   );
@@ -88,7 +88,7 @@ export default async function DatabricksPage() {
     const catalog = await listCurriculumForProgramSlug(DATABRICKS_PROGRAM_SLUG);
     const days = catalog.days.map((d) => ({ ...d, state: "LOCKED" as const }));
     return (
-      <div className="-mx-4 -my-6 min-h-[calc(100svh-4.25rem)] bg-[#FBF9F7] px-5 py-8 font-content text-[#111111] sm:px-8">
+      <div className="-mx-4 -my-6 min-h-[calc(100svh-4.25rem)] bg-[#FBF9F7] px-5 py-8 font-content text-[#111111] md:px-[50px]">
         <div className="mx-auto w-full max-w-[1500px] space-y-8">
           <DatabricksEnrolHero />
           <section>
