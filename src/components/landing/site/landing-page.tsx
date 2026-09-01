@@ -9,6 +9,7 @@ import { KeepThreeSection } from "./keep-three-section";
 import { CohortsSection } from "./cohorts-section";
 import { TestimonialsSection } from "./testimonials-section";
 import { FaqSection } from "./faq-section";
+import { GlobalCommunitySection } from "./global-community-section";
 import { CommunitySection } from "./community-section";
 import { ContactSection } from "./contact-section";
 import { CtaBand } from "./cta-band";
@@ -91,10 +92,11 @@ export function LandingPage({
         <StatsStrip />
         <BridgeSection />
         <HowItWorksSection />
-        <KeepThreeSection />
+        <KeepThreeSection getStartedHref={state.getStartedHref} />
         <CohortsSection cards={cards} />
         <TestimonialsSection />
         <FaqSection />
+        <GlobalCommunitySection />
         <CommunitySection />
         {/* <ContactSection /> */}
         <CtaBand showRecruiterCta={showRecruiterCta} />

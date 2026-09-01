@@ -847,6 +847,8 @@
   width: 100%;
 }
 .abtalks-landing .pipeline { margin-top: var(--lp-space-24); display: grid; gap: var(--lp-space-8); }
+/* CTA under the pipeline in the left column of "The platform and the process" */
+.abtalks-landing .keep__actions { margin-top: var(--lp-space-24); display: flex; flex-wrap: wrap; gap: var(--lp-space-12); }
 .abtalks-landing .pipeline__item {
   position: relative; padding-left: var(--lp-space-20);
   font-size: 14px; line-height: 21px; font-weight: 500;
@@ -1372,6 +1374,17 @@
   .abtalks-landing .dash__body { min-height: 340px; }
 }
 
+/* ---------- Short tablet viewports ----------
+   The single-column Keep pin is a fixed viewport height here, and it was
+   already tight before the CTA joined the left column. These trims only apply
+   where the viewport is genuinely short, so tall tablets keep the full-size
+   dashboard. Nothing above 1080px wide is touched. */
+@media (max-width: 1080px) and (max-height: 900px) {
+  .abtalks-landing .keep__pin { padding-top: 48px; }
+  .abtalks-landing .keep__actions { margin-top: var(--lp-space-16); }
+  .abtalks-landing .dash__body { min-height: 240px; }
+}
+
 /* ---------- Burger menu range ---------- */
 @media (max-width: 860px) {
   .abtalks-landing .nav__links {
@@ -1553,6 +1566,7 @@
   .abtalks-landing .keep__grid { gap: var(--lp-space-24); }
   .abtalks-landing .keep__text .h2 { margin-bottom: var(--lp-space-12); }
   .abtalks-landing .pipeline { margin-top: var(--lp-space-16); gap: var(--lp-space-8); }
+  .abtalks-landing .keep__actions { margin-top: var(--lp-space-20); }
   /* Readable at the design-system paragraph size, not shrunk to fit */
   .abtalks-landing .pipeline__item { font-size: 17px; line-height: 28px; padding-left: var(--lp-space-20); }
   .abtalks-landing .pipeline__item::before { top: 13px; }
@@ -1638,6 +1652,7 @@
   .abtalks-landing .keep__grid { gap: var(--lp-space-16); }
   .abtalks-landing .keep__text .h2 { font-size: 22px; line-height: 28px; margin-bottom: var(--lp-space-8); }
   .abtalks-landing .pipeline { margin-top: var(--lp-space-12); gap: var(--lp-space-4); }
+  .abtalks-landing .keep__actions { margin-top: var(--lp-space-12); }
   .abtalks-landing .pipeline__item { font-size: 14px; line-height: 21px; }
   .abtalks-landing .pipeline__item::before { top: 9px; }
   .abtalks-landing .pipeline__note > p { font-size: 12px; line-height: 16px; }
@@ -1664,6 +1679,232 @@
 @media (max-width: 339px) {
   .abtalks-landing .hero__actions { flex-wrap: wrap; }
   .abtalks-landing .hero__actions .btn { flex: 1 1 100%; padding-inline: var(--lp-space-20); }
+}
+
+/* =========================================================
+   20b. GLOBAL COMMUNITY — dotted world map + self-building network
+   ---------------------------------------------------------
+   Self-contained: every selector is namespaced .gcom*, so no existing
+   section is affected. Only design-system tokens are used.
+   ========================================================= */
+.abtalks-landing .gcom {
+  background: #FFFFFF;
+  /* Vertical rhythm tracks the viewport so the whole section reads as one
+     screen on a laptop instead of running past the fold. */
+  padding-block: clamp(40px, 6vh, var(--lp-section-gap));
+  /* The globe, its routes and the card shadows stay inside the section: no
+     internal scroll container, and nothing that can widen the page. */
+  overflow-x: clip;
+}
+.abtalks-landing .gcom__stage, .abtalks-landing .gcom__map, .abtalks-landing .gcom__nodes, .abtalks-landing .gcom__routes, .abtalks-landing .gcom__land { overflow: visible; }
+/* The map is a picture, not a viewport: it cannot be dragged, selected or
+   panned, and it owns no scroll of its own. */
+.abtalks-landing .gcom__stage, .abtalks-landing .gcom__map {
+  touch-action: pan-y;
+  user-select: none; -webkit-user-select: none;
+  -webkit-user-drag: none;
+}
+.abtalks-landing .gcom__land, .abtalks-landing .gcom__routes { pointer-events: none; }
+/* The map is the section: it runs the full page width, with a 30px margin
+   on each side and nothing else. */
+.abtalks-landing .gcom > .container {
+  max-width: 100%;
+  padding-inline: 30px;
+}
+/* One centred column: heading, then the globe across the full width. */
+.abtalks-landing .gcom__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--lp-space-32);
+  justify-items: center;
+}
+.abtalks-landing .gcom__content { text-align: center; }
+
+/* --- Stage: map box + the absolutely positioned pins/cards over it ---
+   The map runs the full width (30px each side), except on screens that are
+   wide but short, where full width would make it taller than the screen. The
+   cap trades a little width for the guarantee that the whole map, its cards
+   and the heading are on screen at once: 2.6509 is the map's aspect, so
+   capping its height in vh caps its width; 290px covers the header, the
+   heading and the cards that sit above and below the map box. */
+.abtalks-landing .gcom__stage {
+  position: relative;
+  width: min(100%, calc((100vh - 290px) * 2.6509));
+  --lp-gcom-k: 1;                        /* set by layout(): pin/card scale vs map width */
+}
+.abtalks-landing .gcom__map {
+  position: relative;
+  width: 100%;
+  /* Matches the projected map's bounding box */
+  aspect-ratio: 1000 / 377;
+}
+.abtalks-landing .gcom__land,
+.abtalks-landing .gcom__routes { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+
+/* Land dots, banded by how far each one has turned away from the viewer.
+   Together with the per-dot radius this is what makes the surface read as
+   curved — one muted grey, three depths, no second hue. */
+.abtalks-landing .gcom__dots { fill: #8C8884; }
+.abtalks-landing .gcom__dots--mid { fill: #8C8884; }
+.abtalks-landing .gcom__dots--far { fill: #ADA9A5; }
+
+/* Route lines — a thin neon stroke of even weight, below the pins and cards.
+   The colour is a light, saturated orange; the two drop-shadows are the glow
+   (a tight core halo plus a wider bloom), which is what makes it read as neon
+   rather than as a flat hairline. */
+.abtalks-landing .gcom__routeline {
+  fill: none;
+  stroke: #FF8A4F;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 2px rgba(255,138,79,.95))
+          drop-shadow(0 0 6px rgba(255,122,60,.55))
+          drop-shadow(0 0 12px rgba(255,110,45,.30));
+  opacity: 0;
+}
+
+/* --- Location pins + cards --- */
+.abtalks-landing .gcom__nodes { position: absolute; inset: 0; list-style: none; margin: 0; padding: 0; }
+.abtalks-landing .gcom__node { position: absolute; inset: 0; pointer-events: none; }
+
+/* Pin: soft outer glow, halo ring, bright centre. */
+.abtalks-landing .gcom__pin {
+  position: absolute;
+  width: calc(34px * var(--lp-gcom-k)); height: calc(34px * var(--lp-gcom-k));
+  margin: calc(-17px * var(--lp-gcom-k)) 0 0 calc(-17px * var(--lp-gcom-k));  /* centre on the point */
+  border-radius: 50%;
+  display: grid; place-items: center;
+  opacity: 0;
+  transform: scale(.55);
+  transition: opacity .42s var(--lp-ease-soft), transform .52s var(--lp-ease-soft);
+}
+.abtalks-landing .gcom__pin::before,
+.abtalks-landing .gcom__pin::after { content: ""; position: absolute; border-radius: 50%; }
+/* outer glow */
+.abtalks-landing .gcom__pin::before {
+  inset: 0;
+  background: radial-gradient(circle, rgba(224,82,38,.26) 0%, rgba(224,82,38,.10) 45%, rgba(224,82,38,0) 70%);
+}
+/* soft halo */
+.abtalks-landing .gcom__pin::after {
+  width: calc(15px * var(--lp-gcom-k)); height: calc(15px * var(--lp-gcom-k));
+  background: rgba(224,82,38,.30);
+  box-shadow: 0 0 0 1px rgba(224,82,38,.28);
+}
+/* bright central dot */
+.abtalks-landing .gcom__pin i {
+  position: relative; z-index: 1;
+  width: calc(7px * var(--lp-gcom-k)); height: calc(7px * var(--lp-gcom-k)); border-radius: 50%;
+  background: var(--lp-color-primary);
+  box-shadow: 0 0 0 2px #FFFFFF, 0 1px 3px rgba(224,82,38,.45);
+}
+.abtalks-landing .gcom__node.is-on .gcom__pin { opacity: 1; transform: scale(1); }
+
+/* Leader: a hairline from the pin to its card, so a card is never ambiguous
+   in the tight European cluster. Drawn with the same progressive reveal. */
+.abtalks-landing .gcom__leader {
+  position: absolute;
+  height: 1px;
+  background: rgba(224,82,38,.45);
+  transform-origin: 0 50%;
+  opacity: 0;
+  transition: opacity .4s var(--lp-ease);
+}
+.abtalks-landing .gcom__node.is-on .gcom__leader { opacity: 1; }
+
+/* Card — small floating data card. White, hairline border, soft shadow.
+   display:block matters: the card is a <span>, and it drops to position:static
+   in the mobile grid — without it, it would fall back to inline. */
+.abtalks-landing .gcom__card {
+  position: absolute;
+  display: block;
+  width: calc(var(--lp-gcom-cw, 108) * 1px * var(--lp-gcom-k));
+  padding: calc(8px * var(--lp-gcom-k)) calc(12px * var(--lp-gcom-k)) calc(10px * var(--lp-gcom-k));
+  background: #FFFFFF;
+  border: 1px solid #ECE8E4;
+  border-radius: var(--lp-radius-md);
+  box-shadow: 0 6px 18px rgba(17,17,17,.10);
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity .58s var(--lp-ease), transform .62s var(--lp-ease-soft);
+  pointer-events: auto;
+}
+.abtalks-landing .gcom__node.is-lit .gcom__card { opacity: 1; transform: translateY(0); }
+
+.abtalks-landing .gcom__cardhead {
+  display: flex; align-items: center; gap: 5px;
+  white-space: nowrap;
+  font-family: var(--lp-font-display);
+  font-size: calc(11px * var(--lp-gcom-k)); line-height: 16px; font-weight: 700;
+  letter-spacing: .05em; text-transform: uppercase;
+  color: var(--lp-color-text-primary);
+}
+/* Every flag is the same drawn box, so none can appear larger than another. */
+.abtalks-landing .gcom__flag {
+  flex: none;
+  width: calc(18px * var(--lp-gcom-k));
+  height: calc(12px * var(--lp-gcom-k));
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(17,17,17,.10);
+}
+.abtalks-landing .gcom__flag svg { display: block; width: 100%; height: 100%; }
+/* Full country name for screen readers; the card face shows the short label. */
+.abtalks-landing .gcom__sr {
+  position: absolute; width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  clip-path: inset(50%); overflow: hidden; white-space: nowrap;
+}
+.abtalks-landing .gcom__num {
+  display: block;
+  font-family: var(--lp-font-display);
+  font-size: calc(22px * var(--lp-gcom-k)); line-height: calc(28px * var(--lp-gcom-k)); font-weight: 700;
+  color: var(--lp-color-primary);
+  margin-top: 2px;
+}
+.abtalks-landing .gcom__unit {
+  display: block;
+  font-size: calc(12px * var(--lp-gcom-k)); line-height: calc(16px * var(--lp-gcom-k));
+  color: var(--lp-color-text-muted);
+}
+
+/* --- Heading block --- */
+.abtalks-landing .gcom__title { margin-bottom: 0; }
+
+/* =========================================================
+   20c. GLOBAL COMMUNITY — responsive
+   ========================================================= */
+/* Short desktop screens (laptops): the heading and the globe together still
+   have to land inside one viewport, so both tighten. */
+@media (min-width: 721px) and (max-height: 940px) {
+  .abtalks-landing .gcom { padding-block: clamp(30px, 4.6vh, var(--lp-section-gap)); }
+  .abtalks-landing .gcom__grid { gap: var(--lp-space-24); }
+}
+@media (min-width: 721px) and (max-height: 800px) {
+  .abtalks-landing .gcom { padding-block: clamp(24px, 3.4vh, var(--lp-section-gap)); }
+  .abtalks-landing .gcom__grid { gap: var(--lp-space-16); }
+}
+
+@media (max-width: 720px) {
+  /* The map keeps the geography — pins and routes stay on it — but eight
+     floating cards cannot fit a ~350px-wide map without burying it. Below
+     720px the cards become a two-column grid under the map instead, still
+     revealed one at a time in the same order as their pins. */
+  .abtalks-landing .gcom__stage { display: grid; gap: var(--lp-space-20); }
+  .abtalks-landing .gcom__nodes {
+    position: static;
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--lp-space-8);
+  }
+  .abtalks-landing .gcom__node { position: static; }
+  .abtalks-landing .gcom__leader { display: none; }
+  .abtalks-landing .gcom__card {
+    position: static;
+    width: auto;
+    padding: var(--lp-space-12) var(--lp-space-12) 10px;
+    transform: translateY(22px);
+    box-shadow: 0 3px 10px rgba(17,17,17,.07);
+  }
+  .abtalks-landing .gcom__num { font-size: 20px; line-height: 26px; }
 }
 
 /* =========================================================
