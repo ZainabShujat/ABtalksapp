@@ -82,7 +82,7 @@ export function deriveEventNotifications(
       key: `workshop:${ev.id}`,
       title: `Live workshop: ${ev.title}`,
       body: `${ev.time} · ${ev.location}`,
-      href: "/ai-workshop",
+      href: "/workshop",
       category: "WORKSHOP",
       publishedAt: istMidnightInstant(opensKey).toISOString(),
     });

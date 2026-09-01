@@ -13,6 +13,7 @@ import {
 } from "@/components/hire/sample-card-notice";
 import { ShortlistButton } from "@/components/talent/shortlist-button";
 import { cn } from "@/lib/utils";
+import { SKILL_PILL_CAP } from "@/components/hire/hire-card-facts";
 
 /** One ranking dimension as the inspector chart reads it. Null ≠ 0. */
 export type PublicScoreSlice = {
@@ -28,6 +29,13 @@ export type PublicScoreSlice = {
 export type MatchCardData = {
   /** `PROGRAM:<id>` / `CLAUDE:<id>` — what every action on this card addresses. */
   candidateRef: string;
+  /**
+   * Set only by `virtual-candidate.ts`. The card is a requirement, not a
+   * person: no name, no contact, nothing measured. The UI must say so plainly
+   * wherever this is true — a requirement that reads as inventory is the one
+   * failure this feature cannot have.
+   */
+  isVirtual?: boolean;
   /** Which track the evidence came from. Decides the wording of the counts:
    *  the cohort passes graded missions, the challenge submits daily work. */
   source?: CandidateSource;
@@ -352,7 +360,7 @@ function RealMatchCard({
             {e.yearsExperience} yrs
           </li>
         )}
-        {skills.slice(0, 4).map((s) => {
+        {skills.slice(0, SKILL_PILL_CAP).map((s) => {
           const hit = skillHighlighted(s, needles);
           return (
             <li

@@ -61,7 +61,6 @@ const nextConfig: NextConfig = {
       { source: "/program/curriculum", destination: "/program/ai-cohort/curriculum", permanent: true },
       { source: "/program/videos", destination: "/program/ai-cohort/videos", permanent: true },
       { source: "/program/leaderboard", destination: "/program/ai-cohort/leaderboard", permanent: true },
-      { source: "/program/interview", destination: "/program/ai-cohort/interview", permanent: true },
       {
         source: "/program/cohort-interview/:blueprint",
         destination: "/program/ai-cohort/cohort-interview/:blueprint",
@@ -70,6 +69,15 @@ const nextConfig: NextConfig = {
       {
         source: "/program/cohort-interview/:blueprint/report",
         destination: "/program/ai-cohort/cohort-interview/:blueprint/report",
+        permanent: true,
+      },
+      // /ai-workshop was renamed to /workshop. The old path is in confirmation
+      // emails already sent, WhatsApp shares and bookmarks, so it has to keep
+      // resolving rather than 404.
+      { source: "/ai-workshop", destination: "/workshop", permanent: true },
+      {
+        source: "/ai-workshop/:path*",
+        destination: "/workshop/:path*",
         permanent: true,
       },
     ];

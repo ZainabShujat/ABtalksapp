@@ -3,9 +3,11 @@ import { CandidatePersona, UserType, type Prisma } from "@prisma/client";
 import { prisma, writeClient } from "@/lib/db";
 import { isNewCandidateRepoEnabled } from "@/lib/feature-flags";
 import {
-  educationIdForStudentProfile,
-  experienceIdForStudentProfile,
-} from "@/repositories/dual-write";
+  pickPrimaryEducation,
+  pickPrimaryExperience,
+  splitMonthDate,
+  totalExperienceMonths,
+} from "@/repositories/candidate-primary";
 import { studentProfile } from "@/repositories/legacy/student-profile";
 import type { CandidateProfileView } from "@/repositories/types";
 
@@ -45,26 +47,36 @@ const newIdentitySelect = {
   isReadyForInterview: true,
   isCampusAmbassadorCandidate: true,
   ambassadorDismissedAt: true,
+  // No id filter: a candidate may own many rows, and the one legacy surfaces
+  // need is chosen by `pickPrimary*`, not by a migration-era deterministic id.
   education: {
-    where: { id: { startsWith: "edu_sp_" } },
     select: {
-      id: true,
       institutionName: true,
       collegeId: true,
+      startYear: true,
+      startMonth: true,
       graduationYear: true,
+      endMonth: true,
+      isCurrent: true,
       sortOrder: true,
     },
   },
   experience: {
-    where: { id: { startsWith: "exp_sp_" } },
     select: {
-      id: true,
       companyName: true,
       title: true,
-      totalMonths: true,
+      startedOn: true,
+      endedOn: true,
+      isCurrent: true,
     },
   },
-  skills: { select: { skill: { select: { name: true } } } },
+  // Only live claims mirror into the legacy string array; a withdrawn claim
+  // keeps its row (and its evidence) but is no longer something the candidate
+  // asserts, so it must not read back as a declared skill.
+  skills: {
+    where: { claimedByCandidate: true },
+    select: { skill: { select: { name: true } } },
+  },
 } as const;
 
 function userTypeFromPersona(persona: string): "STUDENT" | "PROFESSIONAL" {
@@ -132,27 +144,41 @@ function viewFromNew(
     isCampusAmbassadorCandidate: boolean;
     ambassadorDismissedAt: Date | null;
     education: Array<{
-      id: string;
       institutionName: string;
       collegeId: string | null;
+      startYear: number | null;
+      startMonth: number | null;
       graduationYear: number | null;
+      endMonth: number | null;
+      isCurrent: boolean;
       sortOrder: number;
     }>;
     experience: Array<{
-      id: string;
       companyName: string;
       title: string;
-      totalMonths: number;
+      startedOn: Date;
+      endedOn: Date | null;
+      isCurrent: boolean;
     }>;
     skills: Array<{ skill: { name: string } }>;
   },
 ): CandidateProfileView {
-  const education = row.education.find(
-    (e) => e.id === educationIdForStudentProfile(row.userId),
-  );
-  const experience = row.experience.find(
-    (e) => e.id === experienceIdForStudentProfile(row.userId),
-  );
+  const education = pickPrimaryEducation(row.education);
+
+  const experienceRows = row.experience.map((e) => {
+    const start = splitMonthDate(e.startedOn);
+    const end = splitMonthDate(e.endedOn);
+    return {
+      companyName: e.companyName,
+      title: e.title,
+      startMonth: start.month ?? 1,
+      startYear: start.year ?? 0,
+      endMonth: end.month,
+      endYear: end.year,
+      isCurrent: e.isCurrent,
+    };
+  });
+  const experience = pickPrimaryExperience(experienceRows);
 
   return {
     userId: row.userId,
@@ -172,9 +198,12 @@ function viewFromNew(
     graduationYear: education?.graduationYear ?? null,
     organization: unspecifiedToNull(experience?.companyName),
     role: unspecifiedToNull(experience?.title),
-    yearsExperience: experience
-      ? Math.max(0, Math.round(experience.totalMonths / 12))
-      : null,
+    // Merged span across every role, not the primary row's own duration —
+    // this is what `/hire`'s "minimum years" filter compares against.
+    yearsExperience:
+      experienceRows.length > 0
+        ? Math.floor(totalExperienceMonths(experienceRows) / 12)
+        : null,
     isCampusAmbassadorCandidate: row.isCampusAmbassadorCandidate,
     ambassadorDismissedAt: row.ambassadorDismissedAt,
   };
@@ -411,7 +440,7 @@ async function mintHireOnlyReferralCode(tx: Prisma.TransactionClient): Promise<s
  * If StudentProfile exists, CandidateProfile copies that live referral code.
  * 8-character codes are only for users with no StudentProfile (hire-only).
  */
-async function ensureCandidateProfile(
+export async function ensureCandidateProfile(
   tx: Prisma.TransactionClient,
   userId: string,
 ): Promise<void> {

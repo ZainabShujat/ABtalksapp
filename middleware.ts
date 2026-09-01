@@ -47,7 +47,6 @@ const protectedPaths = [
   "/program/ai-cohort/curriculum",
   "/program/ai-cohort/videos",
   "/program/ai-cohort/leaderboard",
-  "/program/ai-cohort/interview",
   "/program/ai-cohort/cohort-interview",
   "/program/databricks",
   "/talent",
@@ -131,9 +130,9 @@ export default auth((req) => {
   const hasAttributionCookies =
     req.cookies.has(REF_COOKIE_NAME) || alreadyAttributed;
 
-  // Exact match only — `/ai` must not capture `/ai-workshop`,
-  // `/ai-cohort-*` or `/ai-talent-hunt`, and `/claude` must not
-  // capture `/claude-signup`. All of those are public.
+  // Exact match only — `/ai` must not capture `/ai-cohort-*` or
+  // `/ai-talent-hunt`, and `/claude` must not capture `/claude-signup`.
+  // Both of those are public.
   const exactProtectedPaths = ["/ai", "/ds", "/se", "/claude"];
 
   // Scout itself is public. Auth is a dialog on this page, or a dedicated
@@ -205,6 +204,19 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api/auth).*)",
+    /**
+     * Anything with a file extension is skipped, and that last clause is not
+     * cosmetic: `public/` files sit at the site root, so `public/hire/
+     * shortlist.jpg` is served at `/hire/shortlist.jpg` — which starts with
+     * `/hire`, which this middleware protects. The desk's own icons were being
+     * answered with a 307 to `/talent/login`, so the `<img>` received the login
+     * page's HTML and rendered as nothing. Only `_next/static` was exempt, and
+     * `public/` is not `_next/static`.
+     *
+     * It gates no route that was gated before. A path ending in `.jpg` or `.css`
+     * is a file, and a file was never something a session check protected —
+     * `/hire/requests` and every other real route still pass through.
+     */
+    "/((?!_next/static|_next/image|favicon.ico|api/auth|.*\\.[\\w]+$).*)",
   ],
 };

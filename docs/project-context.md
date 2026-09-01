@@ -4,6 +4,17 @@
 
 > **Last updated:** 2026-08-24, reconciled against commit `3b040d8` (master — "Merge branch 'feature/student-dashboard' into master"). The student-dashboard hub itself landed one merge earlier, at `d404d04` (PR #199); `3b040d8` is the verified current `master` HEAD. Covers everything logged under `## Pending reconcile` in `docs/CHANGELOG.md` through 2026-08-24.
 
+> **`/hire` is live on `master` and was not described here.** Scout, the
+> recruiter desk and the engagement flow shipped with `feat/hire-scout-078`
+> and supersede the `/talent` pool browser, which is removed. This document
+> had not caught up: it still described the pool browser and listed building
+> the recruiter experience as a future priority. The sections below now
+> describe what is actually deployed.
+>
+> The feature is behind no flag of its own, but the pool it can reach is
+> bounded by `HIRE_OPEN_COHORT_IDS` and `HIRE_CHALLENGE_POOL`, both unset by
+> default — so a fresh environment reaches published cohorts only.
+
 > **Read this before changing anything data-related.** The platform is **mid-migration**. Plan 078 added a new data model **alongside** the existing one. Three states must be kept apart:
 >
 > - **A. LEGACY DATA MODEL** — still live, still populated, and **authoritative for every read** in production.
@@ -152,6 +163,14 @@ Both are expected to land as **additive** schema later. Neither blocked the 078 
 ### Recruiter-facing (challenge side)
 - `RecruiterReview` (unique userId) — admin-curated anonymized assessment report: `/100` scores (communication / programming / behavior) + feedback, resume sections (`skillGroups`, `education`, `certifications`, `experience`, `projects`, `achievements[]`, `languagesSpoken[]`), `codingChallenges`, strengths / areasForGrowth, `recommendation` (`RecommendationLevel`), admin-only `logistics` + `compensation`, `isPublished` + `shareToken` (unique) for the public `/r/[token]` page.
 - `Job` (`JobType`: FULL_TIME | INTERNSHIP | CONTRACT | PART_TIME) and `JobApplication` (unique jobId+userId)
+
+### Hire / recruiter desk tables
+- `TalentRequest` — one recruiter brief. Holds the spec Scout assembled (role, stack, experience, budget, location) plus the transcript, so a guest conversation can be adopted onto a row at sign-in rather than lost. `alertWhenAvailable` is set by the demand button when a search returns nothing.
+- `TalentEngagementRequest` — **one row per recruiter/candidate pair**, deliberately not one per batch: the team decides each introduction separately and contact release is per pair. `status` (`TalentEngagementStatus`: DRAFT → SUBMITTED → IN_REVIEW → CONTACT_SHARED / DECLINED / CLOSED) is what releases identity — access is *derived* from this status and never stored as a second flag a bug could leave switched on. `source` (`TalentCandidateSource`: PROGRAM | CHALLENGE_60 | CLAUDE | HACKATHON) records which track the candidate came from. `candidatePublicId` denormalises the AB-#### the recruiter saw, so admin and recruiter are demonstrably discussing the same person.
+- `TalentEngagementMessage` — the thread on one engagement; `authorRole` is `recruiter` | `admin`.
+- `CandidateAvailability` — candidate-side availability, kept apart from `searchableByRecruiters`.
+- `VerifiedRecruiterSeat` — allow-list of verified recruiter seats.
+- `RecruiterEmailOtp` — email OTP baseline for recruiter sign-in (recruiters have their own door at `/talent/login`, not the candidate Google button).
 
 ### Reference data
 - `College` — canonical institution catalog (54,651 institutions), queried with a pg_trgm index. `StudentProfile.collegeId` stores the picked id; `StudentProfile.college` remains the display string so no read path has to join.
@@ -593,8 +612,11 @@ path it still requires `ProgramMember.recruiterVisibilityConsentAt` to be set.
 - `/program/apply`, `/program/assessment`
 - `/program/dashboard` (Mission Control), `/program/day/[day]`, `/program/curriculum`, `/program/videos`, `/program/leaderboard`, `/program/interview`
 
-### Protected (recruiter talent portal)
-- `/talent`, `/talent/register`, `/talent/pending`, `/talent/members/[id]`, `/talent/shortlist`
+### Recruiter desk
+- `/hire` — Scout. **Public**: the conversation and a search run for guests; auth is a dialog at checkout, not a wall at the door. `/hire/matches` is public too.
+- `/hire/requests`, `/hire/[requestId]`, `/hire/evidence` — behind a session.
+- `/talent/shortlist` (the cart), `/talent/members/[id]` (evidence profile), `/talent/login`, `/talent/register`, `/talent/pending` — retained.
+- `/talent` — **the pool browser was removed.** It listed the same candidates the search already ranks, and `getTalentPool` was the query still selecting `fullName`. The path is now a permanent redirect to `/hire`; middleware stops gating it so the redirect can fire.
 
 ### Admin (`/admin`, requires admin email)
 - `/admin` — overview, live submissions feed, recent admin actions
@@ -616,6 +638,7 @@ path it still requires `ProgramMember.recruiterVisibilityConsentAt` to be set.
 - `/api/cron/program-commits` — Vercel cron, Bearer-auth via `CRON_SECRET`
 - `/api/program/interview/session` — mints an OpenAI Realtime ephemeral secret
 - `/api/chat` — site help chatbot (behind `ENABLE_CHATBOT`)
+- `/api/cron/hire-alerts` — Vercel cron; notifies recruiters whose `alertWhenAvailable` brief now has matches
 - `/api/cron/078-drift` — 078 legacy-vs-new drift probe (also runnable as `npm run db:check:078:drift`)
 
 ---
@@ -634,6 +657,8 @@ path it still requires `ProgramMember.recruiterVisibilityConsentAt` to be set.
 
 **Recruiter (challenge side):** `recruiter-review-actions`
 
+**Hire desk:** `hire-actions`, `hire-guest-actions`, `hire-request-actions`, `recruiter-auth-actions`, `recruiter-seat-actions`
+
 **Admin:** `admin-actions`, `admin-export-actions`, `admin-remark-actions`, `admin-redemption-actions`, `admin-job-actions`, `admin-recruiter-actions`, `admin-hackathon-actions`, `admin-hackathon-link-actions`, `admin-program-actions`, `admin-program-export-actions`, `campus-ambassador-actions`
 
 All return the discriminated union `{ ok: true, data } | { ok: false, message }`.
@@ -642,13 +667,14 @@ All return the discriminated union `{ ok: true, data } | { ok: false, message }`
 
 ## 9. Feature modules (`src/features/`)
 
-`registration/` · `enrollment/` · `submission/` · `challenge/` · `dashboard/` · `profile/` · `quiz/` · `user/` · `synergy/` · `certificate/` · `marketplace/` · `jobs/` · `recruiter/` · `hackathon/` · `workshop/` · `program/` · `talent-pool/` · `email/` · `admin/`
+`registration/` · `enrollment/` · `submission/` · `challenge/` · `dashboard/` · `profile/` · `quiz/` · `user/` · `synergy/` · `certificate/` · `marketplace/` · `jobs/` · `recruiter/` · `hackathon/` · `workshop/` · `program/` · `hire/` · `talent-pool/` · `email/` · `admin/`
 
 Notes:
 - `program/` is the largest module (missions, verify-mission, days, progression, commits, mentor, recommendations, projects, interview, leaderboard, entry, admin, bootstrap-start-day, parse-brief, constants)
 - `certificate/` owns ID generation, eligibility/issue, PDF render, template source, achievements
 - `workshop/` has admin data, analytics, prefill, recent registrations, registration status. `getWorkshopConfig` is **not** here — it stays in `lib/workshop-supabase.ts`.
 - `recruiter/` holds the `@react-pdf/renderer` document (`recruiter-pdf.tsx`) — keep it out of client/edge bundles
+- `hire/` is the Scout agent and the matching pipeline: `scout-graph` / `scout-tools` / `scout-agent` (LangGraph), `track-registry` + `track-loaders` (which pools exist and how to read them), `dossier` / `challenge-dossier` / `hackathon-dossier`, `score-candidate`, `pool-brief`, `sample-card`. It is **server-only** — a test asserts no client module imports the agent, its tools or the graph.
 
 ### Repository layer (`src/repositories/`) — the 078 migration boundary
 
@@ -781,6 +807,9 @@ the site stays up while it runs.
 - `ENABLE_DEV_AUTH` — Credentials provider, localhost only
 - `ENABLE_CLAUDE_CHALLENGE` — Claude track visibility
 - `ENABLE_PROGRAM` — gates all `/program` and `/talent` routes (`notFound()` when unset)
+- `HIRE_OPEN_COHORT_IDS` — cohorts `/hire` may match before results are published; comma-separated ids or `all`. Unset = published cohorts only.
+- `HIRE_CHALLENGE_POOL` — whether `/hire` also searches the 60-day challenge track, and from how many verified days (`=10`, or `=true` for the default floor of 10). Unset = off.
+- `GROQ_API_KEY`, `GROQ_API_KEY_2`, `GROQ_API_KEY_3` — Scout's model calls; `askGroqJson` falls through to the next key on 429/401. `HIRE_GROQ_MODEL` overrides the model.
 - `ENABLE_CHATBOT` — site help chatbot (`/api/chat` + `ChatWidget` in the root layout)
 - `BYPASS_DAY_LOCKS` — bypass challenge/program day gating server-side (dev)
 - `OTP_DEV_BYPASS`, `OTP_DEV_CODE` — skip MSG91, accept a fixed code (default `1234`)
@@ -1058,15 +1087,42 @@ reconciliation.
 ### Recruiter product direction
 
 There is **no meaningful recruiter user population** that needs legacy
-recruiter-account compatibility. The recruiter product should therefore be built
-against the **new 078 recruiter architecture**: `UserRoleAssignment(RECRUITER)`,
-`RecruiterProfile`, `Organization`, `OrganizationMember`, `TalentList`,
-`TalentListItem`, `CandidateNote`, `Job` / `JobApplication`. Candidate discovery
-should eventually query normalized candidate/evidence data, not `ProgramMember`.
+recruiter-account compatibility, which is what made it safe to replace the
+recruiter surface outright rather than migrate it.
 
-**But `ENABLE_NEW_TALENT` is still OFF — the new talent search is not live.** The
-initial candidate pool, once `CandidateVisibility` backfill is corrected and
-verified, is the AI Cohort candidates plus eligible post-launch new candidates.
+**The recruiter experience is now built, as `/hire`.** What it is:
+
+- **Scout** — a LangGraph agent (`StateGraph` + `ToolNode` + `ChatGroq`,
+  `openai/gpt-oss-120b`, `reasoning_effort: medium`) over a track registry. The
+  model *proposes*; the engine validates and acts, so a tool call can never widen
+  the pool by itself. Eight tools — `list_tracks`, `get_pool_stats`,
+  `update_brief`, `set_pool_filters`, `preview_matches`, `reset_brief`,
+  `offer_options`, `search_pool` — each returning `{applied, rejected}`.
+  Protected attributes are refused at a hard gate before the model is reached.
+- **The desk** — a two-view surface (Scout / Shortlist), a candidate inspector,
+  an evidence resume, and Save-for-later as a device-local list that is
+  deliberately *not* the Shortlist. Nothing on Save-for-later has been shown to
+  the team; moving a candidate to the Shortlist is the act that puts them in
+  front of anyone.
+- **Engagements** — see `TalentEngagementRequest` above. Contact release is per
+  recruiter/candidate pair and derived from status.
+- **Empty searches** return sample cards built from the recruiter's own spec.
+  `SAMPLE:` refs stay off the track whitelist, so a sample can never be
+  shortlisted or introduced.
+
+**Honest architectural note.** `/hire` does **not** query the normalized 078
+tables. It reads `ProgramMember` (and the challenge / hackathon equivalents)
+through per-track dossier loaders in `features/hire/track-loaders.ts`, because
+`ENABLE_NEW_TALENT` is still off and the 078 candidate/evidence data is not the
+live source. The track registry is the seam: when the 078 reads switch on, the
+loaders change and the agent, tools and UI do not. Treat this as deliberate
+sequencing, not as the end state — candidate discovery should still end up on
+normalized evidence data.
+
+**`ENABLE_NEW_TALENT` remains OFF.** The candidate pool, once the
+`CandidateVisibility` backfill is corrected and verified, is the AI Cohort
+candidates plus eligible post-launch new candidates — widened per track by
+`HIRE_OPEN_COHORT_IDS` and `HIRE_CHALLENGE_POOL`.
 
 ### Not yet built
 - Full real Day 1–60 content for SE / DS / AI (placeholders remain where JSON is missing)
@@ -1080,7 +1136,7 @@ verified, is the AI Cohort candidates plus eligible post-launch new candidates.
 4. Correct and verify the recruiter-visible population: **AI Cohort + post-launch candidates only** — not all ~12,800 historical users. Commit and re-run the amended 2b.
 5. Run the full Phase 5 reconciliation: drift, points, visibility count + leak, shadow reads.
 6. Begin controlled Phase 6 repository read switches **only after** that verification passes.
-7. Build the recruiter experience against the 078 recruiter architecture.
+7. Move `/hire`'s track loaders onto the 078 candidate/evidence reads once Phase 6 is verified.
 8. Resume Databricks / interview-agent product work once the migration foundation is stable.
 
 ---

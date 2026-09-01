@@ -32,6 +32,11 @@ import { GapReport } from "@/components/hire/gap-report";
 import { useHireDesk } from "@/components/hire/hire-desk-context";
 import { readGuestCart } from "@/components/hire/guest-cart";
 import { buildSampleCards } from "@/features/hire/sample-card";
+import { hasSufficientRealMatches } from "@/features/hire/match-config";
+import {
+  generateVirtualCandidate,
+  virtualCandidateToCard,
+} from "@/features/hire/virtual-candidate";
 import { buildLockedPreviewCards } from "@/features/hire/locked-preview";
 import type { MatchCardData } from "@/components/hire/match-card";
 import { SearchTabs } from "@/components/hire/search-tabs";
@@ -82,6 +87,7 @@ type Props = {
   initialSearched?: boolean;
   /** Server flag: fill an empty desk with blurred example profiles. */
   proPreview?: boolean;
+  virtualCandidates?: boolean;
 };
 
 const OPENING: Msg = {
@@ -280,6 +286,7 @@ export function ScoutChat({
   alertWhenAvailable = false,
   initialSearched = false,
   proPreview = false,
+  virtualCandidates = false,
 }: Props) {
   const router = useRouter();
   const [requestId, setRequestId] = useState<string | null>(initialRequestId);
@@ -312,6 +319,7 @@ export function ScoutChat({
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const promptRef = useRef<HTMLTextAreaElement>(null);
+  const criteriaRef = useRef<HTMLUListElement>(null);
 
   useLayoutEffect(() => {
     const el = promptRef.current;
@@ -336,11 +344,18 @@ export function ScoutChat({
   // spec-shaped sample card. Both carry `SampleCardNotice`, which is what keeps
   // the page honest that the pool has nobody matching — neither card is
   // inventory, and only the notice says so in words.
-  const deskSamples = !searched || deskMatches.length > 0
+  // "Did the pool answer?" is a threshold question, not a count. A single
+  // 41-scoring near-miss is not an answer, and treating it as one is how a
+  // recruiter concludes we have nobody rather than that we can find somebody.
+  const poolAnswered = hasSufficientRealMatches(deskMatches);
+  const virtualProfile = generateVirtualCandidate(spec);
+  const deskSamples = !searched || poolAnswered
     ? []
     : proPreview
       ? buildLockedPreviewCards(spec)
-      : buildSampleCards(spec);
+      : virtualCandidates && virtualProfile
+        ? [virtualCandidateToCard(virtualProfile)]
+        : buildSampleCards(spec);
 
   useEffect(() => {
     if (persist && (results?.length ?? 0) > 0) {
@@ -675,6 +690,26 @@ export function ScoutChat({
       on: (spec.evidencePriority?.length ?? 0) > 0 || spoken.abtalks,
     },
   ] as const;
+
+  /**
+   * Keep the newest tick in view.
+   *
+   * The checklist is one horizontal strip, so on a narrow screen the items that
+   * just got ticked are usually the ones off the right edge — exactly the
+   * feedback the recruiter is looking for after answering. Scroll the last
+   * ticked item into view whenever the ticks change. `inline: "end"` because
+   * the list fills left to right, and "nearest" block so the page itself never
+   * jumps while someone is typing.
+   */
+  const tickSignature = criteria.map((c) => (c.on ? "1" : "0")).join("");
+  useEffect(() => {
+    const list = criteriaRef.current;
+    if (!list) return;
+    const ticked = list.querySelectorAll<HTMLLIElement>(".scout-criterion.is-on");
+    const last = ticked[ticked.length - 1];
+    if (!last) return;
+    last.scrollIntoView({ behavior: "smooth", inline: "end", block: "nearest" });
+  }, [tickSignature]);
 
   const REQUIREMENT_ASK: Record<(typeof criteria)[number]["key"], string> = {
     Role: "Let's cover the role — what are you hiring for?",
@@ -1027,6 +1062,20 @@ export function ScoutChat({
           else runSearch();
         }}
       >
+        <ul
+          className="scout-criteria"
+          aria-label="Requirement checklist"
+          ref={criteriaRef}
+        >
+          {criteria.map((c) => (
+            <li key={c.key} className={cn("scout-criterion", c.on && "is-on")}>
+              <span className="scout-criterion__box" aria-hidden="true">
+                ✓
+              </span>
+              <span>{c.key}</span>
+            </li>
+          ))}
+        </ul>
         <div className="scout-composer__row">
           <div className="scout-field">
             <label className="sr-only" htmlFor="scout-prompt">
@@ -1058,19 +1107,6 @@ export function ScoutChat({
             {pending ? "…" : "Search"}
           </button>
         </div>
-        <ul className="scout-criteria" aria-label="Requirement checklist">
-          {criteria.map((c) => (
-            <li
-              key={c.key}
-              className={cn("scout-criterion", c.on && "is-on")}
-            >
-              <span className="scout-criterion__box" aria-hidden="true">
-                ✓
-              </span>
-              <span>{c.key}</span>
-            </li>
-          ))}
-        </ul>
       </form>
     </section>
   );

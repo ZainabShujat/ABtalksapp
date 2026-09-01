@@ -88,8 +88,8 @@ export function BottomNav() {
     pathname === "/ds" ||
     pathname === "/se" ||
     pathname.startsWith("/challenge/") ||
-    pathname === "/ai-workshop" ||
-    pathname.startsWith("/ai-workshop/") ||
+    pathname === "/workshop" ||
+    pathname.startsWith("/workshop/") ||
     pathname === "/hackathon" ||
     pathname.startsWith("/hackathon/") ||
     // `hire` belongs here for the same reason `talent` does: the recruiter

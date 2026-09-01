@@ -272,9 +272,12 @@ export default function CommunityStats() {
           <BodyCopy />
         </div>
 
+        {/* Centred only while stacked in one column; once the three sit
+            side by side at `sm` they go back to left-aligned, matching the
+            design's own alignment. */}
         <div className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-3">
           {STATS.map((s) => (
-            <div key={s.label} className="min-w-0">
+            <div key={s.label} className="min-w-0 text-center sm:text-left">
               <div
                 className="font-bold leading-[1.1]"
                 style={{

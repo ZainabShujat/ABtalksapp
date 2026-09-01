@@ -131,7 +131,7 @@ export function AppFooter() {
   const isMarketplace =
     pathname === "/marketplace" || pathname.startsWith("/marketplace/");
   const isWorkshop =
-    pathname === "/ai-workshop" || pathname.startsWith("/ai-workshop/");
+    pathname === "/workshop" || pathname.startsWith("/workshop/");
   const isCohortRegister =
     pathname === "/ai-cohort-register" ||
     pathname.startsWith("/ai-cohort-register/");

@@ -226,7 +226,17 @@ function NotificationPanel({
 }) {
   // Below md the panel is a full-width sheet, so the anchor is ignored. From md
   // up it hangs directly under the bell, wherever the header happens to put it.
-  const [isDesktop, setIsDesktop] = useState(false);
+  //
+  // Read the breakpoint during the first render, not in an effect: the panel
+  // remounts on every open, and an effect-only read paints one frame with no
+  // anchor, which parks the fixed, body-portaled box at the viewport's left
+  // edge. Safe to touch `window` here — the panel never renders on the server
+  // or during hydration, only after a click flips `open`.
+  const [isDesktop, setIsDesktop] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(min-width: 768px)").matches,
+  );
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 768px)");
@@ -268,8 +278,9 @@ function NotificationPanel({
           "fixed z-[70] flex flex-col overflow-hidden rounded-xl border border-border/60 bg-card shadow-xl animate-in fade-in-0 zoom-in-95 duration-150",
           // Mobile: drops from under the sticky header, full width.
           "inset-x-3 top-16 max-h-[70vh]",
-          // Desktop: width only — `anchored` supplies top/right.
-          "md:inset-x-auto md:left-auto md:w-96",
+          // Desktop: width + a safe right inset so `right` never computes to
+          // `auto` — `anchored` overrides it inline once the bell is measured.
+          "md:left-auto md:right-10 md:w-96",
         )}
       >
         <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">

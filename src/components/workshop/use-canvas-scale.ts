@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 /**
  * Fits a fixed-size design canvas into whatever width its container has.
  *
- * Several `/ai-workshop` sections are authored as absolutely-positioned
+ * Several `/workshop` sections are authored as absolutely-positioned
  * compositions on a fixed Figma canvas (the hero at 1920×806, the
  * "What You'll Learn" scatter at 1920×700). Re-laying them out with flexbox
  * loses the exact positions — and in the hero's case the intentional clipping

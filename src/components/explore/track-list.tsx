@@ -46,7 +46,7 @@ export function TrackList({ enrollments, claudeEnabled }: Props) {
       icon: "bolt",
     },
     {
-      href: "/ai-workshop",
+      href: "/workshop",
       title: "Free AI bootcamp",
       support: "Live 1-hour session",
       icon: "play",

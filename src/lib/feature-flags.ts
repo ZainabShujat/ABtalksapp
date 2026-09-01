@@ -190,3 +190,27 @@ export function hireChallengePool(): { enabled: boolean; minDays: number } {
 export function isHireProPreviewEnabled(): boolean {
   return process.env.HIRE_PRO_PREVIEW === "true";
 }
+
+/**
+ * Virtual candidates: an empty search offers to source the requirement rather
+ * than reporting nothing.
+ *
+ * Off by default, and deliberately so on two counts.
+ *
+ * The mechanical one: the feature needs the VirtualCandidate tables, and
+ * `docs/project-context.md` records that `prisma migrate deploy` cannot be used
+ * on this production database — a leftover `20260813000000_general_interview`
+ * folder makes it fail, so migrations are applied with `prisma db execute` plus
+ * `prisma migrate resolve --applied`. That is a deliberate act by a person, not
+ * something a deploy does on its way past, so the code has to be able to ship
+ * before the tables exist. With this off it does: nothing queries them.
+ *
+ * The product one: offering to source someone is a promise. It should be turned
+ * on when the team is ready to answer, not when the code happens to land.
+ *
+ * Read on the server and passed to the client as a prop — the desk is a client
+ * component and cannot read process.env.
+ */
+export function isVirtualCandidatesEnabled(): boolean {
+  return process.env.HIRE_VIRTUAL_CANDIDATES === "true";
+}
