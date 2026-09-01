@@ -15,6 +15,7 @@ export function ProgramDayClient({
   modules,
   estimatedMin,
   missionPoints,
+  basePath,
   children,
 }: {
   dayNumber: number;
@@ -25,6 +26,7 @@ export function ProgramDayClient({
   modules: CurriculumModule[];
   estimatedMin: number;
   missionPoints: number;
+  basePath?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -37,6 +39,7 @@ export function ProgramDayClient({
       modules={modules}
       estimatedMin={estimatedMin}
       missionPoints={missionPoints}
+      basePath={basePath}
     >
       {children}
     </DayShell>

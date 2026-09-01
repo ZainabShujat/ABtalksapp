@@ -18,6 +18,7 @@ import {
   shortlistNoteSchema,
   shortlistToggleSchema,
 } from "@/lib/validations/talent";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import { recordLegalConsents } from "@/features/legal/record-consent";
 import { recordNewsletterOptIn } from "@/features/legal/record-newsletter-optin";
 
@@ -222,6 +223,6 @@ export async function setRecruiterVisibilityAction(
     return { ok: false, message: "No program membership found." };
   }
 
-  revalidatePath("/program/dashboard");
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/dashboard`);
   return { ok: true, data: { enabled: parsed.data.enabled } };
 }

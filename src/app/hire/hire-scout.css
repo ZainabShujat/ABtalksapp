@@ -110,41 +110,18 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-hbtn__icon img {
   text-decoration: none;
 }
 
-/* The wordmark is text, not the cropped logo sprite, because the brand sets
-   "AB" and "talks" apart and an image cannot be asked for a gap. The rest of
-   the site already writes it as text (site-footer, keep-three-dashboard). */
-.hire-app__wordmark {
-  display: inline-flex;
-  align-items: baseline;
-  flex: none;
-  font-size: 19px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  line-height: 1;
-  color: var(--h-ink);
-  white-space: nowrap;
-}
-
-.hire-app__wordmark-gap {
-  display: inline-block;
-  width: 0.16em;
-}
-
 .hire-app__logo {
-  position: relative;
-  width: 108px;
-  height: 28px;
-  overflow: hidden;
-  flex: none;
   display: block;
+  flex: none;
+  height: 28px;
 }
 
+/* The mark is 561x168. Height is what has to match the header; width follows,
+   which is why it is auto rather than the 108px the old cropped sprite needed. */
 .hire-app__logo img {
-  position: absolute;
-  height: 720%;
-  width: 168%;
-  left: -34%;
-  top: -300%;
+  display: block;
+  height: 100%;
+  width: auto;
   max-width: none;
 }
 
@@ -3968,7 +3945,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
     overflow-x: auto;
     overflow-y: hidden;
     gap: 14px;
-    margin: 0 0 8px;
+    margin: 8px 0 0;
     padding-bottom: 2px;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
@@ -4095,9 +4072,6 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
     max-width: 70%;
   }
 
-  .hire-app__wordmark {
-    font-size: 17px;
-  }
 
   /* The card's actions: one centred above, two sharing the row below.
 

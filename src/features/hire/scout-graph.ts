@@ -133,7 +133,7 @@ export type ScoutGraphRun =
   | { ok: true; text: string; hops: number }
   | {
       ok: false;
-      reason: "timeout" | "recursion" | "rate_limit" | "error";
+      reason: "timeout" | "recursion" | "rate_limit" | "auth" | "error";
       hops: number;
     };
 
@@ -182,13 +182,21 @@ export async function runScoutGraph(opts: {
     // answer.
     const rateLimited =
       /RateLimit|429/i.test(name) || /\b429\b|rate limit/i.test(String(error));
+    // A dead key is not a busy one. Both stop the model, but 429 clears itself
+    // and 401 never does — telling a recruiter "try again in a few seconds"
+    // about an expired key is a message that can only ever be wrong, and it
+    // hides the one fact an operator needs from the log.
+    const unauthorised =
+      /\b401\b|invalid api key|expired_api_key|authentication/i.test(String(error));
     const reason = aborted
       ? "timeout"
       : name === "GraphRecursionError"
         ? "recursion"
-        : rateLimited
-          ? "rate_limit"
-          : "error";
+        : unauthorised
+          ? "auth"
+          : rateLimited
+            ? "rate_limit"
+            : "error";
     logger.error("[scout-graph] run failed", {
       reason,
       hops: hopCount(),

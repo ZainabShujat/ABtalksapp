@@ -22,6 +22,7 @@
     "db:seed:hackathon-problems": "tsx prisma/seed-hackathon-problems.ts",
     "db:seed:colleges": "tsx prisma/seed-colleges.ts",
     "db:seed:platform-taxonomy": "tsx prisma/seed-platform-taxonomy.ts",
+    "db:seed:databricks": "tsx prisma/seed-databricks.ts",
     "db:migrate:078:phase2": "tsx prisma/scripts/migrate-078-phase2.ts",
     "db:migrate:078:phase2:sample": "cross-env PHASE2_SAMPLE=1 tsx prisma/scripts/migrate-078-phase2.ts",
     "db:check:078:drift": "tsx prisma/scripts/check-078-drift.ts",

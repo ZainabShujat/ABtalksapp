@@ -6,7 +6,7 @@ import { BarChart3, ChevronDown, Lock, Mic } from "lucide-react";
 import { dsButtonVariants } from "@/components/design/ds-button";
 import { ProgramModuleList } from "@/components/program/program-module-list";
 import { ProgramStatsPanel } from "@/components/program/program-stats-panel";
-import { PROGRAM_TOTAL_DAYS } from "@/features/program/constants";
+import { PROGRAM_AI_COHORT_BASE, PROGRAM_TOTAL_DAYS } from "@/features/program/constants";
 import type { MemberDashboard } from "@/features/program/dashboard";
 import { CohortInterviewCard } from "@/components/program/cohort-interview-card";
 import type { CohortInterviewState } from "@/features/interview/cohort-eligibility";
@@ -294,7 +294,7 @@ function ContinueCard({ data }: { data: MemberDashboard }) {
         </div>
         {cta && currentDay && (
           <Link
-            href={`/program/day/${currentDay.dayNumber}`}
+            href={`${PROGRAM_AI_COHORT_BASE}/day/${currentDay.dayNumber}`}
             className={ctaClass}
           >
             {cta}

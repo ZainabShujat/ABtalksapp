@@ -365,7 +365,12 @@ export async function runScoutAgent(args: {
         ? "That took too long on my side — say it again and I'll pick it up."
         : run.reason === "rate_limit"
           ? "I'm at capacity for a moment — give it a few seconds and send that again. Nothing you've told me is lost."
-          : fallbackText(ctx.spec, ctx.action);
+          : run.reason === "auth"
+            // Deliberately not "try again": retrying an expired key does
+            // nothing. The recruiter is told the truth and kept moving, and
+            // the log carries the reason for whoever has to fix it.
+            ? "My assistant is offline right now — our team has been alerted. You can still search with what you've told me."
+            : fallbackText(ctx.spec, ctx.action);
     return {
       spec: ctx.spec,
       text: noted.length

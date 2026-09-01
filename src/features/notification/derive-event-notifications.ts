@@ -3,6 +3,7 @@ import { HACKATHON } from "@/components/hackathon/hackathon-config";
 import { EVENTS } from "@/components/workshop/events-data";
 import { IST, addCalendarDaysToKey } from "@/lib/date-utils";
 import type { AppNotification } from "./types";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 
 /**
  * Automated notifications are DERIVED, never stored.
@@ -150,7 +151,7 @@ export function deriveEventNotifications(
         key: `cohort:${cohort.id}:enrolling`,
         title: `AI Cohort enrolling: ${cohort.name}`,
         body: `Starts ${formatInTimeZone(cohort.startsAt, IST, "d MMM yyyy")}`,
-        href: "/program",
+        href: PROGRAM_AI_COHORT_BASE,
         category: "COHORT",
         publishedAt: new Date(
           Math.min(cohort.startsAt.getTime() - 14 * 24 * HOUR_MS, now.getTime()),

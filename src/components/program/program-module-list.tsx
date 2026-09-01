@@ -15,11 +15,14 @@ import type {
   CurriculumDay,
   CurriculumModule,
 } from "@/features/program/progression";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import { cn } from "@/lib/utils";
 
 type Props = {
   modules: CurriculumModule[];
   days: CurriculumDay[];
+  lockAllDays?: boolean;
+  basePath?: string;
 };
 
 const MISSION_LABEL: Record<ProgramMissionType, string> = {
@@ -32,7 +35,12 @@ const MISSION_LABEL: Record<ProgramMissionType, string> = {
 
 const startChallengeClass = dsButtonVariants({ size: "sm" });
 
-export function ProgramModuleList({ modules, days }: Props) {
+export function ProgramModuleList({
+  modules,
+  days,
+  lockAllDays,
+  basePath = PROGRAM_AI_COHORT_BASE,
+}: Props) {
   const [open, setOpen] = useState<number | null>(null);
 
   function toggle(moduleNumber: number) {
@@ -61,7 +69,9 @@ export function ProgramModuleList({ modules, days }: Props) {
         {modules.map((mod) => {
           const moduleDays = days.filter((d) => d.moduleNumber === mod.number);
           const total = moduleDays.length;
-          const passed = moduleDays.filter((d) => d.state === "PASSED").length;
+          const passed = lockAllDays
+            ? 0
+            : moduleDays.filter((d) => d.state === "PASSED").length;
           const pct = total ? Math.round((passed / total) * 100) : 0;
           const isOpen = open === mod.number;
           const panelId = `program-module-${mod.number}`;
@@ -118,7 +128,12 @@ export function ProgramModuleList({ modules, days }: Props) {
                 <div id={panelId} className="px-6 pt-3 pb-5">
                   <div className="space-y-3">
                     {moduleDays.map((day) => (
-                      <DayRow key={day.dayNumber} day={day} />
+                      <DayRow
+                        key={day.dayNumber}
+                        day={day}
+                        lockAllDays={lockAllDays}
+                        basePath={basePath}
+                      />
                     ))}
                   </div>
                 </div>
@@ -131,8 +146,17 @@ export function ProgramModuleList({ modules, days }: Props) {
   );
 }
 
-function DayRow({ day }: { day: CurriculumDay }) {
-  const locked = day.state === "LOCKED";
+function DayRow({
+  day,
+  lockAllDays,
+  basePath,
+}: {
+  day: CurriculumDay;
+  lockAllDays?: boolean;
+  basePath: string;
+}) {
+  const state = lockAllDays ? "LOCKED" : day.state;
+  const locked = state === "LOCKED";
 
   return (
     <div
@@ -153,43 +177,43 @@ function DayRow({ day }: { day: CurriculumDay }) {
         </span>
       </div>
       <div className="flex shrink-0 items-center gap-3">
-        {day.state === "AVAILABLE" && (
+        {state === "AVAILABLE" && (
           <Link
-            href={`/program/day/${day.dayNumber}`}
+            href={`${basePath}/day/${day.dayNumber}`}
             className={startChallengeClass}
           >
             Start Challenge
           </Link>
         )}
-        {day.state === "PASSED" && (
+        {state === "PASSED" && (
           <>
             <span className="inline-flex items-center gap-1.5 text-[14px] leading-[21px] font-semibold text-[#2E7D32]">
               <CheckCircle2 className="size-5" aria-hidden />
               Completed
             </span>
             <Link
-              href={`/program/day/${day.dayNumber}`}
+              href={`${basePath}/day/${day.dayNumber}`}
               className="text-[14px] leading-[21px] text-[#E05226] hover:underline"
             >
               View
             </Link>
           </>
         )}
-        {day.state === "SKIPPED" && (
+        {state === "SKIPPED" && (
           <>
             <span className="inline-flex items-center gap-1.5 text-[14px] leading-[21px] text-[#8F8F8F]">
               <SkipForward className="size-5" aria-hidden />
               Skipped
             </span>
             <Link
-              href={`/program/day/${day.dayNumber}`}
+              href={`${basePath}/day/${day.dayNumber}`}
               className="text-[14px] leading-[21px] text-[#E05226] hover:underline"
             >
               View
             </Link>
           </>
         )}
-        {day.state === "LOCKED" && (
+        {state === "LOCKED" && (
           <span className="inline-flex items-center gap-1.5 text-[14px] leading-[21px] text-[#8F8F8F]">
             <Lock className="size-4" aria-hidden />
             Day not unlocked

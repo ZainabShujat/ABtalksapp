@@ -1,0 +1,74 @@
+[
+  {
+    "number": 1,
+    "title": "Databricks Foundations",
+    "subtitle": "Free Edition · Workspace · Unity Catalog · PySpark",
+    "color": "#6366f1",
+    "startDay": 1,
+    "endDay": 3
+  },
+  {
+    "number": 2,
+    "title": "Data Ingestion & Bronze",
+    "subtitle": "Volumes · Delta Lake · Auto Loader · Medallion",
+    "color": "#0ea5e9",
+    "startDay": 4,
+    "endDay": 7
+  },
+  {
+    "number": 3,
+    "title": "Cleansing & the Silver Layer",
+    "subtitle": "PySpark · Joins · Data Quality · MERGE/SCD",
+    "color": "#14b8a6",
+    "startDay": 8,
+    "endDay": 12
+  },
+  {
+    "number": 4,
+    "title": "Modeling & the Gold Layer",
+    "subtitle": "Star schema · Dimensions · Facts · KPIs",
+    "color": "#f59e0b",
+    "startDay": 13,
+    "endDay": 16
+  },
+  {
+    "number": 5,
+    "title": "Declarative Pipelines",
+    "subtitle": "Lakeflow Declarative Pipelines · Expectations · Lineage",
+    "color": "#ec4899",
+    "startDay": 17,
+    "endDay": 20
+  },
+  {
+    "number": 6,
+    "title": "Orchestration & Automation",
+    "subtitle": "Lakeflow Jobs · Retries · Asset Bundles",
+    "color": "#8b5cf6",
+    "startDay": 21,
+    "endDay": 23
+  },
+  {
+    "number": 7,
+    "title": "Governance with Unity Catalog",
+    "subtitle": "Grants · Lineage · Row filters & Column masks",
+    "color": "#ef4444",
+    "startDay": 24,
+    "endDay": 26
+  },
+  {
+    "number": 8,
+    "title": "Analytics, AI/BI & Genie",
+    "subtitle": "Databricks SQL · AI/BI Dashboards · Genie",
+    "color": "#10b981",
+    "startDay": 27,
+    "endDay": 30
+  },
+  {
+    "number": 9,
+    "title": "Capstone",
+    "subtitle": "End-to-end demo · Retrospective · Roadmap",
+    "color": "#22c55e",
+    "startDay": 31,
+    "endDay": 31
+  }
+]

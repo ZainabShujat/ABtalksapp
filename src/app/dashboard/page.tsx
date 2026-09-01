@@ -11,6 +11,7 @@ import { EventsSection } from "@/components/dashboard-hub/events-section";
 import { FaqSection } from "@/components/dashboard-hub/faq-section";
 import { HUB_CARD_HOVER_CLASS } from "@/components/dashboard-hub/nav-items";
 import { getHubData } from "@/features/dashboard/get-hub-data";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import type { Domain } from "@prisma/client";
 
 const TRACK_PATH: Record<Domain, string> = {
@@ -44,7 +45,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   if (!data.profile) {
     if (data.isHackathonRegistered) redirect("/hackathon/dashboard");
-    if (data.hasProgramMembership) redirect("/program/dashboard");
+    if (data.hasProgramMembership) redirect(`${PROGRAM_AI_COHORT_BASE}/dashboard`);
     redirect("/register");
   }
 
@@ -106,6 +107,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         joinedDomains={data.joinedDomains}
         abandonedDomains={data.abandonedDomains}
         hasProgramMembership={data.hasProgramMembership}
+        showDatabricks={data.hasDatabricksAccess}
       />
       <EventsSection />
       

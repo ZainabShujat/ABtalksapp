@@ -23,7 +23,7 @@ import {
   setCohortStatusAction,
 } from "@/app/actions/admin-program-actions";
 import type { CohortOverview } from "@/features/program/admin";
-import { PROGRAM_HOLD_OPEN_COHORT_NAME } from "@/features/program/constants";
+import { PROGRAM_AI_COHORT_BASE, PROGRAM_HOLD_OPEN_COHORT_NAME } from "@/features/program/constants";
 
 const STATUSES = [
   "DRAFT",
@@ -168,7 +168,7 @@ export function ProgramCohortPanel({
   async function copyApplyLink() {
     try {
       await navigator.clipboard.writeText(
-        `${window.location.origin}/program/apply`,
+        `${window.location.origin}${PROGRAM_AI_COHORT_BASE}/apply`,
       );
       toast.success("Apply link copied.");
     } catch {
@@ -326,7 +326,7 @@ export function ProgramCohortPanel({
               <span className="space-y-0.5">
                 <span className="block text-sm font-medium">Open — no code</span>
                 <span className="block text-xs text-muted-foreground">
-                  Anyone signed in can apply straight from /program/apply.
+                  Anyone signed in can apply straight from {PROGRAM_AI_COHORT_BASE}/apply.
                 </span>
               </span>
             </Label>

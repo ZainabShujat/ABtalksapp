@@ -10,6 +10,7 @@ import {
   submitEntryAttempt,
   type EntrySubmitOk,
 } from "@/features/program/entry";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import {
   applyToProgramSchema,
   entrySubmitSchema,
@@ -37,8 +38,8 @@ export async function applyToProgramAction(
   const result = await createApplication(session.user.id, profile, joinCode);
   if (!result.ok) return { ok: false, message: result.message };
 
-  revalidatePath("/program/apply");
-  revalidatePath("/program");
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/apply`);
+  revalidatePath(PROGRAM_AI_COHORT_BASE);
   return { ok: true };
 }
 
@@ -63,12 +64,12 @@ export async function validateJoinCodeAction(
 /** Form action: starts (or resumes) an attempt and sends the user to the assessment. */
 export async function startEntryAssessmentAction(): Promise<void> {
   const session = await auth();
-  if (!session?.user?.id) redirect("/login?from=/program/apply");
+  if (!session?.user?.id) redirect(`/login?from=${PROGRAM_AI_COHORT_BASE}/apply`);
 
   const result = await startEntryAttempt(session.user.id);
-  if (!result.ok) redirect("/program/apply");
+  if (!result.ok) redirect(`${PROGRAM_AI_COHORT_BASE}/apply`);
 
-  redirect("/program/assessment");
+  redirect(`${PROGRAM_AI_COHORT_BASE}/assessment`);
 }
 
 export async function submitEntryAssessmentAction(
@@ -91,8 +92,8 @@ export async function submitEntryAssessmentAction(
   );
   if (!result.ok) return { ok: false, message: result.message };
 
-  revalidatePath("/program/apply");
-  revalidatePath("/program/assessment");
-  revalidatePath("/program/dashboard");
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/apply`);
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/assessment`);
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/dashboard`);
   return { ok: true, data: result };
 }

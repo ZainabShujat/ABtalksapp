@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { fromZonedTime } from "date-fns-tz";
 import { requireAdmin } from "@/lib/admin-auth";
-import { PROGRAM_TZ } from "@/features/program/constants";
+import { PROGRAM_AI_COHORT_BASE, PROGRAM_TZ } from "@/features/program/constants";
 import {
   adminUnlockDay,
   createOrUpdateCohort,
@@ -129,7 +129,7 @@ export async function dropMemberAction(input: unknown): Promise<ActionResult> {
   revalidatePath("/admin/program");
   revalidatePath("/admin/program/members");
   revalidatePath(`/admin/program/members/${parsed.data.memberId}`);
-  revalidatePath("/program/leaderboard");
+  revalidatePath(`${PROGRAM_AI_COHORT_BASE}/leaderboard`);
   revalidatePath("/hire");
   return { ok: true };
 }

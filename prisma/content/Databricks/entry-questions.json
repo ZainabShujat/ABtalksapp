@@ -1,0 +1,522 @@
+[
+  {
+    "section": "APTITUDE",
+    "question": "A laptop's price drops from ₹60,000 to ₹51,000. What is the percentage decrease?",
+    "options": [
+      "15%",
+      "12%",
+      "18%",
+      "20%"
+    ],
+    "correctIndex": 0,
+    "explanation": "Decrease 9,000/60,000 = 15%.",
+    "active": true
+  },
+  {
+    "section": "APTITUDE",
+    "question": "A train covers 90 km in 1 hour 15 minutes. Its average speed is…",
+    "options": [
+      "70 km/h",
+      "72 km/h",
+      "75 km/h",
+      "80 km/h"
+    ],
+    "correctIndex": 1,
+    "explanation": "1.25 h; 90/1.25 = 72 km/h.",
+    "active": true
+  },
+  {
+    "section": "APTITUDE",
+    "question": "Find the next number: 1, 4, 9, 16, 25, …",
+    "options": [
+      "30",
+      "35",
+      "36",
+      "49"
+    ],
+    "correctIndex": 2,
+    "explanation": "Perfect squares; next is 6² = 36.",
+    "active": true
+  },
+  {
+    "section": "APTITUDE",
+    "question": "The average of five numbers is 30. Four of them are 25, 28, 32 and 35. The fifth is…",
+    "options": [
+      "28",
+      "32",
+      "34",
+      "30"
+    ],
+    "correctIndex": 3,
+    "explanation": "Sum = 150; 150 − 120 = 30.",
+    "active": true
+  },
+  {
+    "section": "APTITUDE",
+    "question": "A is three times as old as B. In 10 years, A will be twice B's age. B's age now is…",
+    "options": [
+      "10",
+      "12",
+      "15",
+      "20"
+    ],
+    "correctIndex": 0,
+    "explanation": "3b+10 = 2(b+10) → b = 10.",
+    "active": true
+  },
+  {
+    "section": "APTITUDE",
+    "question": "A shopkeeper buys at ₹1,200 and sells at ₹1,500. Profit percent is…",
+    "options": [
+      "20%",
+      "25%",
+      "30%",
+      "15%"
+    ],
+    "correctIndex": 1,
+    "explanation": "Profit 300 on cost 1,200 = 25%.",
+    "active": true
+  },
+  {
+    "section": "APTITUDE",
+    "question": "If 10 workers finish a job in 6 days, 12 workers (same rate) finish it in…",
+    "options": [
+      "4 days",
+      "6 days",
+      "5 days",
+      "7 days"
+    ],
+    "correctIndex": 2,
+    "explanation": "Work = 60 worker-days; 60/12 = 5.",
+    "active": true
+  },
+  {
+    "section": "APTITUDE",
+    "question": "Ratio of boys to girls is 5:3 in a class of 40. How many girls?",
+    "options": [
+      "16",
+      "18",
+      "20",
+      "15"
+    ],
+    "correctIndex": 3,
+    "explanation": "3/8 of 40 = 15.",
+    "active": true
+  },
+  {
+    "section": "APTITUDE",
+    "question": "A bag has 4 red and 6 blue balls. Probability of drawing a red ball is…",
+    "options": [
+      "2/5",
+      "1/2",
+      "3/5",
+      "4/6"
+    ],
+    "correctIndex": 0,
+    "explanation": "4 red of 10 = 2/5.",
+    "active": true
+  },
+  {
+    "section": "APTITUDE",
+    "question": "Ravi walks 6 km north, then 8 km east. Straight-line distance from start is…",
+    "options": [
+      "12 km",
+      "10 km",
+      "14 km",
+      "7 km"
+    ],
+    "correctIndex": 1,
+    "explanation": "6-8-10 right triangle → 10 km.",
+    "active": true
+  },
+  {
+    "section": "APTITUDE",
+    "question": "If CAT is coded as DBU, then DOG is coded as…",
+    "options": [
+      "EPI",
+      "FPH",
+      "EPH",
+      "DPH"
+    ],
+    "correctIndex": 2,
+    "explanation": "Each letter shifts +1: D→E, O→P, G→H.",
+    "active": true
+  },
+  {
+    "section": "APTITUDE",
+    "question": "Which is the odd one out: 4, 6, 8, 9, 10?",
+    "options": [
+      "4",
+      "8",
+      "10",
+      "9"
+    ],
+    "correctIndex": 3,
+    "explanation": "9 is odd; the rest are even.",
+    "active": true
+  },
+  {
+    "section": "APTITUDE",
+    "question": "Simple interest on ₹20,000 at 10% per year for 6 months is…",
+    "options": [
+      "₹1,000",
+      "₹2,000",
+      "₹1,200",
+      "₹800"
+    ],
+    "correctIndex": 0,
+    "explanation": "20,000 × 0.10 × 0.5 = 1,000.",
+    "active": true
+  },
+  {
+    "section": "APTITUDE",
+    "question": "All cats are animals. Some animals are pets. Which must be true?",
+    "options": [
+      "All cats are pets",
+      "Some cats may be pets",
+      "No cat is a pet",
+      "All pets are cats"
+    ],
+    "correctIndex": 1,
+    "explanation": "Only a possibility follows.",
+    "active": true
+  },
+  {
+    "section": "APTITUDE",
+    "question": "A clock shows 9:00. The angle between the hands is…",
+    "options": [
+      "60°",
+      "120°",
+      "90°",
+      "75°"
+    ],
+    "correctIndex": 2,
+    "explanation": "At 9:00 the hands are a quarter-circle apart: 90°.",
+    "active": true
+  },
+  {
+    "section": "APTITUDE",
+    "question": "Complete the series: B, D, G, K, P, …",
+    "options": [
+      "U",
+      "T",
+      "W",
+      "V"
+    ],
+    "correctIndex": 3,
+    "explanation": "Gaps grow +2,+3,+4,+5,+6 → P+6 = V.",
+    "active": true
+  },
+  {
+    "section": "APTITUDE",
+    "question": "25% of a number is 60. The number is…",
+    "options": [
+      "240",
+      "180",
+      "200",
+      "300"
+    ],
+    "correctIndex": 0,
+    "explanation": "60/0.25 = 240.",
+    "active": true
+  },
+  {
+    "section": "APTITUDE",
+    "question": "If yesterday was Monday, what day is 100 days from today?",
+    "options": [
+      "Tuesday",
+      "Thursday",
+      "Wednesday",
+      "Friday"
+    ],
+    "correctIndex": 1,
+    "explanation": "Today is Tuesday; 100 mod 7 = 2 → Thursday.",
+    "active": true
+  },
+  {
+    "section": "APTITUDE",
+    "question": "Two numbers add to 40 and differ by 8. The larger is…",
+    "options": [
+      "22",
+      "26",
+      "24",
+      "28"
+    ],
+    "correctIndex": 2,
+    "explanation": "(40+8)/2 = 24.",
+    "active": true
+  },
+  {
+    "section": "APTITUDE",
+    "question": "A tank fills in 3 h by pipe A and 6 h by pipe B. Together they fill it in…",
+    "options": [
+      "2.5 h",
+      "3 h",
+      "1.5 h",
+      "2 h"
+    ],
+    "correctIndex": 3,
+    "explanation": "Rate 1/3+1/6 = 1/2 per hour → 2 h.",
+    "active": true
+  },
+  {
+    "section": "TECHNICAL",
+    "question": "What does this print?\n\nx = 7\ny = x\nx = 2\nprint(y)",
+    "options": [
+      "7",
+      "2",
+      "9",
+      "Error"
+    ],
+    "correctIndex": 0,
+    "explanation": "y copied x's value (7) before x was reassigned.",
+    "active": true
+  },
+  {
+    "section": "TECHNICAL",
+    "question": "How many times does this loop run?\n\nfor i in range(4):\n    print(i)",
+    "options": [
+      "3",
+      "4",
+      "5",
+      "Infinite"
+    ],
+    "correctIndex": 1,
+    "explanation": "range(4) yields 0,1,2,3 — four iterations.",
+    "active": true
+  },
+  {
+    "section": "TECHNICAL",
+    "question": "What is the value of 19 % 4?",
+    "options": [
+      "4",
+      "2",
+      "3",
+      "1"
+    ],
+    "correctIndex": 2,
+    "explanation": "% is remainder: 19 = 4×4 + 3.",
+    "active": true
+  },
+  {
+    "section": "TECHNICAL",
+    "question": "In Python, 'data'[0] is…",
+    "options": [
+      "a",
+      "t",
+      "data0",
+      "d"
+    ],
+    "correctIndex": 3,
+    "explanation": "Indexing starts at 0, so index 0 is 'd'.",
+    "active": true
+  },
+  {
+    "section": "TECHNICAL",
+    "question": "len([5, 10, 15]) returns…",
+    "options": [
+      "3",
+      "2",
+      "15",
+      "30"
+    ],
+    "correctIndex": 0,
+    "explanation": "The list has three elements.",
+    "active": true
+  },
+  {
+    "section": "TECHNICAL",
+    "question": "What does this print?\n\nif 5 < 2:\n    print(\"A\")\nelse:\n    print(\"B\")",
+    "options": [
+      "A",
+      "B",
+      "AB",
+      "Nothing"
+    ],
+    "correctIndex": 1,
+    "explanation": "5 < 2 is False, so the else-branch runs.",
+    "active": true
+  },
+  {
+    "section": "TECHNICAL",
+    "question": "plan = {\"name\": \"Gold\", \"premium\": 350}. How do you get \"Gold\"?",
+    "options": [
+      "plan[0]",
+      "plan.name()",
+      "plan[\"name\"]",
+      "plan->name"
+    ],
+    "correctIndex": 2,
+    "explanation": "Dictionary values are accessed by key.",
+    "active": true
+  },
+  {
+    "section": "TECHNICAL",
+    "question": "What is the result of `True or False`?",
+    "options": [
+      "False",
+      "1",
+      "Error",
+      "True"
+    ],
+    "correctIndex": 3,
+    "explanation": "or is True if either side is True.",
+    "active": true
+  },
+  {
+    "section": "TECHNICAL",
+    "question": "x = [1, 2]; x.append(3). Now x is…",
+    "options": [
+      "[1, 2, 3]",
+      "[1, 2]",
+      "[3, 1, 2]",
+      "Error"
+    ],
+    "correctIndex": 0,
+    "explanation": "append adds one element to the end.",
+    "active": true
+  },
+  {
+    "section": "TECHNICAL",
+    "question": "Which SQL query returns only plans over ₹500 per month?",
+    "options": [
+      "GET plans IF premium > 500",
+      "SELECT * FROM plans WHERE monthly_premium > 500",
+      "SELECT plans HAVING 500",
+      "FILTER plans BY 500"
+    ],
+    "correctIndex": 1,
+    "explanation": "SELECT … FROM … WHERE is the standard filter.",
+    "active": true
+  },
+  {
+    "section": "TECHNICAL",
+    "question": "What does SELECT COUNT(*) FROM claims; return?",
+    "options": [
+      "Every claim row",
+      "The largest claim",
+      "The number of rows in the claims table",
+      "The table schema"
+    ],
+    "correctIndex": 2,
+    "explanation": "COUNT(*) aggregates to a single row count.",
+    "active": true
+  },
+  {
+    "section": "TECHNICAL",
+    "question": "In JSON, {\"plan\": \"Gold\", \"premium\": 350} — what type is 350?",
+    "options": [
+      "String",
+      "Boolean",
+      "Array",
+      "Number"
+    ],
+    "correctIndex": 3,
+    "explanation": "Unquoted digits in JSON are numbers.",
+    "active": true
+  },
+  {
+    "section": "TECHNICAL",
+    "question": "What does GROUP BY do in SQL?",
+    "options": [
+      "Groups rows so you can aggregate per group",
+      "Sorts rows alphabetically",
+      "Deletes duplicate tables",
+      "Renames columns"
+    ],
+    "correctIndex": 0,
+    "explanation": "GROUP BY enables aggregates like COUNT/SUM per group.",
+    "active": true
+  },
+  {
+    "section": "TECHNICAL",
+    "question": "What does a SQL JOIN do?",
+    "options": [
+      "Deletes a table",
+      "Combines rows from two tables based on a related key",
+      "Encrypts columns",
+      "Creates an index"
+    ],
+    "correctIndex": 1,
+    "explanation": "Joins match rows across tables on a key.",
+    "active": true
+  },
+  {
+    "section": "TECHNICAL",
+    "question": "Conceptually, a DataFrame is…",
+    "options": [
+      "A single number",
+      "An image file",
+      "A table-like structure of rows and columns",
+      "A web server"
+    ],
+    "correctIndex": 2,
+    "explanation": "DataFrames (pandas/Spark) hold tabular data.",
+    "active": true
+  },
+  {
+    "section": "TECHNICAL",
+    "question": "str(10) does what?",
+    "options": [
+      "Rounds 10",
+      "Multiplies 10",
+      "Nothing — it's invalid",
+      "Converts the number 10 into the text \"10\""
+    ],
+    "correctIndex": 3,
+    "explanation": "str() converts a value to its string form.",
+    "active": true
+  },
+  {
+    "section": "TECHNICAL",
+    "question": "What is a CSV file?",
+    "options": [
+      "Rows of values separated by commas — a plain-text table",
+      "A compressed video",
+      "A Python script",
+      "An image format"
+    ],
+    "correctIndex": 0,
+    "explanation": "CSV = comma-separated values.",
+    "active": true
+  },
+  {
+    "section": "TECHNICAL",
+    "question": "A dictionary is accessed by ___, a list by ___.",
+    "options": [
+      "index; key",
+      "key; index",
+      "row; column",
+      "name; id"
+    ],
+    "correctIndex": 1,
+    "explanation": "Dicts use keys; lists use integer indexes.",
+    "active": true
+  },
+  {
+    "section": "TECHNICAL",
+    "question": "Which SQL returns each distinct plan once?",
+    "options": [
+      "SELECT plan FROM claims",
+      "SELECT UNIQUE plan",
+      "SELECT DISTINCT plan FROM claims",
+      "SELECT ALL plan"
+    ],
+    "correctIndex": 2,
+    "explanation": "DISTINCT removes duplicate values.",
+    "active": true
+  },
+  {
+    "section": "TECHNICAL",
+    "question": "A function ends with `return a + b`. That means…",
+    "options": [
+      "It prints a + b",
+      "It saves a + b to a file",
+      "It deletes a and b",
+      "It sends the value a + b back to the caller"
+    ],
+    "correctIndex": 3,
+    "explanation": "return hands a value back; printing is separate.",
+    "active": true
+  }
+]

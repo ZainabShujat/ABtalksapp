@@ -1,0 +1,1844 @@
+[
+  {
+    "dayNumber": 1,
+    "moduleNumber": 1,
+    "title": "What Is a Lakehouse? Sign Up for Databricks Free Edition",
+    "missionType": "DATA_ROOM",
+    "briefMd": "## Mission: What Is a Lakehouse? Sign Up for Databricks Free Edition\n\n**Get a free, working Databricks workspace and run your first notebook**\n\nToday you set up the platform every other day runs on. You'll sign up for Databricks Free Edition (permanently free, no credit card), tour the workspace, and run your first Python and SQL cells on serverless compute. Everything in this cohort is free — no cloud account, no subscription.\n\n**Concepts to learn**\n\n- **Warehouse vs lake vs lakehouse** - the problem the lakehouse solves\n- **Databricks architecture** - control plane vs compute plane, and what serverless means\n- **Notebooks & compute** - all-purpose compute vs SQL warehouse\n- **Free Edition scope** - serverless only, one SQL warehouse, 5 concurrent job tasks, one active pipeline per type\n\n### Build steps\n\n1. **Sign up for Free Edition:** Go to databricks.com/learn/free-edition and sign up (free forever, no credit card, no cloud account).\n2. **Tour the workspace:** Log in and take the guided tour. Note the left nav: Workspace, Catalog, Jobs & Pipelines, SQL, Compute.\n3. **Create a notebook:** Workspace → Create → Notebook, then attach serverless compute from the top-right selector.\n4. **Run Python:** Run print(\"Hello Lakehouse\") and spark.range(5).display() to confirm Spark is live.\n5. **Run SQL:** Add a cell, switch to %sql, and run SELECT current_date(), current_user();.\n6. **Know the limits:** Read the Free Edition limitations page and bookmark it — the quotas matter later.\n7. **Ship to your repo:** Save the notebook as notebooks/day01_hello_lakehouse.py in your Git folder, add a README, commit & push, then hit Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. What magic command runs a SQL cell in a notebook? (one token)\n2. What compute model powers Free Edition notebooks? (one word)\n3. What is today's deliverable notebook filename? (one token)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "SQL magic command",
+          "value": "%sql",
+          "caseInsensitive": true
+        },
+        {
+          "check": "compute model",
+          "value": "serverless",
+          "caseInsensitive": true
+        },
+        {
+          "check": "day 1 notebook filename",
+          "value": "day01_hello_lakehouse.py",
+          "caseInsensitive": true
+        }
+      ]
+    },
+    "objectives": [
+      "Sign up for Databricks Free Edition and open a workspace",
+      "Create a notebook and attach serverless compute",
+      "Run Python (spark.range) and SQL (%sql) cells successfully",
+      "Commit your first notebook + a README to your GitHub repo"
+    ],
+    "tools": [
+      "Databricks",
+      "Serverless",
+      "Notebooks"
+    ],
+    "estimatedMin": 105,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 2,
+    "moduleNumber": 1,
+    "title": "Workspace, the Unity Catalog Object Model & Git Folders",
+    "missionType": "DATA_ROOM",
+    "briefMd": "## Mission: Workspace, the Unity Catalog Object Model & Git Folders\n\n**Set up your project's catalog, schemas, a raw Volume, and Git repo**\n\nLearn how Databricks organizes data (Unity Catalog) and code (Git folders), then scaffold the project structure the whole cohort uses: a health_claims catalog with bronze/silver/gold schemas, a raw-file Volume, and a GitHub-linked repo folder.\n\n**Concepts to learn**\n\n- **Unity Catalog namespace** - catalog → schema → table/view\n- **Metastore & tables** - managed vs external tables\n- **Volumes** - governed storage for raw files and the /Volumes path\n- **Git folders (Repos)** - connecting GitHub and why version control matters\n\n### Build steps\n\n1. **Explore Catalog Explorer:** Browse the pre-provisioned catalogs (e.g. samples) to see the catalog/schema/table layout.\n2. **Create catalog & schemas:** Create catalog health_claims (or use the workspace catalog if restricted), then schemas bronze, silver, gold.\n3. **Create the raw Volume:** Create a Volume named raw inside bronze — this is where raw files land.\n4. **Practice the namespace:** In a notebook run USE CATALOG / USE SCHEMA / SHOW SCHEMAS / SHOW VOLUMES.\n5. **Connect GitHub:** Add your GitHub account (personal access token) and create/clone the databricks-claims-lakehouse repo as a Git folder.\n6. **Ship to your repo:** Save the setup notebook as notebooks/day02_setup_catalog.py, update the README, commit & push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. What Unity Catalog object type stores raw files? (one word)\n2. How many schemas do you create in your catalog today? (number)\n3. Which schema holds the raw Volume? (one word)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "raw-file object type",
+          "value": "volume",
+          "caseInsensitive": true
+        },
+        {
+          "check": "schema count",
+          "value": "3",
+          "caseInsensitive": true
+        },
+        {
+          "check": "raw Volume schema",
+          "value": "bronze",
+          "caseInsensitive": true
+        }
+      ]
+    },
+    "objectives": [
+      "Create a health_claims catalog with bronze, silver, gold schemas",
+      "Create a raw Volume under the bronze schema",
+      "Connect GitHub and create the databricks-claims-lakehouse repo as a Git folder",
+      "Commit a setup notebook that creates the catalog objects"
+    ],
+    "tools": [
+      "Unity Catalog",
+      "Volumes",
+      "Git"
+    ],
+    "estimatedMin": 120,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 3,
+    "moduleNumber": 1,
+    "title": "PySpark & Spark SQL Fundamentals on Databricks",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: PySpark & Spark SQL Fundamentals on Databricks\n\n**Get fluent in the two languages you'll use every day**\n\nPractice the PySpark DataFrame API and Spark SQL — the tools behind every transformation in this cohort — and meet the Databricks Assistant, your free built-in AI pair-programmer.\n\n**Concepts to learn**\n\n- **Spark architecture** - driver, executors, partitions, distributed execution\n- **DataFrames & laziness** - transformations vs actions; narrow vs wide\n- **Python ↔ SQL** - temp views to move between the two on the same data\n- **Databricks Assistant** - using the built-in AI helper to explain and generate code\n\n### Build steps\n\n1. **Load a DataFrame:** Read a sample dataset, e.g. spark.read.table(\"samples.nyctaxi.trips\") (or a small CSV).\n2. **Transform:** Chain select, filter/where, withColumn, groupBy().agg(), orderBy.\n3. **Act & observe laziness:** Run show(), count(), collect(); notice nothing computes until an action.\n4. **Bridge to SQL:** createOrReplaceTempView(\"trips\") and query it from a %sql cell.\n5. **Use the Assistant:** Ask it to explain a cell and to generate a groupBy aggregation.\n6. **Write a table:** saveAsTable(\"health_claims.bronze.spark_practice\").\n7. **Ship to your repo:** Commit notebooks/day03_spark_basics.py, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. Which are lazy in Spark: transformations or actions? (one word)\n2. What method registers a DataFrame as a temp view? (one method name)\n3. What is the built-in AI helper called? Databricks ___ (one word)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "lazy operation type",
+          "value": "transformations",
+          "caseInsensitive": true
+        },
+        {
+          "check": "temp-view method",
+          "value": "createOrReplaceTempView",
+          "caseInsensitive": true
+        },
+        {
+          "check": "AI helper name",
+          "value": "assistant",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "notebooks/day03_spark_basics.py exists",
+          "kind": "fileExists",
+          "path": "notebooks/day03_spark_basics.py"
+        },
+        {
+          "check": "notebooks/day03_spark_basics.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day03_spark_basics.py",
+          "regex": "createOrReplaceTempView"
+        },
+        {
+          "check": "notebooks/day03_spark_basics.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day03_spark_basics.py",
+          "regex": "groupBy"
+        }
+      ]
+    },
+    "objectives": [
+      "Load data into a DataFrame and chain select/filter/withColumn/groupBy",
+      "Distinguish transformations from actions (lazy evaluation)",
+      "Bridge Python and SQL with a temp view",
+      "Use the Databricks Assistant at least twice; write one table to your schema"
+    ],
+    "tools": [
+      "PySpark",
+      "Spark SQL",
+      "Assistant"
+    ],
+    "estimatedMin": 150,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 4,
+    "moduleNumber": 2,
+    "title": "The Claims Dataset & the Medallion Architecture",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: The Claims Dataset & the Medallion Architecture\n\n**Generate the claims data your whole Lakehouse is built from**\n\nToday you create the synthetic healthcare-claims dataset that every remaining day builds on, land it as raw files in a Unity Catalog Volume, and learn the medallion (Bronze → Silver → Gold) architecture. Use synthetic data only — never real member PHI. Expect about 2–3 hours.\n\n**Concepts to learn**\n\n- **Medallion architecture** - Bronze (raw), Silver (cleaned), Gold (business-ready)\n- **Synthetic data & PHI safety** - realistic fake claims; never real records\n- **Unity Catalog Volumes** - governed raw-file storage and the /Volumes path\n- **Raw file formats** - CSV/JSON landing files and simulating daily drops\n\n### Build steps\n\n1. **Create the notebook:** In your Git folder create notebooks/day04_generate_claims.py.\n2. **Generate five entities:** Use faker/random to build members, plans, providers, claims, claim_lines (schemas in the objectives).\n3. **Add realistic mess:** Sprinkle nulls, mixed-case states, a few duplicates, and bad dates — you'll clean these in Silver.\n4. **Write to the Volume:** Save files to /Volumes/health_claims/bronze/raw/, splitting claims into 2–3 dated files.\n5. **Verify the landing zone:** dbutils.fs.ls(...) and read a few lines back.\n6. **Document:** Fill docs/data_dictionary.md (columns per entity) and docs/medallion_plan.md (raw→bronze→silver→gold).\n7. **Ship to your repo:** Commit the notebook + both .md files, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. How many synthetic entities do you generate? (number)\n2. Which Volume subfolder do the raw files land in? (one word)\n3. What is today's data-dictionary filename? (one token)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "entity count",
+          "value": "5",
+          "caseInsensitive": true
+        },
+        {
+          "check": "raw subfolder",
+          "value": "raw",
+          "caseInsensitive": true
+        },
+        {
+          "check": "data-dictionary filename",
+          "value": "data_dictionary.md",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "notebooks/day04_generate_claims.py exists",
+          "kind": "fileExists",
+          "path": "notebooks/day04_generate_claims.py"
+        },
+        {
+          "check": "notebooks/day04_generate_claims.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day04_generate_claims.py",
+          "regex": "(?i)faker|random"
+        },
+        {
+          "check": "notebooks/day04_generate_claims.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day04_generate_claims.py",
+          "regex": "/Volumes/health_claims/bronze/raw"
+        },
+        {
+          "check": "docs/data_dictionary.md exists",
+          "kind": "fileExists",
+          "path": "docs/data_dictionary.md"
+        },
+        {
+          "check": "docs/medallion_plan.md exists",
+          "kind": "fileExists",
+          "path": "docs/medallion_plan.md"
+        },
+        {
+          "check": "docs/medallion_plan.md matches expected content",
+          "kind": "contentMatches",
+          "path": "docs/medallion_plan.md",
+          "regex": "(?i)bronze"
+        }
+      ]
+    },
+    "objectives": [
+      "Generate synthetic members/plans/providers/claims/claim_lines with Python (faker)",
+      "Land raw files in your bronze.raw Volume, claims split into dated files",
+      "Document each entity's schema in data_dictionary.md",
+      "Write your Bronze→Silver→Gold plan in medallion_plan.md"
+    ],
+    "tools": [
+      "PySpark",
+      "Unity Catalog",
+      "Volumes"
+    ],
+    "estimatedMin": 150,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 5,
+    "moduleNumber": 2,
+    "title": "Delta Lake Fundamentals",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Delta Lake Fundamentals\n\n**Create your first Delta tables with full transaction history**\n\nLearn why Delta Lake is the storage foundation of the Lakehouse: ACID transactions, the transaction log, schema enforcement, and time travel.\n\n**Concepts to learn**\n\n- **Delta vs Parquet/CSV** - the _delta_log and ACID guarantees\n- **Schema enforcement** - and controlled evolution with mergeSchema\n- **Time travel** - DESCRIBE HISTORY, VERSION AS OF, TIMESTAMP AS OF\n- **Managed vs external tables** - who manages the storage\n\n### Build steps\n\n1. **Write a Delta table:** Read one raw claims file and .write.format(\"delta\").saveAsTable(\"health_claims.bronze.delta_demo\").\n2. **Inspect history:** Run DESCRIBE HISTORY and DESCRIBE DETAIL.\n3. **Time travel:** Append rows, then SELECT * FROM delta_demo VERSION AS OF 0.\n4. **Schema enforcement:** Append a mismatched schema (see the error), then retry with option mergeSchema=true.\n5. **Ship to your repo:** Commit notebooks/day05_delta_fundamentals.py, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. What folder holds Delta's transaction log? (one token)\n2. What write option lets you append a changed schema? (one word)\n3. What table format do you convert the raw file into? (one word)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "delta log folder",
+          "value": "_delta_log",
+          "caseInsensitive": true
+        },
+        {
+          "check": "schema-evolution option",
+          "value": "mergeSchema",
+          "caseInsensitive": true
+        },
+        {
+          "check": "table format",
+          "value": "delta",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "notebooks/day05_delta_fundamentals.py exists",
+          "kind": "fileExists",
+          "path": "notebooks/day05_delta_fundamentals.py"
+        },
+        {
+          "check": "notebooks/day05_delta_fundamentals.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day05_delta_fundamentals.py",
+          "regex": "(?i)format\\(\"?delta\"?\\)|saveAsTable"
+        },
+        {
+          "check": "notebooks/day05_delta_fundamentals.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day05_delta_fundamentals.py",
+          "regex": "(?i)version as of"
+        }
+      ]
+    },
+    "objectives": [
+      "Write a raw file to a Delta table and inspect its history",
+      "Demonstrate time travel with VERSION AS OF",
+      "Trigger and resolve a schema-enforcement error with mergeSchema",
+      "Commit the Delta fundamentals notebook"
+    ],
+    "tools": [
+      "Delta Lake",
+      "Time Travel"
+    ],
+    "estimatedMin": 120,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 6,
+    "moduleNumber": 2,
+    "title": "Batch Ingestion into the Bronze Layer",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Batch Ingestion into the Bronze Layer\n\n**Ingest every raw entity into Bronze with ingestion metadata**\n\nBuild the Bronze layer: read each raw entity as-is and write Delta tables with lineage metadata, keeping the data raw (cleaning comes in Silver).\n\n**Concepts to learn**\n\n- **Bronze principles** - keep data raw, add metadata, append-only\n- **Ingestion lineage** - source file, load timestamp, batch id\n- **Idempotent loads** - reading multiple files; consistent naming\n\n### Build steps\n\n1. **Read & write Bronze:** For each entity, read its raw file(s) and write bronze_<entity> in the bronze schema.\n2. **Add metadata:** Add _source_file (input_file_name()), _ingested_at (current_timestamp()), _batch_id.\n3. **Keep it raw:** Do not clean or cast types — preserve the messy values for Silver.\n4. **Reuse via a function:** Wrap the logic in ingest_to_bronze(entity, path) and call it per entity.\n5. **Validate:** Check row counts vs source files; eyeball bronze_claims.\n6. **Ship to your repo:** Commit notebooks/day06_bronze_ingest.py, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. How many metadata columns do you add to each Bronze table? (number)\n2. What function returns the input file path? (one function name)\n3. In which layer do you keep the data raw? (one word)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "metadata column count",
+          "value": "3",
+          "caseInsensitive": true
+        },
+        {
+          "check": "source-file function",
+          "value": "input_file_name",
+          "caseInsensitive": true
+        },
+        {
+          "check": "raw layer",
+          "value": "bronze",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "notebooks/day06_bronze_ingest.py exists",
+          "kind": "fileExists",
+          "path": "notebooks/day06_bronze_ingest.py"
+        },
+        {
+          "check": "notebooks/day06_bronze_ingest.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day06_bronze_ingest.py",
+          "regex": "input_file_name"
+        },
+        {
+          "check": "notebooks/day06_bronze_ingest.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day06_bronze_ingest.py",
+          "regex": "_ingested_at"
+        },
+        {
+          "check": "notebooks/day06_bronze_ingest.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day06_bronze_ingest.py",
+          "regex": "bronze_"
+        }
+      ]
+    },
+    "objectives": [
+      "Write bronze_<entity> Delta tables for all five entities",
+      "Add _source_file, _ingested_at, _batch_id metadata columns",
+      "Keep data raw (no cleaning yet); validate row counts",
+      "Commit the Bronze ingestion notebook"
+    ],
+    "tools": [
+      "Delta Lake",
+      "Bronze",
+      "PySpark"
+    ],
+    "estimatedMin": 150,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 7,
+    "moduleNumber": 2,
+    "title": "Incremental Ingestion with Auto Loader",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Incremental Ingestion with Auto Loader\n\n**Ingest only new claims files, automatically and idempotently**\n\nReplace one-shot loads with Auto Loader (cloudFiles) so new files are picked up incrementally with schema evolution and exactly-once processing via checkpoints.\n\n**Concepts to learn**\n\n- **Auto Loader (cloudFiles)** - incremental file discovery at scale\n- **Schema evolution** - inference and the _rescued_data column\n- **Checkpoints** - why they make ingestion idempotent\n- **availableNow trigger** - batch-style incremental runs\n\n### Build steps\n\n1. **Set up the stream:** Read with cloudFiles.format and a cloudFiles.schemaLocation.\n2. **Write with a checkpoint:** Write into bronze_claims_auto with checkpointLocation and trigger(availableNow=True).\n3. **Prove incremental:** Drop a new dated claims file and re-run — only new records ingest.\n4. **Evolve schema:** Add a column to a newer file, re-run, and inspect _rescued_data.\n5. **Ship to your repo:** Commit notebooks/day07_autoloader.py, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. What format string enables Auto Loader? (one word)\n2. What trigger processes new files then stops? (one word)\n3. What column captures data that didn't fit the schema? (one token)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "Auto Loader format",
+          "value": "cloudFiles",
+          "caseInsensitive": true
+        },
+        {
+          "check": "trigger mode",
+          "value": "availableNow",
+          "caseInsensitive": true
+        },
+        {
+          "check": "rescued column",
+          "value": "_rescued_data",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "notebooks/day07_autoloader.py exists",
+          "kind": "fileExists",
+          "path": "notebooks/day07_autoloader.py"
+        },
+        {
+          "check": "notebooks/day07_autoloader.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day07_autoloader.py",
+          "regex": "cloudFiles"
+        },
+        {
+          "check": "notebooks/day07_autoloader.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day07_autoloader.py",
+          "regex": "(?i)checkpoint"
+        },
+        {
+          "check": "notebooks/day07_autoloader.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day07_autoloader.py",
+          "regex": "availableNow"
+        }
+      ]
+    },
+    "objectives": [
+      "Ingest claims with spark.readStream.format(\"cloudFiles\")",
+      "Use a schemaLocation and checkpointLocation with trigger availableNow",
+      "Prove incremental behaviour by dropping a new dated file",
+      "Demonstrate schema evolution and commit the notebook"
+    ],
+    "tools": [
+      "Auto Loader",
+      "Streaming",
+      "Bronze"
+    ],
+    "estimatedMin": 150,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 8,
+    "moduleNumber": 3,
+    "title": "Cleaning & Conforming Data with PySpark",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Cleaning & Conforming Data with PySpark\n\n**Turn one raw Bronze entity into a clean, typed Silver table**\n\nBegin the Silver layer: cast types, standardize values, handle nulls, and deduplicate members into a canonical shape.\n\n**Concepts to learn**\n\n- **Type casting** - parsing dates and numbers safely\n- **Null handling** - explicit rules; trimming and standardizing strings\n- **Deduplication** - window-based keep-latest\n- **Canonical schema** - renaming to documented columns\n\n### Build steps\n\n1. **Read Bronze:** Load bronze_members into a DataFrame.\n2. **Cast types:** dob/enrollment_date → date, numerics → numeric types.\n3. **Standardize:** Uppercase states, title-case names, normalize gender to M/F/U.\n4. **Handle nulls & dedupe:** Drop rows missing member_id; fill state with 'UNK'; dedupe on member_id via a window.\n5. **Write Silver:** Rename to canonical columns and write silver_members; validate with summary().\n6. **Ship to your repo:** Commit notebooks/day08_silver_members.py, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. What column do you deduplicate members on? (one token)\n2. What value fills a missing state? (one word)\n3. What target table do you write today? (one token)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "dedupe key",
+          "value": "member_id",
+          "caseInsensitive": true
+        },
+        {
+          "check": "missing-state value",
+          "value": "UNK",
+          "caseInsensitive": true
+        },
+        {
+          "check": "silver table",
+          "value": "silver_members",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "notebooks/day08_silver_members.py exists",
+          "kind": "fileExists",
+          "path": "notebooks/day08_silver_members.py"
+        },
+        {
+          "check": "notebooks/day08_silver_members.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day08_silver_members.py",
+          "regex": "(?i)dropDuplicates|Window"
+        },
+        {
+          "check": "notebooks/day08_silver_members.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day08_silver_members.py",
+          "regex": "silver_members"
+        }
+      ]
+    },
+    "objectives": [
+      "Read bronze_members and cast all columns to proper types",
+      "Standardize states/names/gender and handle nulls by rule",
+      "Deduplicate on member_id keeping the latest record",
+      "Write silver_members and commit the notebook"
+    ],
+    "tools": [
+      "PySpark",
+      "Silver",
+      "Data Cleaning"
+    ],
+    "estimatedMin": 150,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 9,
+    "moduleNumber": 3,
+    "title": "Joins & Enrichment",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Joins & Enrichment\n\n**Enrich claims into one conformed Silver table**\n\nJoin cleaned claims to members, plans, and providers, derive business fields, and check referential integrity by finding orphan claims.\n\n**Concepts to learn**\n\n- **Join types** - inner, left, and anti-joins\n- **Ambiguous columns** - handling duplicate names after a join\n- **Derived fields** - business columns from joined data\n- **Referential integrity** - finding orphan records\n\n### Build steps\n\n1. **Clean claims:** Cast amounts/dates, normalize status (paid/denied/pending), trim codes.\n2. **Enrich by joining:** Left-join to silver_members/plans/providers for plan_type, metal_tier, specialty, network_status.\n3. **Derive fields:** claim_age_days, is_denied, in_network.\n4. **Find orphans:** Anti-join to locate claims with no matching member/provider; log the count.\n5. **Write Silver:** Write silver_claims; sanity-check total paid_amount.\n6. **Ship to your repo:** Commit notebooks/day09_silver_claims.py, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. What join type finds unmatched rows: an ___ join? (one word)\n2. What flag column marks a denied claim? (one token)\n3. What target table do you write today? (one token)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "orphan join type",
+          "value": "anti",
+          "caseInsensitive": true
+        },
+        {
+          "check": "denied flag column",
+          "value": "is_denied",
+          "caseInsensitive": true
+        },
+        {
+          "check": "silver table",
+          "value": "silver_claims",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "notebooks/day09_silver_claims.py exists",
+          "kind": "fileExists",
+          "path": "notebooks/day09_silver_claims.py"
+        },
+        {
+          "check": "notebooks/day09_silver_claims.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day09_silver_claims.py",
+          "regex": "(?i)join"
+        },
+        {
+          "check": "notebooks/day09_silver_claims.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day09_silver_claims.py",
+          "regex": "silver_claims"
+        },
+        {
+          "check": "notebooks/day09_silver_claims.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day09_silver_claims.py",
+          "regex": "is_denied|in_network"
+        }
+      ]
+    },
+    "objectives": [
+      "Clean and type bronze_claims (amounts, dates, status)",
+      "Left-join to members/plans/providers to attach attributes",
+      "Derive claim_age_days, is_denied, in_network",
+      "Anti-join to find orphan claims; write silver_claims and commit"
+    ],
+    "tools": [
+      "PySpark",
+      "Silver",
+      "Joins"
+    ],
+    "estimatedMin": 165,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 10,
+    "moduleNumber": 3,
+    "title": "Data Quality & Expectations",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Data Quality & Expectations\n\n**Catch and quarantine bad records instead of trusting them**\n\nAdd explicit data-quality rules to silver_claims, route failing rows to a quarantine table, and enforce a Delta CHECK constraint.\n\n**Concepts to learn**\n\n- **DQ dimensions** - validity, completeness, uniqueness, consistency\n- **Quarantine pattern** - route bad rows aside, don't drop blindly\n- **CHECK constraints** - Delta-level enforcement\n\n### Build steps\n\n1. **Define rules:** total_charge ≥ 0, status in set, date_of_service ≤ date_filed, non-null keys.\n2. **Quarantine:** Split valid vs failing rows; write failing rows to silver_claims_quarantine with a reason.\n3. **Enforce a constraint:** ALTER TABLE ... ADD CONSTRAINT and demonstrate a rejected bad insert.\n4. **Summarize:** Count rows failing each rule; write docs/dq_rules.md.\n5. **Ship to your repo:** Commit the notebook + dq_rules.md, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. What table holds rows that fail your rules? (one token)\n2. What Delta constraint type rejects a bad insert? (one word)\n3. What is today's rules-doc filename? (one token)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "quarantine table",
+          "value": "silver_claims_quarantine",
+          "caseInsensitive": true
+        },
+        {
+          "check": "constraint type",
+          "value": "CHECK",
+          "caseInsensitive": true
+        },
+        {
+          "check": "rules doc filename",
+          "value": "dq_rules.md",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "notebooks/day10_data_quality.py exists",
+          "kind": "fileExists",
+          "path": "notebooks/day10_data_quality.py"
+        },
+        {
+          "check": "notebooks/day10_data_quality.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day10_data_quality.py",
+          "regex": "(?i)quarantine"
+        },
+        {
+          "check": "notebooks/day10_data_quality.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day10_data_quality.py",
+          "regex": "(?i)constraint"
+        },
+        {
+          "check": "docs/dq_rules.md exists",
+          "kind": "fileExists",
+          "path": "docs/dq_rules.md"
+        }
+      ]
+    },
+    "objectives": [
+      "Define rules (amounts, status, date order, non-null keys)",
+      "Split valid vs failing rows; write silver_claims_quarantine",
+      "Add a Delta CHECK constraint and show it rejecting a bad insert",
+      "Document rules in dq_rules.md and commit"
+    ],
+    "tools": [
+      "Data Quality",
+      "Delta Lake",
+      "Silver"
+    ],
+    "estimatedMin": 120,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 11,
+    "moduleNumber": 3,
+    "title": "Upserts, MERGE & Slowly Changing Dimensions",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Upserts, MERGE & Slowly Changing Dimensions\n\n**Handle updates and history like a real pipeline**\n\nUse MERGE for upserts and build an SCD Type 2 member-history table so changes are tracked with effective dates.\n\n**Concepts to learn**\n\n- **MERGE INTO** - combined insert/update/delete; upserts\n- **CDC** - change data capture as a concept\n- **SCD Type 1 vs 2** - overwrite vs keep history with effective dates\n\n### Build steps\n\n1. **Simulate updates:** Create an updated members file where a few members change plan/state.\n2. **Upsert (Type 1):** MERGE INTO silver_members to overwrite matched and insert new.\n3. **History (Type 2):** Build silver_members_history with effective_from/to/is_current via MERGE.\n4. **Verify:** Confirm a changed member has one current and one expired row.\n5. **Ship to your repo:** Commit notebooks/day11_merge_scd.py, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. What SQL keyword performs an upsert? (one word)\n2. Which SCD type keeps history? (number)\n3. What column flags the current row in SCD Type 2? (one token)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "upsert keyword",
+          "value": "MERGE",
+          "caseInsensitive": true
+        },
+        {
+          "check": "SCD type",
+          "value": "2",
+          "caseInsensitive": true
+        },
+        {
+          "check": "current-flag column",
+          "value": "is_current",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "notebooks/day11_merge_scd.py exists",
+          "kind": "fileExists",
+          "path": "notebooks/day11_merge_scd.py"
+        },
+        {
+          "check": "notebooks/day11_merge_scd.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day11_merge_scd.py",
+          "regex": "(?i)merge into"
+        },
+        {
+          "check": "notebooks/day11_merge_scd.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day11_merge_scd.py",
+          "regex": "is_current"
+        }
+      ]
+    },
+    "objectives": [
+      "Upsert changed members with MERGE INTO (SCD Type 1)",
+      "Build silver_members_history (SCD Type 2) with effective_from/to/is_current",
+      "Verify a changed member has one current + one expired row",
+      "Commit the notebook"
+    ],
+    "tools": [
+      "Delta Lake",
+      "MERGE",
+      "SCD"
+    ],
+    "estimatedMin": 150,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 12,
+    "moduleNumber": 3,
+    "title": "Completing & Optimizing the Silver Layer",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Completing & Optimizing the Silver Layer\n\n**Finish Silver for all entities and learn Delta maintenance**\n\nBuild the remaining Silver tables and apply the Delta performance routine: OPTIMIZE, liquid clustering / Z-ORDER, and VACUUM.\n\n**Concepts to learn**\n\n- **OPTIMIZE** - file compaction and why small files hurt\n- **Clustering** - liquid clustering / Z-ORDER for data skipping\n- **VACUUM** - retention and its trade-off with time travel\n\n### Build steps\n\n1. **Finish Silver:** Build the remaining Silver tables (plans, providers, claim_lines) to the clean/typed/deduped standard.\n2. **Optimize & cluster:** OPTIMIZE silver_claims; ALTER TABLE ... CLUSTER BY (member_id, date_of_service) (or Z-ORDER).\n3. **Vacuum:** Run VACUUM; note the retention window trade-off.\n4. **Measure:** Compare a filtered query's profile/EXPLAIN before and after.\n5. **Ship to your repo:** Commit notebooks/day12_silver_optimize.py with a maintenance note, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. What command compacts small files? (one word)\n2. What command purges old files past retention? (one word)\n3. How many more Silver tables do you build today? (number)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "compaction command",
+          "value": "OPTIMIZE",
+          "caseInsensitive": true
+        },
+        {
+          "check": "vacuum command",
+          "value": "VACUUM",
+          "caseInsensitive": true
+        },
+        {
+          "check": "silver tables built",
+          "value": "3",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "notebooks/day12_silver_optimize.py exists",
+          "kind": "fileExists",
+          "path": "notebooks/day12_silver_optimize.py"
+        },
+        {
+          "check": "notebooks/day12_silver_optimize.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day12_silver_optimize.py",
+          "regex": "(?i)optimize"
+        },
+        {
+          "check": "notebooks/day12_silver_optimize.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day12_silver_optimize.py",
+          "regex": "(?i)vacuum"
+        },
+        {
+          "check": "notebooks/day12_silver_optimize.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day12_silver_optimize.py",
+          "regex": "(?i)cluster by|zorder"
+        }
+      ]
+    },
+    "objectives": [
+      "Build silver_plans, silver_providers, silver_claim_lines to standard",
+      "OPTIMIZE and cluster silver_claims; run VACUUM",
+      "Compare a query profile before/after",
+      "Commit the notebook with a documented maintenance routine"
+    ],
+    "tools": [
+      "Delta Lake",
+      "Performance",
+      "Silver"
+    ],
+    "estimatedMin": 150,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 13,
+    "moduleNumber": 4,
+    "title": "Dimensional Modeling & Star-Schema Design",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Dimensional Modeling & Star-Schema Design\n\n**Design the Gold star schema your dashboards will use**\n\nDesign the fact and dimension tables, choose the grain, and document the model before building it.\n\n**Concepts to learn**\n\n- **Star schema** - facts vs dimensions; the grain\n- **Surrogate keys** - and conformed dimensions\n- **Date dimension** - why you build one\n\n### Build steps\n\n1. **Decide the grain:** One row per claim (recommended) or per claim line — write it down.\n2. **Design the schema:** fact_claims + dim_member, dim_plan, dim_provider, dim_date.\n3. **List measures & attributes:** Measures on the fact; descriptive attributes on each dimension.\n4. **Draw & sketch DDL:** Add a diagram and draft DDL in the doc.\n5. **Ship to your repo:** Commit docs/star_schema_design.md, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. How many rows per claim is the fact grain? (number)\n2. How many dimensions does the star schema have? (number)\n3. What is the design-doc filename? (one token)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "fact grain (rows)",
+          "value": "1",
+          "caseInsensitive": true
+        },
+        {
+          "check": "dimension count",
+          "value": "4",
+          "caseInsensitive": true
+        },
+        {
+          "check": "design doc filename",
+          "value": "star_schema_design.md",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "docs/star_schema_design.md exists",
+          "kind": "fileExists",
+          "path": "docs/star_schema_design.md"
+        },
+        {
+          "check": "docs/star_schema_design.md has content",
+          "kind": "minLines",
+          "path": "docs/star_schema_design.md",
+          "min": 8
+        },
+        {
+          "check": "docs/star_schema_design.md matches expected content",
+          "kind": "contentMatches",
+          "path": "docs/star_schema_design.md",
+          "regex": "(?i)fact_claims"
+        },
+        {
+          "check": "docs/star_schema_design.md matches expected content",
+          "kind": "contentMatches",
+          "path": "docs/star_schema_design.md",
+          "regex": "(?i)dim_"
+        }
+      ]
+    },
+    "objectives": [
+      "Choose and document the fact grain (per claim)",
+      "Design fact_claims + dim_member/plan/provider/date",
+      "List measures and per-dimension attributes",
+      "Write the design to star_schema_design.md and commit"
+    ],
+    "tools": [
+      "Dimensional Modeling",
+      "Gold",
+      "Design"
+    ],
+    "estimatedMin": 120,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 14,
+    "moduleNumber": 4,
+    "title": "Building the Gold Dimension Tables",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Building the Gold Dimension Tables\n\n**Materialize dimensions with surrogate keys**\n\nBuild dim_member/plan/provider from Silver and generate a date dimension, each with a unique surrogate key.\n\n**Concepts to learn**\n\n- **Surrogate keys** - identity columns or monotonically_increasing_id\n- **Date dimension** - generating a date range with calendar attributes\n- **BI-focused attributes** - only what dashboards need\n\n### Build steps\n\n1. **Build dimensions:** From Silver, build dim_member/plan/provider with a surrogate key each.\n2. **Generate dim_date:** Create a date range with year/quarter/month/day_of_week/is_weekend.\n3. **Enrich:** Add age_band on dim_member, premium_band on dim_plan.\n4. **Validate:** Confirm each surrogate key is unique and non-null.\n5. **Ship to your repo:** Commit notebooks/day14_gold_dims.py, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. What key type uniquely identifies each dimension row? (one word)\n2. Which dimension do you generate programmatically? (one token)\n3. What band do you add to dim_member? (one token)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "dimension key type",
+          "value": "surrogate",
+          "caseInsensitive": true
+        },
+        {
+          "check": "generated dimension",
+          "value": "dim_date",
+          "caseInsensitive": true
+        },
+        {
+          "check": "member band column",
+          "value": "age_band",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "notebooks/day14_gold_dims.py exists",
+          "kind": "fileExists",
+          "path": "notebooks/day14_gold_dims.py"
+        },
+        {
+          "check": "notebooks/day14_gold_dims.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day14_gold_dims.py",
+          "regex": "dim_date"
+        },
+        {
+          "check": "notebooks/day14_gold_dims.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day14_gold_dims.py",
+          "regex": "dim_member"
+        }
+      ]
+    },
+    "objectives": [
+      "Build dim_member, dim_plan, dim_provider with surrogate keys",
+      "Generate dim_date with calendar attributes",
+      "Add derived attributes (age_band, premium_band)",
+      "Validate key uniqueness and commit"
+    ],
+    "tools": [
+      "Gold",
+      "Dimensions",
+      "PySpark"
+    ],
+    "estimatedMin": 150,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 15,
+    "moduleNumber": 4,
+    "title": "Building the Gold Fact Table",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Building the Gold Fact Table\n\n**Build the central fact table, reconciled to Silver**\n\nConstruct fact_claims at the chosen grain, swapping natural keys for dimension surrogate keys, and reconcile totals against Silver.\n\n**Concepts to learn**\n\n- **Fact construction** - at a defined grain\n- **FK lookups** - joining to dimensions for surrogate keys\n- **Unmatched members** - routing to an Unknown dimension row\n\n### Build steps\n\n1. **Build the fact:** From silver_claims, join to dimensions to swap natural keys for surrogate keys.\n2. **Add measures:** Include numeric measures plus claim_status and denial_reason.\n3. **Handle unmatched:** Route claims with no member/provider to an Unknown dimension member.\n4. **Reconcile & optimize:** Confirm totals match Silver; apply clustering/OPTIMIZE.\n5. **Ship to your repo:** Commit notebooks/day15_gold_fact.py, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. What is the fact table named? (one token)\n2. What layer do you reconcile totals against? (one word)\n3. What dimension member catches unmatched claims? (one word)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "fact table name",
+          "value": "fact_claims",
+          "caseInsensitive": true
+        },
+        {
+          "check": "reconcile layer",
+          "value": "silver",
+          "caseInsensitive": true
+        },
+        {
+          "check": "unmatched member row",
+          "value": "unknown",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "notebooks/day15_gold_fact.py exists",
+          "kind": "fileExists",
+          "path": "notebooks/day15_gold_fact.py"
+        },
+        {
+          "check": "notebooks/day15_gold_fact.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day15_gold_fact.py",
+          "regex": "fact_claims"
+        },
+        {
+          "check": "notebooks/day15_gold_fact.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day15_gold_fact.py",
+          "regex": "(?i)join"
+        }
+      ]
+    },
+    "objectives": [
+      "Build fact_claims with dimension surrogate keys",
+      "Include measures + status/denial_reason for filtering",
+      "Reconcile total paid_amount against silver_claims",
+      "Cluster/optimize the fact and commit"
+    ],
+    "tools": [
+      "Gold",
+      "Fact Table",
+      "PySpark"
+    ],
+    "estimatedMin": 165,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 16,
+    "moduleNumber": 4,
+    "title": "Business Metrics, Aggregates & Views",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Business Metrics, Aggregates & Views\n\n**Turn the star schema into ready-to-use business metrics**\n\nDefine KPIs precisely, build aggregate tables/views, and expose an analyst-friendly view over the Gold layer.\n\n**Concepts to learn**\n\n- **KPI definitions** - denial rate, PMPM, in-network %, avg paid\n- **Aggregates vs views** - summary tables vs on-the-fly views\n- **Analyst usability** - readable columns for non-engineers\n\n### Build steps\n\n1. **Define KPIs:** Write formula + grain for each KPI in docs/kpi_definitions.md.\n2. **Build aggregates:** claims_by_plan_month, denial_rate_by_provider, cost_pmpm, top_procedures.\n3. **Analyst view:** Create vw_claims_analytics joining fact_claims to all dimensions with readable names.\n4. **Verify by hand:** Check two or three KPI numbers against a manual query.\n5. **Ship to your repo:** Commit the notebook + kpi_definitions.md, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. What analyst-friendly view do you create? (one token)\n2. PMPM measures cost per member per ___? (one word)\n3. What is the KPI-doc filename? (one token)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "analyst view",
+          "value": "vw_claims_analytics",
+          "caseInsensitive": true
+        },
+        {
+          "check": "PMPM period",
+          "value": "month",
+          "caseInsensitive": true
+        },
+        {
+          "check": "kpi doc filename",
+          "value": "kpi_definitions.md",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "notebooks/day16_gold_metrics.py exists",
+          "kind": "fileExists",
+          "path": "notebooks/day16_gold_metrics.py"
+        },
+        {
+          "check": "notebooks/day16_gold_metrics.py matches expected content",
+          "kind": "contentMatches",
+          "path": "notebooks/day16_gold_metrics.py",
+          "regex": "vw_claims_analytics"
+        },
+        {
+          "check": "docs/kpi_definitions.md exists",
+          "kind": "fileExists",
+          "path": "docs/kpi_definitions.md"
+        },
+        {
+          "check": "docs/kpi_definitions.md matches expected content",
+          "kind": "contentMatches",
+          "path": "docs/kpi_definitions.md",
+          "regex": "(?i)denial|pmpm"
+        }
+      ]
+    },
+    "objectives": [
+      "Write precise KPI definitions in kpi_definitions.md",
+      "Build claims_by_plan_month, denial_rate_by_provider, cost_pmpm, top_procedures",
+      "Create vw_claims_analytics joining fact + dimensions",
+      "Hand-check KPIs and commit"
+    ],
+    "tools": [
+      "Gold",
+      "KPIs",
+      "Spark SQL"
+    ],
+    "estimatedMin": 135,
+    "missionPoints": 12,
+    "isProjectDay": true
+  },
+  {
+    "dayNumber": 17,
+    "moduleNumber": 5,
+    "title": "Intro to Lakeflow Declarative Pipelines",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Intro to Lakeflow Declarative Pipelines\n\n**Rebuild Bronze ingestion as a declarative pipeline**\n\nLearn Lakeflow Declarative Pipelines (formerly Delta Live Tables) and define your Bronze ingestion as a streaming table using the pipeline decorators.\n\n**Concepts to learn**\n\n- **Declarative vs imperative ETL** - describe the result, let the engine run it\n- **Streaming tables vs MVs** - when to use each\n- **Pipeline decorators** - from pyspark import pipelines as dp; @dp.table (legacy @dlt still works)\n\n### Build steps\n\n1. **Create a pipeline:** Under Jobs & Pipelines, create a pipeline pointing at pipelines/bronze_pipeline.py.\n2. **Define Bronze:** Define bronze_claims as a streaming table reading the Volume with Auto Loader via dp decorators.\n3. **Run & explore:** Run the pipeline; explore the auto-generated DAG and event log.\n4. **Mind the limit:** Note Free Edition's one-active-pipeline-per-type limit.\n5. **Ship to your repo:** Commit pipelines/bronze_pipeline.py, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. Which product family does Delta Live Tables now belong to? (one word)\n2. In 'from pyspark import ___ as dp', what is the module? (one word)\n3. How many active pipelines per type does Free Edition allow? (number)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "product family",
+          "value": "Lakeflow",
+          "caseInsensitive": true
+        },
+        {
+          "check": "pipelines module",
+          "value": "pipelines",
+          "caseInsensitive": true
+        },
+        {
+          "check": "active pipelines limit",
+          "value": "1",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "pipelines/bronze_pipeline.py exists",
+          "kind": "fileExists",
+          "path": "pipelines/bronze_pipeline.py"
+        },
+        {
+          "check": "pipelines/bronze_pipeline.py matches expected content",
+          "kind": "contentMatches",
+          "path": "pipelines/bronze_pipeline.py",
+          "regex": "(?i)import pipelines|@dp\\.|@dlt"
+        },
+        {
+          "check": "pipelines/bronze_pipeline.py matches expected content",
+          "kind": "contentMatches",
+          "path": "pipelines/bronze_pipeline.py",
+          "regex": "cloudFiles"
+        }
+      ]
+    },
+    "objectives": [
+      "Create a pipeline and point it at a source file",
+      "Define bronze_claims as a streaming table using Auto Loader + dp decorators",
+      "Run the pipeline and explore the DAG + event log",
+      "Commit the pipeline source"
+    ],
+    "tools": [
+      "Lakeflow",
+      "Pipelines",
+      "Bronze"
+    ],
+    "estimatedMin": 150,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 18,
+    "moduleNumber": 5,
+    "title": "Building the Full Bronze → Silver → Gold Pipeline",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Building the Full Bronze → Silver → Gold Pipeline\n\n**Express the whole medallion flow in one pipeline**\n\nExtend the pipeline so Silver and Gold are defined declaratively; the engine builds the bronze→silver→gold DAG and runs it incrementally.\n\n**Concepts to learn**\n\n- **Chaining datasets** - reading one pipeline table from another\n- **Streaming vs materialized views** - ingest vs transforms/aggregates\n- **Auto-built DAG** - dependencies resolved for you\n\n### Build steps\n\n1. **Add Silver:** Define silver_claims as an MV/streaming table applying your Day 8–9 cleaning/enrichment.\n2. **Add Gold:** Define denial_rate, cost_pmpm as materialized views reading Silver.\n3. **Run the DAG:** Run the pipeline; watch bronze→silver→gold build automatically.\n4. **Prove incremental:** Land a new file and re-run — only new data flows through.\n5. **Ship to your repo:** Commit pipelines/medallion_pipeline.py, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. What is the pipeline file name today? (one token)\n2. The pipeline auto-builds a dependency graph — its 3-letter acronym? (one word)\n3. How many medallion layers does the pipeline materialize? (number)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "pipeline filename",
+          "value": "medallion_pipeline.py",
+          "caseInsensitive": true
+        },
+        {
+          "check": "dependency acronym",
+          "value": "DAG",
+          "caseInsensitive": true
+        },
+        {
+          "check": "medallion layer count",
+          "value": "3",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "pipelines/medallion_pipeline.py exists",
+          "kind": "fileExists",
+          "path": "pipelines/medallion_pipeline.py"
+        },
+        {
+          "check": "pipelines/medallion_pipeline.py matches expected content",
+          "kind": "contentMatches",
+          "path": "pipelines/medallion_pipeline.py",
+          "regex": "(?i)silver"
+        },
+        {
+          "check": "pipelines/medallion_pipeline.py matches expected content",
+          "kind": "contentMatches",
+          "path": "pipelines/medallion_pipeline.py",
+          "regex": "(?i)gold"
+        }
+      ]
+    },
+    "objectives": [
+      "Add silver_claims (cleaning/enrichment) reading Bronze",
+      "Add Gold aggregates as materialized views reading Silver",
+      "Run the full pipeline and watch the DAG build",
+      "Commit the expanded pipeline"
+    ],
+    "tools": [
+      "Lakeflow",
+      "Medallion",
+      "Pipelines"
+    ],
+    "estimatedMin": 180,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 19,
+    "moduleNumber": 5,
+    "title": "Pipeline Data Quality & Lineage",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Pipeline Data Quality & Lineage\n\n**Add expectations and trace data end to end**\n\nAdd declarative expectations to the pipeline and use Unity Catalog lineage to trace a Gold column back to a raw file. Capture the lineage graph as a screenshot.\n\n**Concepts to learn**\n\n- **Expectations** - expect / expect_or_drop / expect_or_fail\n- **DQ metrics** - pass/fail counts in the event log\n- **UC lineage** - table- and column-level lineage\n\n### Build steps\n\n1. **Add expectations:** Add valid-amounts, valid-status, non-null-keys expectations to silver_claims.\n2. **Inspect metrics:** Re-run and read pass/fail counts in the event log.\n3. **Trace lineage:** Open the UC lineage graph and trace a Gold KPI column back to a raw file.\n4. **Screenshot:** Save the lineage graph as screenshots/day19_lineage.png.\n5. **Ship to your repo:** Commit the updated pipeline + screenshot, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. What pipeline feature enforces data-quality rules? (one word)\n2. Which expectation action drops failing rows? (one token)\n3. What is today's screenshot filename? (one token)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "data-quality feature",
+          "value": "expectations",
+          "caseInsensitive": true
+        },
+        {
+          "check": "drop action",
+          "value": "expect_or_drop",
+          "caseInsensitive": true
+        },
+        {
+          "check": "lineage screenshot",
+          "value": "day19_lineage.png",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "pipelines/medallion_pipeline.py exists",
+          "kind": "fileExists",
+          "path": "pipelines/medallion_pipeline.py"
+        },
+        {
+          "check": "pipelines/medallion_pipeline.py matches expected content",
+          "kind": "contentMatches",
+          "path": "pipelines/medallion_pipeline.py",
+          "regex": "(?i)expect"
+        },
+        {
+          "check": "screenshots/day19_lineage.png exists",
+          "kind": "fileExists",
+          "path": "screenshots/day19_lineage.png"
+        }
+      ]
+    },
+    "objectives": [
+      "Add expectations to silver_claims with drop/fail actions",
+      "Inspect DQ metrics in the pipeline event log",
+      "Trace a Gold column to raw via UC lineage",
+      "Commit the updated pipeline + a lineage screenshot"
+    ],
+    "tools": [
+      "Lakeflow",
+      "Expectations",
+      "Lineage"
+    ],
+    "estimatedMin": 120,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 20,
+    "moduleNumber": 5,
+    "title": "Pipeline Parameters, Testing & Refactor",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Pipeline Parameters, Testing & Refactor\n\n**Make the pipeline production-shaped**\n\nParameterize the pipeline, split it into modular files, and compare full vs incremental refresh.\n\n**Concepts to learn**\n\n- **Pipeline config** - parameters; dev vs prod\n- **Refresh modes** - full vs incremental\n- **Modularity** - separate bronze/silver/gold files\n\n### Build steps\n\n1. **Parameterize:** Move source path and target catalog/schema into pipeline configuration.\n2. **Modularize:** Split into pipelines/bronze.py, silver.py, gold.py.\n3. **Add a DQ summary:** Produce a small Gold data-quality summary each run.\n4. **Compare refreshes:** Run a full refresh and an incremental refresh; note the difference.\n5. **Ship to your repo:** Commit the modular pipeline files, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. Besides incremental, what other refresh mode do you run? (one word)\n2. Into how many modular files do you split the pipeline? (number)\n3. What makes the source path configurable? (one word)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "other refresh mode",
+          "value": "full",
+          "caseInsensitive": true
+        },
+        {
+          "check": "module file count",
+          "value": "3",
+          "caseInsensitive": true
+        },
+        {
+          "check": "config mechanism",
+          "value": "parameters",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "pipelines/bronze.py exists",
+          "kind": "fileExists",
+          "path": "pipelines/bronze.py"
+        },
+        {
+          "check": "pipelines/silver.py exists",
+          "kind": "fileExists",
+          "path": "pipelines/silver.py"
+        },
+        {
+          "check": "pipelines/gold.py exists",
+          "kind": "fileExists",
+          "path": "pipelines/gold.py"
+        }
+      ]
+    },
+    "objectives": [
+      "Parameterize source path and target schema via config",
+      "Split the pipeline into modular bronze/silver/gold files",
+      "Run a full refresh and an incremental refresh",
+      "Commit the modular pipeline"
+    ],
+    "tools": [
+      "Lakeflow",
+      "Refactor",
+      "Pipelines"
+    ],
+    "estimatedMin": 135,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 21,
+    "moduleNumber": 6,
+    "title": "Orchestrating with Lakeflow Jobs",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Orchestrating with Lakeflow Jobs\n\n**Automate the end-to-end flow on a schedule**\n\nUse Lakeflow Jobs (formerly Workflows) to orchestrate generate → pipeline → validate as ordered tasks, then schedule it.\n\n**Concepts to learn**\n\n- **Jobs & tasks** - a job is a DAG of tasks with dependencies\n- **Task types** - notebook and pipeline tasks\n- **Schedules** - triggers and serverless job compute\n\n### Build steps\n\n1. **Create the job:** Task 1 runs the generator, task 2 runs the pipeline, task 3 runs a KPI-validation notebook.\n2. **Wire dependencies:** Order the tasks so they run strictly in sequence.\n3. **Run & inspect:** Run manually; inspect the run graph, durations, and logs.\n4. **Schedule:** Add a daily schedule.\n5. **Ship to your repo:** Commit jobs/claims_job.json + notebooks/day21_validate.py, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. Workflows was renamed to Lakeflow ___? (one word)\n2. How many tasks are in your job? (number)\n3. How many concurrent job tasks does Free Edition allow? (number)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "orchestration product",
+          "value": "Jobs",
+          "caseInsensitive": true
+        },
+        {
+          "check": "job task count",
+          "value": "3",
+          "caseInsensitive": true
+        },
+        {
+          "check": "concurrent task limit",
+          "value": "5",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "jobs/claims_job.json exists",
+          "kind": "fileExists",
+          "path": "jobs/claims_job.json"
+        },
+        {
+          "check": "jobs/claims_job.json matches expected content",
+          "kind": "contentMatches",
+          "path": "jobs/claims_job.json",
+          "regex": "(?i)task"
+        },
+        {
+          "check": "notebooks/day21_validate.py exists",
+          "kind": "fileExists",
+          "path": "notebooks/day21_validate.py"
+        }
+      ]
+    },
+    "objectives": [
+      "Create a 3-task job: generate → pipeline → validate",
+      "Wire dependencies so tasks run in order",
+      "Add a daily schedule",
+      "Export the job definition and commit it"
+    ],
+    "tools": [
+      "Lakeflow Jobs",
+      "Orchestration"
+    ],
+    "estimatedMin": 150,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 22,
+    "moduleNumber": 6,
+    "title": "Parameters, Conditions, Retries & Alerts",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Parameters, Conditions, Retries & Alerts\n\n**Make the orchestration robust and configurable**\n\nAdd job parameters, a branching if/else task, retries and timeouts, and failure notifications.\n\n**Concepts to learn**\n\n- **Params & task values** - passing values between tasks\n- **Branching** - conditional if/else tasks\n- **Resilience** - retries, timeouts, notifications, file-arrival triggers\n\n### Build steps\n\n1. **Parameterize:** Add a run_date parameter and pass it into tasks.\n2. **Branch:** Emit a task value (row count) and add an if/else task on a threshold.\n3. **Harden:** Add retries + a timeout on the pipeline task; email on failure.\n4. **(Optional) trigger:** Add a file-arrival trigger on the raw Volume.\n5. **Ship to your repo:** Commit the updated jobs/claims_job.json, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. What job parameter do you add? (one token)\n2. On what event do you send a notification? (one word)\n3. What task type branches on a threshold? (one word)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "job parameter",
+          "value": "run_date",
+          "caseInsensitive": true
+        },
+        {
+          "check": "notify event",
+          "value": "failure",
+          "caseInsensitive": true
+        },
+        {
+          "check": "branch task type",
+          "value": "conditional",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "jobs/claims_job.json exists",
+          "kind": "fileExists",
+          "path": "jobs/claims_job.json"
+        },
+        {
+          "check": "jobs/claims_job.json matches expected content",
+          "kind": "contentMatches",
+          "path": "jobs/claims_job.json",
+          "regex": "run_date"
+        },
+        {
+          "check": "jobs/claims_job.json matches expected content",
+          "kind": "contentMatches",
+          "path": "jobs/claims_job.json",
+          "regex": "(?i)retry|timeout|notification|email"
+        }
+      ]
+    },
+    "objectives": [
+      "Add a run_date job parameter passed to tasks",
+      "Emit a task value and branch on a threshold",
+      "Add retries + a timeout and a failure notification",
+      "Commit the updated job definition"
+    ],
+    "tools": [
+      "Lakeflow Jobs",
+      "Reliability"
+    ],
+    "estimatedMin": 120,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 23,
+    "moduleNumber": 6,
+    "title": "Reproducibility with Databricks Asset Bundles",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Reproducibility with Databricks Asset Bundles\n\n**Package the whole project as code**\n\nUse Databricks Asset Bundles (DABs) to define your pipeline and job as code and deploy them from the CLI.\n\n**Concepts to learn**\n\n- **Asset Bundles** - the databricks.yml manifest\n- **Resources** - bundling notebooks, pipelines, jobs\n- **Targets & CLI** - dev vs prod; deploy from the CLI\n\n### Build steps\n\n1. **Install & auth CLI:** Install the Databricks CLI and authenticate to Free Edition.\n2. **Scaffold:** databricks bundle init from a default template.\n3. **Define resources:** Add your pipeline and job as resources in databricks.yml.\n4. **Validate & deploy:** databricks bundle validate, then deploy; confirm the objects were created.\n5. **Ship to your repo:** Commit databricks.yml, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. What is the bundle manifest filename? (one token)\n2. What bundle sub-command checks it before deploy? (one word)\n3. DABs stands for Databricks Asset ___? (one word)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "bundle manifest",
+          "value": "databricks.yml",
+          "caseInsensitive": true
+        },
+        {
+          "check": "validate subcommand",
+          "value": "validate",
+          "caseInsensitive": true
+        },
+        {
+          "check": "DABs word",
+          "value": "Bundles",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "databricks.yml exists",
+          "kind": "fileExists",
+          "path": "databricks.yml"
+        },
+        {
+          "check": "databricks.yml matches expected content",
+          "kind": "contentMatches",
+          "path": "databricks.yml",
+          "regex": "(?i)resources"
+        },
+        {
+          "check": "databricks.yml matches expected content",
+          "kind": "contentMatches",
+          "path": "databricks.yml",
+          "regex": "(?i)pipelines|jobs"
+        }
+      ]
+    },
+    "objectives": [
+      "Authenticate the Databricks CLI to your workspace",
+      "Scaffold a bundle and define pipeline + job resources",
+      "bundle validate then deploy to your workspace",
+      "Commit databricks.yml"
+    ],
+    "tools": [
+      "DABs",
+      "CLI",
+      "CI/CD"
+    ],
+    "estimatedMin": 165,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 24,
+    "moduleNumber": 7,
+    "title": "Access Control & Grants",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Access Control & Grants\n\n**Govern who can see and use each layer**\n\nUse Unity Catalog grants to expose only the Gold layer to analysts while keeping Bronze/Silver restricted to engineers.\n\n**Concepts to learn**\n\n- **Privilege model** - catalog → schema → table hierarchy\n- **Principals** - users, groups, service principals\n- **GRANT / REVOKE** - ownership and least privilege\n\n### Build steps\n\n1. **Review hierarchy:** Inspect the privilege hierarchy for health_claims in Catalog Explorer.\n2. **Grant Gold:** GRANT SELECT on gold to an analyst group with USE CATALOG/SCHEMA.\n3. **Restrict lower layers:** Keep bronze/silver to the engineer role.\n4. **Verify & document:** SHOW GRANTS; write docs/access_policy.md; save sql/grants.sql.\n5. **Ship to your repo:** Commit grants.sql + access_policy.md, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. What SQL statement grants access? (one word)\n2. Which layer do analysts get access to? (one word)\n3. What privilege do analysts receive on Gold? (one word)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "grant statement",
+          "value": "GRANT",
+          "caseInsensitive": true
+        },
+        {
+          "check": "analyst layer",
+          "value": "gold",
+          "caseInsensitive": true
+        },
+        {
+          "check": "analyst privilege",
+          "value": "SELECT",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "sql/grants.sql exists",
+          "kind": "fileExists",
+          "path": "sql/grants.sql"
+        },
+        {
+          "check": "sql/grants.sql matches expected content",
+          "kind": "contentMatches",
+          "path": "sql/grants.sql",
+          "regex": "(?i)grant"
+        },
+        {
+          "check": "sql/grants.sql matches expected content",
+          "kind": "contentMatches",
+          "path": "sql/grants.sql",
+          "regex": "(?i)select"
+        },
+        {
+          "check": "docs/access_policy.md exists",
+          "kind": "fileExists",
+          "path": "docs/access_policy.md"
+        }
+      ]
+    },
+    "objectives": [
+      "GRANT SELECT on gold to an analyst group + USE on catalog/schema",
+      "Keep bronze/silver restricted to engineers",
+      "SHOW GRANTS to verify",
+      "Document the policy and commit the SQL"
+    ],
+    "tools": [
+      "Unity Catalog",
+      "Governance",
+      "Security"
+    ],
+    "estimatedMin": 120,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 25,
+    "moduleNumber": 7,
+    "title": "Lineage, Tags, Documentation & Discovery",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Lineage, Tags, Documentation & Discovery\n\n**Make the Lakehouse discoverable and self-documenting**\n\nAdd comments and tags to Gold, tag PHI-sensitive columns, explore lineage, and export a data dictionary.\n\n**Concepts to learn**\n\n- **Lineage** - table- and column-level\n- **Tags** - classification such as PHI-sensitive\n- **AI docs & discovery** - comments and Catalog Explorer search\n\n### Build steps\n\n1. **Comment Gold:** Add table/column comments (accept AI suggestions, then refine).\n2. **Tag PHI:** Tag member name/dob with a sensitivity tag.\n3. **Explore lineage:** Trace fact_claims lineage; screenshot it as screenshots/day25_lineage.png.\n4. **Export dictionary:** Update docs/data_dictionary.md with table/column/description.\n5. **Ship to your repo:** Commit the doc + screenshot, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. What do you attach to PHI columns to classify them? (one word)\n2. What feature traces a column back to raw? (one word)\n3. What documentation file do you export? (one token)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "PHI classifier",
+          "value": "tag",
+          "caseInsensitive": true
+        },
+        {
+          "check": "trace feature",
+          "value": "lineage",
+          "caseInsensitive": true
+        },
+        {
+          "check": "doc filename",
+          "value": "data_dictionary.md",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "docs/data_dictionary.md exists",
+          "kind": "fileExists",
+          "path": "docs/data_dictionary.md"
+        },
+        {
+          "check": "docs/data_dictionary.md has content",
+          "kind": "minLines",
+          "path": "docs/data_dictionary.md",
+          "min": 6
+        },
+        {
+          "check": "screenshots/day25_lineage.png exists",
+          "kind": "fileExists",
+          "path": "screenshots/day25_lineage.png"
+        }
+      ]
+    },
+    "objectives": [
+      "Add table/column comments to Gold (AI-assisted)",
+      "Tag PHI-sensitive columns (name, dob)",
+      "Explore end-to-end lineage for fact_claims",
+      "Export the data dictionary + a lineage screenshot and commit"
+    ],
+    "tools": [
+      "Unity Catalog",
+      "Lineage",
+      "Documentation"
+    ],
+    "estimatedMin": 120,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 26,
+    "moduleNumber": 7,
+    "title": "Fine-Grained Security: Row Filters & Column Masks",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Fine-Grained Security: Row Filters & Column Masks\n\n**Protect PHI with row- and column-level security**\n\nApply a column mask and a row filter to the Gold layer so unprivileged users can't see sensitive member data — essential for healthcare. This is a technical control demo, not a compliance sign-off.\n\n**Concepts to learn**\n\n- **Column masks** - redact sensitive values by group\n- **Row filters** - restrict which rows a principal sees\n- **Dynamic views / ABAC** - is_account_group_member(); attribute-based access\n\n### Build steps\n\n1. **Column mask:** Create a mask redacting name/dob for users not in phi_privileged; apply to Gold columns.\n2. **Row filter:** Create a row filter limiting rows by state/plan for a group; apply to a Gold table.\n3. **Dynamic view (option):** Build a view masking via is_account_group_member() in CASE.\n4. **Test both levels:** Verify masking/filtering as privileged vs unprivileged.\n5. **Ship to your repo:** Commit sql/row_filters_masks.sql, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. A column ___ redacts sensitive values? (one word)\n2. A row ___ restricts which rows are visible? (one word)\n3. What function checks group membership in a dynamic view? (one function name)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "column protection",
+          "value": "mask",
+          "caseInsensitive": true
+        },
+        {
+          "check": "row protection",
+          "value": "filter",
+          "caseInsensitive": true
+        },
+        {
+          "check": "group function",
+          "value": "is_account_group_member",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "sql/row_filters_masks.sql exists",
+          "kind": "fileExists",
+          "path": "sql/row_filters_masks.sql"
+        },
+        {
+          "check": "sql/row_filters_masks.sql matches expected content",
+          "kind": "contentMatches",
+          "path": "sql/row_filters_masks.sql",
+          "regex": "(?i)mask"
+        },
+        {
+          "check": "sql/row_filters_masks.sql matches expected content",
+          "kind": "contentMatches",
+          "path": "sql/row_filters_masks.sql",
+          "regex": "(?i)filter"
+        },
+        {
+          "check": "sql/row_filters_masks.sql matches expected content",
+          "kind": "contentMatches",
+          "path": "sql/row_filters_masks.sql",
+          "regex": "is_account_group_member"
+        }
+      ]
+    },
+    "objectives": [
+      "Create a column mask redacting member name/dob for non-privileged users",
+      "Create a row filter restricting rows by state/plan",
+      "Test as privileged vs unprivileged principal",
+      "Commit the security SQL"
+    ],
+    "tools": [
+      "Unity Catalog",
+      "PHI",
+      "Security"
+    ],
+    "estimatedMin": 150,
+    "missionPoints": 12,
+    "isProjectDay": true
+  },
+  {
+    "dayNumber": 27,
+    "moduleNumber": 8,
+    "title": "Databricks SQL — Queries, Warehouses & Alerts",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Databricks SQL — Queries, Warehouses & Alerts\n\n**Serve the Gold layer through Databricks SQL**\n\nWrite and save analytics queries on Gold using a serverless SQL warehouse, and add an automated alert on a metric threshold.\n\n**Concepts to learn**\n\n- **SQL warehouses** - serverless; the SQL editor\n- **Saved & parameterized queries** - reusable analytics\n- **SQL alerts** - threshold alerts on a schedule\n\n### Build steps\n\n1. **Open the SQL editor:** Use your serverless SQL warehouse.\n2. **Write 5 queries:** denial rate by plan, PMPM trend, top procedures, in-network %, monthly paid amount.\n3. **Parameterize:** Add a :month or :plan parameter to one query.\n4. **Add an alert:** Create a scheduled alert (e.g. denial rate above a threshold).\n5. **Ship to your repo:** Commit sql/analytics_queries.sql + sql/alert.sql, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. What compute runs Databricks SQL queries? (one word)\n2. How many saved analytics queries do you write? (number)\n3. What fires when a metric crosses a threshold? (one word)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "SQL compute",
+          "value": "warehouse",
+          "caseInsensitive": true
+        },
+        {
+          "check": "query count",
+          "value": "5",
+          "caseInsensitive": true
+        },
+        {
+          "check": "threshold feature",
+          "value": "alert",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "sql/analytics_queries.sql exists",
+          "kind": "fileExists",
+          "path": "sql/analytics_queries.sql"
+        },
+        {
+          "check": "sql/analytics_queries.sql has content",
+          "kind": "minLines",
+          "path": "sql/analytics_queries.sql",
+          "min": 5
+        },
+        {
+          "check": "sql/analytics_queries.sql matches expected content",
+          "kind": "contentMatches",
+          "path": "sql/analytics_queries.sql",
+          "regex": "(?i)select"
+        },
+        {
+          "check": "sql/alert.sql exists",
+          "kind": "fileExists",
+          "path": "sql/alert.sql"
+        }
+      ]
+    },
+    "objectives": [
+      "Write 5 saved queries on Gold (denial rate, PMPM, top procedures, in-network %, monthly paid)",
+      "Parameterize one query (by month/plan)",
+      "Create a SQL alert on a threshold",
+      "Commit the SQL files"
+    ],
+    "tools": [
+      "Databricks SQL",
+      "Analytics",
+      "Alerts"
+    ],
+    "estimatedMin": 135,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 28,
+    "moduleNumber": 8,
+    "title": "AI/BI Dashboards",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: AI/BI Dashboards\n\n**Build the stakeholder-facing claims dashboard**\n\nCreate an AI/BI Dashboard on the Gold layer with KPI tiles, charts, and filters, then export it and commit the JSON + a screenshot.\n\n**Concepts to learn**\n\n- **Datasets vs visualizations** - how a dashboard is built\n- **KPI tiles & charts** - choosing the right mark\n- **Filters & sharing** - cross-filtering; publish view-only\n\n### Build steps\n\n1. **Create the dashboard:** New AI/BI Dashboard; dataset from vw_claims_analytics.\n2. **Add tiles & charts:** KPI tiles + paid-over-time, denial-rate-by-plan, top procedures, claims-by-state.\n3. **Add filters & publish:** Date/plan/state filters; publish and share view-only.\n4. **Export & screenshot:** Export the dashboard JSON and capture screenshots/day28_dashboard.png.\n5. **Ship to your repo:** Commit the .lvdash.json + screenshot, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. A dashboard exports as a .___.json file — fill the middle. (one word)\n2. How many KPI tiles do you add? (number)\n3. What is today's screenshot filename? (one token)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "dashboard ext (middle)",
+          "value": "lvdash",
+          "caseInsensitive": true
+        },
+        {
+          "check": "kpi tile count",
+          "value": "4",
+          "caseInsensitive": true
+        },
+        {
+          "check": "dashboard screenshot",
+          "value": "day28_dashboard.png",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "dashboards/claims_dashboard.lvdash.json exists",
+          "kind": "fileExists",
+          "path": "dashboards/claims_dashboard.lvdash.json"
+        },
+        {
+          "check": "screenshots/day28_dashboard.png exists",
+          "kind": "fileExists",
+          "path": "screenshots/day28_dashboard.png"
+        }
+      ]
+    },
+    "objectives": [
+      "Build a dataset from vw_claims_analytics",
+      "Add KPI tiles (total paid, denial rate, PMPM, in-network %) and 3–4 charts",
+      "Add filters (date, plan, state) and publish view-only",
+      "Export the dashboard JSON + a screenshot and commit"
+    ],
+    "tools": [
+      "AI/BI",
+      "Dashboards",
+      "Gold"
+    ],
+    "estimatedMin": 165,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 29,
+    "moduleNumber": 8,
+    "title": "AI/BI Genie — Natural-Language Analytics",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: AI/BI Genie — Natural-Language Analytics\n\n**Let stakeholders ask the claims data questions in English**\n\nCreate a Genie space over Gold, curate instructions and sample questions, verify the generated SQL, and commit the config + a screenshot.\n\n**Concepts to learn**\n\n- **Genie spaces** - grounding on curated tables/views\n- **Instructions** - business definitions and certified questions\n- **Verifying NL-to-SQL** - knowing Genie's limits\n\n### Build steps\n\n1. **Create the space:** New Genie space over your Gold tables and vw_claims_analytics.\n2. **Curate:** Add instructions (denial rate, PMPM, in-network) and certified sample questions.\n3. **Ask & verify:** Ask NL questions and inspect the SQL Genie generates.\n4. **Fix one:** Improve instructions to correct a wrong/ambiguous answer; log examples in sample_qa.md.\n5. **Ship to your repo:** Commit genie/genie_space_config.md + sample_qa.md + screenshot, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. What feature answers questions in plain English? (one word)\n2. What do you add to improve Genie's accuracy? (one word)\n3. What is today's Genie config filename? (one token)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "NL feature",
+          "value": "Genie",
+          "caseInsensitive": true
+        },
+        {
+          "check": "accuracy input",
+          "value": "instructions",
+          "caseInsensitive": true
+        },
+        {
+          "check": "genie config filename",
+          "value": "genie_space_config.md",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "genie/genie_space_config.md exists",
+          "kind": "fileExists",
+          "path": "genie/genie_space_config.md"
+        },
+        {
+          "check": "genie/sample_qa.md exists",
+          "kind": "fileExists",
+          "path": "genie/sample_qa.md"
+        },
+        {
+          "check": "screenshots/day29_genie.png exists",
+          "kind": "fileExists",
+          "path": "screenshots/day29_genie.png"
+        }
+      ]
+    },
+    "objectives": [
+      "Create a Genie space over Gold tables + vw_claims_analytics",
+      "Add instructions (definitions) and certified sample questions",
+      "Ask NL questions and verify the generated SQL",
+      "Commit the Genie config, sample Q&A, and a screenshot"
+    ],
+    "tools": [
+      "AI/BI Genie",
+      "NL Analytics"
+    ],
+    "estimatedMin": 120,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 30,
+    "moduleNumber": 8,
+    "title": "Sharing, Performance & Cost",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Sharing, Performance & Cost\n\n**Polish the analytics experience and understand serverless cost**\n\nSchedule and share the dashboard, tune a slow query, set permissions, and write a stakeholder guide.\n\n**Concepts to learn**\n\n- **Scheduling & sharing** - subscriptions; dashboard/Genie permissions\n- **Serverless cost** - cost drivers and keeping runs cheap\n- **Performance** - query optimization and caching\n\n### Build steps\n\n1. **Schedule & subscribe:** Schedule the dashboard refresh and email stakeholders.\n2. **Tune:** Review query profiles; add an aggregate/clustering for a slow chart.\n3. **Permissions:** Set correct permissions on the dashboard and Genie space.\n4. **Write the guide:** docs/dashboard_guide.md: how to read the dashboard.\n5. **Ship to your repo:** Commit dashboard_guide.md, push, then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. What do you schedule to reach stakeholders? (one word)\n2. What is the main serverless cost driver? (one word)\n3. What is the stakeholder-guide filename? (one token)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "scheduled object",
+          "value": "dashboard",
+          "caseInsensitive": true
+        },
+        {
+          "check": "cost driver",
+          "value": "compute",
+          "caseInsensitive": true
+        },
+        {
+          "check": "guide filename",
+          "value": "dashboard_guide.md",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "docs/dashboard_guide.md exists",
+          "kind": "fileExists",
+          "path": "docs/dashboard_guide.md"
+        },
+        {
+          "check": "docs/dashboard_guide.md has content",
+          "kind": "minLines",
+          "path": "docs/dashboard_guide.md",
+          "min": 5
+        }
+      ]
+    },
+    "objectives": [
+      "Schedule the dashboard to refresh + email stakeholders",
+      "Tune a slow chart with an aggregate/clustering",
+      "Set dashboard + Genie permissions",
+      "Write a stakeholder 'how to read this' guide and commit"
+    ],
+    "tools": [
+      "AI/BI",
+      "Performance",
+      "Sharing"
+    ],
+    "estimatedMin": 120,
+    "missionPoints": 12,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 31,
+    "moduleNumber": 9,
+    "title": "Capstone — End-to-End Review, Demo & Roadmap",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Capstone — End-to-End Review, Demo & Roadmap\n\n**Demo the complete governed Lakehouse and plan v2**\n\nRun the whole system end to end — drop a file, the job runs the pipeline, Gold updates, the dashboard and Genie reflect it — then write a retrospective and roadmap and record a demo.\n\n**Concepts to learn**\n\n- **Architecture review** - raw → Auto Loader → Bronze → Silver → Gold → pipeline → job → governance → SQL → AI/BI\n- **Gaps & tech debt** - what you'd harden next\n- **Roadmap** - streaming, ML (MLflow), more sources, formal compliance review\n\n### Build steps\n\n1. **Live walkthrough:** Drop a new claims file → the job runs the pipeline → Gold updates → dashboard & Genie reflect it.\n2. **Prove governance:** Run a query as a restricted user to show masking; trace a dashboard KPI to raw via lineage.\n3. **Retrospective:** Write docs/retrospective.md: what worked, what was hard, what you'd change.\n4. **Roadmap:** Write docs/roadmap.md: streaming, an ML denial-prediction model (MLflow), more sources, compliance review.\n5. **Record & finalize:** Record a 2–3 min demo (screenshot day31_demo.png); finalize the README.\n6. **Ship to your repo:** Commit retrospective.md, roadmap.md, screenshot, and README, push, then Submit.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. How many medallion layers are there? (number)\n2. What capstone doc records lessons learned? (one token)\n3. What tool tracks the roadmap's ML model? (one word)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "medallion layer count",
+          "value": "3",
+          "caseInsensitive": true
+        },
+        {
+          "check": "retrospective doc",
+          "value": "retrospective.md",
+          "caseInsensitive": true
+        },
+        {
+          "check": "ML tool",
+          "value": "MLflow",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "docs/retrospective.md exists",
+          "kind": "fileExists",
+          "path": "docs/retrospective.md"
+        },
+        {
+          "check": "docs/roadmap.md exists",
+          "kind": "fileExists",
+          "path": "docs/roadmap.md"
+        },
+        {
+          "check": "screenshots/day31_demo.png exists",
+          "kind": "fileExists",
+          "path": "screenshots/day31_demo.png"
+        },
+        {
+          "check": "README.md exists",
+          "kind": "fileExists",
+          "path": "README.md"
+        }
+      ]
+    },
+    "objectives": [
+      "Run a live end-to-end walkthrough (file → job → Gold → dashboard/Genie)",
+      "Show masking as a restricted user; trace a KPI to raw via lineage",
+      "Write a 1-page retrospective and a prioritized v2 roadmap",
+      "Finalize the README and commit everything"
+    ],
+    "tools": [
+      "Capstone",
+      "Demo",
+      "Roadmap"
+    ],
+    "estimatedMin": 180,
+    "missionPoints": 12,
+    "isProjectDay": true
+  }
+]

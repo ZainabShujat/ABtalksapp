@@ -7,6 +7,7 @@ import type {
   BlueprintState,
   CohortInterviewState,
 } from "@/features/interview/cohort-eligibility";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import { resetDemoInterviewAction } from "@/app/actions/interview-actions";
 
 type Props = {
@@ -148,7 +149,7 @@ export function CohortInterviewCard({ state, isIshaan }: Props) {
           title="Day 15 Checkpoint Interview"
           blurb="Test what you've learned across Days 1–15."
           state={state.day15}
-          href="/program/cohort-interview/DAY_15"
+          href={`${PROGRAM_AI_COHORT_BASE}/cohort-interview/DAY_15`}
           blueprint="DAY_15"
           isIshaan={isIshaan}
         />
@@ -157,7 +158,7 @@ export function CohortInterviewCard({ state, isIshaan }: Props) {
           title="Day 31 Final Interview"
           blurb="Assess what you've learned across the full cohort."
           state={state.day31}
-          href="/program/cohort-interview/DAY_31"
+          href={`${PROGRAM_AI_COHORT_BASE}/cohort-interview/DAY_31`}
           blueprint="DAY_31"
           isIshaan={isIshaan}
         />
