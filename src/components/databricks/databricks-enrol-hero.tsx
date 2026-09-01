@@ -1,11 +1,11 @@
 import Link from "next/link";
 
 const LEARN = [
-  "Workspace, Unity Catalog, and PySpark on Free Edition",
+  "Workspace, Unity Catalog, and PySpark",
   "Medallion layers: Bronze ingestion, Silver quality, Gold star schema",
   "Lakeflow Declarative Pipelines, Jobs, and Asset Bundles",
   "Governance (grants, lineage, row filters) plus SQL, AI/BI Dashboards, and Genie",
-  "A Day-31 capstone you can demo end to end",
+  
 ];
 
 export function DatabricksEnrolHero() {
@@ -54,6 +54,12 @@ export function DatabricksEnrolHero() {
                   </li>
                 ))}
               </ul>
+              <a
+                href="#databricks-register"
+                className="mt-6 inline-flex h-10 items-center justify-center rounded-lg bg-[#E05226] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#C9411C] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E05226]"
+              >
+                Register now
+              </a>
             </div>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
