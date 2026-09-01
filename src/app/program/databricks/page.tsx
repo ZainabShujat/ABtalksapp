@@ -12,7 +12,7 @@ import { findDatabricksEnrollment } from "@/repositories/databricks";
 import { listCurriculumForProgramSlug } from "@/repositories/learning";
 
 export const metadata = {
-  title: "Databricks — ABTalks",
+  title: "Databricks | ABTalks",
   description:
     "Build a healthcare-claims Lakehouse on Databricks Free Edition in 31 days.",
 };
@@ -99,7 +99,7 @@ export default async function DatabricksPage() {
               basePath="/program/databricks"
             />
           </section>
-          <section>
+          <section id="databricks-register" className="scroll-mt-24">
             <h2 className="mb-4 font-heading text-2xl leading-[30px] font-semibold text-[#111111]">
               Register
             </h2>
