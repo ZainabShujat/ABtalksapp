@@ -121,8 +121,8 @@ export function Roadmaps({
                     31 Days Databricks
                   </p>
                   <p className="mt-1 text-sm text-[#555555]">
-                    Build a healthcare-claims Lakehouse on Databricks Free
-                    Edition in 31 days.
+                    Build a healthcare-claims Lakehouse on Databricks
+                    in 31 days.
                   </p>
                 </div>
                 <Link

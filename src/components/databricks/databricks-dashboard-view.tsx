@@ -54,7 +54,7 @@ export function DatabricksDashboardView({ data }: Props) {
             Databricks
           </h1>
           <p className="font-fredoka ml-3 mt-2 text-[17px] leading-7 text-[#4B4B4B]">
-            Build a healthcare-claims Lakehouse on Databricks Free Edition in 31
+            Build a healthcare-claims Lakehouse on Databricks in 31
             days
           </p>
         </header>
