@@ -215,6 +215,21 @@ export default function WorkshopThemeStyles() {
         .wk-root .wk-bday-ring { animation: none; opacity: 0; }
       }
 
+      /* The dot inside the LIVE badge on an upcoming-workshop card. It pulses
+         because "live" is a claim about right now, and a static dot reads as
+         a label rather than a state. */
+      .wk-root .wk-live-dot {
+        background: #16a34a;
+        animation: wk-live-pulse 1.8s ease-in-out infinite;
+      }
+      @keyframes wk-live-pulse {
+        0%, 100% { opacity: 1; }
+        50%      { opacity: 0.35; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .wk-root .wk-live-dot { animation: none; }
+      }
+
       /* Shared by the theme toggle and the notification bell, so the two
          icon buttons in the charcoal bar cannot drift apart. */
       .wk-root .wk-bar-toggle button,
