@@ -225,7 +225,11 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           <HeroGreeting firstName={firstName} />
           <div className="mt-4 grid min-w-0 gap-6 lg:grid-cols-[1fr_320px] lg:items-center lg:gap-8 2xl:grid-cols-[minmax(0,1fr)_minmax(320px,360px)]">
             <div className="min-w-0 lg:pr-6">
-              <ActivityHeatmap cells={data.heatmap.cells} embedded />
+              <ActivityHeatmap
+                cells={data.heatmap.cells}
+                totalSubmissions={data.heatmap.totalSubmissionsInWindow}
+                embedded
+              />
             </div>
             <div className="mt-2 lg:mt-0 lg:pl-5">
               <StreakCard streak={data.streak} restartHref={restartHref} />

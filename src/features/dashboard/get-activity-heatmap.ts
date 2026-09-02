@@ -20,10 +20,11 @@ export type ActivityHeatmap = {
   cells: ActivityCell[];
   maxCount: number;
   totalActiveDays: number;
+  totalSubmissionsInWindow: number;
   streak: ActivityStreak;
 };
 
-export const HEATMAP_MONTHS = 4;
+export const HEATMAP_MONTHS = 6;
 
 function getMondayOfWeekContaining(key: string): string {
   const isoDay = parseInt(
@@ -35,7 +36,7 @@ function getMondayOfWeekContaining(key: string): string {
 }
 
 /** First day of the IST month that is (HEATMAP_MONTHS - 1) months before today. */
-function getFourMonthAnchorKey(todayKey: string): string {
+function getHeatmapAnchorKey(todayKey: string): string {
   const todayUtc = parseCalendarKeyToUtcDate(todayKey);
   const anchorMonth = subMonths(todayUtc, HEATMAP_MONTHS - 1);
   const [y, m] = formatInTimeZone(anchorMonth, IST, "yyyy-MM-dd").split("-");
@@ -61,7 +62,7 @@ export function getActivityHeatmap(submissionTimes: Date[]): ActivityHeatmap {
   const todayKey = formatInTimeZone(new Date(), IST, "yyyy-MM-dd");
   const streak = computeActivityStreak(countByDate, todayKey);
   const totalActiveDays = streak.totalActiveDays;
-  const anchorKey = getFourMonthAnchorKey(todayKey);
+  const anchorKey = getHeatmapAnchorKey(todayKey);
   const gridStart = getMondayOfWeekContaining(anchorKey);
 
   const windowCounts: number[] = [];
@@ -81,5 +82,7 @@ export function getActivityHeatmap(submissionTimes: Date[]): ActivityHeatmap {
     cells[i]!.level = countToLevel(cells[i]!.count, maxCount);
   }
 
-  return { cells, maxCount, totalActiveDays, streak };
+  const totalSubmissionsInWindow = windowCounts.reduce((sum, count) => sum + count, 0);
+
+  return { cells, maxCount, totalActiveDays, totalSubmissionsInWindow, streak };
 }
