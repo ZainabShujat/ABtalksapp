@@ -22,6 +22,8 @@ const PREVIEW_COUNT = 2;
 type Props = {
   /** Newest first. Already user-scoped by the caller. */
   attempts: HistoryEntry[];
+  /** Ongoing in-progress interview, if any. */
+  activeAttempt?: { id: string; domainSlug: string } | null;
 };
 
 /**
@@ -35,8 +37,8 @@ type Props = {
  *
  * Server Component — rendered as children of the client `ProfileSection`.
  */
-export function MockInterviewsSection({ attempts }: Props) {
-  if (attempts.length === 0) {
+export function MockInterviewsSection({ attempts, activeAttempt }: Props) {
+  if (attempts.length === 0 && !activeAttempt) {
     return (
       <div className="text-sm text-muted-foreground">
         <p>
@@ -60,13 +62,39 @@ export function MockInterviewsSection({ attempts }: Props) {
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">
-        {attempts.length} interview{attempts.length === 1 ? "" : "s"} taken
-        {recent.length < attempts.length
-          ? ` — showing the ${recent.length} most recent`
-          : ""}
-        .
-      </p>
+      {activeAttempt && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3.5">
+          <div className="min-w-0">
+            <p className="flex items-center gap-2 text-sm font-semibold text-primary">
+              <span className="relative flex size-2.5">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex size-2.5 rounded-full bg-primary" />
+              </span>
+              Interview in progress
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              You have an active interview session waiting.
+            </p>
+          </div>
+          <Link
+            href={`/mock-interviews/${activeAttempt.domainSlug}/attempt/${activeAttempt.id}`}
+            className={cn(buttonVariants({ variant: "default", size: "sm" }), "shrink-0")}
+          >
+            <Mic className="mr-1.5 size-3.5" strokeWidth={2} aria-hidden />
+            Continue interview
+          </Link>
+        </div>
+      )}
+
+      {attempts.length > 0 ? (
+        <p className="text-sm text-muted-foreground">
+          {attempts.length} interview{attempts.length === 1 ? "" : "s"} taken
+          {recent.length < attempts.length
+            ? `, showing the ${recent.length} most recent`
+            : ""}
+          .
+        </p>
+      ) : null}
 
       <ul className="space-y-3">
         {recent.map((a) => (

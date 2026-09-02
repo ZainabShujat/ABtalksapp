@@ -2,7 +2,7 @@
 
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { CandidateLinkType } from "@prisma/client";
-import { Briefcase, CodeXml, FileText, Globe } from "lucide-react";
+import { Briefcase, CodeXml, Globe } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -27,7 +27,6 @@ export type LinksFormValues = {
   linkedinUrl: string;
   githubUsername: string;
   portfolioUrl: string;
-  resumeUrl: string;
   extra: ExtraLinkFormRow[];
 };
 
@@ -79,24 +78,6 @@ export function LinksSection({ initial }: { initial: LinksFormValues }) {
               inputMode="url"
               placeholder="https://example.com/"
               {...register("portfolioUrl")}
-            />
-          </Field>
-        </div>
-
-        <div className="flex items-start gap-3">
-          <FileText className="mt-8 size-5 shrink-0 text-muted-foreground" aria-hidden />
-          <Field
-            label="Résumé"
-            htmlFor="ln-resume"
-            className="flex-1"
-            hint="Visible to you and admins. Recruiters see it only if you allow it."
-          >
-            <Input
-              id="ln-resume"
-              type="url"
-              inputMode="url"
-              placeholder="https://drive.google.com/…"
-              {...register("resumeUrl")}
             />
           </Field>
         </div>

@@ -193,6 +193,18 @@ export async function getHistory(
   };
 }
 
+/** Any open attempt across all domains, or null. */
+export async function getActiveAttempt(
+  userId: string,
+): Promise<ServiceResult<{ id: string; domainSlug: string } | null>> {
+  try {
+    const active = await repo.findAnyActiveAttempt(userId);
+    return { ok: true, data: active };
+  } catch (e: unknown) {
+    return { ok: false, message: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 /* -------------------------------------------------------------------- start */
 
 export type StartAttemptData = {
