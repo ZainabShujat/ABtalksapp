@@ -25,7 +25,10 @@ export function OtherChallenges({
   }
 
   return (
-    <section className="scroll-mt-20 px-4 py-8 sm:px-6 lg:ml-4">
+    <section
+      id="other-challenges"
+      className="scroll-mt-20 px-4 py-8 sm:px-6 lg:ml-4"
+    >
       <h2 className="font-heading text-xl font-semibold uppercase text-[#e05226]">
         Other challenges
       </h2>
