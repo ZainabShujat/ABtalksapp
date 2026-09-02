@@ -33,7 +33,7 @@ const AI_FLUENCY_V1: RubricDefinition = {
       label: "Mental model of how LLMs work",
       weight: 30,
       expectations:
-        "Explains what a language model is actually doing — prediction over tokens, not retrieval or reasoning — and why that shape produces both its strengths and its failure modes.",
+        "Explains what a language model is actually doing (prediction over tokens, not retrieval or reasoning) and why that shape produces both its strengths and its failure modes.",
       observedAcrossAnswers: false,
     },
     {
@@ -81,7 +81,7 @@ const BEHAVIORAL_V1: RubricDefinition = {
       label: "Specificity of example",
       weight: 30,
       expectations:
-        "Describes one real situation with enough concrete detail — who, when, what was actually at stake — that it could not be a hypothetical.",
+        "Describes one real situation with enough concrete detail (who, when, what was actually at stake) that it could not be a hypothetical.",
       observedAcrossAnswers: false,
     },
     {
@@ -138,7 +138,7 @@ const AGENTIC_CODING_V1: RubricDefinition = {
       label: "How they set the agent up",
       weight: 25,
       expectations:
-        "Describes what they actually give the agent — context, constraints, how the task is broken up — and what changes when the first attempt is wrong.",
+        "Describes what they actually give the agent (context, constraints, how the task is broken up) and what changes when the first attempt is wrong.",
       observedAcrossAnswers: false,
     },
     {
@@ -154,7 +154,7 @@ const AGENTIC_CODING_V1: RubricDefinition = {
       label: "Ownership of what ships",
       weight: 20,
       expectations:
-        "Talks about the codebase as something they remain answerable for — knows roughly what is in it, and does not describe shipping work they could not explain.",
+        "Talks about the codebase as something they remain answerable for. Knows roughly what is in it, and does not describe shipping work they could not explain.",
       observedAcrossAnswers: true,
     },
   ],
