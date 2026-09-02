@@ -12,6 +12,7 @@ import { EventsSection } from "@/components/dashboard-hub/events-section";
 import { FaqSection } from "@/components/dashboard-hub/faq-section";
 import { HUB_CARD_HOVER_CLASS } from "@/components/dashboard-hub/nav-items";
 import { getHubData } from "@/features/dashboard/get-hub-data";
+import { buildHubSearchIndex } from "@/features/dashboard/hub-search-index";
 import { getHistory } from "@/features/interview/platform/service";
 import {
   listLiveDomains,
@@ -20,7 +21,7 @@ import {
 import { getCohortInterviewState } from "@/features/interview/cohort-eligibility";
 import { resolveProgramMemberForUser } from "@/lib/program-auth";
 import { toProgramMemberId } from "@/features/interview/provider";
-import { isProgramEnabled } from "@/lib/feature-flags";
+import { isClaudeEnabled, isProgramEnabled } from "@/lib/feature-flags";
 import type {
   AvailableCohortInterview,
   AvailableMockInterview,
@@ -199,11 +200,25 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     email: session.user.email ?? "",
     image: session.user.image ?? null,
   };
+  const isAdmin = session.user.isAdmin ?? false;
+  const searchItems = buildHubSearchIndex({
+    enrollments: data.enrollments,
+    joinedDomains: data.joinedDomains,
+    abandonedDomains: data.abandonedDomains,
+    hasProgramMembership: data.hasProgramMembership,
+    hasDatabricksAccess: data.hasDatabricksAccess,
+    isAdmin,
+    claudeEnabled: isClaudeEnabled(),
+    programEnabled: isProgramEnabled(),
+    mock: availableInterviews.mock,
+    cohort: availableInterviews.cohort,
+  });
 
   return (
     <DashboardShell
       user={shellUser}
-      isAdmin={session.user.isAdmin ?? false}
+      isAdmin={isAdmin}
+      searchItems={searchItems}
     >
       <section className="px-4 py-8 sm:px-6">
         <div className="w-full max-w-[1020px] lg:ml-5 2xl:mx-auto 2xl:max-w-[1600px]">
