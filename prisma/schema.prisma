@@ -326,6 +326,7 @@ model User {
   rolesGranted               UserRoleAssignment[]   @relation("RoleGranter")
   candidateProfile           CandidateProfile?
   visibility                 CandidateVisibility?
+  resume                     CandidateResume?
   pointsAccount              PointsAccount?
   pointsLedger               PointsTransaction[]
   credentials                Credential[]
@@ -348,11 +349,11 @@ model User {
   virtualCandidatesLinked    VirtualCandidateRequest[] @relation("VirtualCandidateLinked")
   virtualCandidatesConverted VirtualCandidate[]        @relation("VirtualCandidateConverted")
   virtualCandidateEvents     VirtualCandidateEvent[]   @relation("VirtualCandidateActor")
-  talentRequests         TalentRequest[]
-  engagementsAsRecruiter TalentEngagementRequest[] @relation("RecruiterEngagements")
-  engagementsAsCandidate TalentEngagementRequest[] @relation("CandidateEngagements")
-  candidateMatches       TalentRequestMatch[]      @relation("CandidateMatches")
-  engagementMessages     TalentEngagementMessage[]
+  talentRequests             TalentRequest[]
+  engagementsAsRecruiter     TalentEngagementRequest[] @relation("RecruiterEngagements")
+  engagementsAsCandidate     TalentEngagementRequest[] @relation("CandidateEngagements")
+  candidateMatches           TalentRequestMatch[]      @relation("CandidateMatches")
+  engagementMessages         TalentEngagementMessage[]
 
   @@index([deletedAt, createdAt(sort: Desc)])
   @@index([createdAt(sort: Desc)])
@@ -1049,41 +1050,41 @@ enum TalentMatchTier {
 
 /// Recruiter requirement gathered by Scout. Survives zero matches (demand signal).
 model TalentRequest {
-  id                 String                    @id @default(cuid())
-  recruiterUserId    String
-  status             TalentRequestStatus       @default(DRAFT)
-  title              String
-  seniority          TalentSeniority?
-  openings           Int                       @default(1)
-  mustHaveStack      String[]                  @default([])
-  niceToHaveStack    String[]                  @default([])
+  id                       String                    @id @default(cuid())
+  recruiterUserId          String
+  status                   TalentRequestStatus       @default(DRAFT)
+  title                    String
+  seniority                TalentSeniority?
+  openings                 Int                       @default(1)
+  mustHaveStack            String[]                  @default([])
+  niceToHaveStack          String[]                  @default([])
   /// Ordered evidence dimensions; reweights scoring (e.g. consistency, projects).
-  evidencePriority   String[]                  @default([])
-  salaryMin          Int?
-  salaryMax          Int?
-  salaryCurrency     String                    @default("INR")
-  salaryPeriod       String                    @default("ANNUAL")
-  workMode           TalentWorkMode?
-  locationCity       String?
-  employmentType     TalentEmploymentType?
-  noticePeriodDays   Int?
-  minExperience      Int?
-  maxExperience      Int?
-  requiresDegree     Boolean                   @default(false)
+  evidencePriority         String[]                  @default([])
+  salaryMin                Int?
+  salaryMax                Int?
+  salaryCurrency           String                    @default("INR")
+  salaryPeriod             String                    @default("ANNUAL")
+  workMode                 TalentWorkMode?
+  locationCity             String?
+  employmentType           TalentEmploymentType?
+  noticePeriodDays         Int?
+  minExperience            Int?
+  maxExperience            Int?
+  requiresDegree           Boolean                   @default(false)
   /// Free-form extras Scout captured; never used for matching.
-  extra              Json?
-  alertWhenAvailable Boolean                   @default(false)
-  createdAt          DateTime                  @default(now())
-  updatedAt          DateTime                  @updatedAt
-  recruiter          User                      @relation(fields: [recruiterUserId], references: [id], onDelete: Cascade)
-  messages           TalentRequestMessage[]
-  matches            TalentRequestMatch[]
-  engagements        TalentEngagementRequest[]
+  extra                    Json?
+  alertWhenAvailable       Boolean                   @default(false)
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  recruiter                User                      @relation(fields: [recruiterUserId], references: [id], onDelete: Cascade)
+  messages                 TalentRequestMessage[]
+  matches                  TalentRequestMatch[]
+  engagements              TalentEngagementRequest[]
+  virtualCandidates        VirtualCandidate[]        @relation("VirtualCandidateOrigin")
+  virtualCandidateRequests VirtualCandidateRequest[] @relation("VirtualCandidateRequestBrief")
 
   @@index([recruiterUserId, createdAt(sort: Desc)])
   @@index([status, createdAt(sort: Desc)])
-  virtualCandidates        VirtualCandidate[]        @relation("VirtualCandidateOrigin")
-  virtualCandidateRequests VirtualCandidateRequest[] @relation("VirtualCandidateRequestBrief")
 }
 
 model TalentRequestMessage {
@@ -1459,7 +1460,7 @@ model MockInterview {
   /// enum. Domains are added by authoring a pack, and a migration per domain
   /// would make the catalogue harder to extend than it needs to be. An unknown
   /// slug simply fails to resolve and the attempt cannot start.
-  domainSlug String
+  domainSlug  String
   /// The exact pack version asked. Reports cite question ids permanently, so a
   /// stored report is only interpretable alongside this pin.
   packId      String
@@ -1500,9 +1501,9 @@ model MockInterview {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  user    User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  turns   MockInterviewTurn[]
-  report  MockInterviewReport?
+  user   User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  turns  MockInterviewTurn[]
+  report MockInterviewReport?
 
   @@index([userId, status])
   @@index([userId, domainSlug])
@@ -1734,6 +1735,21 @@ enum CandidateLinkType {
   BEHANCE
   DRIBBBLE
   OTHER
+}
+
+/// Where the resume document came from. Both sources end at the same parser.
+enum ResumeSourceType {
+  UPLOAD
+  URL
+}
+
+/// Lifecycle of one parse+analyse run. FAILED keeps the row so the candidate
+/// sees the error and can retry without losing the previous attempt's context.
+enum ResumeProcessingStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
 }
 
 /// What kind of engagement a candidate is open to. Multi-select on
@@ -2018,6 +2034,81 @@ model CandidateVisibility {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([searchableByRecruiters, updatedAt(sort: Desc)])
+}
+
+/// The candidate's resume document, parsed once and cached.
+///
+/// One row per candidate. `CandidateProfile.resumeUrl` stays the plain,
+/// user-typed link that every existing reader (hire dossiers, admin, the
+/// interview resume context) already uses — this table is additive and holds
+/// the *processed* artefacts: where the bytes live, what was extracted, and how
+/// strong the resume is on its own terms.
+///
+/// `contentHash` is the sha256 of the document bytes and is what stops a
+/// re-parse: an upload or link fetch that hashes to the stored value returns
+/// the stored `parsedData` / `analysis` untouched.
+///
+/// `analysis` is a Resume STRENGTH score. It is computed with no job
+/// description and must never be presented as an ATS or match score.
+model CandidateResume {
+  id              String                 @id @default(cuid())
+  userId          String                 @unique
+  sourceType      ResumeSourceType
+  /// Set for URL sources. The link exactly as the candidate gave it.
+  sourceUrl       String?
+  /// Vercel Blob pathname (private access). Never a public URL.
+  blobPathname    String?
+  fileName        String?
+  fileType        String?
+  fileSizeBytes   Int?
+  /// sha256 hex of the document bytes.
+  contentHash     String?
+  status          ResumeProcessingStatus @default(PENDING)
+  /// User-facing message for FAILED. Never a stack trace.
+  failureReason   String?
+  /// Document schema version, following `InterviewReport` / `MockInterviewReport`:
+  /// a column rather than a key inside the JSON, so a row written by an older
+  /// deploy degrades to "unavailable" instead of failing validation half-way
+  /// through a render.
+  documentVersion Int                    @default(1)
+  /// THE canonical structured résumé. Validated by `resumeDocumentSchema` on
+  /// write AND on read, exactly as `InterviewReport.report` is.
+  ///
+  /// JSON rather than child tables on this codebase's own rule: it is written
+  /// once, always read whole, and never queried by one of its parts. The parts
+  /// that DO need to be queried, filtered and indexed already have relational
+  /// homes — `CandidateEducation`, `CandidateExperience`,
+  /// `CandidateProjectEntry`, `CandidateCertification`, `CandidateSkill` — and
+  /// `features/resume/enrich.ts` feeds them from this document. Duplicating
+  /// them here as further tables would buy joins and nothing else.
+  ///
+  /// Durable application data, not scratch output: a future JD-match feature
+  /// reads this document and never re-reads the PDF.
+  parsedData      Json?
+  /// { overallScore, categories, strengths, weaknesses, recommendations }.
+  /// Validated on write and on read like `parsedData`.
+  analysis        Json?
+  /// Denormalised from `analysis` so the score can be listed and sorted without
+  /// parsing the JSON — same reason as `InterviewReport.overallScore`.
+  overallScore    Int?
+  parsedAt        DateTime?
+  /// When the résumé was last merged into the profile, and which sections it
+  /// contributed to. The merge is additive by construction, so these record
+  /// what the candidate was given, never a claim of ownership.
+  appliedAt       DateTime?
+  appliedSections String[]               @default([])
+  /// Per-entry merge decisions from the last run: matched / created / skipped
+  /// and why. Written once, read whole, and only when someone is debugging a
+  /// bad merge — never rendered, and it holds no candidate prose beyond the
+  /// entry labels needed to identify a row.
+  mergeLog        Json?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([updatedAt(sort: Desc)])
 }
 
 model CandidateEducation {
@@ -3156,37 +3247,37 @@ model RecruiterEmailOtp {
 /// so two recruiters asking for the same stack share one sourcing job while
 /// keeping separate requests.
 model VirtualCandidate {
-  id             String                 @id @default(cuid())
+  id                       String                 @id @default(cuid())
   /// Order-independent signature of the requirement. Unique: one profile per
   /// distinct requirement, which is what makes demand countable.
-  fingerprintKey String                 @unique
+  fingerprintKey           String                 @unique
   /// The requirement said back, e.g. "Python + Flask + MERN Full Stack
   /// Developer". Never a person's name.
-  title          String
-  roleFamily     String
-  requiredSkills String[]               @default([])
-  preferredSkills String[]              @default([])
-  experienceMin  Int?
-  experienceMax  Int?
-  locationLabel  String?
-  employmentType TalentEmploymentType?
+  title                    String
+  roleFamily               String
+  requiredSkills           String[]               @default([])
+  preferredSkills          String[]               @default([])
+  experienceMin            Int?
+  experienceMax            Int?
+  locationLabel            String?
+  employmentType           TalentEmploymentType?
   /// Free-text requirement, e.g. "within 15 days". Not a promise about anyone.
-  availabilityRequirement String?
-  educationRequirement    String?
-  status         VirtualCandidateStatus @default(AVAILABLE_ON_REQUEST)
+  availabilityRequirement  String?
+  educationRequirement     String?
+  status                   VirtualCandidateStatus @default(AVAILABLE_ON_REQUEST)
   /// The TalentRequest that first produced this profile, for provenance.
-  originRequestId String?
+  originRequestId          String?
   /// Set once sourcing succeeds. From here the recruiter sees the real person
   /// and this profile stops being offered.
   convertedCandidateUserId String?
-  adminNotes     String?
-  expiresAt      DateTime?
-  createdAt      DateTime               @default(now())
-  updatedAt      DateTime               @updatedAt
-  fulfilledAt    DateTime?
+  adminNotes               String?
+  expiresAt                DateTime?
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  fulfilledAt              DateTime?
 
-  originRequest      TalentRequest? @relation("VirtualCandidateOrigin", fields: [originRequestId], references: [id], onDelete: SetNull)
-  convertedCandidate User?          @relation("VirtualCandidateConverted", fields: [convertedCandidateUserId], references: [id], onDelete: SetNull)
+  originRequest      TalentRequest?            @relation("VirtualCandidateOrigin", fields: [originRequestId], references: [id], onDelete: SetNull)
+  convertedCandidate User?                     @relation("VirtualCandidateConverted", fields: [convertedCandidateUserId], references: [id], onDelete: SetNull)
   requests           VirtualCandidateRequest[]
 
   @@index([status, createdAt(sort: Desc)])
@@ -3200,32 +3291,32 @@ model VirtualCandidate {
 /// which is what lets two recruiters chase the same profile without either of
 /// them losing their own context or being told about the other.
 model VirtualCandidateRequest {
-  id                 String                        @id @default(cuid())
-  virtualCandidateId String
-  recruiterUserId    String
+  id                    String                        @id @default(cuid())
+  virtualCandidateId    String
+  recruiterUserId       String
   /// The TalentRequest this was asked from, so the brief is recoverable.
-  talentRequestId    String?
-  status             VirtualCandidateRequestStatus @default(REQUESTED)
+  talentRequestId       String?
+  status                VirtualCandidateRequestStatus @default(REQUESTED)
   /// Days the recruiter can wait. Their constraint, not our commitment.
-  timelineDays       Int?
-  recruiterNote      String?
-  adminNotes         String?
-  priority           Int                           @default(0)
-  assignedAdminId    String?
-  expectedBy         DateTime?
+  timelineDays          Int?
+  recruiterNote         String?
+  adminNotes            String?
+  priority              Int                           @default(0)
+  assignedAdminId       String?
+  expectedBy            DateTime?
   /// The real person sourced for THIS recruiter. Per request, not per profile:
   /// two recruiters can be served by different people from one requirement.
   linkedCandidateUserId String?
-  createdAt          DateTime                      @default(now())
-  updatedAt          DateTime                      @updatedAt
-  fulfilledAt        DateTime?
-  cancelledAt        DateTime?
+  createdAt             DateTime                      @default(now())
+  updatedAt             DateTime                      @updatedAt
+  fulfilledAt           DateTime?
+  cancelledAt           DateTime?
 
-  virtualCandidate VirtualCandidate @relation(fields: [virtualCandidateId], references: [id], onDelete: Cascade)
-  recruiter        User             @relation("VirtualCandidateRequester", fields: [recruiterUserId], references: [id], onDelete: Cascade)
-  talentRequest    TalentRequest?   @relation("VirtualCandidateRequestBrief", fields: [talentRequestId], references: [id], onDelete: SetNull)
-  assignedAdmin    User?            @relation("VirtualCandidateAssignee", fields: [assignedAdminId], references: [id], onDelete: SetNull)
-  linkedCandidate  User?            @relation("VirtualCandidateLinked", fields: [linkedCandidateUserId], references: [id], onDelete: SetNull)
+  virtualCandidate VirtualCandidate        @relation(fields: [virtualCandidateId], references: [id], onDelete: Cascade)
+  recruiter        User                    @relation("VirtualCandidateRequester", fields: [recruiterUserId], references: [id], onDelete: Cascade)
+  talentRequest    TalentRequest?          @relation("VirtualCandidateRequestBrief", fields: [talentRequestId], references: [id], onDelete: SetNull)
+  assignedAdmin    User?                   @relation("VirtualCandidateAssignee", fields: [assignedAdminId], references: [id], onDelete: SetNull)
+  linkedCandidate  User?                   @relation("VirtualCandidateLinked", fields: [linkedCandidateUserId], references: [id], onDelete: SetNull)
   events           VirtualCandidateEvent[]
 
   /// One open ask per recruiter per requirement. A second click is the same
@@ -3240,15 +3331,15 @@ model VirtualCandidateRequest {
 /// Append-only history for one request. Every status move and every link lands
 /// here, so "who promised what, when" survives the row being edited.
 model VirtualCandidateEvent {
-  id        String   @id @default(cuid())
-  requestId String
+  id          String                         @id @default(cuid())
+  requestId   String
   /// STATUS_CHANGED | NOTE_ADDED | ASSIGNED | CANDIDATE_LINKED | CANCELLED …
-  kind      String
-  fromStatus VirtualCandidateRequestStatus?
-  toStatus   VirtualCandidateRequestStatus?
-  note      String?
+  kind        String
+  fromStatus  VirtualCandidateRequestStatus?
+  toStatus    VirtualCandidateRequestStatus?
+  note        String?
   actorUserId String?
-  createdAt DateTime @default(now())
+  createdAt   DateTime                       @default(now())
 
   request VirtualCandidateRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
   actor   User?                   @relation("VirtualCandidateActor", fields: [actorUserId], references: [id], onDelete: SetNull)

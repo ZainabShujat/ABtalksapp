@@ -1,0 +1,178 @@
+{
+  "candidate_name": "Asha Menon",
+  "headline": "Backend Engineer | Distributed Systems & Data Platforms",
+  "email": "asha.menon@example.com",
+  "phone": "+91 98450 12345",
+  "location": "Bengaluru, Karnataka",
+  "linkedin": "https://linkedin.com/in/asha-menon",
+  "github": "https://github.com/ashamenon",
+  "portfolio": "https://asha.dev",
+  "website": "https://asha.dev",
+  "summary": "Backend engineer with 3 years building Python and Go services for high-volume data pipelines. Focused on reliability, query performance and developer tooling.",
+  "career_level": "Mid-level",
+  "primary_domain": "Backend Engineering",
+  "estimated_experience_years": 2,
+  "skills": [
+    "Python",
+    "Go",
+    "TypeScript",
+    "SQL",
+    "FastAPI",
+    "React",
+    "Node.js",
+    "PostgreSQL",
+    "Redis",
+    "MongoDB",
+    "AWS",
+    "Docker",
+    "Kubernetes",
+    "Git"
+  ],
+  "technical_skills": [
+    "Python",
+    "Go",
+    "TypeScript",
+    "SQL",
+    "FastAPI",
+    "React",
+    "Node.js",
+    "PostgreSQL",
+    "Redis",
+    "MongoDB",
+    "AWS",
+    "Docker",
+    "Kubernetes",
+    "Git"
+  ],
+  "soft_skills": [],
+  "programming_languages": [
+    "Python",
+    "Go",
+    "TypeScript",
+    "SQL"
+  ],
+  "frameworks": [
+    "FastAPI",
+    "React",
+    "Node.js"
+  ],
+  "databases": [
+    "PostgreSQL",
+    "Redis",
+    "MongoDB"
+  ],
+  "cloud_platforms": [
+    "AWS"
+  ],
+  "tools": [
+    "Docker",
+    "Kubernetes",
+    "Git"
+  ],
+  "projects": [
+    {
+      "title": "Ledgerly - double-entry ledger with a SQL query console",
+      "description": "double-entry ledger with a SQL query console",
+      "technologies": [
+        "Python",
+        "PostgreSQL",
+        "Docker"
+      ],
+      "github": "https://github.com/ashamenon/ledgerly",
+      "demo": "https://ledgerly.vercel.app",
+      "contributions": [
+        "Designed the append-only schema and wrote 120 property tests over it"
+      ]
+    },
+    {
+      "title": "Pulse - real-time deployment status dashboard",
+      "description": "real-time deployment status dashboard",
+      "technologies": [
+        "TypeScript",
+        "React",
+        "Node.js",
+        "Redis"
+      ],
+      "github": "https://github.com/ashamenon/pulse",
+      "demo": "http://pulse-demo.netlify.app",
+      "contributions": [
+        "Streams build events over websockets to a React front end"
+      ]
+    },
+    {
+      "title": "Atlas - static site generator for API docs",
+      "description": "static site generator for API docs",
+      "technologies": [
+        "Go",
+        "Markdown"
+      ],
+      "github": "https://github.com/ashamenon/atlas",
+      "demo": "https://atlas.pages.dev",
+      "contributions": [
+        "Generates OpenAPI reference pages from a single spec file"
+      ]
+    },
+    {
+      "title": "Kettle - CLI for seeding local databases",
+      "description": "CLI for seeding local databases",
+      "technologies": [
+        "Go"
+      ],
+      "github": null,
+      "demo": null,
+      "contributions": [
+        "Generates referentially consistent fixtures from a schema"
+      ]
+    }
+  ],
+  "experience": [
+    {
+      "title": "Backend Engineer",
+      "company": "Nimbus Technologies Pvt. Ltd.",
+      "employment_type": null,
+      "duration": "Mar 2023 - Present",
+      "responsibilities": [
+        "Built a FastAPI ingestion service in Python handling 40,000 events per day",
+        "Reduced PostgreSQL p95 query latency by 45% by adding partial indexes",
+        "Cut Docker image size by 60%, shortening deploys from 9 minutes to 3"
+      ],
+      "achievements": [],
+      "technologies": [
+        "FastAPI",
+        "Python",
+        "PostgreSQL",
+        "Docker"
+      ]
+    },
+    {
+      "title": "Junior Engineer",
+      "company": "Bytecraft Labs",
+      "employment_type": null,
+      "duration": "Jun 2022 - Feb 2023",
+      "responsibilities": [
+        "Shipped a Redis caching layer that removed 30% of database reads",
+        "Migrated 12 services to AWS and documented a rollback path for each"
+      ],
+      "achievements": [],
+      "technologies": [
+        "Redis",
+        "AWS"
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "B.Tech",
+      "branch": "Computer Science",
+      "institution": "PES University, Bengaluru",
+      "year": "2018 - 2022",
+      "cgpa": "8.7/10"
+    }
+  ],
+  "certifications": [
+    "AWS Certified Developer - Associate (2024)"
+  ],
+  "internships": [],
+  "achievements": [],
+  "languages": []
+}

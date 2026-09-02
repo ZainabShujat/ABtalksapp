@@ -688,7 +688,8 @@ export type LinksWrite = {
   linkedinUrl: string | null;
   githubUsername: string | null;
   portfolioUrl: string | null;
-  resumeUrl: string | null;
+  /** `undefined` leaves the stored resume link untouched. */
+  resumeUrl?: string | null;
   extra: readonly {
     type: CandidateLinkType;
     label: string | null;
@@ -708,7 +709,10 @@ export async function saveLinks(
         linkedinUrl: input.linkedinUrl,
         githubUsername: input.githubUsername,
         portfolioUrl: input.portfolioUrl,
-        resumeUrl: input.resumeUrl,
+        // Spread, not a plain assignment: the resume moved to its own section
+        // (plan 106), so the Links form no longer sends this field and writing
+        // `undefined` as `null` would silently detach an uploaded resume.
+        ...(input.resumeUrl === undefined ? {} : { resumeUrl: input.resumeUrl }),
       },
     });
 
@@ -731,7 +735,7 @@ export async function saveLinks(
       data: {
         linkedinUrl: input.linkedinUrl,
         githubUsername: input.githubUsername,
-        resumeUrl: input.resumeUrl,
+        ...(input.resumeUrl === undefined ? {} : { resumeUrl: input.resumeUrl }),
       },
     });
   });

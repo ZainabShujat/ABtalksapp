@@ -300,7 +300,13 @@ export const linksSectionSchema = z.object({
   linkedinUrl: nullableUrl,
   githubUsername: githubField,
   portfolioUrl: nullableUrl,
-  resumeUrl: nullableUrl,
+  /**
+   * Optional, and absent from the Links form since plan 106 moved the resume
+   * into its own profile section. It stays in the schema so any older client
+   * still round-trips it, but a Links save that omits it must NOT clear the
+   * resume the candidate uploaded — see `saveLinks`.
+   */
+  resumeUrl: nullableUrl.optional(),
   extra: z.array(extraLinkSchema).max(15, "At most 15 additional links"),
 });
 
