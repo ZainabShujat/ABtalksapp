@@ -10,6 +10,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import { useRouter } from "next/navigation";
+import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type {
   HubSearchGroup,
@@ -129,41 +130,47 @@ export function DashboardSearch({ items }: DashboardSearchProps) {
   }
 
   return (
-    <div ref={rootRef} className="relative max-[360px]:w-[min(250px,calc(100vw-7.5rem))]">
-      <input
-        type="search"
-        value={query}
-        onChange={(event) => {
-          setQuery(event.target.value);
-          setOpen(true);
-        }}
-        onFocus={() => setOpen(true)}
-        onKeyDown={onKeyDown}
-        placeholder="Search Dashboard"
-        aria-label="Search Dashboard"
-        role="combobox"
-        aria-autocomplete="list"
-        aria-expanded={showPanel}
-        aria-controls={listId}
-        aria-activedescendant={
-          showPanel && flat[activeIndex] ? `${listId}-${flat[activeIndex].id}` : undefined
-        }
-        autoComplete="off"
-        className="h-9 w-[250px] max-[360px]:w-full appearance-none rounded-md border border-[#E05226] bg-transparent px-3 text-sm text-[#111111] outline-none placeholder:font-normal placeholder:text-[#8F8F8F] focus:border-[#E05226] focus:ring-0 [&::-webkit-search-cancel-button]:hidden"
-      />
+    <div ref={rootRef} className="relative hidden md:block">
+      <div className="group relative">
+        <Search
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-[#8F8F8F] group-focus-within:text-[#E05226]"
+        />
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={onKeyDown}
+          placeholder="Search Dashboard"
+          aria-label="Search Dashboard"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={showPanel}
+          aria-controls={listId}
+          aria-activedescendant={
+            showPanel && flat[activeIndex] ? `${listId}-${flat[activeIndex].id}` : undefined
+          }
+          autoComplete="off"
+          className="h-9 w-[250px] appearance-none rounded-md border border-neutral-200 bg-transparent py-0 pr-3 pl-9 text-sm text-[#111111] outline-none placeholder:font-normal placeholder:text-[#8F8F8F] focus:border-[#E05226] focus:ring-0 group-focus-within:border-[#E05226] [&::-webkit-search-cancel-button]:hidden"
+        />
+      </div>
 
       {showPanel ? (
         <div
           id={listId}
           role="listbox"
-          className="absolute right-0 z-50 mt-1 max-h-48 min-w-[250px] overflow-y-auto rounded-md border border-neutral-200 bg-[#FBF9F7] py-1 shadow-md"
+          className="scrollbar-program-orange absolute right-0 z-50 mt-1.5 max-h-72 min-w-[320px] overflow-y-auto rounded-lg border border-neutral-200 bg-[#FBF9F7] py-1.5 shadow-md"
         >
           {flat.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-[#8F8F8F]">No matches</p>
+            <p className="px-3.5 py-3 text-sm text-[#8F8F8F]">No matches</p>
           ) : (
             grouped.map((entry) => (
               <div key={entry.group}>
-                <p className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wide text-[#8F8F8F] uppercase">
+                <p className="px-3.5 pt-2.5 pb-1 text-[11px] font-semibold tracking-wide text-[#8F8F8F] uppercase">
                   {entry.group}
                 </p>
                 {entry.items.map((item, index) => {
@@ -180,7 +187,7 @@ export function DashboardSearch({ items }: DashboardSearchProps) {
                       onMouseEnter={() => setActiveIndex(flatIndex)}
                       onClick={() => go(item.href)}
                       className={cn(
-                        "flex w-full flex-col items-start px-3 py-1.5 text-left text-sm text-[#111111]",
+                        "flex w-full flex-col items-start px-3.5 py-2 text-left text-sm text-[#111111]",
                         active && "bg-[#e05226]/10 text-[#e05226]",
                       )}
                     >
