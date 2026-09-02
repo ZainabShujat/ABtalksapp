@@ -1,7 +1,10 @@
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { logger } from "@/lib/logger";
-import type { InterviewBlueprintKey } from "@/features/interview/cohort/blueprint";
-import { followUpBudgetFor, getCurrentQuestion } from "@/features/interview/state";
+import {
+  followUpBudgetFor,
+  getCurrentQuestion,
+  type TargetSelector,
+} from "@/features/interview/state";
 import type {
   AnswerEvidence,
   InterviewPlan,
@@ -26,6 +29,7 @@ import type {
   AgentAction,
   InterviewAgentState,
   InterviewDecision,
+  InterviewTrackKey,
   LlmAction,
   TranscriptTurn,
 } from "@/features/interview/agent/types";
@@ -60,7 +64,7 @@ import type { InterviewLLM } from "@/features/interview/agent/llm/provider";
 
 const InterviewAnnotation = Annotation.Root({
   interviewId: Annotation<string>,
-  blueprint: Annotation<InterviewBlueprintKey>,
+  blueprint: Annotation<InterviewTrackKey>,
 
   plan: Annotation<InterviewPlan>,
   interviewState: Annotation<InterviewState>,
@@ -87,6 +91,7 @@ const InterviewAnnotation = Annotation.Root({
   finished: Annotation<boolean>,
   status: Annotation<InterviewStatus>,
   error: Annotation<string | null>,
+  targetSelector: Annotation<TargetSelector | undefined>,
 });
 
 /** Branch taken straight after `receiveAnswer` rejects a turn. */
@@ -176,11 +181,16 @@ export type RunTurnInput = {
   /** Minutes left in the session, from the server clock. Null when unknown. */
   minutesLeft?: number | null;
   interviewId: string;
-  blueprint: InterviewBlueprintKey;
+  blueprint: InterviewTrackKey;
   plan: InterviewPlan;
   state: InterviewState;
   questionId: string;
   answerText: string;
+  /**
+   * How to choose the next target. Omitted keeps authored order, which is what
+   * the cohort wants; the platform passes its adaptive planner.
+   */
+  targetSelector?: TargetSelector;
 };
 
 export type RunTurnResult =
@@ -252,6 +262,7 @@ export async function runInterviewTurn(
     finished: false,
     status: input.state.status,
     error: null,
+    targetSelector: input.targetSelector,
   };
 
   let final: InterviewAgentState = initial;

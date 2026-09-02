@@ -5,12 +5,14 @@ import { CandidatePersona } from "@prisma/client";
 import { Users } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 import { getCandidateDetail } from "@/repositories/candidate-detail";
 import { getProfileEvidence } from "@/features/profile/get-evidence";
 import { computeCompleteness } from "@/features/profile/completeness";
 import { getPopularSkills } from "@/features/skill/search-skills";
 import { getMyRedemptions } from "@/features/marketplace/get-my-redemptions";
+import { getHistory } from "@/features/interview/platform/service";
 import { DashboardShell } from "@/components/dashboard-hub/dashboard-shell";
 import { CopyReferralLinkButton } from "@/components/profile/copy-referral-link-button";
 import { SoundPreferences } from "@/components/profile/sound-preferences";
@@ -20,6 +22,7 @@ import { BasicInfoSection } from "@/components/profile/basic-info-section";
 import { ExperienceSection } from "@/components/profile/experience-section";
 import { EducationSection } from "@/components/profile/education-section";
 import { ProjectsSection } from "@/components/profile/projects-section";
+import { MockInterviewsSection } from "@/components/profile/mock-interviews-section";
 import { SkillsSection } from "@/components/profile/skills-section";
 import { CertificationsSection } from "@/components/profile/certifications-section";
 import { LinksSection } from "@/components/profile/links-section";
@@ -101,14 +104,32 @@ export default async function ProfilePage() {
     );
   }
 
-  const [evidence, popularSkills, myRedemptions, referralCount, headersList] =
-    await Promise.all([
+  const [
+    evidence,
+    popularSkills,
+    myRedemptions,
+    referralCount,
+    headersList,
+    mockInterviewHistory,
+  ] = await Promise.all([
       getProfileEvidence(userId),
       getPopularSkills(10),
       getMyRedemptions(userId),
       prisma.referral.count({ where: { referrerId: userId } }),
       headers(),
+      // The MockInterview tables exist on demo but the migration has not been
+      // applied to production, so this query throws there until it is. The
+      // profile must not 500 over it — it degrades to an empty list, which
+      // renders the section's "none taken yet" copy.
+      getHistory(userId).catch((e: unknown) => {
+        logger.warn("[profile] mock interview history unavailable", {
+          message: e instanceof Error ? e.message : String(e),
+        });
+        return { ok: false as const, message: "unavailable" };
+      }),
     ]);
+
+  const mockInterviews = mockInterviewHistory.ok ? mockInterviewHistory.data : [];
 
   const completeness = computeCompleteness(detail, { hasAny: evidence.hasAny });
   const status = new Map(completeness.sections.map((x) => [x.key, x]));
@@ -269,6 +290,19 @@ export default async function ProfilePage() {
                 liveUrl: s(p.liveUrl),
               }))}
             />
+          </ProfileSection>
+
+          <ProfileSection
+            title="Mock interviews"
+            description="Live AI interviews you have taken. Earned, not entered."
+            complete={null}
+            summary={
+              mockInterviews.length > 0
+                ? `${mockInterviews.length} attempt${mockInterviews.length === 1 ? "" : "s"}`
+                : "None taken yet"
+            }
+          >
+            <MockInterviewsSection attempts={mockInterviews} />
           </ProfileSection>
 
           <ProfileSection

@@ -1094,6 +1094,23 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
   opacity: 0.5;
 }
 
+/* Layout-reveal (design-system §31): the captured-requirements row
+   grows/shrinks so the search field eases up and down instead of jumping. */
+.scout-criteria-slot {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-3) var(--ease-spark);
+}
+
+.scout-criteria-slot.is-open {
+  grid-template-rows: 1fr;
+}
+
+.scout-criteria-slot__clip {
+  overflow: hidden;
+  min-height: 0;
+}
+
 .scout-criteria {
   display: flex;
   flex-wrap: nowrap;
@@ -1143,7 +1160,6 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 /* Candidate card */
 .hire-app .desk-card {
   position: relative;
-  isolation: isolate;
   overflow: hidden;
   padding: 20px 22px;
   border: 1px solid var(--h-card-line);
@@ -1153,46 +1169,6 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
   transition:
     border-color 200ms var(--ease),
     box-shadow 200ms var(--ease);
-}
-
-.hire-app .desk-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(
-      120% 90% at 0% -10%,
-      rgba(224, 82, 38, 0.22) 0%,
-      rgba(255, 176, 140, 0.1) 34%,
-      transparent 62%
-    ),
-    radial-gradient(
-      70% 50% at 100% 110%,
-      rgba(255, 176, 140, 0.08) 0%,
-      transparent 55%
-    );
-}
-
-html.dark:not(:has(.theme-abtalks-light)) .hire-app .desk-card::before {
-  background:
-    radial-gradient(
-      110% 85% at -5% -15%,
-      rgba(255, 138, 84, 0.42) 0%,
-      rgba(224, 82, 38, 0.16) 32%,
-      transparent 60%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(42, 27, 22, 0.45) 0%,
-      rgba(24, 24, 27, 0) 52%
-    );
-}
-
-.hire-app .desk-card > * {
-  position: relative;
-  z-index: 1;
 }
 
 .hire-app .desk-card:hover {
@@ -1205,36 +1181,6 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app .desk-card::before {
   box-shadow: 0 8px 24px rgba(224, 82, 38, 0.14);
 }
 
-.hire-app .desk-card.desk-card--top::before {
-  background:
-    radial-gradient(
-      130% 95% at 0% -20%,
-      rgba(224, 82, 38, 0.32) 0%,
-      rgba(255, 176, 140, 0.14) 38%,
-      transparent 64%
-    ),
-    radial-gradient(
-      60% 40% at 100% 0%,
-      rgba(255, 176, 140, 0.12) 0%,
-      transparent 50%
-    );
-}
-
-html.dark:not(:has(.theme-abtalks-light)) .hire-app .desk-card.desk-card--top::before {
-  background:
-    radial-gradient(
-      120% 90% at -8% -20%,
-      rgba(255, 138, 84, 0.55) 0%,
-      rgba(224, 82, 38, 0.22) 34%,
-      transparent 62%
-    ),
-    linear-gradient(
-      165deg,
-      rgba(56, 28, 18, 0.5) 0%,
-      rgba(24, 24, 27, 0) 58%
-    );
-}
-
 .hire-app .desk-card.desk-card--sample {
   border-style: dashed;
 }
@@ -1242,6 +1188,12 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app .desk-card.desk-card--top::b
 .hire-app .desk-card.is-selected {
   border-color: var(--h-primary);
   box-shadow: 0 0 0 1px rgba(224, 82, 38, 0.22);
+}
+
+/* The card body is a click target for the inspector (see DeskMatchCard).
+   The controls inside it keep their own cursors and their own clicks. */
+.hire-app .desk-card--clickable {
+  cursor: pointer;
 }
 
 .desk-card__head {
@@ -1810,6 +1762,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-detail__resume {
   box-shadow: 0 12px 34px rgba(0, 0, 0, 0.24);
   font-size: 13px;
   font-weight: 600;
+  transition: bottom var(--dur-3) var(--ease-spark);
 }
 
 html.dark:not(:has(.theme-abtalks-light)) .hire-podbar {
@@ -1865,6 +1818,24 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-podbar {
 
 .hire-podbar__close:hover {
   background: rgba(255, 255, 255, 0.12);
+}
+
+/* Desktop: float the pill above the composer, not on top of it.
+
+   The desk is a 100dvh shell, so the composer's field sits ~37px off the bottom
+   of the viewport and a pill fixed at bottom:22px lands squarely on the field
+   someone is about to type into. Phones already solve this below 900px by
+   reserving space under the composer (see the max-width:900px block) — that
+   rule stays as it is. Here the pill moves up instead, clearing the field and
+   the checklist strip when the strip is on screen. */
+@media (min-width: 901px) {
+  .hire-podbar {
+    bottom: 96px;
+  }
+
+  .hire-app--desk:has(.scout-criteria-slot.is-open) .hire-podbar {
+    bottom: 124px;
+  }
 }
 
 .hire-req {

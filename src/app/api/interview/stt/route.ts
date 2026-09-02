@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { resolveInterviewMemberId } from "@/features/interview/provider";
+import { resolvePlatformUserId } from "@/features/interview/platform/provider";
 import { checkLanguage } from "@/features/interview/language-gate";
 import {
   isSttConfigured,
@@ -21,12 +22,16 @@ export const maxDuration = 300; // 5 minutes max execution on Vercel
  *
  * A route handler rather than a Server Action because Server Actions are a poor
  * fit for binary uploads. The security posture is the same as the actions':
- * the member is resolved from the session and never from the payload.
+ * the speaker is resolved from the session and never from the payload.
+ *
+ * SHARED by the cohort interview and the interview platform (plan 103). It can
+ * be, because it is stateless: audio in, text out, no interview row touched.
  *
  * What this endpoint deliberately does NOT do is submit the answer. It returns
- * text to the client, which then calls `submitInterviewAnswerAction` exactly as
- * the text runner does — so a spoken answer and a typed one traverse identical
- * validation, identical state guards and identical scoring.
+ * text to the client, which then calls the relevant submit action — the cohort's
+ * or the platform's — so a spoken answer and a typed one traverse identical
+ * validation, identical state guards and identical scoring. Ownership is checked
+ * there, on a call that knows which interview is being answered.
  */
 export async function POST(request: Request) {
   if (!isSttConfigured()) {
@@ -38,10 +43,23 @@ export async function POST(request: Request) {
 
   // Auth BEFORE reading the body: an unauthenticated request must not be able
   // to make the server buffer eight megabytes.
+  //
+  // ANY SIGNED-IN USER, not only a cohort member. This route is shared by the
+  // cohort interview and the interview platform (plan 103), and a mock
+  // interview requires registration alone — gating on enrollment would 403
+  // every platform candidate.
+  //
+  // Widening it is safe because this endpoint READS NO INTERVIEW ROW. It is
+  // stateless transcription: audio in, text out. It cannot reveal or mutate
+  // anyone's attempt, and the caller still has to submit that text through a
+  // Server Action that does check ownership. The cohort member id is preferred
+  // when present purely so the provider-side abuse identifier stays stable for
+  // existing cohort traffic.
   const memberId = await resolveInterviewMemberId();
-  if (!memberId) {
+  const speakerId = memberId ?? (await resolvePlatformUserId());
+  if (!speakerId) {
     return NextResponse.json(
-      { ok: false, message: "Enrollment required." },
+      { ok: false, message: "Please sign in to continue." },
       { status: 403 },
     );
   }
@@ -115,7 +133,7 @@ export async function POST(request: Request) {
   const result = await transcribeAnswer(
     file,
     filename,
-    safetyIdentifierFor(memberId),
+    safetyIdentifierFor(speakerId),
   );
 
   if (!result.ok) {
@@ -126,7 +144,7 @@ export async function POST(request: Request) {
   }
 
   logger.info("[interview/stt] transcribed", {
-    memberId,
+    memberId: speakerId,
     bytes: file.size,
     chars: result.data.text.length,
   });
@@ -137,7 +155,7 @@ export async function POST(request: Request) {
   const language = checkLanguage(result.data.text, result.data.language);
   if (!language.ok) {
     logger.info("[interview/stt] non-English answer", {
-      memberId,
+      memberId: speakerId,
       reason: language.reason,
       nonLatinRatio: Number(language.nonLatinRatio.toFixed(2)),
       detected: result.data.language ?? "unknown",

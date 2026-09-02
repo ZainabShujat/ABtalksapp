@@ -317,6 +317,9 @@ model User {
   legalConsents           LegalConsent[]
   dataRightsRequests      DataRightsRequest[]
   notificationReads       NotificationRead[]
+  /// Interview platform attempts (plan 103). Direct User relation: a mock
+  /// interview needs registration only, never cohort enrollment.
+  mockInterviews          MockInterview[]
 
   // Plan 078 Phase 1 — new identity / learning / talent relations (legacy fields above stay).
   roleAssignments            UserRoleAssignment[]   @relation("RoleSubject")
@@ -1433,6 +1436,160 @@ model InterviewReport {
   generatedAt DateTime @default(now())
 
   interview GeneralInterview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+}
+
+/// One attempt at a mock interview from the interview platform (plan 103).
+///
+/// SEPARATE FROM `GeneralInterview` ON PURPOSE. A cohort interview is a
+/// credential: one completion per member per blueprint, enforced by a partial
+/// unique index, gated on passed curriculum days, keyed to `ProgramMember`. A
+/// mock interview is practice: open to any registered `User`, unlimited
+/// retakes, no eligibility. Sharing one table would mean every schema change
+/// made to serve practice puts the credential at risk, and the one-completion
+/// index is exactly the guard that would get loosened for the wrong reason.
+///
+/// Deliberately absent: any unique index on completion. Retakes are the point.
+model MockInterview {
+  id     String @id @default(cuid())
+  /// Direct FK to User — NOT ProgramMember. A mock interview requires only
+  /// registration, so it must not depend on cohort enrollment.
+  userId String
+
+  /// Resolved against the code registry in `platform/domains.ts`, not a Postgres
+  /// enum. Domains are added by authoring a pack, and a migration per domain
+  /// would make the catalogue harder to extend than it needs to be. An unknown
+  /// slug simply fails to resolve and the attempt cannot start.
+  domainSlug String
+  /// The exact pack version asked. Reports cite question ids permanently, so a
+  /// stored report is only interpretable alongside this pin.
+  packId      String
+  packVersion Int
+
+  /// 1-based, per (userId, domainSlug). Computed as max+1 at open.
+  attemptNumber Int
+
+  status MockInterviewStatus @default(NOT_STARTED)
+
+  /// Frozen at open: questions, rubric snapshot, sections, capabilities.
+  plan       Json
+  /// Authoritative runtime state. Never accepted from the client.
+  state      Json?
+  /// Read-optimized projections of `state`, written from the same object.
+  transcript Json?
+  evidence   Json?
+
+  /// Declared workspaces, frozen at open. `["VOICE"]` today. A domain-config
+  /// change must not add a workspace to a room already running.
+  capabilities String[] @default([])
+
+  /// Scores keyed by RUBRIC COMPETENCY ID, as JSON rather than named columns.
+  /// `GeneralInterview` uses five fixed columns, which structurally cannot
+  /// express a Behavioral or DSA rubric — that constraint is the main reason
+  /// this table exists.
+  competencyScores Json?
+  /// Denormalized for listing and sorting only. Authority lives in the report.
+  overallScore     Int?
+  summary          String?
+
+  durationSec   Int?
+  invalidReason String?
+
+  startedAt   DateTime?
+  endedAt     DateTime?
+  evaluatedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user    User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  turns   MockInterviewTurn[]
+  report  MockInterviewReport?
+
+  @@index([userId, status])
+  @@index([userId, domainSlug])
+}
+
+/// One answer and what the system made of it. Append-only audit trail.
+///
+/// The platform's equivalent of `InterviewTurn`, plus the two forward-compatible
+/// columns from plan 103 seams 3 and 6. Both are always null in Phase 1: they
+/// exist now because adding them later would mean changing the Server Action
+/// signature, the graph entry channel and every evidence path in one commit.
+model MockInterviewTurn {
+  id          String @id @default(cuid())
+  interviewId String
+
+  /// Monotonic within an interview. Ordering is explicit, never inferred from
+  /// createdAt — two turns can land inside the same millisecond.
+  turnIndex Int
+
+  questionId String
+  /// Pack section, the platform's grouping unit in place of a cohort module.
+  sectionId  String
+  /// 1 = the authored question, 2+ = an escalation rung.
+  depthLevel Int    @default(1)
+  /// NEXT_QUESTION | FOLLOW_UP | ESCALATE | REDIRECT | REPEAT | CLARIFY | COMPLETE
+  action     String
+
+  /// Verbatim. A report that quotes a paraphrase is not evidence.
+  promptText String
+  answerText String
+
+  /// Seam 3: non-text evidence from a future workspace (code, diagram).
+  /// Always null in Phase 1.
+  artifacts    Json?
+  /// Seam 6: client-side behavioural events for later analysis.
+  /// Always null in Phase 1.
+  clientEvents Json?
+
+  /// AnswerEvidence. Null for REDIRECT/REPEAT turns, which record none by design.
+  evidence Json?
+
+  /// True when a model failure forced the deterministic path.
+  degraded  Boolean  @default(false)
+  latencyMs Int?
+  createdAt DateTime @default(now())
+
+  interview MockInterview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  @@unique([interviewId, turnIndex])
+  @@index([interviewId, questionId])
+}
+
+/// The generated report for one completed mock attempt.
+///
+/// One row per attempt, not per domain: retakes mean "the report for this
+/// domain" is ambiguous, so reports are addressed by attempt.
+model MockInterviewReport {
+  id          String @id @default(cuid())
+  interviewId String @unique
+
+  /// Document schema version. Bumped when the shape changes, so an old row
+  /// degrades to "unavailable" rather than rendering half a page.
+  version Int @default(1)
+
+  /// Denormalized for listing and sorting without parsing the JSON.
+  overallScore Int
+
+  /// The full assessment document. Validated on write AND on read.
+  report Json
+
+  /// True when the prose fell back to deterministic text because the narrative
+  /// model was unavailable. Scores are unaffected — they are always computed in
+  /// code — but a reader deserves to know.
+  narrativeDegraded Boolean @default(false)
+
+  generatedAt DateTime @default(now())
+
+  interview MockInterview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+}
+
+enum MockInterviewStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+  /// Technical failure or too little evidence to score. Consumes nothing.
+  INVALID
 }
 
 /// Standardized cohort question banks. Extensible: a future candidate-specific

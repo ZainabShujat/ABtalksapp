@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { InterviewBlueprintKey } from "@/features/interview/cohort/blueprint";
 import { ISSUE_TYPES, RELEVANCE_LEVELS } from "@/features/interview/types";
+import type { TargetSelector } from "@/features/interview/state";
 import type {
   AnswerEvidence,
   InterviewPlan,
@@ -107,6 +108,28 @@ export const interviewDecisionSchema = z.object({
       matchedEvidence: [],
       relevance: "ON_TOPIC",
     }),
+  /**
+   * WHY this answer deserves a follow-up. Reported before the follow-up is
+   * phrased, so the probe targets a decided reason instead of the model being
+   * asked to "be more interesting" and producing "can you elaborate?".
+   */
+  followUpReason: z
+    .enum([
+      "vague",
+      "surprising",
+      "incomplete",
+      "contradicts_earlier",
+      "worth_deepening",
+      "clarification_needed",
+      "challenge_opportunity",
+    ])
+    .nullish(),
+  /**
+   * WHAT specifically to explore: the claim, decision, trade-off or gap in the
+   * candidate's own answer. The phrasing layer builds the question out of this
+   * rather than discovering a target for itself.
+   */
+  targetDetail: z.string().max(400).nullish(),
   followUpQuestion: z.string().max(600).nullish(),
   acknowledgement: z.string().max(300).nullish(),
   clarification: z.string().max(400).nullish(),
@@ -119,6 +142,18 @@ export type InterviewDecision = {
   action: LlmAction;
   reason: string;
   evidence: AnswerEvidence;
+  /** Why a follow-up is warranted. Null when none is. */
+  followUpReason?:
+    | "vague"
+    | "surprising"
+    | "incomplete"
+    | "contradicts_earlier"
+    | "worth_deepening"
+    | "clarification_needed"
+    | "challenge_opportunity"
+    | null;
+  /** The specific thing in their answer worth exploring. Logged for the trail. */
+  targetDetail?: string | null;
   followUpQuestion?: string | null;
   /**
    * One short, neutral sentence reacting to what the candidate just said, spoken
@@ -180,11 +215,22 @@ export type InterviewDecision = {
  * the prompt need, projected from the plan and the persisted state when the
  * turn opens.
  */
+/**
+ * What kind of interview a turn belongs to.
+ *
+ * A cohort blueprint, or an interview-platform domain slug (plan 103). Widened
+ * to a string rather than having the platform pass a fake `"DAY_15"`: this value
+ * is carried on the agent state and would otherwise be false provenance in every
+ * log line and replay. Nothing in the graph reads it — `grep -c blueprint
+ * nodes.ts` is 0 — so this is a type-only change with no runtime effect.
+ */
+export type InterviewTrackKey = InterviewBlueprintKey | (string & {});
+
 export type InterviewAgentState = {
   interviewId: string;
   /** Minutes remaining in the session, or null when unknown. */
   minutesLeft?: number | null;
-  blueprint: InterviewBlueprintKey;
+  blueprint: InterviewTrackKey;
 
   plan: InterviewPlan;
   interviewState: InterviewState;
@@ -214,4 +260,10 @@ export type InterviewAgentState = {
 
   /** Set only when a node refuses the turn (stale question, not in progress). */
   error: string | null;
+
+  /**
+   * How the next assessment target is chosen. Undefined keeps the sequential
+   * behaviour the cohort has always had; the platform supplies its planner.
+   */
+  targetSelector?: TargetSelector;
 };
