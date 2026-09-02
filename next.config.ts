@@ -32,6 +32,13 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  // Résumé uploads go through a Server Action, and the default body cap is
+  // 1 MB — well under a normal PDF. This leaves headroom above the 4 MB the
+  // résumé ingest enforces; Vercel's own 4.5 MB request limit is the real
+  // ceiling in production, which is why ingest caps below it rather than here.
+  experimental: {
+    serverActions: { bodySizeLimit: "5mb" },
+  },
   images: {
     remotePatterns: [
       // Pre-play stills for past-workshop replays, derived from each event's

@@ -1300,6 +1300,19 @@
   visibility: hidden;
 }
 
+.pw-mock-active {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid color-mix(in srgb, var(--pw-orange) 35%, var(--pw-border));
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--pw-orange) 6%, #fdfcfb);
+  margin-bottom: 14px;
+}
+
 /* Mock interview attempt list (kept from the existing preview) */
 .pw-mock-list {
   list-style: none;

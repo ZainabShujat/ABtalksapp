@@ -13,6 +13,7 @@ export type WizardChecklistKey =
   | "mock"
   | "skills"
   | "certifications"
+  | "resume"
   | "links"
   | "preferences";
 

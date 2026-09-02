@@ -9,7 +9,6 @@ import { useSectionSave } from "./use-section-save";
 import { useProfileWizard } from "./wizard-context";
 import {
   PwField,
-  PwFileDrop,
   PwInput,
   PwRow,
   PwSelect,
@@ -142,15 +141,6 @@ export function BasicInfoSection({
             {...register("headline")}
           />
         </PwField>
-      </PwRow>
-
-      <PwRow cols={1}>
-        <PwFileDrop
-          id="bi-resume"
-          accept=".pdf,.doc,.docx"
-          maxSizeMB={5}
-          hint="PDF or DOCX — up to 5 MB. Drop a file here or browse."
-        />
       </PwRow>
 
       <PwRow cols={1} grow>

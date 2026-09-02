@@ -19,6 +19,8 @@ const PREVIEW_COUNT = 2;
 type Props = {
   /** Newest first. Already user-scoped by the caller. */
   attempts: HistoryEntry[];
+  /** Ongoing in-progress interview, if any. */
+  activeAttempt?: { id: string; domainSlug: string } | null;
 };
 
 function MicIcon() {
@@ -37,8 +39,8 @@ function MicIcon() {
  * Server Component — rendered by the page and handed to the client wizard as a
  * ReactNode. No wizard context, no form.
  */
-export function MockInterviewsSection({ attempts }: Props) {
-  if (attempts.length === 0) {
+export function MockInterviewsSection({ attempts, activeAttempt }: Props) {
+  if (attempts.length === 0 && !activeAttempt) {
     return (
       <>
         <p className="pw-note">
@@ -61,58 +63,84 @@ export function MockInterviewsSection({ attempts }: Props) {
 
   return (
     <div>
-      <p className="pw-note">
-        {attempts.length} interview{attempts.length === 1 ? "" : "s"} taken
-        {recent.length < attempts.length
-          ? ` — showing the ${recent.length} most recent`
-          : ""}
-        .
-      </p>
+      {activeAttempt ? (
+        <div className="pw-mock-active">
+          <div>
+            <p className="pw-mock-item-title">Interview in progress</p>
+            <p className="pw-mock-item-meta">
+              You have an active interview session waiting.
+            </p>
+          </div>
+          <Link
+            href={`/mock-interviews/${activeAttempt.domainSlug}/attempt/${activeAttempt.id}`}
+            className="pw-btn-action"
+          >
+            <MicIcon />
+            <span>Continue interview</span>
+          </Link>
+        </div>
+      ) : null}
 
-      <ul className="pw-mock-list">
-        {recent.map((a) => (
-          <li key={a.id} className="pw-mock-item">
-            <div>
-              <p className="pw-mock-item-title">{a.domainLabel}</p>
-              <p className="pw-mock-item-meta">
-                Attempt {a.attemptNumber}
-                {" · "}
-                {a.createdAt.toLocaleDateString("en-GB", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })}
-                {" · "}
-                {STATUS_LABEL[a.status] ?? a.status}
-                {a.status === "COMPLETED" && a.overallScore !== null
-                  ? ` · ${(a.overallScore / 10).toFixed(1)}/10`
-                  : ""}
-              </p>
-            </div>
-            {a.hasReport ? (
-              <Link
-                href={`/mock-interviews/${a.domainSlug}/attempt/${a.id}/report`}
-                className="pw-mock-link"
-              >
-                View report
-              </Link>
-            ) : (
-              <span className="pw-mock-item-meta">Not scored</span>
-            )}
-          </li>
-        ))}
-      </ul>
+      {attempts.length > 0 ? (
+        <p className="pw-note">
+          {attempts.length} interview{attempts.length === 1 ? "" : "s"} taken
+          {recent.length < attempts.length
+            ? ` — showing the ${recent.length} most recent`
+            : ""}
+          .
+        </p>
+      ) : null}
+
+      {recent.length > 0 ? (
+        <ul className="pw-mock-list">
+          {recent.map((a) => (
+            <li key={a.id} className="pw-mock-item">
+              <div>
+                <p className="pw-mock-item-title">{a.domainLabel}</p>
+                <p className="pw-mock-item-meta">
+                  Attempt {a.attemptNumber}
+                  {" · "}
+                  {a.createdAt.toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                  {" · "}
+                  {STATUS_LABEL[a.status] ?? a.status}
+                  {a.status === "COMPLETED" && a.overallScore !== null
+                    ? ` · ${(a.overallScore / 10).toFixed(1)}/10`
+                    : ""}
+                </p>
+              </div>
+              {a.hasReport ? (
+                <Link
+                  href={`/mock-interviews/${a.domainSlug}/attempt/${a.id}/report`}
+                  className="pw-mock-link"
+                >
+                  View report
+                </Link>
+              ) : (
+                <span className="pw-mock-item-meta">Not scored</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       <div className="pw-mock-links">
-        <Link href="/mock-interviews" className="pw-btn-action">
-          <MicIcon />
-          <span>Take another</span>
-        </Link>
-        <Link href="/mock-interviews/history" className="pw-mock-link">
-          {hidden > 0
-            ? `All ${attempts.length} interviews and reports`
-            : "Full practice history"}
-        </Link>
+        {!activeAttempt ? (
+          <Link href="/mock-interviews" className="pw-btn-action">
+            <MicIcon />
+            <span>Take another</span>
+          </Link>
+        ) : null}
+        {attempts.length > 0 ? (
+          <Link href="/mock-interviews/history" className="pw-mock-link">
+            {hidden > 0
+              ? `All ${attempts.length} interviews and reports`
+              : "Full practice history"}
+          </Link>
+        ) : null}
       </div>
     </div>
   );

@@ -26,7 +26,6 @@ export type LinksFormValues = {
   linkedinUrl: string;
   githubUsername: string;
   portfolioUrl: string;
-  resumeUrl: string;
   extra: ExtraLinkFormRow[];
 };
 
@@ -54,16 +53,6 @@ function GlobeIcon() {
       <circle cx="12" cy="12" r="10" />
       <path d="M2 12h20" />
       <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-    </svg>
-  );
-}
-
-function FileIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden>
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <path d="M14 2v6h6" />
-      <path d="M8 13h8M8 17h5" />
     </svg>
   );
 }
@@ -133,23 +122,6 @@ export function LinksSection({ initial }: { initial: LinksFormValues }) {
             inputMode="url"
             placeholder="https://yoursite.com"
             {...register("portfolioUrl")}
-          />
-        </PwField>
-      </PwRow>
-
-      <PwRow cols={1}>
-        <PwField
-          label="Résumé"
-          htmlFor="ln-resume"
-          icon={<FileIcon />}
-          helper="Visible to you and admins. Recruiters see it only if you allow it."
-        >
-          <PwInput
-            id="ln-resume"
-            type="url"
-            inputMode="url"
-            placeholder="https://drive.google.com/..."
-            {...register("resumeUrl")}
           />
         </PwField>
       </PwRow>
