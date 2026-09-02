@@ -1,22 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SkillProficiency } from "@prisma/client";
-import { BadgeCheck, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { saveSkillsAction } from "@/app/actions/candidate-profile-actions";
 import { PROFICIENCY_LABELS } from "@/lib/candidate-vocab";
-import { EmptyState, Field, SectionActions } from "./fields";
 import { SkillCombobox, type SkillOption } from "./skill-combobox";
 import { useSectionSave } from "./use-section-save";
+import { useProfileWizard } from "./wizard-context";
+import { PwField, PwNote, PwRow } from "./wizard-fields";
 
 export type SkillRow = {
   skillId: string;
@@ -35,11 +26,16 @@ export function SkillsSection({
   initial: SkillRow[];
   popular: SkillOption[];
 }) {
-  const { saving, save } = useSectionSave(saveSkillsAction, "Skills");
+  const { formId, onSaved, setDirty } = useProfileWizard();
+  const { save } = useSectionSave(saveSkillsAction, "Skills");
   const [rows, setRows] = useState<SkillRow[]>(initial);
 
   const selectedIds = rows.map((r) => r.skillId);
   const quickAdds = popular.filter((p) => !selectedIds.includes(p.id));
+
+  useEffect(() => {
+    setDirty(JSON.stringify(rows) !== JSON.stringify(initial));
+  }, [rows, initial, setDirty]);
 
   function add(skill: SkillOption) {
     setRows((prev) =>
@@ -71,122 +67,102 @@ export function SkillsSection({
 
   return (
     <form
-      onSubmit={(e) => {
+      id={formId}
+      onSubmit={async (e) => {
         e.preventDefault();
-        void save({
+        const ok = await save({
           claims: rows.map((r) => ({
             skillId: r.skillId,
             selfRated: r.selfRated ?? "",
           })),
         });
+        if (ok) onSaved();
       }}
-      className="space-y-5"
     >
-      <Field
-        label="Add a skill"
-        htmlFor="skill-search"
-        hint="Pick from the catalog so recruiters searching that skill can find you."
-      >
-        <SkillCombobox
-          id="skill-search"
-          excludeIds={selectedIds}
-          onSelect={add}
-        />
-      </Field>
-
-      {quickAdds.length > 0 ? (
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">Quick adds</p>
-          <div className="flex flex-wrap gap-2">
-            {quickAdds.map((s) => (
-              <Button
-                key={s.id}
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => add(s)}
-              >
-                {s.name}
-              </Button>
-            ))}
+      <PwRow cols={1}>
+        <PwField
+          label="Add a skill"
+          htmlFor="skill-search"
+          helper="Pick from the catalog so recruiters searching that skill can find you."
+        >
+          <div className="pw-tag-input-row">
+            <SkillCombobox
+              id="skill-search"
+              excludeIds={selectedIds}
+              onSelect={add}
+            />
           </div>
-        </div>
-      ) : null}
-
-      {rows.length === 0 ? (
-        <EmptyState>No skills yet. Add at least three.</EmptyState>
-      ) : (
-        <ul className="space-y-2">
-          {rows.map((row) => (
-            <li
-              key={row.skillId}
-              className="flex flex-wrap items-center gap-3 rounded-xl border bg-muted/20 p-3"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium">{row.name}</span>
-                  {row.verified ? (
-                    <Badge className="gap-1 bg-emerald-600 text-white hover:bg-emerald-600/90">
-                      <BadgeCheck className="size-3" aria-hidden />
-                      Verified
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-muted-foreground">
-                      Self-declared
-                    </Badge>
-                  )}
-                </div>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {row.verified
-                    ? `${row.evidenceCount} piece${row.evidenceCount === 1 ? "" : "s"} of evidence on the platform`
-                    : row.categoryName ?? "No evidence recorded yet"}
-                </p>
+          {quickAdds.length > 0 ? (
+            <div className="pw-quick-adds">
+              <div className="pw-quick-label">Quick adds</div>
+              <div className="pw-quick-row">
+                {quickAdds.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className="pw-quick-chip"
+                    onClick={() => add(s)}
+                  >
+                    {s.name}
+                  </button>
+                ))}
               </div>
+            </div>
+          ) : null}
+          <div className="pw-tag-list pw-tag-list-boxed">
+            {rows.length === 0 ? (
+              <div className="pw-tag-empty">
+                No skills yet. Add at least three.
+              </div>
+            ) : (
+              rows.map((row) => (
+                <span key={row.skillId} className="pw-tag-chip">
+                  <span>{row.name}</span>
+                  <select
+                    aria-label={`Self-rated proficiency for ${row.name}`}
+                    value={row.selfRated ?? ""}
+                    onChange={(e) =>
+                      rate(
+                        row.skillId,
+                        e.target.value
+                          ? (e.target.value as SkillProficiency)
+                          : null,
+                      )
+                    }
+                  >
+                    <option value="">Rate</option>
+                    {Object.values(SkillProficiency).map((p) => (
+                      <option key={p} value={p}>
+                        {PROFICIENCY_LABELS[p] ?? p}
+                      </option>
+                    ))}
+                  </select>
+                  {row.verified ? (
+                    <span className="pw-verified">Verified</span>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="pw-tag-remove"
+                    aria-label={`Remove ${row.name}`}
+                    onClick={() => remove(row.skillId)}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden>
+                      <path d="M6 6l12 12M18 6L6 18" />
+                    </svg>
+                  </button>
+                </span>
+              ))
+            )}
+          </div>
+        </PwField>
+      </PwRow>
 
-              <Select
-                value={row.selfRated ?? ""}
-                onValueChange={(v) =>
-                  rate(row.skillId, v ? (v as SkillProficiency) : null)
-                }
-              >
-                <SelectTrigger
-                  size="sm"
-                  className="w-40"
-                  aria-label={`Self-rated proficiency for ${row.name}`}
-                >
-                  <SelectValue placeholder="Self-rate" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(SkillProficiency).map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {PROFICIENCY_LABELS[p] ?? p}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => remove(row.skillId)}
-                aria-label={`Remove ${row.name}`}
-              >
-                <X className="size-4" aria-hidden />
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <p className="text-xs text-muted-foreground">
+      <PwNote muted>
         Self-rating is your own assessment. <strong>Verified</strong> means the
         platform has recorded evidence — a passed activity, an assessment, a
         credential — and it is never inferred from what you rate yourself.
         Removing a skill withdraws the claim; any evidence behind it is kept.
-      </p>
-
-      <SectionActions saving={saving} saveLabel="Save skills" />
+      </PwNote>
     </form>
   );
 }

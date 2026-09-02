@@ -1,17 +1,19 @@
 "use client";
 
+import { useEffect } from "react";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { saveProjectsAction } from "@/app/actions/candidate-profile-actions";
-import {
-  ChipInput,
-  EmptyState,
-  Field,
-  RowCard,
-  SectionActions,
-} from "./fields";
 import { useSectionSave } from "./use-section-save";
+import { useProfileWizard } from "./wizard-context";
+import {
+  PwAddMore,
+  PwEntryCard,
+  PwField,
+  PwInput,
+  PwRow,
+  PwTags,
+  PwTextarea,
+} from "./wizard-fields";
 
 export type ProjectFormRow = {
   title: string;
@@ -32,92 +34,116 @@ export const emptyProjectRow: ProjectFormRow = {
 };
 
 export function ProjectsSection({ initial }: { initial: ProjectFormRow[] }) {
-  const { saving, save } = useSectionSave(saveProjectsAction, "Projects");
-  const { control, register, handleSubmit } = useForm<FormValues>({
-    defaultValues: { rows: initial },
+  const { formId, onSaved, setDirty } = useProfileWizard();
+  const { save } = useSectionSave(saveProjectsAction, "Projects");
+  const { control, register, handleSubmit, formState } = useForm<FormValues>({
+    defaultValues: {
+      rows: initial.length > 0 ? initial : [{ ...emptyProjectRow }],
+    },
   });
-  const { fields, append, remove } = useFieldArray({ control, name: "rows" });
+  const { fields, append, remove, replace } = useFieldArray({
+    control,
+    name: "rows",
+  });
+
+  useEffect(() => {
+    setDirty(formState.isDirty);
+  }, [formState.isDirty, setDirty]);
+
+  function removeOrClear(index: number) {
+    if (fields.length === 1) {
+      replace([{ ...emptyProjectRow }]);
+      return;
+    }
+    remove(index);
+  }
 
   return (
-    <form onSubmit={handleSubmit((v) => save(v))} className="space-y-4">
-      {fields.length === 0 ? (
-        <EmptyState>
-          Nothing here yet. A project with a repo a recruiter can open is worth
-          more than a line on a résumé.
-        </EmptyState>
-      ) : null}
-
-      {fields.map((field, index) => (
-        <RowCard
-          key={field.id}
-          index={index}
-          title="Project"
-          onRemove={() => remove(index)}
-        >
-          <Field label="Project name" required htmlFor={`prj-title-${index}`}>
-            <Input
-              id={`prj-title-${index}`}
-              placeholder="ex: Realtime transit tracker"
-              {...register(`rows.${index}.title`, { required: true })}
-            />
-          </Field>
-
-          <Field label="Description" htmlFor={`prj-desc-${index}`}>
-            <Textarea
-              id={`prj-desc-${index}`}
-              rows={3}
-              maxLength={4000}
-              placeholder="What it does, what was hard about it, and what you built yourself."
-              {...register(`rows.${index}.description`)}
-            />
-          </Field>
-
-          <Field
-            label="Tech stack"
-            hint="Descriptive only — this does not add to your skills."
+    <form
+      id={formId}
+      onSubmit={handleSubmit(async (v) => {
+        if (await save(v)) onSaved();
+      })}
+    >
+      <div className="pw-entries">
+        {fields.map((field, index) => (
+          <PwEntryCard
+            key={field.id}
+            index={index}
+            title="Project"
+            onRemove={() => removeOrClear(index)}
           >
-            <Controller
-              control={control}
-              name={`rows.${index}.techStack`}
-              render={({ field: f }) => (
-                <ChipInput
-                  values={f.value}
-                  onChange={f.onChange}
-                  placeholder="ex: Next.js, Postgres"
-                  max={20}
+            <PwRow cols={1}>
+              <PwField
+                label="Project name"
+                required
+                htmlFor={`prj-title-${index}`}
+              >
+                <PwInput
+                  id={`prj-title-${index}`}
+                  placeholder="e.g. Campus Ride Sharing App"
+                  {...register(`rows.${index}.title`, { required: true })}
                 />
-              )}
-            />
-          </Field>
+              </PwField>
+            </PwRow>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="GitHub" htmlFor={`prj-repo-${index}`}>
-              <Input
-                id={`prj-repo-${index}`}
-                type="url"
-                inputMode="url"
-                placeholder="https://github.com/…"
-                {...register(`rows.${index}.repoUrl`)}
-              />
-            </Field>
-            <Field label="Live URL" htmlFor={`prj-live-${index}`}>
-              <Input
-                id={`prj-live-${index}`}
-                type="url"
-                inputMode="url"
-                placeholder="https://…"
-                {...register(`rows.${index}.liveUrl`)}
-              />
-            </Field>
-          </div>
-        </RowCard>
-      ))}
+            <PwRow cols={1}>
+              <PwField
+                label="Description"
+                htmlFor={`prj-desc-${index}`}
+                area
+              >
+                <PwTextarea
+                  id={`prj-desc-${index}`}
+                  maxLength={4000}
+                  placeholder="What it does, what was hard about it, and what you built yourself."
+                  {...register(`rows.${index}.description`)}
+                />
+              </PwField>
+            </PwRow>
 
-      <SectionActions
-        saving={saving}
-        onAdd={() => append({ ...emptyProjectRow })}
-        addLabel={fields.length === 0 ? "Add project" : "Add another"}
-      />
+            <PwRow cols={1}>
+              <PwField label="Tech stack">
+                <Controller
+                  control={control}
+                  name={`rows.${index}.techStack`}
+                  render={({ field: f }) => (
+                    <PwTags
+                      id={`prj-tech-${index}`}
+                      values={f.value}
+                      onChange={f.onChange}
+                      placeholder="ex: Next.js, Postgres"
+                      helper="Descriptive only — this does not add to your skills."
+                    />
+                  )}
+                />
+              </PwField>
+            </PwRow>
+
+            <PwRow cols={2}>
+              <PwField label="GitHub" htmlFor={`prj-repo-${index}`}>
+                <PwInput
+                  id={`prj-repo-${index}`}
+                  type="url"
+                  inputMode="url"
+                  placeholder="https://github.com/..."
+                  {...register(`rows.${index}.repoUrl`)}
+                />
+              </PwField>
+              <PwField label="Live URL" htmlFor={`prj-live-${index}`}>
+                <PwInput
+                  id={`prj-live-${index}`}
+                  type="url"
+                  inputMode="url"
+                  placeholder="https://www.example.com/"
+                  {...register(`rows.${index}.liveUrl`)}
+                />
+              </PwField>
+            </PwRow>
+          </PwEntryCard>
+        ))}
+      </div>
+      <PwAddMore onClick={() => append({ ...emptyProjectRow })} />
     </form>
   );
 }

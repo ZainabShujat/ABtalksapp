@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AB Talks | Profile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menu">
+  <svg viewBox="0 0 24 24" width="20" height="20"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+</button>
+<div class="scrim" id="scrim"></div>
+
+<div class="app">
+
+  <!-- ============ SIDEBAR (260px) ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <div class="logo-section">
+        <div class="brand">abtalks black logo here</div>
+      </div>
+
+      <nav class="nav-list">
+        <a class="nav-item" href="#">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" class="ico"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></span>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a class="nav-item" href="#">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" class="ico"><path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/></svg></span>
+          <span class="nav-label">Workshops</span>
+        </a>
+        <a class="nav-item" href="#">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" class="ico"><path d="m2 7 1.5-4h17L22 7"/><path d="M2 7h20v3a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0Z"/><path d="M4 12.5V20a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7.5"/></svg></span>
+          <span class="nav-label">Marketplace</span>
+        </a>
+        <a class="nav-item" href="#">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" class="ico"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span>
+          <span class="nav-label">Jobs</span>
+        </a>
+        <a class="nav-item" href="#">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" class="ico"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg></span>
+          <span class="nav-label">Achievements</span>
+        </a>
+        <a class="nav-item active" href="#">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" class="ico"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+          <span class="nav-label">Profile</span>
+        </a>
+      </nav>
+    </div>
+
+    <div class="sidebar-bottom">
+      <div class="sidebar-divider"></div>
+      <div class="user-profile-summary">
+        <div class="avatar sm" aria-hidden="true"></div>
+        <div class="user-info">
+          <div class="account-name"></div>
+          <div class="account-mail"></div>
+        </div>
+      </div>
+      <button class="signout-button" type="button">
+        <svg viewBox="0 0 24 24" class="ico"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+        <span>Sign out</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ============ CONTENT COLUMN ============ -->
+  <div class="content">
+
+    <!-- ---- Top header: 85px, white, must stay ---- -->
+    <header class="topbar" id="topbar">
+      <div class="topbar-tools">
+        <button type="button" class="tool-btn" id="resetBtn" title="Clear everything and start from section 1">
+          <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+          Reset
+        </button>
+        <button type="button" class="tool-btn primary" id="refillBtn" title="Fill every section with sample data and complete the profile">
+          <svg viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Refill Complete Form
+        </button>
+      </div>
+    </header>
+
+    <!-- ---- Workspace ---- -->
+    <main class="workspace">
+
+      <!-- ---- Profile card: 336 x 629 ---- -->
+      <section class="profile-card">
+        <div class="profile-head">
+          <div class="ring-wrap">
+            <svg class="ring" viewBox="0 0 112 112" aria-hidden="true">
+              <defs>
+                <!-- clay: warm-lit green, brighter at the top-left light source -->
+                <linearGradient id="clayRingGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%"   stop-color="#8CEE93"/>
+                  <stop offset="45%"  stop-color="#4CD46C"/>
+                  <stop offset="100%" stop-color="#22A94F"/>
+                </linearGradient>
+                <!-- clay: soft cast shadow below-right, light bloom above-left -->
+                <filter id="clayRing" x="-60%" y="-60%" width="220%" height="220%">
+                  <feDropShadow dx="0.8" dy="1.3" stdDeviation="1.2" flood-color="#199247" flood-opacity=".26"/>
+                  <feDropShadow dx="-0.7" dy="-0.8" stdDeviation="0.9" flood-color="#FFFFFF" flood-opacity=".5"/>
+                </filter>
+                <!-- clay: the track reads as a pressed-in groove -->
+                <filter id="clayTrack" x="-60%" y="-60%" width="220%" height="220%">
+                  <feDropShadow dx="0" dy="1" stdDeviation="0.9" flood-color="#B9BCB6" flood-opacity=".32"/>
+                  <feDropShadow dx="0" dy="-0.8" stdDeviation="0.8" flood-color="#FFFFFF" flood-opacity=".6"/>
+                </filter>
+              </defs>
+              <circle class="ring-bg" cx="56" cy="56" r="48.5"/>
+              <circle class="ring-fg" id="ringFg" cx="56" cy="56" r="48.5"/>
+            </svg>
+            <div class="avatar lg" id="avatarLg" aria-hidden="true"></div>
+
+            <input type="file" id="photoInput" class="photo-input" accept="image/*" />
+            <button type="button" class="avatar-edit" id="avatarEdit" title="Change profile photo" aria-label="Change profile photo">
+              <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            </button>
+
+            <div class="ring-check" id="ringCheck" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <div class="pct-badge" id="pctBadge">
+              <span class="pct-num" id="pctNum">0%</span>
+              <span class="pct-label">Profile Completed</span>
+            </div>
+          </div>
+
+          <div class="user-details">
+            <h1 class="user-name">John Doe</h1>
+            <div class="education-degree">Student</div>
+            <div class="last-updated">Last updated 3m ago</div>
+          </div>
+        </div>
+
+        <ul class="checklist" id="checklist"></ul>
+
+        
+      </section>
+
+      <!-- ---- Form card: 1217 x 669 ---- -->
+      <section class="form-card">
+        <div class="section-header" id="sectionHeader">
+          <div class="section-progress" id="sectionProgress"></div>
+          <div class="section-header-content">
+            <h2 id="sectionTitle">1. Basic Information</h2>
+            <p id="sectionDesc">This is how you are introduced on the platform.</p>
+          </div>
+          <div class="complete-pill" id="completePill">
+            <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> Profile Complete
+          </div>
+        </div>
+
+        <form class="section-body" id="sectionBody" autocomplete="off" novalidate></form>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" id="prevBtn">Previous</button>
+          <button type="button" class="btn btn-primary" id="nextBtn">Next</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<button class="fab" type="button" aria-label="Chat">
+  <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+</button>
+
+<script src="script.js"></script>
+</body>
+</html>

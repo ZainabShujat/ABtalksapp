@@ -299,34 +299,3 @@ export function EmptyState({ children }: { children: ReactNode }) {
   );
 }
 
-/* ─── Section footer ─────────────────────────────────────────────────────── */
-
-export function SectionActions({
-  onAdd,
-  addLabel,
-  saving,
-  saveLabel = "Save",
-  disabled,
-}: {
-  onAdd?: () => void;
-  addLabel?: string;
-  saving: boolean;
-  saveLabel?: string;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-      {onAdd && addLabel ? (
-        <Button type="button" variant="ghost" onClick={onAdd} className="px-2">
-          <Plus className="size-4" aria-hidden />
-          {addLabel}
-        </Button>
-      ) : (
-        <span />
-      )}
-      <Button type="submit" disabled={saving || disabled}>
-        {saving ? "Saving…" : saveLabel}
-      </Button>
-    </div>
-  );
-}

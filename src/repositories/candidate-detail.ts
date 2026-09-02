@@ -141,6 +141,7 @@ export type CandidateDetail = {
   resumeUrl: string | null;
   referralCode: string;
   isReadyForInterview: boolean;
+  updatedAt: Date;
   education: EducationView[];
   experience: ExperienceView[];
   projects: ProjectView[];
@@ -174,6 +175,7 @@ export async function getCandidateDetail(
       resumeUrl: true,
       referralCode: true,
       isReadyForInterview: true,
+      updatedAt: true,
       education: {
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
         select: {
@@ -294,6 +296,7 @@ export async function getCandidateDetail(
     resumeUrl: row.resumeUrl,
     referralCode: row.referralCode,
     isReadyForInterview: row.isReadyForInterview,
+    updatedAt: row.updatedAt,
     education: row.education.map((e) => ({ ...e })),
     experience: row.experience.map((e) => {
       const start = splitMonthDate(e.startedOn);

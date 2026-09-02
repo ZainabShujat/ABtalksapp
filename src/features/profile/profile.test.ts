@@ -469,6 +469,7 @@ function detailFixture(over: Partial<CandidateDetail> = {}): CandidateDetail {
     resumeUrl: null,
     referralCode: "ABC123",
     isReadyForInterview: false,
+    updatedAt: new Date("2026-01-01T00:00:00Z"),
     education: [],
     experience: [],
     projects: [],

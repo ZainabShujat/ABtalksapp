@@ -1,20 +1,20 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { CandidatePersona } from "@prisma/client";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { saveBasicInfoAction } from "@/app/actions/candidate-profile-actions";
 import { PERSONA_LABELS } from "@/lib/candidate-vocab";
-import { Field, SectionActions } from "./fields";
 import { useSectionSave } from "./use-section-save";
+import { useProfileWizard } from "./wizard-context";
+import {
+  PwField,
+  PwFileDrop,
+  PwInput,
+  PwRow,
+  PwSelect,
+  PwTextarea,
+} from "./wizard-fields";
 
 export type BasicInfoValues = {
   fullName: string;
@@ -34,134 +34,140 @@ export function BasicInfoSection({
   initial: BasicInfoValues;
   phoneVerified: boolean;
 }) {
-  const { saving, save } = useSectionSave(saveBasicInfoAction, "Basic information");
+  const { formId, onSaved, setDirty } = useProfileWizard();
+  const { save } = useSectionSave(saveBasicInfoAction, "Basic information");
   const {
     register,
     handleSubmit,
     watch,
-    setValue,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<BasicInfoValues>({ defaultValues: initial });
 
   const summary = watch("summary") ?? "";
-  const persona = watch("primaryPersona");
+
+  useEffect(() => {
+    setDirty(isDirty);
+  }, [isDirty, setDirty]);
 
   return (
-    <form onSubmit={handleSubmit((values) => save(values))} className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field
+    <form
+      id={formId}
+      onSubmit={handleSubmit(async (v) => {
+        if (await save(v)) onSaved();
+      })}
+    >
+      <PwRow cols={2}>
+        <PwField
           label="Full name"
           required
           htmlFor="bi-fullName"
           error={errors.fullName?.message}
         >
-          <Input
+          <PwInput
             id="bi-fullName"
             autoComplete="name"
+            placeholder="Your full name"
+            aria-invalid={Boolean(errors.fullName)}
+            className={errors.fullName ? "pw-invalid" : undefined}
             {...register("fullName", { required: "Full name is required" })}
           />
-        </Field>
-
-        <Field
+        </PwField>
+        <PwField
           label="Phone"
           htmlFor="bi-phone"
-          hint={
-            phoneVerified
-              ? "Verified"
-              : "Add your number so recruiters can reach you"
-          }
+          verified={phoneVerified}
         >
-          <Input
+          <PwInput
             id="bi-phone"
+            type="tel"
             inputMode="tel"
             autoComplete="tel"
-            placeholder="+91…"
+            placeholder="+91-XXXXXXXXXX"
             {...register("phone")}
           />
-        </Field>
-      </div>
+        </PwField>
+      </PwRow>
 
-      <Field
-        label="Headline"
-        htmlFor="bi-headline"
-        hint="One line. What you do, or what you are working toward."
-      >
-        <Input
-          id="bi-headline"
-          maxLength={160}
-          placeholder="ex: Final-year CSE student building ML systems"
-          {...register("headline")}
-        />
-      </Field>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Field label="City" htmlFor="bi-city">
-          <Input
+      <PwRow cols={3}>
+        <PwField label="I am a" htmlFor="bi-persona">
+          <PwSelect id="bi-persona" {...register("primaryPersona")}>
+            {Object.values(CandidatePersona).map((p) => (
+              <option key={p} value={p}>
+                {PERSONA_LABELS[p] ?? p}
+              </option>
+            ))}
+          </PwSelect>
+        </PwField>
+        <PwField label="City" htmlFor="bi-city">
+          <PwInput
             id="bi-city"
-            placeholder="ex: Bangalore"
+            placeholder="e.g. Noida"
             autoComplete="address-level2"
             {...register("locationCity")}
           />
-        </Field>
-        <Field label="State / region" htmlFor="bi-region">
-          <Input
+        </PwField>
+        <PwField label="State / region" htmlFor="bi-region">
+          <PwInput
             id="bi-region"
-            placeholder="ex: Karnataka"
+            placeholder="e.g. Uttar Pradesh"
             autoComplete="address-level1"
             {...register("locationRegion")}
           />
-        </Field>
-        <Field label="Country code" htmlFor="bi-country" hint="2 letters, e.g. IN">
-          <Input
+        </PwField>
+      </PwRow>
+
+      <PwRow cols={2}>
+        <PwField
+          label="Country code"
+          htmlFor="bi-country"
+          helper="2 letters, e.g. IN"
+        >
+          <PwInput
             id="bi-country"
             maxLength={2}
             placeholder="IN"
             className="uppercase"
             {...register("countryCode")}
           />
-        </Field>
-      </div>
-
-      <Field
-        label="I am currently"
-        hint="Used for display. It does not change which challenge track you are on."
-      >
-        <Select
-          value={persona}
-          onValueChange={(v) =>
-            setValue("primaryPersona", v as CandidatePersona, {
-              shouldDirty: true,
-            })
-          }
+        </PwField>
+        <PwField
+          label="Headline"
+          htmlFor="bi-headline"
+          helper="One line. What you do, or what you are working toward."
         >
-          <SelectTrigger aria-label="Current persona">
-            <SelectValue placeholder="Select" />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.values(CandidatePersona).map((p) => (
-              <SelectItem key={p} value={p}>
-                {PERSONA_LABELS[p] ?? p}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </Field>
+          <PwInput
+            id="bi-headline"
+            maxLength={160}
+            placeholder="ex: Final-year CSE student building ML systems"
+            {...register("headline")}
+          />
+        </PwField>
+      </PwRow>
 
-      <Field
-        label="About"
-        htmlFor="bi-summary"
-        hint={`${summary.length}/2000`}
-      >
-        <Textarea
-          id="bi-summary"
-          rows={5}
-          maxLength={2000}
-          placeholder="What you have built, what you are good at, and what you want to do next."
-          {...register("summary")}
+      <PwRow cols={1}>
+        <PwFileDrop
+          id="bi-resume"
+          accept=".pdf,.doc,.docx"
+          maxSizeMB={5}
+          hint="PDF or DOCX — up to 5 MB. Drop a file here or browse."
         />
-      </Field>
+      </PwRow>
 
-      <SectionActions saving={saving} />
+      <PwRow cols={1} grow>
+        <PwField
+          label="About"
+          htmlFor="bi-summary"
+          counter={`${summary.length}/2000`}
+          area
+        >
+          <PwTextarea
+            id="bi-summary"
+            maxLength={2000}
+            placeholder="Tell recruiters who you are."
+            {...register("summary")}
+          />
+        </PwField>
+      </PwRow>
     </form>
   );
 }
