@@ -5,31 +5,34 @@ import {
   isTtsConfigured,
   resolveSpeakableLine,
   safetyIdentifierFor,
-  synthesizeLine,
+  synthesizeLineStream,
 } from "@/features/interview/voice";
+import { recordSpan, ttsCostUsd } from "@/features/interview/telemetry";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Speaks one interviewer line.
+ * Speaks one interviewer line for a cohort interview.
  *
- * Note the request shape: an interview id, an optional line KIND, and NO text.
- * Every line is composed server-side — from the interview's own transcript, from
- * the question the server has on the floor, or from a fixed constant — so this
- * endpoint can only ever voice something this interview would have said to this
- * member. Accepting text would turn a paid speech API into an open
- * text-to-speech service for anyone with an account.
- *
- * The kind exists because three of the interviewer's lines are composed by the
- * ROOM in reaction to the microphone and never enter the persisted transcript.
- * Without it, asking to speak while one of those was on screen synthesized the
- * agent's last line instead — which is why a candidate who fell silent heard the
- * interview restart from the greeting.
+ * Streamed via synthesizeLineStream to eliminate buffering delay.
  */
 const bodySchema = z.object({
   interviewId: z.string().min(1).max(64),
-  line: z.enum(["time_up", "latest", "waiting", "retry", "repeat", "language", "moving_on"]).default("latest"),
+  line: z
+    .enum([
+      "time_up",
+      "latest",
+      "waiting",
+      "retry",
+      "repeat",
+      "language",
+      "noisy_room",
+      "moving_on",
+      "thinking",
+    ])
+    .default("latest"),
   /**
    * Which authored wording of a repeating line to speak. Bounded and taken
    * modulo the pool server-side, so it selects among our own sentences and
@@ -39,7 +42,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  if (!isTtsConfigured()) {
+  if (!isTtsConfigured("cohort")) {
     return NextResponse.json(
       { ok: false, message: "Voice is not configured." },
       { status: 503 },
@@ -62,6 +65,7 @@ export async function POST(request: Request) {
     );
   }
 
+  const resolveStartedMs = Date.now();
   const line = await resolveSpeakableLine(
     parsed.data.interviewId,
     memberId,
@@ -74,10 +78,16 @@ export async function POST(request: Request) {
       { status: line.status },
     );
   }
+  const resolveMs = Date.now() - resolveStartedMs;
 
-  const audio = await synthesizeLine(
+  const audio = await synthesizeLineStream(
     line.data.text,
     safetyIdentifierFor(memberId),
+    // THE GRADED INTERVIEW. Reads the cohort-scoped variables only, which are
+    // unset, so this keeps the OpenAI voice it has always used. Streaming the
+    // body is a transport change and does not alter which words are spoken or
+    // who speaks them.
+    "cohort",
   );
   if (!audio.ok) {
     return NextResponse.json(
@@ -86,11 +96,34 @@ export async function POST(request: Request) {
     );
   }
 
-  return new NextResponse(audio.data.audio, {
+  recordSpan({
+    attemptId: parsed.data.interviewId,
+    name: "tts_resolve",
+    ms: resolveMs,
+  });
+  recordSpan({
+    attemptId: parsed.data.interviewId,
+    name: "tts_ttfb",
+    ms: audio.data.ttfbMs,
+    provider: audio.data.vendor,
+    model: audio.data.model,
+    characters: line.data.text.length,
+    costUsd: ttsCostUsd(audio.data.model, line.data.text.length),
+  });
+
+  logger.info("[cohort/tts] speaking", {
+    line: parsed.data.line,
+    chars: line.data.text.length,
+    vendor: audio.data.vendor,
+    model: audio.data.model,
+    resolveMs,
+    ttfbMs: audio.data.ttfbMs,
+  });
+
+  return new NextResponse(audio.data.stream, {
     status: 200,
     headers: {
       "Content-Type": audio.data.contentType,
-      "Content-Length": String(audio.data.audio.byteLength),
       // The exact words in the audio, so the room can show the line it is
       // actually hearing rather than the one it guessed. Base64 because header
       // values are ASCII-only and a question may contain anything.

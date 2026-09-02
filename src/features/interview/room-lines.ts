@@ -31,7 +31,8 @@ export type RoomLineKind =
   | "repeat"
   | "language"
   | "noisy_room"
-  | "moving_on";
+  | "moving_on"
+  | "thinking";
 
 export const ROOM_LINE_KINDS: readonly RoomLineKind[] = [
   "latest",
@@ -42,6 +43,7 @@ export const ROOM_LINE_KINDS: readonly RoomLineKind[] = [
   "language",
   "noisy_room",
   "moving_on",
+  "thinking",
 ];
 
 /**
@@ -135,6 +137,42 @@ export const TIME_UP_LINES = [
 export const TIME_UP_LINE = TIME_UP_LINES[0];
 
 /**
+ * Said while the interviewer is working out what to say next.
+ *
+ * WHY THIS EXISTS. Even with streamed speech and a fast transcriber there is a
+ * real gap between the candidate finishing and the interviewer starting: an
+ * upload, a transcription, an assessment call, and a synthesis request, none of
+ * which can be removed entirely. Held in silence that gap reads as a freeze,
+ * and the candidate's own instinct is to start talking again into it, which
+ * makes the next turn worse.
+ *
+ * A person fills that space, so this does too. These are deliberately the
+ * shortest lines in the file and deliberately say NOTHING about the answer:
+ * anything evaluative here would be a verdict delivered before the evaluator
+ * has run, and a candidate would reasonably read it as one.
+ *
+ * Spoken only when the gap is actually long enough to need covering — see
+ * `THINKING_LINE_AFTER_MS`. A fast turn is not padded with chatter.
+ */
+export const THINKING_LINES = [
+  "Mm.",
+  "Right.",
+  "Okay.",
+  "Let me think about that.",
+  "Give me a second.",
+] as const;
+
+export const THINKING_LINE = THINKING_LINES[0];
+
+/**
+ * How long the interviewer stays silent before saying anything at all.
+ *
+ * Under this, silence reads as a person taking a beat, which is what it should
+ * read as. Over it, silence reads as a broken page.
+ */
+export const THINKING_LINE_AFTER_MS = 1_500;
+
+/**
  * Resolves one room line to its wording.
  *
  * `variant` exists because these lines repeat WITHIN a single interview — the
@@ -147,7 +185,13 @@ export const TIME_UP_LINE = TIME_UP_LINES[0];
  * this interview would have said. See `voice.ts:resolveSpeakableLine`.
  */
 export function roomLineFor(
-  kind: "waiting" | "retry" | "moving_on" | "time_up" | "noisy_room",
+  kind:
+    | "waiting"
+    | "retry"
+    | "moving_on"
+    | "time_up"
+    | "noisy_room"
+    | "thinking",
   variant: number,
 ): string {
   const pool =
@@ -159,7 +203,9 @@ export function roomLineFor(
           ? MOVING_ON_LINES
           : kind === "time_up"
             ? TIME_UP_LINES
-            : NOISY_ROOM_LINES;
+            : kind === "thinking"
+              ? THINKING_LINES
+              : NOISY_ROOM_LINES;
   const index = Number.isFinite(variant)
     ? ((Math.trunc(variant) % pool.length) + pool.length) % pool.length
     : 0;

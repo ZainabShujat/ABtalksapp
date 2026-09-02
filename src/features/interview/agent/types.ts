@@ -266,4 +266,23 @@ export type InterviewAgentState = {
    * behaviour the cohort has always had; the platform supplies its planner.
    */
   targetSelector?: TargetSelector;
+
+  /**
+   * Whether the second, conversational phrasing stage may run this turn.
+   *
+   * UNSET IS THE COHORT. Its graph then executes exactly the nodes it executed
+   * before stage 2 existed, which is what makes "the cohort interview is
+   * unaffected" a structural property rather than a promise: the phrasing node
+   * returns an empty update on its first line and nothing downstream can tell
+   * it ran. Only the mock platform sets it.
+   */
+  conversational?: boolean;
+
+  /**
+   * Which conversational move stage 2 made, if it ran.
+   *
+   * Persisted onto `InterviewState.recentMoves` by `updateState`, so the next
+   * turn can be told not to repeat it.
+   */
+  phrasedMove?: string | null;
 };

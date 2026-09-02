@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger";
 import { resolveInterviewMemberId } from "@/features/interview/provider";
 import { resolvePlatformUserId } from "@/features/interview/platform/provider";
 import { checkLanguage } from "@/features/interview/language-gate";
+import type { VoiceSurface } from "@/features/interview/voice";
 import {
   isSttConfigured,
   transcribeAnswer,
@@ -34,7 +35,13 @@ export const maxDuration = 300; // 5 minutes max execution on Vercel
  * there, on a call that knows which interview is being answered.
  */
 export async function POST(request: Request) {
-  if (!isSttConfigured()) {
+  // The cheap early check keeps its original position and its original job:
+  // refuse before authenticating and before buffering an upload when speech is
+  // not configured at all. It asks about the cohort surface because that is the
+  // conservative one — if the graded interview can be transcribed, some vendor
+  // is present. The per-surface decision is made below, once the form has been
+  // read, and `transcribeAnswer` returns its own 503 if that surface has none.
+  if (!isSttConfigured("cohort")) {
     return NextResponse.json(
       { ok: false, message: "Voice is not configured." },
       { status: 503 },
@@ -73,6 +80,21 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+
+  // WHICH INTERVIEW IS UPLOADING.
+  //
+  // Unlike the two TTS routes, this one is genuinely shared: both rooms POST
+  // here, so the surface cannot be inferred from the path. It DEFAULTS TO
+  // "cohort", so anything unrecognised — a missing field, an older client, a
+  // hand-made request — gets the graded interview's existing transcriber rather
+  // than silently inheriting the practice override.
+  //
+  // Client-supplied, and safe to be: it selects among vendors the SERVER has
+  // configured and cannot introduce one, exactly like the `line` KIND on the
+  // speech routes. The worst a forged value does is transcribe that caller's
+  // own audio with the other configured vendor.
+  const surface: VoiceSurface =
+    form.get("surface") === "platform" ? "platform" : "cohort";
 
   const file = form.get("audio");
   if (!(file instanceof Blob)) {
@@ -134,6 +156,7 @@ export async function POST(request: Request) {
     file,
     filename,
     safetyIdentifierFor(speakerId),
+    surface,
   );
 
   if (!result.ok) {

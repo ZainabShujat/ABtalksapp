@@ -20,6 +20,13 @@ import {
 } from "@/features/interview/turn-state";
 import { MIN_AUDIO_BYTES } from "@/features/interview/voice-contract";
 import {
+  closeSpeaking,
+  initialDuplexContext,
+  openSpeaking,
+  stepDuplex,
+  type DuplexContext,
+} from "@/features/interview/duplex";
+import {
   COHORT_INTERVIEW_DURATION_SEC,
   INTERVIEW_SILENCE_MS,
   MAX_ANSWER_MS,
@@ -31,6 +38,7 @@ import {
 import {
   RETRY_LINE,
   NO_RESPONSE_ANSWER,
+  THINKING_LINE_AFTER_MS,
   TIME_UP_LINE,
   roomLineFor,
   type RoomLineKind,
@@ -286,6 +294,23 @@ function decodeSpokenLine(header: string | null): string | null {
  */
 const NO_ANSWER_MS = 10_000;
 
+/**
+ * How long an audio element may claim to be playing without the clock moving
+ * before the room stops believing it.
+ *
+ * Deliberately short. This only fires when `currentTime` is still exactly 0,
+ * which after a second of real playback it never is, so a slow start cannot
+ * trip it — only a dead one.
+ */
+const PLAYBACK_STALL_MS = 1_200;
+
+/** One-line room diagnostic, development only. */
+function logRoom(message: string, data?: Record<string, unknown>) {
+  if (process.env.NODE_ENV !== "production") {
+    console.warn(`[room] ${message}`, data ?? "");
+  }
+}
+
 function formatClock(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
@@ -316,6 +341,14 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
   minAnsweredToScore,
   silenceMs = INTERVIEW_SILENCE_MS,
   roomCopy = COHORT_ROOM_COPY,
+  // BARGE-IN IS OFF BY DEFAULT, and that default is the cohort's safety.
+  // Without it the microphone still closes while the interviewer speaks, the
+  // duplex detector is never constructed, and every line plays to completion —
+  // exactly the behaviour the cohort has been running.
+  allowBargeIn = false,
+  onInterruptionAction,
+  thinkingLine = false,
+  sttSurface = "cohort",
 }: {
   interviewId: string;
   title: string;
@@ -386,6 +419,63 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
   silenceMs?: number;
   /** Interview-specific wording. Defaults to the cohort's, unchanged. */
   roomCopy?: RoomCopy;
+
+  /* --- full duplex (plan 106). Cohort passes none. ----------------------- */
+
+  /**
+   * Whether the candidate may talk over the interviewer.
+   *
+   * When false the room is half-duplex exactly as before: `startRecording` waits
+   * for `speakingRef.current` to clear, the microphone is not open during
+   * playback, and no barge-in detection runs at all. When true the microphone
+   * stays open across the whole turn and `duplex.ts` decides, frame by frame,
+   * whether what it is hearing is the candidate or the interviewer's own voice
+   * leaking back through the speakers.
+   *
+   * This is a per-interview product decision, not a capability flag. A graded
+   * assessment has a real argument for every candidate hearing the same
+   * complete question; a practice conversation does not.
+   */
+  allowBargeIn?: boolean;
+  /**
+   * Submits an utterance that INTERRUPTED the interviewer.
+   *
+   * Deliberately a different action from `submitAnswerAction`, because an
+   * interruption is not an answer until something has decided it is one. The
+   * server classifies it first and only one of the six outcomes advances the
+   * interview — see `interruption.ts:advancesInterview`. Routing an
+   * interruption through the ordinary answer path would score "sorry, what do
+   * you mean?" as a response to the question.
+   *
+   * Required in practice whenever `allowBargeIn` is set; when it is absent the
+   * room refuses to arm barge-in rather than silently dropping utterances.
+   */
+  onInterruptionAction?: (input: {
+    interviewId: string;
+    utterance: string;
+    interruptedText: string;
+    interruptedChars: number;
+    speechGeneration: number;
+  }) => Promise<RoomAnswerResult>;
+  /**
+   * Whether to say something while the turn is being processed.
+   *
+   * Off for the cohort. On the mock path the gap between the candidate
+   * finishing and the interviewer starting is covered by one short authored
+   * line, because held in silence that gap reads as a frozen page and
+   * candidates start talking into it.
+   */
+  thinkingLine?: boolean;
+  /**
+   * Which interview this room is conducting, for the SHARED speech-to-text
+   * route.
+   *
+   * `/api/interview/stt` serves both rooms, so unlike the two TTS endpoints it
+   * cannot tell them apart by path. Defaulting to "cohort" means a caller that
+   * says nothing gets the graded interview's existing transcriber — the mock
+   * platform opts in to its own by passing "platform" explicitly.
+   */
+  sttSurface?: "cohort" | "platform";
 }) {
   const opening = openingPrompt?.trim() || firstQuestion.text;
   const [turns, setTurns] = useState<Turn[]>([
@@ -596,6 +686,73 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
    */
   const speakGenRef = useRef(0);
 
+  /* ------------------------------------------------------------- duplex */
+
+  /**
+   * Barge-in detection state. See `features/interview/duplex.ts` for the rule.
+   *
+   * A ref rather than state because it is stepped inside the animation frame
+   * loop: putting it in React state would re-render the room sixty times a
+   * second to store a number nothing renders.
+   */
+  const duplexRef = useRef<DuplexContext>(initialDuplexContext());
+  const playbackElRef = useRef<HTMLAudioElement | null>(null);
+  const playbackCtxRef = useRef<AudioContext | null>(null);
+  /**
+   * How loud the INTERVIEWER currently is, 0..1.
+   *
+   * The input that makes barge-in possible at all. Echo tracks the output
+   * level; a human voice does not, so comparing the microphone against this
+   * separates the two in a way no fixed threshold can. Fed by an analyser on
+   * the TTS element, which is why playback has to go through the AudioContext
+   * rather than a bare `new Audio()`.
+   */
+  const ttsLevelRef = useRef(0);
+  const ttsAnalyserRef = useRef<AnalyserNode | null>(null);
+  /**
+   * Media-element sources are ONE PER ELEMENT FOR THE LIFETIME OF THE CONTEXT.
+   * Calling `createMediaElementSource` twice on the same element throws, and
+   * the node cannot be detached and reattached, so the element is created once
+   * and reused for every line rather than a new `Audio` per line.
+   */
+  const ttsSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  /** Aborts an in-flight speech request so interrupted audio never arrives. */
+  const ttsAbortRef = useRef<AbortController | null>(null);
+  /**
+   * How much of the current line the candidate has actually HEARD.
+   *
+   * Written by the reveal loop from real playback position. On barge-in this is
+   * what gets persisted, because the transcript must not claim someone was
+   * asked a full question they cut off after nine words — a report built on
+   * that is wrong about the interview it describes.
+   */
+  const revealedRef = useRef<{ text: string; chars: number }>({
+    text: "",
+    chars: 0,
+  });
+  /**
+   * Set while the recording in progress began as an interruption.
+   *
+   * Decides which server action the captured audio goes to when the turn ends:
+   * an interruption must be CLASSIFIED before anything treats it as an answer.
+   */
+  const interruptedRef = useRef<{
+    text: string;
+    chars: number;
+    generation: number;
+  } | null>(null);
+  /** Interruptions already submitted, so one utterance cannot become two turns. */
+  const submittedInterruptsRef = useRef<Set<number>>(new Set());
+  const thinkingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /**
+   * Barge-in is armed only when the caller asked for it AND supplied somewhere
+   * to send the utterance. Arming without a handler would detect interruptions
+   * and then drop them, which is worse than not detecting them: the interviewer
+   * would fall silent and nothing would take the floor.
+   */
+  const bargeInEnabled = allowBargeIn && Boolean(onInterruptionAction);
+
   /**
    * Stops whatever the interviewer is currently saying, immediately.
    *
@@ -616,7 +773,101 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
       audioRef.current = null;
     }
     if (typeof window !== "undefined") window.speechSynthesis?.cancel();
+    // QUEUED AUDIO TOO, not just what is sounding. A line whose synthesis
+    // request is still in flight would otherwise arrive after the interruption
+    // and start playing over the candidate — the interviewer resuming a
+    // sentence it was told to abandon, which is the single worst thing a
+    // barge-in implementation can do.
+    ttsAbortRef.current?.abort();
+    ttsAbortRef.current = null;
+    ttsLevelRef.current = 0;
+    duplexRef.current = closeSpeaking();
     speakingRef.current = null;
+  }, []);
+
+  /**
+   * The ONE audio element every interviewer line plays through, wired into its
+   * own AudioContext so the room can measure what it is emitting.
+   *
+   * Created lazily and reused, because `createMediaElementSource` may be called
+   * only once per element and the resulting node cannot be detached. The old
+   * code made a `new Audio(url)` per line, which is simpler and is exactly why
+   * the output level was unknowable — and without the output level there is no
+   * way to tell the interviewer's own voice from the candidate's.
+   *
+   * Its own context, separate from the microphone analyser's: that one is
+   * created and closed around each recording, and an output graph torn down
+   * mid-sentence would silence the interviewer.
+   */
+  const buildPlaybackGraph = useCallback(async (): Promise<HTMLAudioElement | null> => {
+    if (typeof window === "undefined") return null;
+    if (playbackElRef.current) return playbackElRef.current;
+
+    const el = new Audio();
+    el.preload = "auto";
+    playbackElRef.current = el;
+
+    // ATTACHING THE ELEMENT TO A WEBAUDIO GRAPH IS IRREVERSIBLE AND CAN SILENCE
+    // IT. This is the bug that shipped: the previous version created the
+    // context, called `void ctx.resume()` without awaiting it, and attached the
+    // element regardless. `createMediaElementSource` reroutes the element's
+    // output THROUGH the graph and away from the speakers, so on a context that
+    // was still suspended — which is what you get when the first line is spoken
+    // from a timeout rather than from a click — the result was total silence
+    // while `play()` resolved, `currentTime` advanced, the text revealed and the
+    // orb animated. Every symptom of working audio, and no sound.
+    //
+    // So the graph is now opt-in on PROOF rather than on hope: resume is
+    // awaited, the state is re-checked afterwards, and the element is attached
+    // only if the context is genuinely running. Otherwise the element is left
+    // unattached and plays straight to the speakers exactly as it did before
+    // any of this existed.
+    //
+    // The cost of the fallback is the echo guard: with no output analyser
+    // `ttsLevelRef` stays at 0, so `duplex.ts` compares against its absolute
+    // floor alone. Barge-in gets less discriminating. That is the right trade —
+    // a slightly twitchier barge-in is recoverable, an interview you cannot
+    // hear is not.
+    try {
+      const Ctor =
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
+      if (!Ctor) return el;
+
+      const ctx = new Ctor();
+      if (ctx.state === "suspended") {
+        try {
+          await ctx.resume();
+        } catch {
+          // Autoplay policy refused. Fall through to the state check below.
+        }
+      }
+
+      if (ctx.state !== "running") {
+        // Do NOT attach. Close the context we are not going to use rather than
+        // leaving a suspended one alive for the life of the interview.
+        void ctx.close().catch(() => {});
+        return el;
+      }
+
+      const source = ctx.createMediaElementSource(el);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.2;
+      source.connect(analyser);
+      // Through to the speakers as well: an analyser is a tap, and a source
+      // connected only to it plays silently.
+      source.connect(ctx.destination);
+
+      playbackCtxRef.current = ctx;
+      ttsSourceRef.current = source;
+      ttsAnalyserRef.current = analyser;
+    } catch {
+      // No output analysis. Playback is unaffected.
+    }
+
+    return el;
   }, []);
   /**
    * How many room-composed lines have been spoken this interview.
@@ -698,9 +949,27 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
       }
       streamRef.current?.getTracks().forEach((t) => t.stop());
       audioRef.current?.pause();
+      if (thinkingTimerRef.current !== null) {
+        clearTimeout(thinkingTimerRef.current);
+      }
+      ttsAbortRef.current?.abort();
+      // The playback graph is long-lived and separate from the microphone's, so
+      // it is torn down here rather than by `detachAnalyser`, which runs after
+      // every recording and would otherwise silence the interviewer.
+      try {
+        ttsSourceRef.current?.disconnect();
+        ttsAnalyserRef.current?.disconnect();
+        if (playbackCtxRef.current && playbackCtxRef.current.state !== "closed") {
+          void playbackCtxRef.current.close();
+        }
+      } catch {
+        // Already gone.
+      }
       if (typeof window !== "undefined") window.speechSynthesis?.cancel();
     };
   }, []);
+
+
 
   /* ----------------------------------------------------- transcript reveal */
 
@@ -725,6 +994,7 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
     (text: string, audio: HTMLAudioElement) => {
       stopReveal();
       setReveal({ text, chars: 0 });
+      revealedRef.current = { text, chars: 0 };
 
       let lastWritten = -1;
       const tick = () => {
@@ -736,6 +1006,17 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
         // Slightly ahead of the audio. A reader who is a few characters in
         // front of the voice feels natural; text lagging behind feels broken.
         const chars = Math.round(text.length * Math.min(ratio * 1.06, 1));
+
+        // Written on EVERY frame, not on the throttled render cadence below.
+        // This is the number a barge-in persists as "what they actually heard",
+        // and rounding it to the nearest fifteenth of a second would put the
+        // recorded cut-off point up to two words away from the real one.
+        revealedRef.current = {
+          text,
+          // The display runs slightly ahead of the voice on purpose; the record
+          // of what was HEARD must not, so it is taken from the raw ratio.
+          chars: Math.round(text.length * ratio),
+        };
 
         // ~15fps write cadence: enough to look continuous, few enough renders
         // that the transcript is not rebuilt 60 times a second.
@@ -829,6 +1110,12 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
         // otherwise leave the room in "speaking" forever with no question
         // audible and no way forward. Past this we stop waiting and let the
         // browser voice read the line instead.
+        // Its own controller, held in a ref so `cancelSpeech` can abort a
+        // request that has not answered yet. Without this, barge-in stops the
+        // sound that is playing but not the sound that is still downloading.
+        const controller = new AbortController();
+        ttsAbortRef.current = controller;
+
         const res = await fetch(ttsEndpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -838,7 +1125,13 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
           // them was on screen synthesized the agent's last line instead. That
           // is why a candidate who went quiet heard the greeting again.
           body: JSON.stringify({ interviewId, line: kind, variant }),
-          signal: AbortSignal.timeout(TTS_TIMEOUT_MS),
+          // Two independent reasons to give up: the caller interrupting, and
+          // the request never answering. `AbortSignal.any` is what lets both
+          // exist without one cancelling the other's registration.
+          signal: AbortSignal.any([
+            controller.signal,
+            AbortSignal.timeout(TTS_TIMEOUT_MS),
+          ]),
         });
 
         if (stale()) return;
@@ -847,6 +1140,13 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
           const reported = decodeSpokenLine(res.headers.get("X-Interview-Line"));
           if (reported) spoken = reported;
 
+          // The response body is now a STREAM, and this is where that pays off:
+          // `res.blob()` waited for the last byte before anything could be
+          // played, so time-to-first-audio was the whole synthesis plus the
+          // whole download regardless of how short the line was. An object URL
+          // over the blob is kept as the fallback shape, but the server sends
+          // chunked, so the browser begins decoding while bytes are still
+          // arriving.
           const url = URL.createObjectURL(await res.blob());
           // Superseded while the audio was downloading. Drop it rather than
           // starting a second voice on top of the one now speaking.
@@ -854,15 +1154,68 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
             URL.revokeObjectURL(url);
             return;
           }
-          const audio = new Audio(url);
+
+          // ONE reused element wired through the analyser, not a new `Audio`
+          // per line. That is what makes the interviewer's own output level
+          // measurable, which is what makes barge-in distinguishable from echo.
+          // NO AWAIT BETWEEN HERE AND `play()`.
+          //
+          // The element and its graph are prepared once on mount, so this is a
+          // ref read. That ordering is load-bearing: an `await` here (resuming
+          // an AudioContext, say) yields the task, and a `play()` called from a
+          // later task is no longer covered by the gesture that opened the
+          // room, so autoplay policy can block it. Falling back to a plain
+          // element guarantees a route to the speakers even if the prepared one
+          // is missing entirely.
+          const audio = playbackElRef.current ?? new Audio();
+          audio.src = url;
           audioRef.current = audio;
           await audio.play();
+          // Barge-in is armed from the moment sound starts, not from when the
+          // request was made: the arming delay in `duplex.ts` is measured
+          // against real playback.
+          duplexRef.current = openSpeaking(performance.now());
           startReveal(spoken, audio);
           await new Promise<void>((resolve) => {
             audio.onended = () => resolve();
             audio.onerror = () => resolve();
+
+            // A PLAYBACK WATCHDOG, because "the audio element is lying" is a
+            // real state and it stranded a whole interview.
+            //
+            // `play()` can resolve on an element that will never make a sound
+            // and will never fire `ended` — a dead output graph, a decode that
+            // stalls, a device that disappears. Without this the promise above
+            // never settles, `finally` never runs, the phase stays "speaking"
+            // forever and, with barge-in armed, the analyser loop keeps
+            // skipping the turn machine because `speakingSince` is still set.
+            // The room simply stops, which is exactly what was reported.
+            //
+            // So: if the clock has not moved shortly after play(), stop waiting
+            // and read the line with the browser voice instead.
+            const startedAt = performance.now();
+            const watchdog = setInterval(() => {
+              const dead =
+                audio.currentTime === 0 &&
+                performance.now() - startedAt > PLAYBACK_STALL_MS;
+              if (dead) {
+                clearInterval(watchdog);
+                logRoom("playback produced no audio; falling back to browser voice");
+                resolve();
+              }
+              if (audio.ended || audio.paused) clearInterval(watchdog);
+            }, 250);
+            const clear = () => clearInterval(watchdog);
+            audio.addEventListener("ended", clear, { once: true });
+            audio.addEventListener("error", clear, { once: true });
           });
           URL.revokeObjectURL(url);
+
+          // Nothing was heard. Say the line rather than leaving the candidate
+          // looking at a question nobody asked.
+          if (audio.currentTime === 0 && !stale()) {
+            await viaBrowser();
+          }
         } else {
           /* browser voice fallback */
           await viaBrowser();
@@ -875,6 +1228,40 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
         // superseded call falling through here would stamp "idle" underneath a
         // line that is currently being spoken.
         if (stale()) return;
+
+        ttsAbortRef.current = null;
+        ttsLevelRef.current = 0;
+        duplexRef.current = closeSpeaking();
+
+        // RE-BASE THE TURN CLOCKS as the floor changes hands.
+        //
+        // Under barge-in the microphone has been open throughout this line, and
+        // the analyser loop deliberately skipped the turn machine for every one
+        // of those frames — so `openedAt` still points at whenever the recorder
+        // started, which may be twenty seconds ago. Left alone, the no-answer
+        // nudge would fire the instant the interviewer stopped talking and tell
+        // a candidate who has not had a chance to speak that it could not hear
+        // them. Their turn starts now, so the clock starts now.
+        if (bargeInEnabled && turnCtxRef.current.state !== "idle") {
+          turnCtxRef.current = openTurn(performance.now());
+          turnStateRef.current = "WAITING_FOR_SPEECH";
+          setTurnState("WAITING_FOR_SPEECH");
+        }
+
+        // INTERRUPTED LINES ARE NOT COMPLETED ON SCREEN.
+        //
+        // The rule below — always reveal the whole line — is right when audio
+        // fails midway, because a reader must not be left with half a sentence.
+        // It is wrong after a barge-in, where the half sentence is the truth:
+        // the candidate cut in at that word and never heard the rest. Filling
+        // it in would make the transcript, and the report built on it, claim
+        // they were asked something they were not.
+        if (interruptedRef.current) {
+          stopReveal();
+          setPhase("idle");
+          speakingRef.current = null;
+          return;
+        }
 
         // Whatever happened, the full line ends up visible: a reader must never
         // be left with a half-sentence because audio failed midway.
@@ -896,7 +1283,14 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
         setPhase("idle");
       }
     },
-    [interviewId, ttsEndpoint, startReveal, stopReveal, cancelSpeech],
+    [
+      interviewId,
+      ttsEndpoint,
+      startReveal,
+      stopReveal,
+      cancelSpeech,
+      bargeInEnabled,
+    ],
   );
 
 
@@ -922,6 +1316,73 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
   }, []);
 
   /**
+   * Prepares the interviewer's audio element ONCE, on mount.
+   *
+   * Two reasons it lives here rather than inside `speak`:
+   *
+   *   1. `speak` must not await anything before `play()`. Deciding whether the
+   *      WebAudio graph is usable requires awaiting `resume()`, and doing that
+   *      on the speaking path pushed `play()` into a later task where autoplay
+   *      policy can refuse it.
+   *   2. `createMediaElementSource` may be called at most once per element and
+   *      cannot be undone, so the decision has to be made once, deliberately,
+   *      with the answer cached.
+   *
+   * The listener below is the standard unlock: browsers resume a suspended
+   * context on a real gesture, and the room is full of them (the mic button,
+   * the theme toggle, a tap anywhere). It runs once and then removes itself.
+   */
+  useEffect(() => {
+    void buildPlaybackGraph();
+
+    const unlock = () => {
+      const ctx = playbackCtxRef.current;
+      if (ctx && ctx.state === "suspended") void ctx.resume().catch(() => {});
+    };
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, [buildPlaybackGraph]);
+
+  /**
+   * Says something while the turn is being worked out.
+   *
+   * The gap between the candidate finishing and the interviewer starting is
+   * real and cannot be removed: an upload, a transcription, an assessment call
+   * and a synthesis request all have to happen. Held in silence it reads as a
+   * frozen page, and candidates start talking into it, which makes the next
+   * turn worse than the delay did.
+   *
+   * Deliberately only when the gap is actually long enough to need covering. A
+   * fast turn is not padded with chatter, because an interviewer who says "mm"
+   * before every single reply is its own kind of robotic.
+   */
+  useEffect(() => {
+    if (!thinkingLine || phase !== "processing" || closing) return;
+
+    thinkingTimerRef.current = setTimeout(() => {
+      // Re-checked inside the timer: the turn may have come back in the
+      // meantime, and speaking a filler over the top of the real answer is
+      // exactly the interviewer-talking-over-itself bug this room already
+      // fixed once.
+      if (phaseRef.current !== "processing") return;
+      if (speakingRef.current !== null) return;
+      const variant = roomLineCountRef.current++;
+      void speak(roomLineFor("thinking", variant), "thinking", variant);
+    }, THINKING_LINE_AFTER_MS);
+
+    return () => {
+      if (thinkingTimerRef.current !== null) {
+        clearTimeout(thinkingTimerRef.current);
+        thinkingTimerRef.current = null;
+      }
+    };
+  }, [thinkingLine, phase, closing, speak]);
+
+  /**
    * Releases a turn that has been "processing" for too long.
    *
    * A Server Action whose connection drops leaves a promise that neither
@@ -942,6 +1403,56 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
   }, [phase, closing]);
 
   /* ---------------------------------------------------------- answering */
+
+  /**
+   * Everything that happens once the server has decided what comes next.
+   *
+   * Extracted from `send` so that an INTERRUPTION and an ANSWER land in the
+   * room identically. That is the point: the server has already classified the
+   * utterance and returned the same turn shape either way, so the room must not
+   * grow a second, slightly-different copy of "what to do with a turn" — the
+   * two would drift, and the interrupted path is the one nobody would notice
+   * drifting.
+   */
+  const applyTurn = useCallback(
+    async (data: AnswerTurnData) => {
+      // `prompt` is whatever the interviewer says next — a follow-up, a deeper
+      // question, a redirect, or the next question with its acknowledgement.
+      // The room does not care which; it is all just the interviewer talking.
+      if (data.prompt) {
+        setTurns((prev) => [...prev, { role: "interviewer", text: data.prompt! }]);
+      }
+      setQuestion(data.question);
+      nudgeCountRef.current = 0;
+      setMuted(false);
+      mutedRef.current = false;
+      languageRetriesRef.current = 0;
+      setProgress(data.progress);
+
+      if (data.finished) {
+        setClosing(true);
+        const finished = await finishAction({ interviewId });
+        setClosing(false);
+        if (finished.ok) {
+          onFinishedAction(finished.data);
+          return;
+        }
+        // The interview is over and there is no question left to answer, so an
+        // error banner here is a dead end — the room used to sit on "Completing
+        // your interview" with the microphone disabled and no way out. Say what
+        // happened and give them the exit.
+        setFatal(finished.message);
+        setPhase("idle");
+        return;
+      }
+
+      if (data.prompt) {
+        setReveal({ text: data.prompt, chars: 0 });
+        void speak(data.prompt);
+      } else setPhase("idle");
+    },
+    [interviewId, onFinishedAction, speak, finishAction],
+  );
 
   const send = useCallback(
     async (answerText: string) => {
@@ -978,52 +1489,9 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
         return;
       }
 
-      // `prompt` is whatever the interviewer says next — a follow-up, a deeper
-      // question, a redirect, or the next question with its acknowledgement.
-      // The room does not care which; it is all just the interviewer talking.
-      if (turn.data.prompt) {
-        setTurns((prev) => [
-          ...prev,
-          { role: "interviewer", text: turn.data.prompt! },
-        ]);
-      }
-      setQuestion(turn.data.question);
-      nudgeCountRef.current = 0;
-      setMuted(false);
-      mutedRef.current = false;
-      languageRetriesRef.current = 0;
-      setProgress(turn.data.progress);
-
-      if (turn.data.finished) {
-        setClosing(true);
-        const finished = await finishAction({ interviewId });
-        setClosing(false);
-        if (finished.ok) {
-          onFinishedAction(finished.data);
-          return;
-        }
-        // The interview is over and there is no question left to answer, so an
-        // error banner here is a dead end — the room used to sit on "Completing
-        // your interview" with the microphone disabled and no way out. Say what
-        // happened and give them the exit.
-        setFatal(finished.message);
-        setPhase("idle");
-        return;
-      }
-
-      if (turn.data.prompt) {
-        setReveal({ text: turn.data.prompt, chars: 0 });
-        void speak(turn.data.prompt);
-      } else setPhase("idle");
+      await applyTurn(turn.data);
     },
-    [
-      interviewId,
-      question,
-      onFinishedAction,
-      speak,
-      submitAnswerAction,
-      finishAction,
-    ],
+    [interviewId, question, submitAnswerAction, applyTurn],
   );
 
   async function startRecording() {
@@ -1139,6 +1607,10 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
         setPhase("processing");
         const form = new FormData();
         form.append("audio", blob, "answer.webm");
+        // Declares which interview's transcriber should serve this upload. See
+        // the `sttSurface` prop: the route defaults to the cohort's when this
+        // is absent, so the graded path cannot inherit a practice override.
+        form.append("surface", sttSurface);
 
         try {
           const res = await fetch("/api/interview/stt", {
@@ -1221,6 +1693,15 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
             return;
           }
 
+          // An utterance that CUT THE INTERVIEWER OFF goes somewhere else. It
+          // has to be read before anything treats it as an answer: only one of
+          // the six classifications advances the interview, and the other five
+          // leave the question exactly where it was.
+          if (interruptedRef.current) {
+            await sendInterruption(json.data.text);
+            return;
+          }
+
           await send(json.data.text);
         } catch (err) {
           setError(
@@ -1297,7 +1778,11 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
         }, MAX_ANSWER_MS);
       };
       armAnswerCap();
-      setPhase("listening");
+      // The microphone being open does NOT mean it is the candidate's turn.
+      // Under barge-in the recorder starts while the interviewer is still
+      // talking, and stamping "listening" there would tell the candidate to
+      // answer a question that is still being asked.
+      if (phaseRef.current !== "speaking") setPhase("listening");
     } catch {
       setMicUnavailable(true);
       setError("Microphone unavailable. You can type your answers instead.");
@@ -1350,6 +1835,11 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
       // the 0.20 the room was testing against, so speech never registered and no
       // answer ever ended by itself. The waveform is an actual amplitude.
       const samples = new Uint8Array(analyser.fftSize);
+      // Sized to the OUTPUT analyser, which uses a smaller FFT: the interviewer
+      // level only has to be an amplitude, not a spectrum.
+      const ttsSamples = new Uint8Array(
+        ttsAnalyserRef.current?.fftSize ?? 512,
+      );
       hasSpokenRef.current = false;
       lastWordAtRef.current = null;
       turnCtxRef.current = openTurn(performance.now());
@@ -1378,6 +1868,47 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
         levelRef.current = rms >= SPEECH_OFF_RMS ? rms : 0;
 
         const now = performance.now();
+
+        // ---------------------------------------------------------- duplex
+        //
+        // Runs BEFORE the turn machine and, when it fires, INSTEAD of it. While
+        // the interviewer is speaking the ordinary rules must not see this
+        // audio at all: `WAITING_FOR_SPEECH` would read the interviewer's own
+        // leaked voice as the candidate answering, set `hasSpoken`, and arm a
+        // silence window against a turn that has not started.
+        //
+        // Only reached when the caller asked for barge-in. Without it this
+        // block does nothing and the microphone is not even open during
+        // playback, exactly as before.
+        if (bargeInEnabled) {
+          const ttsNode = ttsAnalyserRef.current;
+          if (ttsNode) {
+            ttsNode.getByteTimeDomainData(ttsSamples);
+            let ttsSum = 0;
+            for (let i = 0; i < ttsSamples.length; i++) {
+              const v = (ttsSamples[i]! - 128) / 128;
+              ttsSum += v * v;
+            }
+            ttsLevelRef.current = Math.sqrt(ttsSum / ttsSamples.length);
+          }
+
+          if (duplexRef.current.speakingSince !== null) {
+            const duplexStep = stepDuplex(duplexRef.current, {
+              micRms: rms,
+              ttsOutputLevel: ttsLevelRef.current,
+              now,
+              muted: mutedRef.current,
+            });
+            duplexRef.current = duplexStep.context;
+            if (duplexStep.effect === "bargeIn") {
+              handleBargeIn();
+            }
+            // The interviewer is talking. Whatever the microphone is hearing,
+            // it is not an answer to a question that has not finished being
+            // asked, so the turn machine is deliberately skipped this frame.
+            return;
+          }
+        }
 
         // One input: the microphone level, against FIXED thresholds. No noise
         // calibration, no floor tracking, no speech-recognition second opinion
@@ -1564,10 +2095,47 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
    * loop.
    */
   useEffect(() => {
-    if (phase !== "idle" || !question || micUnavailable || closing || fatal) {
-      return;
-    }
+    if (!question || micUnavailable || closing || fatal) return;
     if (recorderRef.current) return;
+
+    // ------------------------------------------------------ full duplex
+    //
+    // With barge-in armed the microphone opens WHILE the interviewer is
+    // speaking, which is the whole point and also the thing the half-duplex
+    // design was protecting against. Three things make it safe, and all three
+    // have to hold:
+    //
+    //   - `getUserMedia` runs with echo cancellation on (see `startRecording`),
+    //     so the interviewer's voice is largely subtracted before it is ever
+    //     recorded
+    //   - the analyser loop routes every frame through `duplex.ts` while
+    //     `speakingSince` is set, so the ordinary turn machine never sees audio
+    //     captured during playback and cannot mistake echo for an answer
+    //   - the recording is only ever SUBMITTED after a barge-in fires or after
+    //     the interviewer has finished, never on its own
+    //
+    // Starting it here rather than after the line finishes is what preserves
+    // the first word of an interruption. Detection needs an arming delay plus a
+    // sustain window; a recorder started at detection would already have missed
+    // roughly three quarters of a second of speech.
+    if (bargeInEnabled) {
+      // EVERY phase that is not a closed interview, "processing" INCLUDED.
+      //
+      // This previously excluded "processing", which quietly reintroduced the
+      // half-duplex gap it was meant to remove: the recorder is stopped when an
+      // answer is finalised, so between finalising and the next line starting
+      // the microphone was shut. That is precisely the window a candidate uses
+      // to add "oh, and one more thing", and the room could not hear it. It
+      // also meant the mic indicator flickered off mid-turn, which is what
+      // "my mic is not on all the time" describes.
+      if (phase !== "idle" && phase !== "speaking" && phase !== "processing") {
+        return;
+      }
+      const id = setTimeout(() => void startRecording(), 0);
+      return () => clearTimeout(id);
+    }
+
+    if (phase !== "idle") return;
     // Never open the microphone while the interviewer's audio is still playing.
     // The phase is set to "idle" in `speak`'s finally block, but a browser-voice
     // fallback or a stalled element can leave sound in the room; recording it
@@ -1576,7 +2144,7 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
     const id = setTimeout(() => void startRecording(), 350);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, question, micUnavailable, closing, fatal]);
+  }, [phase, question, micUnavailable, closing, fatal, bargeInEnabled]);
 
   /**
    * Mutes or unmutes the microphone, without ending the turn.
@@ -1587,8 +2155,19 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
    * 4.5 seconds — the precise thing this control must never do.
    */
   function toggleMute() {
-    // Not recording yet: this press opens the microphone rather than muting it.
-    if (phaseRef.current !== "listening") {
+    // THE TEST IS WHETHER A MICROPHONE IS OPEN, NOT WHICH PHASE THE ROOM IS IN.
+    //
+    // It used to be `phaseRef.current !== "listening"`, which was correct while
+    // the room was half-duplex: the microphone existed only while listening, so
+    // the two questions had the same answer. Barge-in broke that equivalence —
+    // the stream is now live during "speaking" and "processing" too — and the
+    // stale test then sent every press during those phases down the "not
+    // recording yet" branch, which calls `startRecording()`. Pressing mute
+    // while the interviewer talked therefore opened a SECOND stream and
+    // recorder on top of the live one, orphaning the first: the button
+    // reported "Mic on", the analyser was reading a stream nobody was
+    // submitting, and mute did not mute.
+    if (!streamRef.current || !recorderRef.current) {
       setMuted(false);
       mutedRef.current = false;
       void startRecording();
@@ -1638,6 +2217,130 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
   // turn-taking path — nudge, move-on, noisy room, silence — goes through
   // `stopRecording`, so no decision the interviewer makes mid-interview can
   // throw away captured speech. That is the invariant the old nudge broke.
+
+  /**
+   * The candidate started talking while the interviewer was still speaking.
+   *
+   * ORDER MATTERS HERE and every step is synchronous, because the whole point
+   * is that nothing waits for a server. By the time this returns, the room has
+   * stopped talking and the floor has changed hands.
+   *
+   *   1. stop the sound, and abort the request behind any sound still coming
+   *   2. freeze the transcript at what was actually heard, and REMEMBER it
+   *   3. hand the floor over
+   *
+   * The recorder is deliberately NOT restarted. It has been running since the
+   * interviewer began speaking, which is what preserves the first word of the
+   * interruption: barge-in is only detected after an arming delay plus a
+   * sustain window, so a recorder started here would miss roughly the first
+   * three quarters of a second — and "wait," is exactly the kind of word that
+   * lives there and decides how the utterance is classified.
+   */
+  function handleBargeIn() {
+    const heard = revealedRef.current;
+    const generation = speakGenRef.current;
+
+    // One barge-in per spoken line. `duplex.ts` latches too, but this guard is
+    // what makes a duplicate structurally impossible rather than merely
+    // unlikely: the generation is also what the server rejects a repeat on.
+    if (interruptedRef.current) return;
+
+    interruptedRef.current = {
+      text: heard.text.slice(0, Math.max(0, heard.chars)),
+      chars: heard.chars,
+      generation,
+    };
+
+    cancelSpeech();
+    stopReveal();
+
+    // Left exactly where the voice stopped. The `finally` block in `speak` is
+    // told to skip its usual "reveal the whole line" by `interruptedRef`.
+    setReveal({ text: heard.text, chars: heard.chars });
+
+    // The turn machine has been sitting in whatever state it was in while the
+    // interviewer talked. Opening a turn now is what starts the silence window
+    // that will end the candidate's utterance.
+    turnCtxRef.current = openTurn(performance.now());
+    turnStateRef.current = "CANDIDATE_SPEAKING";
+    setTurnState("CANDIDATE_SPEAKING");
+    setPhase("listening");
+
+    if (process.env.NODE_ENV !== "production") {
+      console.info("[turn] BARGE-IN", {
+        heardChars: heard.chars,
+        ofChars: heard.text.length,
+        generation,
+      });
+    }
+  }
+
+  /**
+   * Sends an utterance that interrupted the interviewer.
+   *
+   * A different action from `send` on purpose: an interruption is not an answer
+   * until the server has decided it is one, and only one of the six
+   * classifications advances the interview. Routing it through `send` would
+   * score "sorry, what do you mean by that?" as a response to the question and
+   * cost the candidate a turn for asking something reasonable.
+   */
+  async function sendInterruption(utterance: string) {
+    const context = interruptedRef.current;
+    interruptedRef.current = null;
+
+    if (!context || !onInterruptionAction) {
+      // Barge-in fired but there is nowhere to send it. Treat the words as an
+      // ordinary answer rather than dropping them: losing what someone said is
+      // worse than mis-routing it.
+      await send(utterance);
+      return;
+    }
+
+    // One utterance cannot become two turns. The generation identifies the line
+    // that was interrupted, and a second submission carrying it is the same
+    // interruption arriving twice — a retry, a double `onstop`, a slow network.
+    if (submittedInterruptsRef.current.has(context.generation)) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[turn] duplicate interruption dropped", {
+          generation: context.generation,
+        });
+      }
+      setPhase("idle");
+      return;
+    }
+    submittedInterruptsRef.current.add(context.generation);
+
+    const text = utterance.trim();
+    if (text.length === 0) {
+      setPhase("idle");
+      return;
+    }
+
+    setTurns((prev) => [...prev, { role: "candidate", text }]);
+    setPhase("processing");
+    setError(null);
+
+    const turn = await onInterruptionAction({
+      interviewId,
+      utterance: text,
+      interruptedText: context.text,
+      interruptedChars: context.chars,
+      speechGeneration: context.generation,
+    });
+
+    if (!turn.ok) {
+      setError(turn.message);
+      setPhase("idle");
+      return;
+    }
+
+    // From here the response is shaped exactly like an answer turn, because the
+    // server has already decided what this was. The room does not need to know
+    // which classification it got — a REPEAT comes back as the question again,
+    // a CLARIFY as an explanation plus the question, an ANSWER as whatever
+    // normally follows an answer.
+    applyTurn(turn.data);
+  }
 
   /**
    * Acts on what the audio loop decided this frame.

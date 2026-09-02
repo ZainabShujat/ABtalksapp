@@ -63,7 +63,8 @@ export async function resolvePlatformSpeakableLine(
     kind === "moving_on" ||
     kind === "retry" ||
     kind === "waiting" ||
-    kind === "noisy_room"
+    kind === "noisy_room" ||
+    kind === "thinking"
   ) {
     return { ok: true, data: { text: roomLineFor(kind, variant) } };
   }

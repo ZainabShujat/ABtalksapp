@@ -6,8 +6,9 @@ import { resolvePlatformSpeakableLine } from "@/features/interview/platform/voic
 import {
   isTtsConfigured,
   safetyIdentifierFor,
-  synthesizeLine,
+  synthesizeLineStream,
 } from "@/features/interview/voice";
+import { recordSpan, ttsCostUsd } from "@/features/interview/telemetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,6 +47,7 @@ const bodySchema = z.object({
       "language",
       "noisy_room",
       "moving_on",
+      "thinking",
     ])
     .default("latest"),
   /**
@@ -57,7 +59,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  if (!isTtsConfigured()) {
+  if (!isTtsConfigured("platform")) {
     return NextResponse.json(
       { ok: false, message: "Voice is not configured." },
       { status: 503 },
@@ -96,12 +98,12 @@ export async function POST(request: Request) {
   }
   const resolveMs = Date.now() - resolveStartedMs;
 
-  const synthStartedMs = Date.now();
-  const audio = await synthesizeLine(
+  const audio = await synthesizeLineStream(
     line.data.text,
     safetyIdentifierFor(userId),
+    // The practice interview, so the Deepgram override applies here.
+    "platform",
   );
-  const synthMs = Date.now() - synthStartedMs;
 
   if (!audio.ok) {
     return NextResponse.json(
@@ -110,22 +112,39 @@ export async function POST(request: Request) {
     );
   }
 
-  // `resolveMs` separates the database read from the synthesis call, so a slow
-  // turn can be attributed to one or the other instead of being reported as a
-  // single opaque number.
-  logger.info("[mock-interview/tts] spoken", {
-    line: parsed.data.line,
-    chars: line.data.text.length,
-    bytes: audio.data.audio.byteLength,
-    resolveMs,
-    synthMs,
+  recordSpan({
+    attemptId: parsed.data.interviewId,
+    name: "tts_resolve",
+    ms: resolveMs,
+  });
+  recordSpan({
+    attemptId: parsed.data.interviewId,
+    name: "tts_ttfb",
+    ms: audio.data.ttfbMs,
+    provider: audio.data.vendor,
+    model: audio.data.model,
+    characters: line.data.text.length,
+    costUsd: ttsCostUsd(audio.data.model, line.data.text.length),
   });
 
-  return new NextResponse(audio.data.audio, {
+  logger.info("[mock-interview/tts] speaking", {
+    line: parsed.data.line,
+    chars: line.data.text.length,
+    vendor: audio.data.vendor,
+    model: audio.data.model,
+    resolveMs,
+    ttfbMs: audio.data.ttfbMs,
+  });
+
+  // STREAMED, not buffered. `Content-Length` is deliberately absent: it cannot
+  // be known before the last byte, and requiring it is exactly what forced the
+  // whole file to be assembled before anything could be sent. The header the
+  // room actually needs — the words being spoken — is available immediately,
+  // so nothing is lost by streaming the body.
+  return new NextResponse(audio.data.stream, {
     status: 200,
     headers: {
       "Content-Type": audio.data.contentType,
-      "Content-Length": String(audio.data.audio.byteLength),
       // The exact words in the audio, so the room can show the line it is
       // actually hearing rather than the one it guessed. Base64 because header
       // values are ASCII-only and a question may contain anything.
@@ -134,6 +153,9 @@ export async function POST(request: Request) {
       // Interview audio is per-attempt and per-user. It must never be cached by
       // a CDN or a shared proxy.
       "Cache-Control": "no-store, private",
+      // Stops any intermediary from buffering the body to add a length header,
+      // which would silently undo the whole point of this route.
+      "X-Accel-Buffering": "no",
     },
   });
 }

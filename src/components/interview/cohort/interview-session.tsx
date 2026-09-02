@@ -176,6 +176,15 @@ export function InterviewSession({
     );
   }
 
+  // The cohort's interruption callback was DELETED, not merely unwired.
+  //
+  // Leaving it in place after the props were removed made it both dead code and
+  // a conditionally-called hook — it sat after the `brief` early return, so
+  // React's rules-of-hooks lint failed on it. The server side
+  // (`recordCohortInterruption`, the provider method, the action and its
+  // schema) is deliberately kept; re-enabling barge-in here means restoring
+  // this callback and passing the three props below.
+
   /* ---------------------------------------------------------------- live */
 
   if (stage.name === "live") {
@@ -186,6 +195,24 @@ export function InterviewSession({
         firstQuestion={stage.question}
         openingPrompt={stage.openingPrompt}
         candidateName={candidateName.split(" ")[0] ?? "You"}
+        // DELIBERATELY NOT PASSING `allowBargeIn` OR `thinkingLine`.
+        //
+        // Both were briefly switched on here and that was wrong. This is the
+        // once-per-lifetime graded cohort interview, and plan 106 is scoped to
+        // the mock platform precisely because the two have different arguments:
+        // a practice conversation should feel like a conversation, while an
+        // assessment has a real claim that every candidate should hear the same
+        // complete question. Turning barge-in on here would also have opened
+        // the microphone during interviewer speech on the graded path, which is
+        // the exact risk the half-duplex design was protecting against.
+        //
+        // The server side (`recordCohortInterruption`, the provider method, the
+        // action and its schema) is kept and is deliberately dormant: it is
+        // coherent, tested by the same invariant tests, and is what a later
+        // decision to enable this would need. Reaching it requires passing the
+        // two props below this line, which is a product decision, not a tidy-up.
+        //
+        //   allowBargeIn / onInterruptionAction / thinkingLine — NOT PASSED.
         onFinishedAction={(result) => setStage({ name: "done", result })}
         onAbandonedAction={() => {
           setStage({ name: "brief" });

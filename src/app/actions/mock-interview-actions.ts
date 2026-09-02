@@ -14,6 +14,7 @@ import {
   attemptIdSchema,
   startMockInterviewSchema,
   submitMockAnswerSchema,
+  submitMockInterruptionSchema,
 } from "@/lib/validations/mock-interview";
 
 /**
@@ -86,6 +87,34 @@ export async function submitMockAnswerAction(
     parsed.data.attemptId,
     parsed.data.questionId,
     { text: parsed.data.answerText, artifacts: parsed.data.artifacts },
+  );
+}
+
+/**
+ * Submits an utterance that interrupted the interviewer mid-sentence.
+ *
+ * Scoped to the authenticated user and routed through `service.recordInterruption`.
+ * Only if the interruption was classified as an early substantive answer does
+ * the server advance the interview or record evidence.
+ */
+export async function submitMockInterruptionAction(
+  input: unknown,
+): Promise<ActionResult<AnswerTurnData>> {
+  const auth = await requireUserId();
+  if (!auth.ok) return auth;
+
+  const parsed = submitMockInterruptionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: "Invalid interruption submission." };
+  }
+
+  return service.recordInterruption(
+    auth.userId,
+    parsed.data.attemptId,
+    parsed.data.utterance,
+    parsed.data.interruptedText,
+    parsed.data.interruptedChars,
+    parsed.data.speechGeneration,
   );
 }
 

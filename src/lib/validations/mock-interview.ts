@@ -71,6 +71,18 @@ export const submitMockAnswerSchema = z.object({
   artifacts: z.array(turnArtifactSchema).max(8).optional(),
 });
 
+export const submitMockInterruptionSchema = z.object({
+  attemptId: z.string().min(1).max(64),
+  utterance: z.string().min(1).max(8000),
+  interruptedText: z.string().max(8000).default(""),
+  interruptedChars: z.number().int().min(0).default(0),
+  speechGeneration: z.number().int().min(0).default(0),
+});
+
+export type SubmitMockInterruptionInput = z.infer<
+  typeof submitMockInterruptionSchema
+>;
+
 /* -------------------------------------------------------- report document */
 
 /**

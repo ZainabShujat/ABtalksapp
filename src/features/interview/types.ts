@@ -420,6 +420,39 @@ export type InterviewState = {
   /** Clarifications answered on the question currently on the floor. */
   clarificationsAsked?: number;
   /**
+   * The highest interruption "speech generation" this interview has accepted.
+   *
+   * The browser stamps every spoken interviewer line with a monotonically
+   * increasing number and sends it back with any utterance that interrupted
+   * that line. This field is the SERVER's record of the newest one it has acted
+   * on, and it is what makes replay and staleness detectable without trusting
+   * the client and without a second store: a submission is admitted only if its
+   * generation is strictly greater than this.
+   *
+   * Living on `InterviewState` is deliberate. That object is already the single
+   * persisted source of truth for the interview, already written inside the
+   * same `saveTurn` as every other turn effect, and already survives across
+   * requests — so the guard cannot drift from the state it is guarding, and
+   * costs no extra write.
+   *
+   * Optional: interviews that predate barge-in have no such field, and it is
+   * read as `?? -1` so the first real submission is always admitted.
+   */
+  lastInterruptionGeneration?: number;
+  /**
+   * The conversational moves the interviewer has recently made, oldest first.
+   *
+   * Fed to the phrasing stage so it does not make the same move three turns
+   * running. Distinct from varying the WORDING, which the analyse stage already
+   * handles via `recentOpeners`: four differently-phrased acknowledgements in a
+   * row still read as four acknowledgements in a row, and that is the pattern a
+   * listener actually notices.
+   *
+   * Optional and bounded to the last handful. Attempts created before the
+   * phrasing stage existed have no such field, and it is read as `?? []`.
+   */
+  recentMoves?: string[];
+  /**
    * How deep the conversation has gone on the question currently open.
    * 1 = the core question as banked; 2 and 3 are escalation rungs. Resets with
    * every new question, like the other per-question counters.

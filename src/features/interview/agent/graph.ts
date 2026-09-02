@@ -20,6 +20,7 @@ import {
   applyRepeat,
   completeInterview,
   createAnalyzeAnswer,
+  createPhraseTurn,
   receiveAnswer,
   routeResponse,
   shouldContinue,
@@ -92,6 +93,8 @@ const InterviewAnnotation = Annotation.Root({
   status: Annotation<InterviewStatus>,
   error: Annotation<string | null>,
   targetSelector: Annotation<TargetSelector | undefined>,
+  conversational: Annotation<boolean | undefined>,
+  phrasedMove: Annotation<string | null | undefined>,
 });
 
 /** Branch taken straight after `receiveAnswer` rejects a turn. */
@@ -119,11 +122,39 @@ function actionBranch(
   }
 }
 
+/**
+ * Whether this turn detours through the phrasing stage on its way to the
+ * branch node, or goes straight there as it always did.
+ *
+ * Returning a branch name directly when `conversational` is unset is what keeps
+ * the cohort's executed-node trace byte-identical to what it was before stage 2
+ * existed.
+ */
+function phraseOrBranch(
+  state: InterviewAgentState,
+):
+  | "phraseTurn"
+  | "followUp"
+  | "escalate"
+  | "nextQuestion"
+  | "redirect"
+  | "repeat"
+  | "clarify" {
+  return state.conversational ? "phraseTurn" : actionBranch(state);
+}
+
 export function buildInterviewGraph(llm: InterviewLLM) {
   return new StateGraph(InterviewAnnotation)
     .addNode("receiveAnswer", receiveAnswer)
     .addNode("analyzeAnswer", createAnalyzeAnswer(llm))
     .addNode("routeResponse", routeResponse)
+    // STAGE 2 sits HERE, and the position is the design. By this point
+    // `routeResponse` has already turned the model's proposal into the
+    // interview's decision under budgets the model never sees, so nothing this
+    // node writes can change what happens next - only how it sounds. Before
+    // routing it would be writing about a decision not yet made; after the
+    // branch nodes it would be rewriting text they had already composed.
+    .addNode("phraseTurn", createPhraseTurn(llm))
     .addNode("followUp", applyFollowUp)
     .addNode("escalate", applyEscalate)
     .addNode("nextQuestion", applyNextQuestion)
@@ -138,7 +169,23 @@ export function buildInterviewGraph(llm: InterviewLLM) {
       abort: END,
     })
     .addEdge("analyzeAnswer", "routeResponse")
-    .addConditionalEdges("routeResponse", actionBranch, {
+    // The phrasing stage is SKIPPED ENTIRELY rather than entered and made to
+    // return nothing. The difference matters: a node that runs and no-ops still
+    // appears in the executed-node trace, and that trace is what
+    // `verify-interview-agent.ts` asserts on as evidence of which path the
+    // ladder took. A cohort turn must be indistinguishable from a pre-stage-2
+    // cohort turn all the way down to the node list, so the edge routes around
+    // the node instead of through it.
+    .addConditionalEdges("routeResponse", phraseOrBranch, {
+      phraseTurn: "phraseTurn",
+      followUp: "followUp",
+      escalate: "escalate",
+      nextQuestion: "nextQuestion",
+      redirect: "redirect",
+      repeat: "repeat",
+      clarify: "clarify",
+    })
+    .addConditionalEdges("phraseTurn", actionBranch, {
       followUp: "followUp",
       escalate: "escalate",
       nextQuestion: "nextQuestion",
@@ -191,6 +238,15 @@ export type RunTurnInput = {
    * the cohort wants; the platform passes its adaptive planner.
    */
   targetSelector?: TargetSelector;
+  /**
+   * Whether the conversational phrasing stage may run.
+   *
+   * OMITTED IS THE COHORT, and that is the whole safety story for this change:
+   * with it unset `phraseTurn` returns an empty update immediately, so the
+   * cohort executes the same work, makes the same number of model calls, and
+   * produces the same text it did before stage 2 existed.
+   */
+  conversational?: boolean;
 };
 
 export type RunTurnResult =
@@ -263,6 +319,8 @@ export async function runInterviewTurn(
     status: input.state.status,
     error: null,
     targetSelector: input.targetSelector,
+    conversational: input.conversational ?? false,
+    phrasedMove: null,
   };
 
   let final: InterviewAgentState = initial;

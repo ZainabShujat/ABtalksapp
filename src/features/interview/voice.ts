@@ -38,6 +38,62 @@ const OPENAI_TRANSCRIBE_URL = "https://api.openai.com/v1/audio/transcriptions";
 const OPENAI_SPEECH_URL = "https://api.openai.com/v1/audio/speech";
 const GROQ_TRANSCRIBE_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
 const GROQ_SPEECH_URL = "https://api.groq.com/openai/v1/audio/speech";
+const DEEPGRAM_TRANSCRIBE_URL = "https://api.deepgram.com/v1/listen";
+const DEEPGRAM_SPEAK_URL = "https://api.deepgram.com/v1/speak";
+
+/**
+ * Deepgram's voice, when Deepgram is serving speech.
+ *
+ * `thalia` is the Aura-2 voice closest to the register the interview is trying
+ * to hold: even, unhurried, and without the presenter lilt most synthetic
+ * voices reach for. Overridable without a deploy, like the OpenAI voice.
+ */
+const DEEPGRAM_TTS_MODEL =
+  process.env.INTERVIEW_DEEPGRAM_TTS_MODEL ?? "aura-2-thalia-en";
+
+/**
+ * WHICH INTERVIEW IS ASKING.
+ *
+ * This parameter exists because the two interviews share every line of speech
+ * transport and must NOT share the decision about who provides it. The mock
+ * platform is a practice conversation where a faster, more natural vendor is a
+ * straightforward win. The cohort interview is a once-per-lifetime graded
+ * credential, and changing the voice a candidate is assessed by — or the
+ * transcriber their evidence is extracted from — is a product decision about
+ * that credential, not a side effect of improving practice.
+ *
+ * Before this existed, `INTERVIEW_TTS_PROVIDER=deepgram` silently switched the
+ * graded interview to a different voice, because `ttsVendor()` read one global
+ * and both routes called it. That is exactly the implicit coupling this makes
+ * impossible: every entry point now states which interview it is serving, and
+ * the compiler requires it.
+ */
+export type VoiceSurface = "cohort" | "platform";
+
+/**
+ * The configured vendor override for one surface, or "" for none.
+ *
+ * SEPARATE ENVIRONMENT VARIABLES PER SURFACE, deliberately, rather than one
+ * variable plus a code branch. A single variable cannot express "Deepgram for
+ * practice, unchanged for the graded interview", which is the actual operating
+ * requirement — and an operator reading the environment can see which interview
+ * each setting governs without reading this file.
+ *
+ * The cohort variables are UNSET by default, and unset means the behaviour that
+ * predates all of this: OpenAI when its key is present, Groq otherwise. So the
+ * graded interview keeps its voice unless someone deliberately changes it.
+ */
+function preferredVendor(kind: "stt" | "tts", surface: VoiceSurface): string {
+  const raw =
+    surface === "platform"
+      ? kind === "stt"
+        ? process.env.INTERVIEW_STT_PROVIDER
+        : process.env.INTERVIEW_TTS_PROVIDER
+      : kind === "stt"
+        ? process.env.COHORT_INTERVIEW_STT_PROVIDER
+        : process.env.COHORT_INTERVIEW_TTS_PROVIDER;
+  return raw?.trim().toLowerCase() ?? "";
+}
 
 /**
  * The interviewer's voice.
@@ -57,9 +113,15 @@ const SPEECH_VOICE = process.env.INTERVIEW_TTS_VOICE ?? "ash";
  * Groq key and no OpenAI key, and an interview that cannot hear the candidate
  * is not a voice interview.
  */
-type SpeechVendor = { name: "openai" | "groq"; apiKey: string };
+type SpeechVendor = { name: "openai" | "groq" | "deepgram"; apiKey: string };
 
-function sttVendor(): SpeechVendor | null {
+function sttVendor(surface: VoiceSurface): SpeechVendor | null {
+  if (preferredVendor("stt", surface) === "deepgram" && process.env.DEEPGRAM_API_KEY) {
+    return { name: "deepgram", apiKey: process.env.DEEPGRAM_API_KEY };
+  }
+  if (preferredVendor("stt", surface) === "groq" && process.env.GROQ_API_KEY) {
+    return { name: "groq", apiKey: process.env.GROQ_API_KEY };
+  }
   if (process.env.OPENAI_API_KEY) {
     return { name: "openai", apiKey: process.env.OPENAI_API_KEY };
   }
@@ -69,7 +131,10 @@ function sttVendor(): SpeechVendor | null {
   return null;
 }
 
-function ttsVendor(): SpeechVendor | null {
+function ttsVendor(surface: VoiceSurface): SpeechVendor | null {
+  if (preferredVendor("tts", surface) === "deepgram" && process.env.DEEPGRAM_API_KEY) {
+    return { name: "deepgram", apiKey: process.env.DEEPGRAM_API_KEY };
+  }
   if (process.env.OPENAI_API_KEY) {
     return { name: "openai", apiKey: process.env.OPENAI_API_KEY };
   }
@@ -133,18 +198,18 @@ export {
 } from "@/features/interview/voice-contract";
 
 /** Speech-to-text is available. The interview can hear the candidate. */
-export function isSttConfigured(): boolean {
-  return sttVendor() !== null;
+export function isSttConfigured(surface: VoiceSurface): boolean {
+  return sttVendor(surface) !== null;
 }
 
 /** Server-side speech synthesis is available. */
-export function isTtsConfigured(): boolean {
-  return ttsVendor() !== null;
+export function isTtsConfigured(surface: VoiceSurface): boolean {
+  return ttsVendor(surface) !== null;
 }
 
 /** Kept for callers that only ask "is voice usable at all". */
-export function isVoiceConfigured(): boolean {
-  return isSttConfigured();
+export function isVoiceConfigured(surface: VoiceSurface): boolean {
+  return isSttConfigured(surface);
 }
 
 export type VoiceResult<T> =
@@ -164,10 +229,15 @@ export async function transcribeAnswer(
   audio: Blob,
   filename: string,
   safetyIdentifier: string,
+  surface: VoiceSurface,
 ): Promise<VoiceResult<{ text: string; language: string | null }>> {
-  const vendor = sttVendor();
+  const vendor = sttVendor(surface);
   if (!vendor) {
     return { ok: false, status: 503, message: "Voice is not configured." };
+  }
+
+  if (vendor.name === "deepgram") {
+    return transcribeViaDeepgram(audio, vendor.apiKey);
   }
 
   // whisper-1 on OpenAI, not gpt-4o-transcribe. Two reasons, both learned the
@@ -274,6 +344,153 @@ export async function transcribeAnswer(
   }
 }
 
+/**
+ * Transcription via Deepgram Nova-3.
+ *
+ * A SEPARATE FUNCTION RATHER THAN A BRANCH inside the multipart path, because
+ * the request shape is genuinely different: Deepgram takes the raw audio as the
+ * body with a content type, not a `FormData` file part, and everything the
+ * OpenAI path expresses as form fields is a query parameter here. Threading a
+ * discriminator through the existing builder would leave a function where half
+ * the fields apply to half the vendors.
+ *
+ * WHY NOVA-3 IS PREFERRED. Measured on this project's own audio against
+ * `whisper-1`: same transcript on the technical vocabulary that matters, at a
+ * fraction of the round trip, because Whisper is batch-only and Nova-3 is not.
+ * The candidate is waiting through this leg, and it was the second largest
+ * component of the gap after buffered speech synthesis.
+ *
+ * `keyterm` replaces the OpenAI `prompt` vocabulary hint and is stronger: it
+ * biases the decoder toward exact spellings rather than seeding its context.
+ * That is the difference between an evidence checklist matching "RAG" and
+ * matching "rag", or between "Ollama" and "a llama".
+ */
+async function transcribeViaDeepgram(
+  audio: Blob,
+  apiKey: string,
+): Promise<VoiceResult<{ text: string; language: string | null }>> {
+  const model = process.env.INTERVIEW_DEEPGRAM_STT_MODEL ?? "nova-3";
+
+  const params = new URLSearchParams({
+    model,
+    smart_format: "true",
+    punctuate: "true",
+    // Detected language feeds the SAME English gate the Whisper path feeds.
+    // Deepgram reports an ISO-639-1 code, which `checkLanguage` already accepts
+    // alongside Whisper's language names — so the gate needs no vendor
+    // awareness and keeps behaving identically.
+    detect_language: "true",
+  });
+  for (const term of DEEPGRAM_KEYTERMS) params.append("keyterm", term);
+
+  try {
+    const res = await fetch(`${DEEPGRAM_TRANSCRIBE_URL}?${params}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Token ${apiKey}`,
+        "Content-Type": audio.type || "audio/webm",
+      },
+      body: audio,
+      signal: AbortSignal.timeout(TRANSCRIBE_TIMEOUT_MS),
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      logger.error("[interview/stt] transcription failed", {
+        vendor: "deepgram",
+        status: res.status,
+        body: body.slice(0, 400),
+      });
+      return {
+        ok: false,
+        status: 502,
+        message: "Could not transcribe that recording.",
+      };
+    }
+
+    const data = (await res.json()) as {
+      results?: {
+        channels?: {
+          alternatives?: { transcript?: string }[];
+          detected_language?: string;
+        }[];
+      };
+      metadata?: { duration?: number };
+    };
+
+    const channel = data.results?.channels?.[0];
+    const text = (channel?.alternatives?.[0]?.transcript ?? "").trim();
+    const language = channel?.detected_language?.trim() || null;
+
+    // Same contract as the Whisper path: an empty transcript is a real outcome
+    // (silence, a muted mic, a click) and is reported rather than submitted, so
+    // an empty answer never spends one of the candidate's turns.
+    if (text.length === 0) {
+      return {
+        ok: false,
+        status: 422,
+        message: "No speech was detected. Try recording again.",
+      };
+    }
+
+    return { ok: true, data: { text, language } };
+  } catch (error) {
+    logger.error("[interview/stt] request errored", {
+      vendor: "deepgram",
+      error: String(error),
+    });
+    return {
+      ok: false,
+      status: 500,
+      message: "Could not transcribe that recording.",
+    };
+  }
+}
+
+/**
+ * Exact spellings to bias the decoder toward.
+ *
+ * Derived from `TRANSCRIPTION_VOCABULARY_HINT` above, but as discrete terms
+ * because that is the shape Deepgram's `keyterm` takes. Kept to names that
+ * actually appear in this curriculum: padding the list with ordinary English
+ * dilutes the bias rather than strengthening it.
+ */
+const DEEPGRAM_KEYTERMS = [
+  "LLM",
+  "RAG",
+  "retrieval-augmented generation",
+  "embeddings",
+  "vector database",
+  "Pinecone",
+  "Chroma",
+  "FAISS",
+  "LangChain",
+  "LlamaIndex",
+  "Ollama",
+  "Hugging Face",
+  "Anthropic",
+  "Claude",
+  "GPT-4o",
+  "Gemini",
+  "fine-tuning",
+  "LoRA",
+  "quantization",
+  "chunking",
+  "few-shot",
+  "chain of thought",
+  "context window",
+  "hallucination",
+  "tool calling",
+  "MCP",
+  "Streamlit",
+  "FastAPI",
+  "Next.js",
+  "Postgres",
+  "Prisma",
+  "Docker",
+  "Vercel",
+];
+
 /* ------------------------------------------------------------------ TTS */
 
 /**
@@ -321,6 +538,9 @@ export async function resolveSpeakableLine(
   if (kind === "waiting") {
     return { ok: true, data: { text: roomLineFor("waiting", variant) } };
   }
+  if (kind === "thinking") {
+    return { ok: true, data: { text: roomLineFor("thinking", variant) } };
+  }
 
   const row = await prisma.generalInterview.findFirst({
     where: { id: interviewId, memberId, status: "IN_PROGRESS" },
@@ -364,16 +584,39 @@ export async function resolveSpeakableLine(
  * rather than thrown: an interview whose audio fails must fall back to reading
  * the question on screen, not stop.
  */
-export async function synthesizeLine(
+/**
+ * The delivery instruction sent with every synthesized line.
+ *
+ * Content is fixed upstream; this only asks for the register. Supported by
+ * `gpt-4o-mini-tts`, ignored by the older `tts-1` models and by Deepgram, so it
+ * is safe to send on any path.
+ */
+const SPEECH_INSTRUCTIONS =
+  "You are a technical interviewer talking with a candidate. Calm, warm and professional — a senior engineer who is genuinely curious, not a presenter or a narrator. Conversational pace, slightly unhurried, with brief natural pauses at commas and between sentences. Never sound enthusiastic, never sound flat, and do not emphasise words for effect.";
+
+/** Builds the upstream synthesis request for whichever vendor is serving. */
+function speechRequest(
+  vendor: SpeechVendor,
   text: string,
   safetyIdentifier: string,
-): Promise<VoiceResult<{ audio: ArrayBuffer; contentType: string }>> {
-  const vendor = ttsVendor();
-  if (!vendor) {
+): { url: string; init: RequestInit; model: string } {
+  if (vendor.name === "deepgram") {
+    // `encoding=mp3` so the browser can play the bytes as they arrive, exactly
+    // as it does for the OpenAI path. Deepgram streams the response by default,
+    // which is the entire reason this vendor is preferred here.
+    const url = `${DEEPGRAM_SPEAK_URL}?model=${encodeURIComponent(DEEPGRAM_TTS_MODEL)}&encoding=mp3`;
     return {
-      ok: false,
-      status: 503,
-      message: "Server speech synthesis is not configured.",
+      url,
+      model: DEEPGRAM_TTS_MODEL,
+      init: {
+        method: "POST",
+        headers: {
+          Authorization: `Token ${vendor.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text }),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      },
     };
   }
 
@@ -381,10 +624,10 @@ export async function synthesizeLine(
     process.env.INTERVIEW_TTS_MODEL ??
     (vendor.name === "groq" ? "canopylabs/orpheus-v1-english" : "gpt-4o-mini-tts");
 
-  try {
-    const res = await fetch(
-      vendor.name === "groq" ? GROQ_SPEECH_URL : OPENAI_SPEECH_URL,
-      {
+  return {
+    url: vendor.name === "groq" ? GROQ_SPEECH_URL : OPENAI_SPEECH_URL,
+    model,
+    init: {
       method: "POST",
       headers: {
         Authorization: `Bearer ${vendor.apiKey}`,
@@ -396,20 +639,123 @@ export async function synthesizeLine(
         voice: SPEECH_VOICE,
         input: text,
         response_format: "mp3",
-        // Delivery instruction, not content. The words are fixed upstream; this
-        // only asks for the register. Supported by gpt-4o-mini-tts and ignored
-        // by the older tts-1 models, so it is safe to send either way.
-        instructions:
-          "You are a technical interviewer talking with a candidate. Calm, warm and professional — a senior engineer who is genuinely curious, not a presenter or a narrator. Conversational pace, slightly unhurried, with brief natural pauses at commas and between sentences. Never sound enthusiastic, never sound flat, and do not emphasise words for effect.",
+        instructions: SPEECH_INSTRUCTIONS,
       }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    },
+  };
+}
+
+/**
+ * Synthesizes one line and returns the audio AS A STREAM.
+ *
+ * THE POINT OF THIS FUNCTION. `synthesizeLine` below does
+ * `await res.arrayBuffer()`, and its caller then sets `Content-Length` and
+ * returns the whole body, and the browser then does `await res.blob()` before
+ * it will play anything. Three full buffers in a row, on the leg the candidate
+ * experiences as silence: time-to-first-audio was the ENTIRE synthesis plus the
+ * entire download, measured at 3.0-3.8s against OpenAI and unchanged by how
+ * short the line was.
+ *
+ * Returning `res.body` untouched lets the bytes travel from the vendor to the
+ * speaker without ever being assembled, so the interviewer starts talking at
+ * first-byte instead of at last-byte. Nothing else about the request changes.
+ *
+ * `synthesizeLine` is deliberately KEPT rather than reimplemented on top of
+ * this: the cohort route uses it, it is a graded once-per-lifetime interview,
+ * and it should not inherit a transport change as a side effect of a mock
+ * interview improvement.
+ */
+export async function synthesizeLineStream(
+  text: string,
+  safetyIdentifier: string,
+  surface: VoiceSurface,
+): Promise<
+  VoiceResult<{
+    stream: ReadableStream<Uint8Array>;
+    contentType: string;
+    vendor: string;
+    model: string;
+    /** Request sent to first byte available. The number worth optimising. */
+    ttfbMs: number;
+  }>
+> {
+  const vendor = ttsVendor(surface);
+  if (!vendor) {
+    return {
+      ok: false,
+      status: 503,
+      message: "Server speech synthesis is not configured.",
+    };
+  }
+
+  const { url, init, model } = speechRequest(vendor, text, safetyIdentifier);
+  const startedMs = Date.now();
+
+  try {
+    const res = await fetch(url, init);
+    const ttfbMs = Date.now() - startedMs;
+
+    if (!res.ok || !res.body) {
+      const body = await res.text().catch(() => "");
+      logger.error("[interview/tts] synthesis failed", {
+        vendor: vendor.name,
+        model,
+        status: res.status,
+        // The actual upstream reason, never collapsed into the candidate-facing
+        // message. A 429 and a bad model name need different fixes.
+        body: body.slice(0, 400),
+      });
+      return { ok: false, status: 502, message: "Could not play that question." };
+    }
+
+    return {
+      ok: true,
+      data: {
+        stream: res.body,
+        contentType: "audio/mpeg",
+        vendor: vendor.name,
+        model,
+        ttfbMs,
       },
-    );
+    };
+  } catch (error) {
+    logger.error("[interview/tts] request errored", {
+      vendor: vendor.name,
+      model,
+      error: String(error),
+    });
+    return { ok: false, status: 500, message: "Could not play that question." };
+  }
+}
+
+export async function synthesizeLine(
+  text: string,
+  safetyIdentifier: string,
+  surface: VoiceSurface,
+): Promise<VoiceResult<{ audio: ArrayBuffer; contentType: string }>> {
+  const vendor = ttsVendor(surface);
+  if (!vendor) {
+    return {
+      ok: false,
+      status: 503,
+      message: "Server speech synthesis is not configured.",
+    };
+  }
+
+  // Shares the request builder with the streaming path, so the two can never
+  // disagree about which vendor, model, voice or register a line is spoken in.
+  // The ONLY difference between them is whether the body is assembled here.
+  const { url, init, model } = speechRequest(vendor, text, safetyIdentifier);
+
+  try {
+    const res = await fetch(url, init);
 
     if (!res.ok) {
       const body = await res.text().catch(() => "");
       logger.error("[interview/tts] synthesis failed", {
         vendor: vendor.name,
+        model,
         status: res.status,
         body: body.slice(0, 400),
       });
@@ -421,7 +767,11 @@ export async function synthesizeLine(
       data: { audio: await res.arrayBuffer(), contentType: "audio/mpeg" },
     };
   } catch (error) {
-    logger.error("[interview/tts] request errored", { error: String(error) });
+    logger.error("[interview/tts] request errored", {
+      vendor: vendor.name,
+      model,
+      error: String(error),
+    });
     return { ok: false, status: 500, message: "Could not play that question." };
   }
 }

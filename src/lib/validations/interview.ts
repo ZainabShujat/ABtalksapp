@@ -31,9 +31,20 @@ export const submitInterviewAnswerSchema = z.object({
   answerText: z.string().trim().max(8000),
 });
 
+export const submitInterviewInterruptionSchema = z.object({
+  interviewId: z.string().min(1).max(64),
+  utterance: z.string().min(1).max(8000),
+  interruptedText: z.string().max(8000).default(""),
+  interruptedChars: z.number().int().min(0).default(0),
+  speechGeneration: z.number().int().min(0).default(0),
+});
+
 export type StartInterviewInput = z.infer<typeof startInterviewSchema>;
 export type SubmitInterviewAnswerInput = z.infer<
   typeof submitInterviewAnswerSchema
+>;
+export type SubmitInterviewInterruptionInput = z.infer<
+  typeof submitInterviewInterruptionSchema
 >;
 
 /* -------------------------------------------------------------- the report */

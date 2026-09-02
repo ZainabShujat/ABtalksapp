@@ -40,11 +40,24 @@ import {
   gateStart,
   resolveCohortEligibility,
 } from "@/features/interview/session";
-import { createInitialState, getCurrentQuestion } from "@/features/interview/state";
+import {
+  appendLine,
+  createInitialState,
+  getCurrentQuestion,
+} from "@/features/interview/state";
+import { resolveInterviewLLM } from "@/features/interview/agent/llm/registry";
+import { repeatLine } from "@/features/interview/room-lines";
+import {
+  isFreshGeneration,
+  preClassifyInterruption,
+} from "@/features/interview/interruption";
+import { questionAsAsked } from "@/features/interview/agent/depth";
+import { recordSpan } from "@/features/interview/telemetry";
 import type { AgentAction } from "@/features/interview/agent";
 import type {
   CohortEligibility,
   InterviewScores,
+  InterviewState,
   PlannedQuestion,
 } from "@/features/interview/types";
 
@@ -250,6 +263,13 @@ export async function recordCohortAnswer(
   interviewId: string,
   questionId: string,
   answerText: string,
+  /**
+   * Set only when this answer arrived as an interruption classified as an early
+   * answer. Written in the same `saveTurn` as the turn, so an advancing
+   * interruption raises the replay high-water mark in the same commit that
+   * advances. Undefined on the ordinary answer path.
+   */
+  stampInterruptionGeneration?: number,
 ): Promise<ServiceResult<AnswerTurnData>> {
   const attempt = await loadActiveAttempt(interviewId, memberId);
   if (!attempt) {
@@ -308,7 +328,17 @@ export async function recordCohortAnswer(
     latencyMs: Date.now() - startedMs,
   };
 
-  await saveTurn(interviewId, memberId, turn.data.state, record);
+  await saveTurn(
+    interviewId,
+    memberId,
+    stampInterruptionGeneration === undefined
+      ? turn.data.state
+      : {
+          ...turn.data.state,
+          lastInterruptionGeneration: stampInterruptionGeneration,
+        },
+    record,
+  );
 
   return {
     ok: true,
@@ -324,6 +354,209 @@ export async function recordCohortAnswer(
         : null,
       finished: turn.data.finished,
       progress: coreProgressFor(attempt.plan, turn.data.state),
+    },
+  };
+}
+
+/**
+ * Processes an interruption (barge-in utterance) in a cohort interview.
+ *
+ * ENFORCES THE SAME INVARIANT: only an "ANSWER" classification is routed to
+ * `recordCohortAnswer` and allowed to advance the interview or record evidence.
+ *
+ * All other classifications (REPEAT, CLARIFY, CORRECT, ADD_INFORMATION, OTHER)
+ * keep the open question on the floor, update the transcript, and return the
+ * appropriate prompt without advancing the turn index or awarding evidence.
+ */
+export async function recordCohortInterruption(
+  memberId: string,
+  interviewId: string,
+  utterance: string,
+  interruptedText = "",
+  interruptedChars = 0,
+  speechGeneration = 0,
+): Promise<ServiceResult<AnswerTurnData>> {
+  const attempt = await loadActiveAttempt(interviewId, memberId);
+  if (!attempt) {
+    return { ok: false, message: "This interview is no longer in progress." };
+  }
+
+  const openQuestion = getCurrentQuestion(attempt.plan, attempt.state);
+  if (!openQuestion) {
+    return { ok: false, message: "No question is currently open." };
+  }
+
+  const cleanUtterance = utterance.trim();
+  if (cleanUtterance.length === 0) {
+    return { ok: false, message: "No utterance was captured." };
+  }
+
+  // Same replay/staleness guard as the platform path, and it runs before any
+  // classification so a duplicate costs no model call. This path is currently
+  // DORMANT (see `interview-session.tsx` - the cohort deliberately does not pass
+  // `allowBargeIn`), but a guard that only exists on the enabled path is a guard
+  // that will be missing on the day the other one is switched on.
+  if (!isFreshGeneration(speechGeneration, attempt.state.lastInterruptionGeneration)) {
+    logger.warn("[cohort-interview] stale or replayed interruption refused", {
+      interviewId,
+      memberId,
+      speechGeneration,
+      lastAccepted: attempt.state.lastInterruptionGeneration ?? null,
+    });
+    return {
+      ok: true,
+      data: {
+        isFollowUp: true,
+        action: "REPEAT",
+        prompt: null,
+        question: toClientQuestion(openQuestion, attempt.blueprint),
+        finished: false,
+        progress: coreProgressFor(attempt.plan, attempt.state),
+      },
+    };
+  }
+
+  const startedMs = Date.now();
+  const llm = resolveInterviewLLM();
+
+  // 1. Fast-path deterministic regex pre-classifier
+  let classification = preClassifyInterruption(cleanUtterance);
+
+  // 2. Defer ambiguous utterances to LLM
+  if (!classification && llm.classifyInterruption) {
+    const depthLevel = attempt.state.depthLevel ?? 1;
+    const asked = questionAsAsked(openQuestion, depthLevel);
+    classification = await llm.classifyInterruption({
+      utterance: cleanUtterance,
+      interruptedText: interruptedText || asked.spokenText || asked.text,
+      currentQuestion: asked.spokenText || asked.text,
+      recentConversation: attempt.state.transcript,
+    });
+  }
+
+  // 3. Fallback
+  if (!classification) {
+    classification = {
+      kind: "CLARIFY",
+      reason: "Fallback classification",
+      subject: "",
+      reply: "Let me clarify what I mean.",
+      confidence: 0,
+    };
+  }
+
+  recordSpan({
+    attemptId: interviewId,
+    name: "interrupt_classify",
+    ms: Date.now() - startedMs,
+    provider: llm.name,
+    interruptionKind: classification.kind,
+  });
+
+  logger.info("[cohort-interview] interruption classified", {
+    interviewId,
+    memberId,
+    kind: classification.kind,
+    reason: classification.reason,
+    interruptedChars,
+    speechGeneration,
+  });
+
+  // 4. Invariant: only ANSWER calls recordCohortAnswer
+  if (classification.kind === "ANSWER") {
+    return recordCohortAnswer(
+      memberId,
+      interviewId,
+      openQuestion.id,
+      cleanUtterance,
+      speechGeneration,
+    );
+  }
+
+  const depthLevel = attempt.state.depthLevel ?? 1;
+  const asked = questionAsAsked(openQuestion, depthLevel);
+  const questionText = asked.spokenText || asked.text;
+
+  // 5. Compose the spoken prompt
+  let promptText = "";
+  let action: AgentAction = "REPEAT";
+
+  if (classification.kind === "REPEAT") {
+    action = "REPEAT";
+    promptText = repeatLine(questionText);
+  } else if (classification.kind === "CLARIFY") {
+    action = "CLARIFY";
+    const reply = classification.reply?.trim();
+    promptText = reply ? `${reply}\n\n${questionText}` : questionText;
+  } else if (
+    classification.kind === "CORRECT" ||
+    classification.kind === "ADD_INFORMATION"
+  ) {
+    action = "CLARIFY";
+    const reply = classification.reply?.trim() || "Got it.";
+    promptText = `${reply}\n\n${questionText}`;
+  } else {
+    // OTHER
+    action = "REDIRECT";
+    const reply =
+      classification.reply?.trim() ||
+      "Understood. Let's return to the question:";
+    promptText = `${reply}\n\n${questionText}`;
+  }
+
+  // Update interview transcript & counts
+  const stateWithCandidate = appendLine(
+    attempt.state,
+    "candidate",
+    cleanUtterance,
+    openQuestion.id,
+  );
+  const stateWithInterviewer = appendLine(
+    stateWithCandidate,
+    "interviewer",
+    promptText,
+    openQuestion.id,
+  );
+
+  const updatedState: InterviewState = {
+    ...stateWithInterviewer,
+    // Stamped in the same write as the turn it guards.
+    lastInterruptionGeneration: speechGeneration,
+    repeatsAsked:
+      classification.kind === "REPEAT"
+        ? (attempt.state.repeatsAsked ?? 0) + 1
+        : attempt.state.repeatsAsked,
+    redirectsAsked:
+      classification.kind === "OTHER"
+        ? (attempt.state.redirectsAsked ?? 0) + 1
+        : attempt.state.redirectsAsked,
+  };
+
+  const turnIndex = await nextTurnIndex(interviewId);
+  const record: TurnRecord = {
+    turnIndex,
+    questionId: openQuestion.id,
+    tier: (asked.tier ?? "CORE") as "CORE" | "EXTENSION",
+    depthLevel,
+    action,
+    promptText,
+    answerText: cleanUtterance,
+    evidence: null,
+    degraded: false,
+    latencyMs: Date.now() - startedMs,
+  };
+
+  await saveTurn(interviewId, memberId, updatedState, record);
+
+  return {
+    ok: true,
+    data: {
+      isFollowUp: true,
+      action,
+      prompt: promptText,
+      question: toClientQuestion(openQuestion, attempt.blueprint),
+      finished: false,
+      progress: coreProgressFor(attempt.plan, updatedState),
     },
   };
 }

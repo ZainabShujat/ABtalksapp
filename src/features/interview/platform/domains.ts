@@ -78,7 +78,7 @@ const DOMAINS: readonly InterviewDomain[] = [
     blurb:
       "Building with an AI coding agent: what you hand over, what you check, and whether you could still explain what shipped.",
     purpose:
-      "A practical interview about working with AI coding agents. It asks what you have actually built with one, how you set it up, how you establish that what it wrote is correct, and where you draw the line. It is spoken — you will not be asked to write code — and it takes no position on whether heavy delegation is good, only on whether you stay responsible for what ships.",
+      "A practical interview about working with AI coding agents. It asks what you have actually built with one, how you set it up, how you establish that what it wrote is correct, and where you draw the line. It is spoken (you will not be asked to write code) and it takes no position on whether heavy delegation is good, only on whether you stay responsible for what ships.",
     family: "AI",
     status: "LIVE",
     rubricId: "agentic-coding-v1",
@@ -196,7 +196,7 @@ const DOMAINS: readonly InterviewDomain[] = [
     blurb:
       "The people side of working: how you handle pressure, disagreement, ownership and change, told through real examples.",
     purpose:
-      "A professional and people-situations interview. It asks about real situations you have been in and listens for communication, ownership, decision-making, adaptability, problem-solving and self-awareness. There is nothing technical in it and nothing about AI — it is deliberately separate from AI Fluency, and the two assess different things. Take this one to practise the round where you are asked to talk about yourself and your work rather than about a technology.",
+      "A professional and people-situations interview. It asks about real situations you have been in and listens for communication, ownership, decision-making, adaptability, problem-solving and self-awareness. There is nothing technical in it and nothing about AI. It is deliberately separate from AI Fluency, and the two assess different things. Take this one to practise the round where you are asked to talk about yourself and your work rather than about a technology.",
     family: "General",
     status: "LIVE",
     rubricId: "behavioral-v1",

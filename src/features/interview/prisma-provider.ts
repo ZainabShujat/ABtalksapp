@@ -4,6 +4,7 @@ import {
   finishCohortInterview,
   getCohortInterviewOverview,
   recordCohortAnswer,
+  recordCohortInterruption,
   resumeCohortInterview,
   startCohortInterview,
 } from "@/features/interview/service";
@@ -55,6 +56,24 @@ export const cohortInterviewProvider = {
     answerText: string,
   ): Promise<ProviderResult<AnswerTurnData>> {
     return recordCohortAnswer(memberId, interviewId, questionId, answerText);
+  },
+
+  interruption(
+    memberId: string,
+    interviewId: string,
+    utterance: string,
+    interruptedText = "",
+    interruptedChars = 0,
+    speechGeneration = 0,
+  ): Promise<ProviderResult<AnswerTurnData>> {
+    return recordCohortInterruption(
+      memberId,
+      interviewId,
+      utterance,
+      interruptedText,
+      interruptedChars,
+      speechGeneration,
+    );
   },
 
   finish(

@@ -28,7 +28,10 @@ import {
   routeDecision,
 } from "@/features/interview/agent/policy";
 import type { InterviewAgentState } from "@/features/interview/agent/types";
-import type { InterviewLLM } from "@/features/interview/agent/llm/provider";
+import type {
+  ConversationalMove,
+  InterviewLLM,
+} from "@/features/interview/agent/llm/provider";
 
 /**
  * The graph's nodes. Each is a plain async function of state that returns a
@@ -192,6 +195,7 @@ export function createAnalyzeAnswer(llm: InterviewLLM) {
       // The last few interviewer openings, so the model can avoid starting
       // three turns running the same way. Read off the transcript rather than
       // tracked separately, so it cannot drift from what was actually said.
+      conversational: state.conversational ?? false,
       recentOpeners: state.interviewState.transcript
         .filter((l) => l.role === "interviewer")
         .slice(-3)
@@ -267,6 +271,143 @@ export function routeResponse(state: InterviewAgentState): NodeUpdate {
     lastDecision: outcome.action,
     nextPrompt: staged,
   };
+}
+
+/* --------------------------------------------------------------- phraseTurn */
+
+/**
+ * STAGE 2: turns the routed decision into something a person would say.
+ *
+ * Runs BETWEEN `routeResponse` and the branch nodes, which is the only place it
+ * can safely run: by this point the action has been decided by `policy.ts`
+ * under budgets the model never sees, so nothing this node produces can change
+ * what happens — only how it sounds. Putting phrasing before routing would hand
+ * the writer a decision that had not been made yet, and putting it after the
+ * branch nodes would mean rewriting text those nodes had already composed.
+ *
+ * It is a NO-OP in four cases, and each one is a case where prose is either
+ * unwanted or unsafe:
+ *
+ *   - `conversational` is not set. The cohort never sets it, so the cohort graph
+ *     runs exactly as it did before this node existed.
+ *   - the provider has no `phraseTurn`. Mock and older adapters simply skip it.
+ *   - the action is REPEAT, REDIRECT, ESCALATE or CLARIFY. Every one of those
+ *     speaks BANKED text: an escalation rung the model did not write, a
+ *     verbatim restatement, an authored redirect. Rephrasing them is precisely
+ *     what the deep-probe comparability rule forbids.
+ *   - nothing was said. A non-response has nothing to react to, and reacting
+ *     anyway is how an interviewer ends up thanking someone for silence.
+ *
+ * Failure is not a branch. `phraseTurn` returns null rather than throwing, and
+ * null leaves `state.decision` untouched, so the turn continues on the prose
+ * stage 1 already produced.
+ */
+export function createPhraseTurn(llm: InterviewLLM) {
+  return async function phraseTurn(
+    state: InterviewAgentState,
+  ): Promise<NodeUpdate> {
+    if (!state.conversational || !llm.phraseTurn) return {};
+    if (!state.decision || state.decision.noResponse) return {};
+
+    const action = state.lastDecision;
+    if (action !== "FOLLOW_UP" && action !== "NEXT_QUESTION") return {};
+
+    const question = getCurrentQuestion(state.plan, state.interviewState);
+    if (!question) return {};
+
+    const depthLevel = state.interviewState.depthLevel ?? 1;
+    const view = activeQuestionView(question, depthLevel);
+    const asked = questionAsAsked(question, depthLevel);
+    const prior = state.interviewState.evidenceByQuestionId[view.evidenceKey];
+
+    const expected = asked.expectedEvidence ?? [];
+    const matched = new Set<number>([
+      ...(prior?.matchedEvidence ?? []),
+      ...(state.decision.evidence.matchedEvidence ?? []),
+    ]);
+
+    const phrasing = await llm.phraseTurn({
+      action,
+      candidateAnswer: state.candidateAnswer,
+      currentQuestion: asked.text,
+      followUpReason: state.decision.followUpReason ?? null,
+      targetDetail: state.decision.targetDetail ?? null,
+      // What they have already established, in OUR words rather than theirs, so
+      // the writer knows not to ask for it again.
+      whatIsKnown: buildInterviewMemory(state.plan, state.interviewState).slice(-4),
+      // PARAPHRASED, never the verbatim checklist item. `summariseGap` reduces
+      // an expected-evidence line to the shape of the gap without carrying the
+      // wording, because a follow-up that quotes the checklist tells the
+      // candidate exactly what to say and stops assessing anything.
+      whatIsMissing: expected
+        .map((item, i) => (matched.has(i) ? null : summariseGap(item)))
+        .filter((x): x is string => x !== null)
+        .slice(0, 3),
+      recentConversation: state.interviewState.transcript.slice(-4),
+      recentMoves: (state.interviewState.recentMoves ?? []).slice(
+        -3,
+      ) as ConversationalMove[],
+      flaggedIssues: state.decision.evidence.flaggedIssues,
+      calibratedLevel: state.interviewState.calibration?.level ?? null,
+      nextQuestionText:
+        action === "NEXT_QUESTION"
+          ? (state.plan.questions[
+              (state.interviewState.currentQuestionIndex ?? 0) + 1
+            ]?.text ?? null)
+          : null,
+    });
+
+    if (!phrasing) return {};
+
+    logger.info("[interview-agent] turn phrased", {
+      interviewId: state.interviewId,
+      action,
+      move: phrasing.move,
+      acknowledged: Boolean(phrasing.acknowledgement),
+      bridged: Boolean(phrasing.bridge),
+      probed: Boolean(phrasing.followUpQuestion),
+    });
+
+    // Merged onto the decision rather than kept beside it, so every downstream
+    // resolver (`resolveAcknowledgement`, `resolveBridge`, `resolveFollowUpText`)
+    // keeps reading exactly one object and keeps applying exactly the same
+    // validators it applied to stage 1's prose. Stage 2 gets no privileges.
+    const merged = {
+      ...state.decision,
+      acknowledgement:
+        phrasing.acknowledgement ?? state.decision.acknowledgement,
+      bridge: phrasing.bridge ?? state.decision.bridge,
+      followUpQuestion:
+        phrasing.followUpQuestion ?? state.decision.followUpQuestion,
+    };
+
+    // `routeResponse` already staged the probe text from STAGE 1's wording, and
+    // `applyFollowUp` prefers whatever is staged. Re-resolving here is what
+    // actually lets the better sentence reach the candidate — and it goes back
+    // through `resolveFollowUpText`, so the new wording is validated by exactly
+    // the same rules the old wording passed. A phrasing that fails them falls
+    // back to the staged text rather than to nothing.
+    const restaged =
+      action === "FOLLOW_UP"
+        ? (resolveFollowUpText(asked, merged) ?? state.nextPrompt)
+        : state.nextPrompt;
+
+    return { decision: merged, nextPrompt: restaged, phrasedMove: phrasing.move };
+  };
+}
+
+/**
+ * Reduces an expected-evidence item to the SHAPE of what is missing.
+ *
+ * The checklist is the standard the answer is graded against. Handing its
+ * wording to the sentence writer would produce follow-ups that quote it back —
+ * "you haven't told me how you evaluated retrieval accuracy" — which converts
+ * the rest of the question into dictation. Taking the first clause keeps enough
+ * for the writer to aim at while dropping the specifics that would give it away.
+ */
+function summariseGap(item: string): string {
+  const firstClause = item.split(/[,;(]/)[0]?.trim() ?? item;
+  return firstClause.length > 60 ? `${firstClause.slice(0, 60)}…` : firstClause;
 }
 
 /* --------------------------------------------------- branch: prompt drafting */
@@ -390,6 +531,21 @@ export function updateState(state: InterviewAgentState): NodeUpdate {
   const asked = questionAsAsked(question, depthLevel);
   const view = activeQuestionView(question, depthLevel);
 
+  // Remember the conversational move so the next turn can be told not to make
+  // it again. Bounded to five: the phrasing stage is shown the last three, and
+  // keeping a couple more costs nothing while leaving room to widen the window
+  // without a migration. Absent when stage 2 did not run, which is every cohort
+  // turn — so the field simply never appears on a cohort state.
+  const withMove: InterviewState = state.phrasedMove
+    ? {
+        ...state.interviewState,
+        recentMoves: [
+          ...(state.interviewState.recentMoves ?? []),
+          state.phrasedMove,
+        ].slice(-5),
+      }
+    : state.interviewState;
+
   const proposed: TurnAction =
     state.lastDecision === "FOLLOW_UP"
       ? "FOLLOW_UP"
@@ -403,7 +559,7 @@ export function updateState(state: InterviewAgentState): NodeUpdate {
   // about whether we could afford to act on it.
   const strength = classifyAnswer(asked, state.decision.evidence);
   const withSignal: InterviewState = {
-    ...state.interviewState,
+    ...withMove,
     competenceSignal: updateCompetenceSignal(
       state.interviewState.competenceSignal,
       question.competency,

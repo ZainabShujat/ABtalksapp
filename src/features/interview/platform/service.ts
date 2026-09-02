@@ -38,8 +38,15 @@ import * as repo from "@/features/interview/platform/repository";
 import { selectNextPlatformTarget } from "@/features/interview/platform/target-planner";
 import { buildCandidateContext } from "@/features/interview/candidate-context";
 import { formatProfileContext } from "@/features/interview/platform/profile-context";
+import { repeatLine } from "@/features/interview/room-lines";
+import {
+  isFreshGeneration,
+  preClassifyInterruption,
+} from "@/features/interview/interruption";
+import { recordSpan } from "@/features/interview/telemetry";
+import { questionAsAsked } from "@/features/interview/agent/depth";
 import type { DomainSummary, TurnSubmission } from "@/features/interview/platform/types";
-import type { PlannedQuestion } from "@/features/interview/types";
+import type { InterviewPlan, InterviewState, PlannedQuestion } from "@/features/interview/types";
 
 /**
  * The interview platform's flows: start → (answer)* → finish, plus abandon.
@@ -191,6 +198,18 @@ export async function getHistory(
       domainLabel: getDomain(a.domainSlug)?.label ?? a.domainSlug,
     })),
   };
+}
+
+/** Any open attempt across all domains, or null. */
+export async function getActiveAttempt(
+  userId: string,
+): Promise<ServiceResult<{ id: string; domainSlug: string } | null>> {
+  try {
+    const active = await repo.findAnyActiveAttempt(userId);
+    return { ok: true, data: active };
+  } catch (e: unknown) {
+    return { ok: false, message: e instanceof Error ? e.message : String(e) };
+  }
 }
 
 /* -------------------------------------------------------------------- start */
@@ -377,6 +396,20 @@ export async function recordAnswer(
   attemptId: string,
   questionId: string,
   submission: TurnSubmission,
+  /**
+   * Set only when this answer arrived as an INTERRUPTION that was classified as
+   * an early answer.
+   *
+   * It is written into the same `saveTurn` as the turn itself, which is what
+   * makes replay protection cover the ANSWER branch: an interruption that
+   * advances the interview raises the high-water mark in the same commit that
+   * advances it, so a second delivery of the identical request is refused by
+   * `isFreshGeneration` before it can advance anything a second time.
+   *
+   * Undefined on the ordinary answer path, where the existing value carries
+   * forward untouched.
+   */
+  stampInterruptionGeneration?: number,
 ): Promise<ServiceResult<AnswerTurnData>> {
   const attempt = await repo.loadActiveAttempt(attemptId, userId);
   if (!attempt) {
@@ -445,6 +478,7 @@ export async function recordAnswer(
     state: attempt.state,
     questionId,
     answerText: submission.text,
+    conversational: true,
     // ADAPTIVE TARGET SELECTION, wrapped in the wind-down guard. The cohort
     // passes none and keeps authored order.
     targetSelector,
@@ -480,7 +514,17 @@ export async function recordAnswer(
   };
 
   const persistStartedMs = Date.now();
-  await repo.saveTurn(attemptId, userId, turn.data.state, record);
+  await repo.saveTurn(
+    attemptId,
+    userId,
+    stampInterruptionGeneration === undefined
+      ? turn.data.state
+      : {
+          ...turn.data.state,
+          lastInterruptionGeneration: stampInterruptionGeneration,
+        },
+    record,
+  );
 
   logger.info("[mock-interview] turn latency", {
     attemptId,
@@ -508,6 +552,226 @@ export async function recordAnswer(
         : null,
       finished: turn.data.finished,
       progress: platformProgress(attempt.plan, turn.data.state),
+    },
+  };
+}
+
+/**
+ * Processes a candidate interruption (barge-in utterance).
+ *
+ * ENFORCES THE CORE INVARIANT: only an "ANSWER" classification is routed to
+ * `recordAnswer` and allowed to advance the interview or record evidence.
+ *
+ * All other classifications (REPEAT, CLARIFY, CORRECT, ADD_INFORMATION, OTHER)
+ * keep the open question on the floor, update the transcript and audit trail,
+ * and return the appropriate response without advancing turn index or awarding
+ * evidence.
+ */
+export async function recordInterruption(
+  userId: string,
+  attemptId: string,
+  utterance: string,
+  interruptedText = "",
+  interruptedChars = 0,
+  speechGeneration = 0,
+): Promise<ServiceResult<AnswerTurnData>> {
+  const attempt = await repo.loadActiveAttempt(attemptId, userId);
+  if (!attempt) {
+    return { ok: false, message: "This interview is no longer in progress." };
+  }
+
+  const context = platformContextOf(attempt.plan);
+  if (!context) {
+    return { ok: false, message: "This interview is not readable." };
+  }
+
+  const openQuestion = getCurrentQuestion(attempt.plan, attempt.state);
+  if (!openQuestion) {
+    return { ok: false, message: "No question is currently open." };
+  }
+
+  const cleanUtterance = utterance.trim();
+  if (cleanUtterance.length === 0) {
+    return { ok: false, message: "No utterance was captured." };
+  }
+
+  // ------------------------------------------------------- replay / staleness
+  //
+  // BEFORE any classification, and therefore before any model call: a stale or
+  // replayed submission must cost nothing and must change nothing. Running the
+  // classifier first would spend a request to then throw the answer away, and
+  // would log an interruption that was never admitted.
+  //
+  // Refusal is reported as a successful no-op turn rather than an error. The
+  // browser that sent it has usually already moved on — this is a duplicate or
+  // a tab that woke up — and surfacing "invalid submission" to a candidate who
+  // did nothing wrong would be worse than the silence they will actually get.
+  if (!isFreshGeneration(speechGeneration, attempt.state.lastInterruptionGeneration)) {
+    logger.warn("[mock-interview] stale or replayed interruption refused", {
+      attemptId,
+      speechGeneration,
+      lastAccepted: attempt.state.lastInterruptionGeneration ?? null,
+    });
+    return {
+      ok: true,
+      data: {
+        isFollowUp: true,
+        action: "REPEAT",
+        // Nothing is spoken. The interviewer already said whatever this
+        // duplicate was answering.
+        prompt: null,
+        question: toClientQuestion(openQuestion, attempt.plan.questions.length),
+        finished: false,
+        progress: platformProgress(attempt.plan, attempt.state),
+      },
+    };
+  }
+
+  const startedMs = Date.now();
+  const llm = resolveInterviewLLM();
+
+  // 1. Fast-path deterministic regex pre-classifier
+  let classification = preClassifyInterruption(cleanUtterance);
+
+  // 2. If ambiguous, defer to LLM classifier
+  if (!classification && llm.classifyInterruption) {
+    const depthLevel = attempt.state.depthLevel ?? 1;
+    const asked = questionAsAsked(openQuestion, depthLevel);
+    classification = await llm.classifyInterruption({
+      utterance: cleanUtterance,
+      interruptedText: interruptedText || asked.spokenText || asked.text,
+      currentQuestion: asked.spokenText || asked.text,
+      recentConversation: attempt.state.transcript,
+    });
+  }
+
+  // 3. Fallback if model or provider classification failed
+  if (!classification) {
+    classification = {
+      kind: "CLARIFY",
+      reason: "Fallback classification",
+      subject: "",
+      reply: "Let me clarify what I mean.",
+      confidence: 0,
+    };
+  }
+
+  recordSpan({
+    attemptId,
+    name: "interrupt_classify",
+    ms: Date.now() - startedMs,
+    provider: llm.name,
+    interruptionKind: classification.kind,
+  });
+
+  logger.info("[mock-interview] interruption classified", {
+    attemptId,
+    kind: classification.kind,
+    reason: classification.reason,
+    interruptedChars,
+    speechGeneration,
+  });
+
+  // 4. Invariant: only ANSWER calls recordAnswer
+  if (classification.kind === "ANSWER") {
+    return recordAnswer(
+      userId,
+      attemptId,
+      openQuestion.id,
+      { text: cleanUtterance },
+      // The generation is stamped by `recordAnswer`'s own write rather than by
+      // a second one here. Without it a replayed ANSWER would pass the guard on
+      // its second arrival, because nothing would have raised the high-water
+      // mark - and an ANSWER is the one classification that advances.
+      speechGeneration,
+    );
+  }
+
+  const depthLevel = attempt.state.depthLevel ?? 1;
+  const asked = questionAsAsked(openQuestion, depthLevel);
+  const questionText = asked.spokenText || asked.text;
+
+  // 5. Compose the spoken prompt
+  let promptText = "";
+  let action: AgentAction = "REPEAT";
+
+  if (classification.kind === "REPEAT") {
+    action = "REPEAT";
+    promptText = repeatLine(questionText);
+  } else if (classification.kind === "CLARIFY") {
+    action = "CLARIFY";
+    const reply = classification.reply?.trim();
+    promptText = reply ? `${reply}\n\n${questionText}` : questionText;
+  } else if (
+    classification.kind === "CORRECT" ||
+    classification.kind === "ADD_INFORMATION"
+  ) {
+    action = "CLARIFY";
+    const reply = classification.reply?.trim() || "Got it.";
+    promptText = `${reply}\n\n${questionText}`;
+  } else {
+    // OTHER
+    action = "REDIRECT";
+    const reply =
+      classification.reply?.trim() ||
+      "Understood. Let's return to the question:";
+    promptText = `${reply}\n\n${questionText}`;
+  }
+
+  // Update interview transcript & counts
+  const stateWithCandidate = appendLine(
+    attempt.state,
+    "candidate",
+    cleanUtterance,
+    openQuestion.id,
+  );
+  const stateWithInterviewer = appendLine(
+    stateWithCandidate,
+    "interviewer",
+    promptText,
+    openQuestion.id,
+  );
+
+  const updatedState: InterviewState = {
+    ...stateWithInterviewer,
+    // Stamped in the SAME write as the turn it guards, so the high-water mark
+    // and the state it protects can never be half-applied.
+    lastInterruptionGeneration: speechGeneration,
+    repeatsAsked:
+      classification.kind === "REPEAT"
+        ? (attempt.state.repeatsAsked ?? 0) + 1
+        : attempt.state.repeatsAsked,
+    redirectsAsked:
+      classification.kind === "OTHER"
+        ? (attempt.state.redirectsAsked ?? 0) + 1
+        : attempt.state.redirectsAsked,
+  };
+
+  const turnIndex = await repo.nextTurnIndex(attemptId, userId);
+  const record: repo.TurnRecord = {
+    turnIndex,
+    questionId: openQuestion.id,
+    sectionId: asked.sectionId ?? "",
+    depthLevel,
+    action,
+    promptText,
+    answerText: cleanUtterance,
+    evidence: null, // No evidence awarded for non-answer interruptions
+    degraded: false,
+    latencyMs: Date.now() - startedMs,
+  };
+
+  await repo.saveTurn(attemptId, userId, updatedState, record);
+
+  return {
+    ok: true,
+    data: {
+      isFollowUp: true,
+      action,
+      prompt: promptText,
+      question: toClientQuestion(openQuestion, attempt.plan.questions.length),
+      finished: false,
+      progress: platformProgress(attempt.plan, updatedState),
     },
   };
 }

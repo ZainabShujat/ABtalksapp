@@ -9,6 +9,7 @@ import {
   finishMockInterviewAction,
   startMockInterviewAction,
   submitMockAnswerAction,
+  submitMockInterruptionAction,
 } from "@/app/actions/mock-interview-actions";
 import type {
   ClientQuestion,
@@ -92,6 +93,23 @@ export function MockInterviewSession({
   const finishAction = useCallback(
     (input: { interviewId: string }) =>
       finishMockInterviewAction({ attemptId: input.interviewId }),
+    [],
+  );
+  const submitInterruptionAction = useCallback(
+    (input: {
+      interviewId: string;
+      utterance: string;
+      interruptedText: string;
+      interruptedChars: number;
+      speechGeneration: number;
+    }) =>
+      submitMockInterruptionAction({
+        attemptId: input.interviewId,
+        utterance: input.utterance,
+        interruptedText: input.interruptedText,
+        interruptedChars: input.interruptedChars,
+        speechGeneration: input.speechGeneration,
+      }),
     [],
   );
   /**
@@ -217,6 +235,12 @@ export function MockInterviewSession({
         // The platform's actions and speech endpoint. The room itself is
         // unchanged and does not know which interview it is conducting.
         submitAnswerAction={submitAnswerAction}
+        onInterruptionAction={submitInterruptionAction}
+        allowBargeIn={true}
+        thinkingLine={true}
+        // Opts this room into the platform speech vendors. Without it the
+        // shared STT route would transcribe with the cohort's.
+        sttSurface="platform"
         finishAction={finishAction}
         abandonAction={abandonAction}
         ttsEndpoint="/api/mock-interview/tts"

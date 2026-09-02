@@ -12,6 +12,7 @@ import {
   interviewIdSchema,
   startInterviewSchema,
   submitInterviewAnswerSchema,
+  submitInterviewInterruptionSchema,
 } from "@/lib/validations/interview";
 import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 
@@ -87,6 +88,32 @@ export async function submitInterviewAnswerAction(
     parsed.data.interviewId,
     parsed.data.questionId,
     parsed.data.answerText,
+  );
+}
+
+/**
+ * Submits an utterance that interrupted the interviewer mid-sentence during a cohort interview.
+ *
+ * Enforces the invariant: only if classified as an ANSWER will the interview advance.
+ */
+export async function submitInterviewInterruptionAction(
+  input: unknown,
+): Promise<ActionResult<AnswerTurnData>> {
+  const auth = await requireMemberId();
+  if (!auth.ok) return auth;
+
+  const parsed = submitInterviewInterruptionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: "Invalid interruption submission." };
+  }
+
+  return getInterviewProvider().interruption(
+    auth.memberId,
+    parsed.data.interviewId,
+    parsed.data.utterance,
+    parsed.data.interruptedText,
+    parsed.data.interruptedChars,
+    parsed.data.speechGeneration,
   );
 }
 

@@ -4,17 +4,55 @@ import {
   type InterviewDecision,
 } from "@/features/interview/agent/types";
 import {
+  ANALYZE_ASSESS_ONLY_PROMPT,
   ANALYZE_SYSTEM_PROMPT,
   STRICT_JSON_REMINDER,
   buildAnalyzeUserMessage,
   buildPhraseUserMessage,
   PHRASE_SYSTEM_PROMPT,
 } from "@/features/interview/agent/llm/prompt";
+import {
+  PHRASE_TURN_SYSTEM_PROMPT,
+  buildPhraseTurnUserMessage,
+} from "@/features/interview/agent/llm/phrase-turn-prompt";
+import {
+  CLASSIFY_INTERRUPTION_SYSTEM_PROMPT,
+  buildClassifyInterruptionUserMessage,
+} from "@/features/interview/agent/llm/interrupt-prompt";
+import { interruptionClassificationSchema } from "@/features/interview/interruption";
 import { fallbackDecision } from "@/features/interview/agent/llm/heuristics";
-import type {
-  AnalyzeAnswerInput,
-  InterviewLLM,
+import {
+  CONVERSATIONAL_MOVES,
+  type AnalyzeAnswerInput,
+  type ConversationalMove,
+  type InterviewLLM,
 } from "@/features/interview/agent/llm/provider";
+import { z } from "zod";
+
+/**
+ * Stage 2's output shape.
+ *
+ * Every field is optional and every field is capped. A phrasing model that
+ * starts monologuing produces a long string that `policy.ts` then refuses, so
+ * the cap here is belt-and-braces rather than the enforcement point — the
+ * enforcement point is deliberately the same validator the old single-call
+ * output already had to pass.
+ */
+const turnPhrasingSchema = z.object({
+  acknowledgement: z.string().max(300).nullish(),
+  followUpQuestion: z.string().max(600).nullish(),
+  bridge: z.string().max(300).nullish(),
+  move: z.string().max(40).nullish(),
+});
+
+function isConversationalMove(
+  value: string | undefined,
+): value is ConversationalMove {
+  return (
+    value !== undefined &&
+    (CONVERSATIONAL_MOVES as readonly string[]).includes(value)
+  );
+}
 
 /**
  * A generic JSON-completion provider.
@@ -221,8 +259,116 @@ export function createJsonInterviewLLM(
       }
     },
 
+    /**
+     * STAGE 2. Prose only, and it runs AFTER routing.
+     *
+     * `temperature: 0.8`, deliberately, and it is the whole reason this call
+     * was split out of `analyzeAnswer`. Assessment is pinned at zero so two
+     * candidates giving the same answer get the same evidence read; that same
+     * setting applied to conversation produces the single most likely sentence
+     * every time, which is precisely what made the interviewer sound scripted.
+     * Now each call gets the temperature its job actually wants.
+     *
+     * Returns null rather than throwing on any failure. The caller falls back
+     * to the prose stage 1 already produced, and below that to the
+     * deterministic pools, so a phrasing outage costs tone and nothing else.
+     */
+    async phraseTurn(input) {
+      try {
+        const res = await askJson({
+          system: PHRASE_TURN_SYSTEM_PROMPT,
+          user: buildPhraseTurnUserMessage(input),
+          // Small: three short strings and a label. The old combined call
+          // needed 1100 tokens because it also carried an evidence block.
+          maxTokens: 400,
+          temperature: 0.8,
+        });
+
+        if (!res.ok) {
+          logger.warn("[interview-agent] turn phrasing rejected", {
+            provider: name,
+            action: input.action,
+            // Named, never collapsed. A 429 and a malformed body are different
+            // problems and the log has to be able to tell them apart.
+            message: res.message,
+          });
+          return null;
+        }
+
+        const parsed = turnPhrasingSchema.safeParse(res.data);
+        if (!parsed.success) {
+          logger.warn("[interview-agent] turn phrasing malformed", {
+            provider: name,
+            action: input.action,
+          });
+          return null;
+        }
+
+        const move = parsed.data.move?.trim().toLowerCase();
+        return {
+          acknowledgement: (parsed.data.acknowledgement ?? "").trim() || null,
+          followUpQuestion: (parsed.data.followUpQuestion ?? "").trim() || null,
+          bridge: (parsed.data.bridge ?? "").trim() || null,
+          move: isConversationalMove(move) ? move : null,
+        };
+      } catch (error) {
+        logger.warn("[interview-agent] turn phrasing failed", {
+          provider: name,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return null;
+      }
+    },
+
+    /**
+     * Reads what a barge-in meant.
+     *
+     * `temperature: 0` — this is a classification, and two identical
+     * interruptions must be read identically. Null on any failure, which the
+     * caller turns into the label that keeps the question open rather than the
+     * one that spends it.
+     */
+    async classifyInterruption(input) {
+      try {
+        const res = await askJson({
+          system: CLASSIFY_INTERRUPTION_SYSTEM_PROMPT,
+          user: buildClassifyInterruptionUserMessage(input),
+          maxTokens: 200,
+        });
+
+        if (!res.ok) {
+          logger.warn("[interview-agent] interruption classify rejected", {
+            provider: name,
+            message: res.message,
+          });
+          return null;
+        }
+
+        const parsed = interruptionClassificationSchema.safeParse(res.data);
+        if (!parsed.success) {
+          logger.warn("[interview-agent] interruption classify malformed", {
+            provider: name,
+          });
+          return null;
+        }
+        return parsed.data;
+      } catch (error) {
+        logger.warn("[interview-agent] interruption classify failed", {
+          provider: name,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return null;
+      }
+    },
+
     async analyzeAnswer(input: AnalyzeAnswerInput): Promise<InterviewDecision> {
       const user = buildAnalyzeUserMessage(input);
+      // The lean prompt only when something else will do the writing. The
+      // cohort never sets this, so it keeps the exact prompt it was validated
+      // against.
+      const base = input.conversational
+        ? ANALYZE_ASSESS_ONLY_PROMPT
+        : ANALYZE_SYSTEM_PROMPT;
 
       // Why each attempt failed, so the fallback line below can name the cause.
       // Without this the only trace of "the evaluator was unavailable" was a

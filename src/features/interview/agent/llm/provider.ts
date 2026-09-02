@@ -6,6 +6,7 @@ import type {
   InterviewDecision,
   TranscriptTurn,
 } from "@/features/interview/agent/types";
+import type { InterruptionClassification } from "@/features/interview/interruption";
 
 /**
  * The one seam between the interview brain and any language model.
@@ -88,6 +89,15 @@ export type AnalyzeAnswerInput = {
    * arbitrary because it is.
    */
   recentOpeners?: string[];
+  /**
+   * Whether a phrasing stage will run after this call.
+   *
+   * When true the leaner assessment-only prompt is used, because nothing this
+   * call writes for `acknowledgement`, `followUpQuestion` or `bridge` will be
+   * spoken. When false or absent — every cohort turn — the original combined
+   * prompt is used and the behaviour is unchanged.
+   */
+  conversational?: boolean;
 };
 
 export interface InterviewLLM {
@@ -108,7 +118,98 @@ export interface InterviewLLM {
    * `analyzeAnswer` it must not throw: an empty map is the degraded answer.
    */
   phraseQuestions?(input: PhraseQuestionsInput): Promise<Record<string, string>>;
+
+  /**
+   * STAGE 2. Writes what the interviewer says, from a decision already made.
+   *
+   * OPTIONAL, and that is load-bearing rather than incidental. The cohort path
+   * never calls it: its graph runs with `conversational` unset, so the turn
+   * takes exactly the shape it took before this method existed. A provider that
+   * omits it — the mock provider, or any future vendor — simply falls back to
+   * the prose fields stage 1 already returns, which fall back in turn to the
+   * deterministic pools in `policy.ts`. Three levels, and the interview sounds
+   * progressively plainer rather than breaking at any of them.
+   *
+   * MUST NOT throw. A phrasing failure is a duller sentence, never a lost turn.
+   */
+  phraseTurn?(input: PhraseTurnInput): Promise<TurnPhrasing | null>;
+
+  /**
+   * Reads what a candidate meant by talking over the interviewer.
+   *
+   * OPTIONAL for the same reason: without it, barge-in is simply not offered,
+   * and `InterviewRoom` stays half-duplex exactly as it is today.
+   *
+   * MUST NOT throw. On failure the caller treats the interruption as the safe
+   * label — see `interruption.ts:advancesInterview` — which keeps the question
+   * on the floor rather than spending it on a guess.
+   */
+  classifyInterruption?(
+    input: ClassifyInterruptionInput,
+  ): Promise<InterruptionClassification | null>;
 }
+
+/**
+ * The conversational moves stage 2 can make, tracked so it does not make the
+ * same one three turns running.
+ *
+ * Varying the MOVE rather than the wording is the distinction that matters:
+ * four differently-phrased acknowledgements in a row still read as four
+ * acknowledgements in a row. `recentOpeners` on `AnalyzeAnswerInput` already
+ * varies wording; this varies what the sentence is DOING.
+ */
+export const CONVERSATIONAL_MOVES = [
+  "acknowledge",
+  "observe",
+  "challenge",
+  "compare",
+  "wonder",
+  "scenario",
+  "narrow",
+  "connect",
+] as const;
+
+export type ConversationalMove = (typeof CONVERSATIONAL_MOVES)[number];
+
+export type TurnPhrasing = {
+  acknowledgement: string | null;
+  followUpQuestion: string | null;
+  bridge: string | null;
+  move: ConversationalMove | null;
+};
+
+export type PhraseTurnInput = {
+  /** Already routed. Stage 2 cannot change it. */
+  action: "FOLLOW_UP" | "NEXT_QUESTION";
+  candidateAnswer: string;
+  currentQuestion: string;
+  followUpReason: string | null;
+  targetDetail: string | null;
+  /** Points already established on this question, so they are not re-asked. */
+  whatIsKnown: string[];
+  /**
+   * What the answer still lacks, PARAPHRASED.
+   *
+   * Never the verbatim checklist. A follow-up that quotes an expected-evidence
+   * item back at the candidate tells them exactly what to say, which turns the
+   * remainder of the question into dictation rather than assessment.
+   */
+  whatIsMissing: string[];
+  recentConversation: TranscriptTurn[];
+  recentMoves: ConversationalMove[];
+  flaggedIssues: string[];
+  calibratedLevel?: "FOUNDATIONS" | "WORKING" | "ADVANCED" | null;
+  /** Only for NEXT_QUESTION, so the bridge can lead into it. Never reworded. */
+  nextQuestionText?: string | null;
+};
+
+export type ClassifyInterruptionInput = {
+  utterance: string;
+  /** As much of the interviewer's line as the candidate actually heard. */
+  interruptedText: string;
+  currentQuestion: string;
+  recentConversation: TranscriptTurn[];
+};
 
 export type PhraseTarget = {
   id: string;
