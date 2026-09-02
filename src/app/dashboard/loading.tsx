@@ -42,6 +42,7 @@ export default function DashboardLoading() {
             <Skeleton className="h-4 w-24 bg-[#E0E0E0]" />
           </div>
           <div className="flex items-center gap-3">
+            <Skeleton className="hidden h-9 w-[250px] rounded-md bg-[#E0E0E0] md:block" />
             <Skeleton className="size-9 rounded-md bg-[#E0E0E0]" />
             <Skeleton className="hidden h-9 w-24 bg-[#E0E0E0] sm:block" />
             <Skeleton className="size-9 rounded-full bg-[#E0E0E0]" />

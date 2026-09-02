@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 import { getCandidateDetail } from "@/repositories/candidate-detail";
 import { getProfileEvidence } from "@/features/profile/get-evidence";
+import { getResumeView } from "@/features/resume/service";
 import { computeCompleteness } from "@/features/profile/completeness";
 import { getPopularSkills } from "@/features/skill/search-skills";
 import { getMyRedemptions } from "@/features/marketplace/get-my-redemptions";
@@ -27,6 +28,7 @@ import { MockInterviewsSection } from "@/components/profile/mock-interviews-sect
 import { SkillsSection } from "@/components/profile/skills-section";
 import { CertificationsSection } from "@/components/profile/certifications-section";
 import { LinksSection } from "@/components/profile/links-section";
+import { ResumeSection } from "@/components/profile/resume-section";
 import { PreferencesSection } from "@/components/profile/preferences-section";
 import { EvidenceSection } from "@/components/profile/evidence-section";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -40,6 +42,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PERSONA_LABELS } from "@/lib/candidate-vocab";
+
+/**
+ * Résumé parsing runs inline in a Server Action invoked from this route, and one
+ * Gemini document call takes longer than the platform's 10s default. Everything
+ * else on the page is unaffected — this is a ceiling, not a reservation.
+ */
+export const maxDuration = 60;
 
 /** Nulls become "" so every input stays controlled from first render. */
 const s = (v: string | null | undefined) => v ?? "";
@@ -113,29 +122,43 @@ export default async function ProfilePage() {
     headersList,
     mockInterviewHistory,
     activeMockInterview,
+    resume,
   ] = await Promise.all([
-      getProfileEvidence(userId),
-      getPopularSkills(10),
-      getMyRedemptions(userId),
-      prisma.referral.count({ where: { referrerId: userId } }),
-      headers(),
-      // The MockInterview tables exist on demo but the migration has not been
-      // applied to production, so this query throws there until it is. The
-      // profile must not 500 over it — it degrades to an empty list, which
-      // renders the section's "none taken yet" copy.
-      getHistory(userId).catch((e: unknown) => {
-        logger.warn("[profile] mock interview history unavailable", {
-          message: e instanceof Error ? e.message : String(e),
-        });
-        return { ok: false as const, message: "unavailable" };
-      }),
-      getActiveAttempt(userId).catch((e: unknown) => {
-        logger.warn("[profile] active mock interview unavailable", {
-          message: e instanceof Error ? e.message : String(e),
-        });
-        return { ok: false as const, message: "unavailable" };
-      }),
-    ]);
+    getProfileEvidence(userId),
+    getPopularSkills(10),
+    getMyRedemptions(userId),
+    prisma.referral.count({ where: { referrerId: userId } }),
+    headers(),
+    // The MockInterview tables exist on demo but the migration has not been
+    // applied to production, so this query throws there until it is. The
+    // profile must not 500 over it — it degrades to an empty list, which
+    // renders the section's "none taken yet" copy.
+    getHistory(userId).catch((e: unknown) => {
+      logger.warn("[profile] mock interview history unavailable", {
+        message: e instanceof Error ? e.message : String(e),
+      });
+      return { ok: false as const, message: "unavailable" };
+    }),
+    getActiveAttempt(userId).catch((e: unknown) => {
+      logger.warn("[profile] active mock interview unavailable", {
+        message: e instanceof Error ? e.message : String(e),
+      });
+      return { ok: false as const, message: "unavailable" };
+    }),
+    // A single indexed row read. The parser is NEVER invoked on page load —
+    // see the note in features/resume/service.ts.
+    //
+    // Same degradation as the mock interview history above: `CandidateResume`
+    // is a new table, and until its migration has been applied to a given
+    // environment this query throws there. The profile must not 500 over a
+    // section that is additive — it renders the empty state instead.
+    getResumeView(userId).catch((e: unknown) => {
+      logger.warn("[profile] résumé unavailable", {
+        message: e instanceof Error ? e.message : String(e),
+      });
+      return null;
+    }),
+  ]);
 
   const mockInterviews = mockInterviewHistory.ok ? mockInterviewHistory.data : [];
   const activeAttempt = activeMockInterview.ok ? activeMockInterview.data : null;
@@ -391,6 +414,24 @@ export default async function ProfilePage() {
           </ProfileSection>
 
           <ProfileSection
+            title="Résumé"
+            description="Upload your résumé to see how strong it is and what to improve."
+            complete={resume?.status === "READY"}
+            hint="No résumé attached yet"
+            summary={
+              resume?.status === "READY" && resume.strength
+                ? `Strength ${resume.strength.overallScore}/100`
+                : resume?.status === "FAILED"
+                  ? "Could not be analysed"
+                  : resume
+                    ? "Analysing…"
+                    : null
+            }
+          >
+            <ResumeSection resume={resume} />
+          </ProfileSection>
+
+          <ProfileSection
             title="Links"
             description="Where your work lives."
             complete={sectionOf("links")?.complete ?? false}
@@ -404,7 +445,6 @@ export default async function ProfilePage() {
                 linkedinUrl: s(detail.linkedinUrl),
                 githubUsername: s(detail.githubUsername),
                 portfolioUrl: s(detail.portfolioUrl),
-                resumeUrl: s(detail.resumeUrl),
                 extra: detail.links.map((l) => ({
                   type: l.type,
                   label: s(l.label),
@@ -434,7 +474,7 @@ export default async function ProfilePage() {
                   detail.preference?.willingToRelocate ?? false,
                 noticePeriodDays:
                   detail.preference?.noticePeriodDays === null ||
-                  detail.preference?.noticePeriodDays === undefined
+                    detail.preference?.noticePeriodDays === undefined
                     ? ""
                     : String(detail.preference.noticePeriodDays),
                 availableFromMonth:

@@ -33,7 +33,7 @@ type KeycapConfig = {
 
 const KEYCAPS: KeycapConfig[] = [
   {
-    href: "/databricks",
+    href: "/program/databricks",
     label: "DATABRICKS COHORT",
     stem: "bg-[#276eb4]",
     faceClassName:
