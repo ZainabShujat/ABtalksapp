@@ -77,7 +77,8 @@
 
 .pw-profile-card {
   width: var(--pw-profile-card-w);
-  min-height: min(var(--pw-profile-card-h), 100%);
+  height: var(--pw-profile-card-h);
+  overflow: hidden;
   align-self: start;
   background: var(--pw-white);
   border-radius: var(--pw-card-radius);
@@ -1493,6 +1494,40 @@
   .pw-profile-card {
     padding-top: 20px;
     padding-bottom: 14px;
+  }
+}
+
+/* Desktop: pin the profile card; only the form body scrolls. */
+@media (min-width: 1025px) {
+  .pw-root {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: calc(100svh - 72px - 148px);
+    max-height: calc(100svh - 72px - 148px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .pw-workspace {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .pw-profile-card {
+    max-height: 100%;
+    min-height: 0;
+  }
+  .pw-form-card {
+    align-self: stretch;
+    height: auto;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .pw-section-body {
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 }
 

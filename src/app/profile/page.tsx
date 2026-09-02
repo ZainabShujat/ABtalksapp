@@ -320,6 +320,7 @@ export default async function ProfilePage() {
       user={{ ...shellUser, name: detail.fullName || shellUser.name }}
       isAdmin={session.user.isAdmin ?? false}
       showSectionNav={false}
+      contentClassName="min-[1025px]:flex min-[1025px]:min-h-0 min-[1025px]:flex-col min-[1025px]:overflow-hidden"
     >
       <ProfileWizard
         steps={steps}
