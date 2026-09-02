@@ -84,7 +84,13 @@ export default function WorkshopDetailsModal({
           transition={{ duration: 0.22 }}
           onClick={onClose}
           role="dialog"
-          aria-modal="true"
+          // Only claim modality when it is true. `aria-modal` tells assistive
+          // tech the rest of the document is inert — which it is for the
+          // full-viewport overlay, and is not in `contained` mode, where the
+          // Upcoming Workshops column stays visible and operable beside it.
+          // Announcing otherwise would hide a live part of the page from
+          // screen-reader users while it is still there for everyone else.
+          {...(contained ? {} : { "aria-modal": true })}
           aria-labelledby="wk-details-title"
           className={`${
             contained ? "absolute rounded-[32px]" : "fixed"

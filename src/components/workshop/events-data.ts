@@ -538,6 +538,17 @@ export const eventStatus = (ev: WorkshopEvent, nowMs: number): EventStatus => {
  * itself once it finishes; nothing has to be edited when the week turns over.
  */
 export const sidebarEvents = (nowMs: number, limit = 3): WorkshopEvent[] =>
-  EVENTS.filter((e) => !e.placeholder && eventStatus(e, nowMs) !== "PAST")
+  EVENTS.filter(
+    (e) =>
+      // The column is headed "Upcoming Workshops", so it holds workshops.
+      // Without this the hackathon, the cohort start day and the challenge
+      // kickoff would file in beside them as soon as a future one is added —
+      // each carrying a Register button bound to a workshop it has nothing to
+      // do with. They are already on the grid, where their own colour and
+      // their own destination say what they are.
+      e.track === "workshop" &&
+      !e.placeholder &&
+      eventStatus(e, nowMs) !== "PAST",
+  )
     .sort((a, b) => eventStartMs(a) - eventStartMs(b))
     .slice(0, limit);
