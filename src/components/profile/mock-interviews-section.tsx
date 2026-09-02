@@ -1,8 +1,5 @@
 import Link from "next/link";
-import { FileText, Mic } from "lucide-react";
 import type { HistoryEntry } from "@/features/interview/platform/service";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 const STATUS_LABEL: Record<string, string> = {
   COMPLETED: "Completed",
@@ -26,34 +23,38 @@ type Props = {
   activeAttempt?: { id: string; domainSlug: string } | null;
 };
 
+function MicIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden>
+      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+      <path d="M12 19v3" />
+    </svg>
+  );
+}
+
 /**
  * Mock interviews on the profile, read-only.
  *
- * Like Evidence & achievements, nothing here is entered — every row is
- * something the candidate did. It sits after Projects because it is the same
- * kind of claim ("here is what I can do") with the platform, rather than the
- * candidate, as the author. Each row links straight to that attempt's own
- * report: retakes mean a domain has a list of reports, not a result.
- *
- * Server Component — rendered as children of the client `ProfileSection`.
+ * Server Component — rendered by the page and handed to the client wizard as a
+ * ReactNode. No wizard context, no form.
  */
 export function MockInterviewsSection({ attempts, activeAttempt }: Props) {
   if (attempts.length === 0 && !activeAttempt) {
     return (
-      <div className="text-sm text-muted-foreground">
-        <p>
+      <>
+        <p className="pw-note">
           You haven&rsquo;t taken a mock interview yet. They are live voice
           interviews with an AI interviewer, and each one you finish keeps its
           own scored report.
         </p>
-        <Link
-          href="/mock-interviews"
-          className={cn(buttonVariants({ variant: "default" }), "mt-4")}
-        >
-          <Mic className="mr-1.5 size-4" strokeWidth={2} aria-hidden />
-          Take a mock interview
-        </Link>
-      </div>
+        <div className="pw-action-wrap" style={{ marginTop: 18 }}>
+          <Link href="/mock-interviews" className="pw-btn-action">
+            <MicIcon />
+            <span>Take a mock interview</span>
+          </Link>
+        </div>
+      </>
     );
   }
 
@@ -61,101 +62,85 @@ export function MockInterviewsSection({ attempts, activeAttempt }: Props) {
   const hidden = attempts.length - recent.length;
 
   return (
-    <div className="space-y-3">
-      {activeAttempt && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3.5">
-          <div className="min-w-0">
-            <p className="flex items-center gap-2 text-sm font-semibold text-primary">
-              <span className="relative flex size-2.5">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" />
-                <span className="relative inline-flex size-2.5 rounded-full bg-primary" />
-              </span>
-              Interview in progress
-            </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+    <div>
+      {activeAttempt ? (
+        <div className="pw-mock-active">
+          <div>
+            <p className="pw-mock-item-title">Interview in progress</p>
+            <p className="pw-mock-item-meta">
               You have an active interview session waiting.
             </p>
           </div>
           <Link
             href={`/mock-interviews/${activeAttempt.domainSlug}/attempt/${activeAttempt.id}`}
-            className={cn(buttonVariants({ variant: "default", size: "sm" }), "shrink-0")}
+            className="pw-btn-action"
           >
-            <Mic className="mr-1.5 size-3.5" strokeWidth={2} aria-hidden />
-            Continue interview
+            <MicIcon />
+            <span>Continue interview</span>
           </Link>
         </div>
-      )}
+      ) : null}
 
       {attempts.length > 0 ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="pw-note">
           {attempts.length} interview{attempts.length === 1 ? "" : "s"} taken
           {recent.length < attempts.length
-            ? `, showing the ${recent.length} most recent`
+            ? ` — showing the ${recent.length} most recent`
             : ""}
           .
         </p>
       ) : null}
 
-      <ul className="space-y-3">
-        {recent.map((a) => (
-          <li
-            key={a.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/20 p-3"
-          >
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">{a.domainLabel}</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Attempt {a.attemptNumber}
-                {" · "}
-                {a.createdAt.toLocaleDateString("en-GB", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })}
-                {" · "}
-                {STATUS_LABEL[a.status] ?? a.status}
-                {a.status === "COMPLETED" && a.overallScore !== null
-                  ? ` · ${(a.overallScore / 10).toFixed(1)}/10`
-                  : ""}
-              </p>
-            </div>
+      {recent.length > 0 ? (
+        <ul className="pw-mock-list">
+          {recent.map((a) => (
+            <li key={a.id} className="pw-mock-item">
+              <div>
+                <p className="pw-mock-item-title">{a.domainLabel}</p>
+                <p className="pw-mock-item-meta">
+                  Attempt {a.attemptNumber}
+                  {" · "}
+                  {a.createdAt.toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                  {" · "}
+                  {STATUS_LABEL[a.status] ?? a.status}
+                  {a.status === "COMPLETED" && a.overallScore !== null
+                    ? ` · ${(a.overallScore / 10).toFixed(1)}/10`
+                    : ""}
+                </p>
+              </div>
+              {a.hasReport ? (
+                <Link
+                  href={`/mock-interviews/${a.domainSlug}/attempt/${a.id}/report`}
+                  className="pw-mock-link"
+                >
+                  View report
+                </Link>
+              ) : (
+                <span className="pw-mock-item-meta">Not scored</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
-            {a.hasReport ? (
-              <Link
-                href={`/mock-interviews/${a.domainSlug}/attempt/${a.id}/report`}
-                className={cn(
-                  buttonVariants({ variant: "outline", size: "sm" }),
-                  "shrink-0",
-                )}
-              >
-                <FileText className="mr-1.5 size-3.5" strokeWidth={2} aria-hidden />
-                View report
-              </Link>
-            ) : (
-              <span className="shrink-0 text-xs text-muted-foreground">
-                Not scored
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
-
-      <div className="flex flex-wrap gap-2 pt-1">
-        <Link
-          href="/mock-interviews"
-          className={cn(buttonVariants({ variant: "default", size: "sm" }))}
-        >
-          <Mic className="mr-1.5 size-3.5" strokeWidth={2} aria-hidden />
-          Take another
-        </Link>
-        <Link
-          href="/mock-interviews/history"
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-        >
-          {hidden > 0
-            ? `All ${attempts.length} interviews and reports`
-            : "Full practice history"}
-        </Link>
+      <div className="pw-mock-links">
+        {!activeAttempt ? (
+          <Link href="/mock-interviews" className="pw-btn-action">
+            <MicIcon />
+            <span>Take another</span>
+          </Link>
+        ) : null}
+        {attempts.length > 0 ? (
+          <Link href="/mock-interviews/history" className="pw-mock-link">
+            {hidden > 0
+              ? `All ${attempts.length} interviews and reports`
+              : "Full practice history"}
+          </Link>
+        ) : null}
       </div>
     </div>
   );

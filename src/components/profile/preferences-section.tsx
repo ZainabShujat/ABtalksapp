@@ -1,27 +1,23 @@
 "use client";
 
+import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { OpportunityType } from "@prisma/client";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { savePreferencesAction } from "@/app/actions/candidate-profile-actions";
-import {
-  COMMON_ROLES,
-  OPPORTUNITY_TYPE_LABELS,
-  WORK_MODES,
-  yearRange,
-} from "@/lib/candidate-vocab";
-import { ChipInput, Field, MonthYearField, SectionActions } from "./fields";
+import { OPPORTUNITY_TYPE_LABELS, WORK_MODES } from "@/lib/candidate-vocab";
 import { useSectionSave } from "./use-section-save";
+import { useProfileWizard } from "./wizard-context";
+import {
+  PwCheckGroup,
+  PwCheckbox,
+  PwField,
+  PwInput,
+  PwMonthYear,
+  PwRow,
+  PwSelect,
+  PwTags,
+  PwTogglePanel,
+} from "./wizard-fields";
 
 export type PreferencesFormValues = {
   openToWork: boolean;
@@ -35,188 +31,169 @@ export type PreferencesFormValues = {
   availableFromYear: number | null;
 };
 
-const YEARS = yearRange(1, 5);
+const OPPORTUNITY_OPTIONS = Object.values(OpportunityType).map((t) => ({
+  value: t,
+  label: OPPORTUNITY_TYPE_LABELS[t] ?? t,
+}));
 
 export function PreferencesSection({
   initial,
 }: {
   initial: PreferencesFormValues;
 }) {
-  const { saving, save } = useSectionSave(
-    savePreferencesAction,
-    "Career preferences",
-  );
-  const { control, register, handleSubmit } = useForm<PreferencesFormValues>({
-    defaultValues: initial,
-  });
+  const { formId, onSaved, setDirty } = useProfileWizard();
+  const { save } = useSectionSave(savePreferencesAction, "Career preferences");
+  const { control, register, handleSubmit, formState } =
+    useForm<PreferencesFormValues>({ defaultValues: initial });
+
+  useEffect(() => {
+    setDirty(formState.isDirty);
+  }, [formState.isDirty, setDirty]);
 
   return (
-    <form onSubmit={handleSubmit((v) => save(v))} className="space-y-5">
-      <div className="flex items-start justify-between gap-4 rounded-xl border bg-muted/20 p-4">
-        <div className="min-w-0">
-          <p className="font-medium">Open to work</p>
-          <p className="text-xs text-muted-foreground">
-            Says whether you are looking right now. Separate from whether
-            recruiters can find you at all — this switch does not change that.
-          </p>
-        </div>
+    <form
+      id={formId}
+      onSubmit={handleSubmit(async (v) => {
+        if (await save(v)) onSaved();
+      })}
+    >
+      <PwRow cols={1}>
         <Controller
           control={control}
           name="openToWork"
           render={({ field }) => (
-            <Switch
+            <PwTogglePanel
+              title="Open to work"
+              text="Says whether you are looking right now. Separate from whether recruiters can find you at all — this switch does not change that."
               checked={field.value}
-              onCheckedChange={(c) => field.onChange(c === true)}
-              aria-label="Open to work"
-            />
-          )}
-        />
-      </div>
-
-      <Field label="Preferred roles">
-        <Controller
-          control={control}
-          name="preferredRoles"
-          render={({ field }) => (
-            <ChipInput
-              values={field.value}
               onChange={field.onChange}
-              placeholder="ex: Backend Engineer"
-              max={10}
-              suggestions={COMMON_ROLES}
             />
           )}
         />
-      </Field>
+      </PwRow>
 
-      <Field label="Preferred locations">
-        <Controller
-          control={control}
-          name="preferredLocations"
-          render={({ field }) => (
-            <ChipInput
-              values={field.value}
-              onChange={field.onChange}
-              placeholder="ex: Bangalore"
-              max={10}
-            />
-          )}
-        />
-      </Field>
+      <PwRow cols={1}>
+        <PwField label="Preferred roles">
+          <Controller
+            control={control}
+            name="preferredRoles"
+            render={({ field }) => (
+              <PwTags
+                values={field.value}
+                onChange={field.onChange}
+                placeholder="ex: Backend Engineer"
+              />
+            )}
+          />
+        </PwField>
+      </PwRow>
 
-      <Field label="Opportunity type">
-        <Controller
-          control={control}
-          name="opportunityTypes"
-          render={({ field }) => (
-            <div className="flex flex-wrap gap-x-5 gap-y-2">
-              {Object.values(OpportunityType).map((t) => {
-                const checked = field.value.includes(t);
-                return (
-                  <div key={t} className="flex items-center gap-2">
-                    <Checkbox
-                      id={`opp-${t}`}
-                      checked={checked}
-                      onCheckedChange={(c) =>
-                        field.onChange(
-                          c === true
-                            ? [...field.value, t]
-                            : field.value.filter((v) => v !== t),
-                        )
-                      }
-                    />
-                    <Label htmlFor={`opp-${t}`} className="font-normal">
-                      {OPPORTUNITY_TYPE_LABELS[t] ?? t}
-                    </Label>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        />
-      </Field>
+      <PwRow cols={1}>
+        <PwField label="Preferred locations">
+          <Controller
+            control={control}
+            name="preferredLocations"
+            render={({ field }) => (
+              <PwTags
+                values={field.value}
+                onChange={field.onChange}
+                placeholder="ex: Bangalore"
+              />
+            )}
+          />
+        </PwField>
+      </PwRow>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Work mode">
+      <PwRow cols={1}>
+        <PwField label="Opportunity type">
+          <Controller
+            control={control}
+            name="opportunityTypes"
+            render={({ field }) => (
+              <PwCheckGroup
+                options={OPPORTUNITY_OPTIONS}
+                value={field.value}
+                onChange={(next) => field.onChange(next as OpportunityType[])}
+              />
+            )}
+          />
+        </PwField>
+      </PwRow>
+
+      <PwRow cols={2}>
+        <PwField label="Work mode" htmlFor="pref-mode">
           <Controller
             control={control}
             name="remotePreference"
             render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger aria-label="Work mode">
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent>
-                  {WORK_MODES.map((m) => (
-                    <SelectItem key={m} value={m}>
-                      {m}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <PwSelect
+                id="pref-mode"
+                value={field.value}
+                onChange={field.onChange}
+              >
+                <option value="">Select</option>
+                {WORK_MODES.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </PwSelect>
             )}
           />
-        </Field>
-
-        <Field
+        </PwField>
+        <PwField
           label="Notice period"
           htmlFor="pref-notice"
-          hint="In days. Leave blank if you are immediately available."
+          helper="In days. Leave blank if you are immediately available."
         >
-          <Input
+          <PwInput
             id="pref-notice"
             type="number"
             min={0}
             max={365}
-            placeholder="ex: 30"
+            placeholder="e.g. 10"
             {...register("noticePeriodDays")}
           />
-        </Field>
-      </div>
+        </PwField>
+      </PwRow>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Controller
-          control={control}
-          name="availableFromMonth"
-          render={({ field: month }) => (
-            <Controller
-              control={control}
-              name="availableFromYear"
-              render={({ field: year }) => (
-                <MonthYearField
-                  label="Available from"
-                  years={YEARS}
-                  month={month.value}
-                  year={year.value}
-                  onMonthChange={month.onChange}
-                  onYearChange={year.onChange}
-                />
-              )}
-            />
-          )}
-        />
-
-        <div className="flex items-end pb-1">
-          <div className="flex items-center gap-2">
-            <Controller
-              control={control}
-              name="willingToRelocate"
-              render={({ field }) => (
-                <Checkbox
-                  id="pref-relocate"
-                  checked={field.value}
-                  onCheckedChange={(c) => field.onChange(c === true)}
-                />
-              )}
-            />
-            <Label htmlFor="pref-relocate" className="font-normal">
-              Willing to relocate
-            </Label>
-          </div>
-        </div>
-      </div>
-
-      <SectionActions saving={saving} saveLabel="Save preferences" />
+      <PwRow cols={2}>
+        <PwField label="Available from">
+          <Controller
+            control={control}
+            name="availableFromMonth"
+            render={({ field: month }) => (
+              <Controller
+                control={control}
+                name="availableFromYear"
+                render={({ field: year }) => (
+                  <PwMonthYear
+                    month={month.value}
+                    year={year.value}
+                    onMonthChange={month.onChange}
+                    onYearChange={year.onChange}
+                  />
+                )}
+              />
+            )}
+          />
+        </PwField>
+        <PwField inlineCheck>
+          <Controller
+            control={control}
+            name="willingToRelocate"
+            render={({ field }) => (
+              <PwCheckbox
+                id="pref-relocate"
+                checked={field.value}
+                onChange={field.onChange}
+              >
+                Willing to relocate
+              </PwCheckbox>
+            )}
+          />
+        </PwField>
+      </PwRow>
     </form>
   );
 }

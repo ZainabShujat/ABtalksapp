@@ -1,21 +1,20 @@
 "use client";
 
+import { useEffect } from "react";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { CandidateLinkType } from "@prisma/client";
-import { Briefcase, CodeXml, Globe } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import { saveLinksAction } from "@/app/actions/candidate-profile-actions";
 import { EXTRA_LINK_TYPES, LINK_TYPE_LABELS } from "@/lib/candidate-vocab";
-import { Field, SectionActions } from "./fields";
 import { useSectionSave } from "./use-section-save";
+import { useProfileWizard } from "./wizard-context";
+import {
+  PwAddMore,
+  PwEntryCard,
+  PwField,
+  PwInput,
+  PwRow,
+  PwSelect,
+} from "./wizard-fields";
 
 export type ExtraLinkFormRow = {
   type: CandidateLinkType;
@@ -30,132 +29,161 @@ export type LinksFormValues = {
   extra: ExtraLinkFormRow[];
 };
 
+function BriefcaseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden>
+      <rect x="2" y="7" width="20" height="14" rx="2" />
+      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+    </svg>
+  );
+}
+
+function CodeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden>
+      <path d="m16 18 6-6-6-6" />
+      <path d="m8 6-6 6 6 6" />
+    </svg>
+  );
+}
+
+function GlobeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M2 12h20" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
+  );
+}
+
 export function LinksSection({ initial }: { initial: LinksFormValues }) {
-  const { saving, save } = useSectionSave(saveLinksAction, "Links");
-  const { control, register, handleSubmit } = useForm<LinksFormValues>({
-    defaultValues: initial,
+  const { formId, onSaved, setDirty } = useProfileWizard();
+  const { save } = useSectionSave(saveLinksAction, "Links");
+  const { control, register, handleSubmit, formState } = useForm<LinksFormValues>(
+    { defaultValues: initial },
+  );
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "extra",
   });
-  const { fields, append, remove } = useFieldArray({ control, name: "extra" });
+
+  useEffect(() => {
+    setDirty(formState.isDirty);
+  }, [formState.isDirty, setDirty]);
 
   return (
-    <form onSubmit={handleSubmit((v) => save(v))} className="space-y-5">
-      <div className="space-y-4">
-        <div className="flex items-start gap-3">
-          <Briefcase className="mt-8 size-5 shrink-0 text-[#0A66C2]" aria-hidden />
-          <Field label="LinkedIn" htmlFor="ln-linkedin" className="flex-1">
-            <Input
-              id="ln-linkedin"
-              type="url"
-              inputMode="url"
-              placeholder="https://www.linkedin.com/in/…"
-              {...register("linkedinUrl")}
-            />
-          </Field>
-        </div>
+    <form
+      id={formId}
+      onSubmit={handleSubmit(async (v) => {
+        if (await save(v)) onSaved();
+      })}
+    >
+      <PwRow cols={1}>
+        <PwField
+          label="LinkedIn"
+          htmlFor="ln-linkedin"
+          icon={<BriefcaseIcon />}
+        >
+          <PwInput
+            id="ln-linkedin"
+            type="url"
+            inputMode="url"
+            placeholder="https://www.linkedin.com/in/username/"
+            {...register("linkedinUrl")}
+          />
+        </PwField>
+      </PwRow>
 
-        <div className="flex items-start gap-3">
-          <CodeXml className="mt-8 size-5 shrink-0" aria-hidden />
-          <Field
-            label="GitHub"
-            htmlFor="ln-github"
-            className="flex-1"
-            hint="Username or full profile URL — both are stored as your username."
-          >
-            <Input
-              id="ln-github"
-              placeholder="https://github.com/username"
-              {...register("githubUsername")}
-            />
-          </Field>
-        </div>
+      <PwRow cols={1}>
+        <PwField
+          label="GitHub"
+          htmlFor="ln-github"
+          icon={<CodeIcon />}
+          helper="Username or full profile URL — both are stored as your username."
+        >
+          <PwInput
+            id="ln-github"
+            placeholder="https://github.com/username"
+            {...register("githubUsername")}
+          />
+        </PwField>
+      </PwRow>
 
-        <div className="flex items-start gap-3">
-          <Globe className="mt-8 size-5 shrink-0 text-muted-foreground" aria-hidden />
-          <Field label="Portfolio" htmlFor="ln-portfolio" className="flex-1">
-            <Input
-              id="ln-portfolio"
-              type="url"
-              inputMode="url"
-              placeholder="https://example.com/"
-              {...register("portfolioUrl")}
-            />
-          </Field>
-        </div>
-      </div>
+      <PwRow cols={1}>
+        <PwField
+          label="Portfolio"
+          htmlFor="ln-portfolio"
+          icon={<GlobeIcon />}
+        >
+          <PwInput
+            id="ln-portfolio"
+            type="url"
+            inputMode="url"
+            placeholder="https://yoursite.com"
+            {...register("portfolioUrl")}
+          />
+        </PwField>
+      </PwRow>
 
       {fields.length > 0 ? (
-        <div className="space-y-3 border-t pt-4">
-          <p className="text-xs font-medium text-muted-foreground">
-            Additional links
-          </p>
+        <div className="pw-entries">
           {fields.map((field, index) => (
-            <div
+            <PwEntryCard
               key={field.id}
-              className="grid gap-2 sm:grid-cols-[10rem_1fr_auto] sm:items-end"
+              index={index}
+              title="Link"
+              onRemove={() => remove(index)}
             >
-              <Field label="Type">
-                <Controller
-                  control={control}
-                  name={`extra.${index}.type`}
-                  render={({ field: f }) => (
-                    <Select
-                      value={f.value}
-                      onValueChange={(v) => f.onChange(v as CandidateLinkType)}
-                    >
-                      <SelectTrigger aria-label="Link type">
-                        <SelectValue placeholder="Type" />
-                      </SelectTrigger>
-                      <SelectContent>
+              <PwRow cols={2}>
+                <PwField label="Type">
+                  <Controller
+                    control={control}
+                    name={`extra.${index}.type`}
+                    render={({ field: f }) => (
+                      <PwSelect
+                        value={f.value}
+                        onChange={(e) =>
+                          f.onChange(e.target.value as CandidateLinkType)
+                        }
+                      >
                         {EXTRA_LINK_TYPES.map((t) => (
-                          <SelectItem key={t} value={t}>
+                          <option key={t} value={t}>
                             {LINK_TYPE_LABELS[t] ?? t}
-                          </SelectItem>
+                          </option>
                         ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </Field>
-
-              <div className="grid gap-2 sm:grid-cols-2">
-                <Field label="Label" htmlFor={`ln-label-${index}`}>
-                  <Input
+                      </PwSelect>
+                    )}
+                  />
+                </PwField>
+                <PwField label="Label" htmlFor={`ln-label-${index}`}>
+                  <PwInput
                     id={`ln-label-${index}`}
                     placeholder="ex: LeetCode"
                     {...register(`extra.${index}.label`)}
                   />
-                </Field>
-                <Field label="URL" htmlFor={`ln-url-${index}`}>
-                  <Input
+                </PwField>
+              </PwRow>
+              <PwRow cols={1}>
+                <PwField label="URL" htmlFor={`ln-url-${index}`}>
+                  <PwInput
                     id={`ln-url-${index}`}
                     type="url"
                     inputMode="url"
                     placeholder="https://…"
                     {...register(`extra.${index}.url`)}
                   />
-                </Field>
-              </div>
-
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => remove(index)}
-                className="sm:mb-1"
-              >
-                Remove
-              </Button>
-            </div>
+                </PwField>
+              </PwRow>
+            </PwEntryCard>
           ))}
         </div>
       ) : null}
 
-      <SectionActions
-        saving={saving}
-        onAdd={() =>
+      <PwAddMore
+        onClick={() =>
           append({ type: CandidateLinkType.LEETCODE, label: "", url: "" })
         }
-        addLabel="Add another"
-        saveLabel="Save links"
       />
     </form>
   );

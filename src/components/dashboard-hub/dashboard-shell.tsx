@@ -5,6 +5,7 @@ import { DashboardHeader, type HeaderSectionNavItem } from "./dashboard-header";
 import { DashboardSidebar } from "./dashboard-sidebar";
 import { DashboardFooter } from "./dashboard-footer";
 import type { HubSearchItem } from "@/features/dashboard/hub-search-index";
+import { cn } from "@/lib/utils";
 
 const CLAUDE_SIDEBAR_COLLAPSED_KEY = "abtalks.claudeSidebarCollapsed";
 
@@ -26,6 +27,8 @@ type DashboardShellProps = {
   sectionNavItems?: HeaderSectionNavItem[];
   /** Hub-only search catalog. Omit on other DashboardShell routes. */
   searchItems?: HubSearchItem[];
+  /** Extra classes on the header/footer content pane. */
+  contentClassName?: string;
 };
 
 export function DashboardShell({
@@ -36,6 +39,7 @@ export function DashboardShell({
   showSectionNav = true,
   sectionNavItems,
   searchItems,
+  contentClassName,
 }: DashboardShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -104,7 +108,14 @@ export function DashboardShell({
           sectionNavItems={sectionNavItems}
           searchItems={searchItems}
         />
-        <div className="flex-1 overflow-x-hidden scroll-smooth">{children}</div>
+        <div
+          className={cn(
+            "flex-1 overflow-x-hidden scroll-smooth",
+            contentClassName,
+          )}
+        >
+          {children}
+        </div>
         <DashboardFooter />
       </div>
     </div>
