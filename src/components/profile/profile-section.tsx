@@ -24,6 +24,8 @@ type Props = {
   /** Right-aligned summary when collapsed, e.g. "3 roles". */
   summary?: string | null;
   children: ReactNode;
+  /** Custom icon override (e.g. Activity mic icon with custom status coloring/animation). */
+  icon?: ReactNode;
 };
 
 /**
@@ -40,6 +42,7 @@ export function ProfileSection({
   defaultOpen = false,
   summary,
   children,
+  icon,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const headingId = useId();
@@ -56,7 +59,9 @@ export function ProfileSection({
           "hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-primary/30",
         )}
       >
-        {complete === null ? (
+        {icon !== undefined ? (
+          icon
+        ) : complete === null ? (
           <span className="size-5 shrink-0" aria-hidden />
         ) : complete ? (
           <CheckCircle2
