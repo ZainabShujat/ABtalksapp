@@ -81,15 +81,19 @@ export function computeCompleteness(
     Boolean(detail.portfolioUrl) ||
     detail.links.length > 0;
 
-  // Engagement with the section, not a particular answer. Requiring
-  // `openToWork` would push people into declaring they are job-hunting just to
-  // move a progress bar.
+  // Any saved engagement with the section counts. openToWork alone is enough
+  // once the candidate has opted in; roles/locations/types/mode/notice/dates
+  // also qualify. An empty save (all defaults) does not.
   const preferencesComplete = Boolean(
     pref &&
-      (pref.preferredRoles.length > 0 ||
+      (pref.openToWork ||
+        pref.preferredRoles.length > 0 ||
         pref.preferredLocations.length > 0 ||
         pref.opportunityTypes.length > 0 ||
-        pref.remotePreference),
+        Boolean(pref.remotePreference) ||
+        pref.willingToRelocate ||
+        pref.noticePeriodDays !== null ||
+        pref.availableFromYear !== null),
   );
 
   const sections: SectionStatus[] = [
@@ -149,7 +153,7 @@ export function computeCompleteness(
       label: "Career preferences",
       complete: preferencesComplete,
       weight: WEIGHTS.preferences,
-      hint: "Tell us the roles and locations you want",
+      hint: "Tell us what you are looking for, or mark Open to work",
     },
     {
       key: "evidence",

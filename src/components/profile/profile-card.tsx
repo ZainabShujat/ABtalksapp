@@ -107,6 +107,7 @@ export function ProfileCard({
   onJump,
   performance,
   avatarUploadEnabled,
+  openToWork,
 }: {
   score: number;
   fullName: string;
@@ -119,6 +120,7 @@ export function ProfileCard({
   onJump: (index: number) => void;
   performance: { searchAppearances: number; recruiterActions: number };
   avatarUploadEnabled: boolean;
+  openToWork?: boolean;
 }) {
   const uid = useId().replace(/:/g, "");
   const gradId = `pw-clayRingGrad-${uid}`;
@@ -218,6 +220,9 @@ export function ProfileCard({
         </div>
 
         <div className="pw-user-details">
+          {openToWork ? (
+            <span className="pw-open-to-work">Open To Work</span>
+          ) : null}
           <h1 className="pw-user-name">{fullName || "Your name"}</h1>
           <div className="pw-education-degree">{personaLabel}</div>
           <div className="pw-last-updated" suppressHydrationWarning>

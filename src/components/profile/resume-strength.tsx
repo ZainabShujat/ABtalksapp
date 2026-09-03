@@ -3,9 +3,9 @@ import type { ResumeView } from "@/features/resume/types";
 import { cn } from "@/lib/utils";
 
 /**
- * Résumé Strength, as the candidate sees it.
+ * Resume Strength, as the candidate sees it.
  *
- * The score describes the résumé, not a job. It is never labelled ATS, match or
+ * The score describes the resume, not a job. It is never labelled ATS, match or
  * compatibility anywhere in this component — no job description was involved in
  * producing it, and a label implying otherwise would be a lie to the candidate.
  *
@@ -36,7 +36,7 @@ export function ResumeStrength({
     <div className="space-y-5">
       <div className="rounded-2xl border bg-muted/20 p-5">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Résumé strength
+          Resume strength
         </p>
 
         <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -57,7 +57,7 @@ export function ResumeStrength({
           aria-valuenow={strength.overallScore}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label="Résumé strength"
+          aria-label="Resume strength"
         >
           <div
             className={cn("h-full rounded-full transition-all duration-500", t.bar)}
@@ -66,7 +66,7 @@ export function ResumeStrength({
         </div>
 
         <p className="mt-3 text-xs text-muted-foreground">
-          How complete and well written your résumé is on its own — not measured
+          How complete and well written your resume is on its own — not measured
           against any particular job.
         </p>
       </div>

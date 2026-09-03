@@ -39,6 +39,7 @@ export function ProfileWizard({
   updatedAtIso,
   performance,
   avatarUploadEnabled,
+  openToWork,
 }: {
   steps: WizardStep[];
   initialIndex: number;
@@ -49,6 +50,7 @@ export function ProfileWizard({
   updatedAtIso: string;
   performance: { searchAppearances: number; recruiterActions: number };
   avatarUploadEnabled: boolean;
+  openToWork?: boolean;
 }) {
   const [index, setIndex] = useState(initialIndex);
   const [dirty, setDirty] = useState(false);
@@ -149,6 +151,7 @@ export function ProfileWizard({
           onJump={requestLeave}
           performance={performance}
           avatarUploadEnabled={avatarUploadEnabled}
+          openToWork={openToWork}
         />
 
         <ProfileWizardProvider

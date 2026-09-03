@@ -317,9 +317,9 @@ export default async function ProfilePage() {
     },
     {
       key: "resume",
-      title: "Résumé",
+      title: "Resume",
       description:
-        "Upload your résumé to see how strong it is and what to improve.",
+        "Upload your resume to see how strong it is and what to improve.",
       checklist: "resume",
       complete: resumeComplete,
       attention: !resumeComplete,
@@ -400,6 +400,7 @@ export default async function ProfilePage() {
         updatedAtIso={detail.updatedAt.toISOString()}
         performance={PROFILE_PERFORMANCE}
         avatarUploadEnabled={isAvatarStorageConfigured()}
+        openToWork={detail.preference?.openToWork ?? false}
       />
     </DashboardShell>
   );

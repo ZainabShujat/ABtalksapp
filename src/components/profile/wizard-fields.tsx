@@ -529,21 +529,31 @@ export function PwTogglePanel({
 }) {
   const autoId = useId();
   const switchId = id ?? autoId;
+  const on = Boolean(checked);
   return (
-    <div className="pw-toggle-panel">
+    <div
+      className={`pw-toggle-panel${on ? " pw-on" : ""}`}
+      onClick={() => onChange(!on)}
+      onKeyDown={(e) => {
+        if (e.key === " " || e.key === "Enter") {
+          e.preventDefault();
+          onChange(!on);
+        }
+      }}
+      role="switch"
+      aria-checked={on}
+      aria-labelledby={`${switchId}-title`}
+      tabIndex={0}
+    >
       <div className="pw-toggle-copy">
-        <div className="pw-toggle-title">{title}</div>
+        <div className="pw-toggle-title" id={`${switchId}-title`}>
+          {title}
+        </div>
         <div className="pw-toggle-text">{text}</div>
       </div>
-      <label className="pw-switch" htmlFor={switchId}>
-        <input
-          id={switchId}
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
-        />
-        <span />
-      </label>
+      <span className="pw-switch" aria-hidden>
+        <span className={on ? "pw-switch-track pw-checked" : "pw-switch-track"} />
+      </span>
     </div>
   );
 }

@@ -539,37 +539,74 @@ suite("completeness reaches 100 without every optional section", () => {
   );
 });
 
-suite("completeness ignores visibility and openToWork", () => {
-  const base = detailFixture({
-    headline: "x",
-    locationCity: "y",
-    preference: {
-      openToWork: false,
-      preferredRoles: ["Engineer"],
-      preferredLocations: [],
-      opportunityTypes: [],
-      remotePreference: null,
-      willingToRelocate: false,
-      noticePeriodDays: null,
-      availableFromMonth: null,
-      availableFromYear: null,
-    },
-  });
-  const notLooking = computeCompleteness(base, { hasAny: false });
-  const looking = computeCompleteness(
+suite("completeness treats preference engagement broadly", () => {
+  const withRoles = computeCompleteness(
     detailFixture({
-      ...base,
-      preference: { ...base.preference!, openToWork: true },
+      headline: "x",
+      locationCity: "y",
+      preference: {
+        openToWork: false,
+        preferredRoles: ["Engineer"],
+        preferredLocations: [],
+        opportunityTypes: [],
+        remotePreference: null,
+        willingToRelocate: false,
+        noticePeriodDays: null,
+        availableFromMonth: null,
+        availableFromYear: null,
+      },
     }),
     { hasAny: false },
   );
   assert(
-    notLooking.score === looking.score,
-    "declaring you are open to work changes nothing",
+    withRoles.sections.find((x) => x.key === "preferences")?.complete === true,
+    "roles complete the section",
+  );
+
+  const openOnly = computeCompleteness(
+    detailFixture({
+      headline: "x",
+      locationCity: "y",
+      preference: {
+        openToWork: true,
+        preferredRoles: [],
+        preferredLocations: [],
+        opportunityTypes: [],
+        remotePreference: null,
+        willingToRelocate: false,
+        noticePeriodDays: null,
+        availableFromMonth: null,
+        availableFromYear: null,
+      },
+    }),
+    { hasAny: false },
   );
   assert(
-    notLooking.sections.find((x) => x.key === "preferences")?.complete === true,
-    "engaging with the section is enough",
+    openOnly.sections.find((x) => x.key === "preferences")?.complete === true,
+    "openToWork alone completes the section after save",
+  );
+
+  const emptyPref = computeCompleteness(
+    detailFixture({
+      headline: "x",
+      locationCity: "y",
+      preference: {
+        openToWork: false,
+        preferredRoles: [],
+        preferredLocations: [],
+        opportunityTypes: [],
+        remotePreference: null,
+        willingToRelocate: false,
+        noticePeriodDays: null,
+        availableFromMonth: null,
+        availableFromYear: null,
+      },
+    }),
+    { hasAny: false },
+  );
+  assert(
+    emptyPref.sections.find((x) => x.key === "preferences")?.complete === false,
+    "empty defaults do not complete the section",
   );
 
   const src = code("src/features/profile/completeness.ts");

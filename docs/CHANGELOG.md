@@ -50,6 +50,7 @@ _(Cleared 2026-08-24 — the 17 entries that were under this heading were folded
 reconciled against `3b040d8`. The un-headed block above (2026-08-06 → 2026-08-20) was logged outside this
 heading and was never reconciled; its facts were folded into the same pass, but the lines were left in place
 rather than deleted without authorization. Cursor appends new lines below.)_
+- 2026-09-03 [rule] /profile Career Preferences completes on any saved engagement (incl. openToWork); profile card shows orange Open To Work tag when set
 - 2026-09-03 [rule] /profile Skills section completes with ≥1 claimed skill (was MIN_SKILLS = 3)
 - 2026-09-03 [rule] /profile Basic Information requires phone OTP when verification is on (India); verified state shows green badge only
 - 2026-09-03 [rule] /profile Other skill path find-or-creates Skill rows (slug fold) so custom names stay recruiter-searchable
