@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Loader2, ShoppingCart, X } from "lucide-react";
+// BookmarkPlus, not ShoppingCart: this is a shortlist, not a basket, and
+// nothing downstream is a purchase. The label already says "Add to Shortlist".
+import { BookmarkPlus, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { toggleShortlistAction } from "@/app/actions/talent-actions";
 import {
@@ -135,8 +137,21 @@ export function ShortlistButton({
         <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
       ) : inCart ? (
         <X className="size-3.5" aria-hidden="true" />
+      ) : podLabel ? (
+        // The Shortlist mark from the desk header (`/hire/talentpod.jpg`), so
+        // the button on a card and the nav item it feeds are recognisably the
+        // same thing. Only the `podLabel` — i.e. Scout desk — variant takes it;
+        // the generic cart button keeps its lucide glyph.
+        <img
+          src="/hire/talentpod.jpg"
+          alt=""
+          width={14}
+          height={16}
+          aria-hidden="true"
+          className="shrink-0"
+        />
       ) : (
-        <ShoppingCart className="size-3.5" aria-hidden="true" />
+        <BookmarkPlus className="size-3.5" aria-hidden="true" />
       )}
       {!compact && label}
     </button>

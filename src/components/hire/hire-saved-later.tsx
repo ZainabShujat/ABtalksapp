@@ -161,12 +161,6 @@ export function HireSavedLater() {
 
       <div className="hire-pod__main">
         <div className="hire-pod__col">
-          <p className="hire-pod__privacy">
-            <strong>Privacy protected.</strong> Candidates are shown by reference
-            ID. Names and contact details stay hidden until you place a request
-            and our team confirms the engagement.
-          </p>
-
           <div className="hire-pod__list">
             {rows.length === 0 ? (
               <div className="pod-empty">

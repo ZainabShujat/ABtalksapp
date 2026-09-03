@@ -215,20 +215,10 @@ export function HireTalentPod({ serverRows }: { serverRows: CartRow[] }) {
           Back to Scout
         </button>
         <h1 className="hire-pod__title">Your Shortlist</h1>
-        <p className="hire-pod__sub">
-          Saved on this device until you sign in. Checkout asks you to
-          register or sign in — you stay on this page.
-        </p>
       </header>
 
       <div className="hire-pod__main">
         <div className="hire-pod__col">
-          <p className="hire-pod__privacy">
-            <strong>Privacy protected.</strong> Candidates are shown by
-            reference ID. Names and contact details stay hidden until you place a
-            request and our team confirms the engagement.
-          </p>
-
           {selectable.length > 0 && (
             <button
               type="button"
