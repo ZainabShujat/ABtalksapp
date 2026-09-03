@@ -9,7 +9,8 @@ import { getCandidateDetail } from "@/repositories/candidate-detail";
 import { getProfileEvidence } from "@/features/profile/get-evidence";
 import { getResumeView } from "@/features/resume/service";
 import { computeCompleteness } from "@/features/profile/completeness";
-import { getPopularSkills } from "@/features/skill/search-skills";
+import { getSkillsByNames } from "@/features/skill/search-skills";
+import { PROFILE_QUICK_SKILLS } from "@/lib/candidate-vocab";
 import { getActiveAttempt, getHistory } from "@/features/interview/platform/service";
 import { DashboardShell } from "@/components/dashboard-hub/dashboard-shell";
 import { ProfileWizard, type WizardStep } from "@/components/profile/profile-wizard";
@@ -25,6 +26,18 @@ import { ResumeSection } from "@/components/profile/resume-section";
 import { PreferencesSection } from "@/components/profile/preferences-section";
 import { buttonVariants } from "@/components/ui/button";
 import { PERSONA_LABELS } from "@/lib/candidate-vocab";
+import { isOtpVerificationRequired } from "@/lib/feature-flags";
+import { isAvatarStorageConfigured } from "@/features/profile/avatar-storage";
+
+/**
+ * Placeholder figures — nothing measures these yet.
+ *
+ * Search appearances needs a write when a candidate is returned by a /hire
+ * search; recruiter actions needs one when a recruiter opens or shortlists
+ * them. Neither exists. When that tracking lands, replace this constant with
+ * the real read and delete this comment — no other file needs to change.
+ */
+const PROFILE_PERFORMANCE = { searchAppearances: 1, recruiterActions: 0 } as const;
 
 /**
  * Résumé parsing runs inline in a Server Action invoked from this route, and one
@@ -91,13 +104,13 @@ export default async function ProfilePage() {
 
   const [
     evidence,
-    popularSkills,
+    catalogSkills,
     mockInterviewHistory,
     activeMockInterview,
     resume,
   ] = await Promise.all([
     getProfileEvidence(userId),
-    getPopularSkills(10),
+    getSkillsByNames(PROFILE_QUICK_SKILLS),
     // The MockInterview tables exist on demo but the migration has not been
     // applied to production, so this query throws there until it is. The
     // profile must not 500 over it — it degrades to an empty list, which
@@ -156,6 +169,7 @@ export default async function ProfilePage() {
       node: (
         <BasicInfoSection
           phoneVerified={detail.phoneVerified}
+          otpRequired={isOtpVerificationRequired()}
           initial={{
             fullName: detail.fullName,
             phone: s(detail.phone),
@@ -267,7 +281,7 @@ export default async function ProfilePage() {
       savable: true,
       node: (
         <SkillsSection
-          popular={popularSkills}
+          catalog={catalogSkills}
           initial={claimedSkills.map((sk) => ({
             skillId: sk.skillId,
             name: sk.name,
@@ -303,9 +317,9 @@ export default async function ProfilePage() {
     },
     {
       key: "resume",
-      title: "Résumé",
+      title: "Resume",
       description:
-        "Upload your résumé to see how strong it is and what to improve.",
+        "Upload your resume to see how strong it is and what to improve.",
       checklist: "resume",
       complete: resumeComplete,
       attention: !resumeComplete,
@@ -373,7 +387,6 @@ export default async function ProfilePage() {
       user={{ ...shellUser, name: detail.fullName || shellUser.name }}
       isAdmin={session.user.isAdmin ?? false}
       showSectionNav={false}
-      contentClassName="min-[1025px]:flex min-[1025px]:min-h-0 min-[1025px]:flex-col min-[1025px]:overflow-hidden"
     >
       <ProfileWizard
         steps={steps}
@@ -385,6 +398,9 @@ export default async function ProfilePage() {
         }
         imageUrl={user.image ?? null}
         updatedAtIso={detail.updatedAt.toISOString()}
+        performance={PROFILE_PERFORMANCE}
+        avatarUploadEnabled={isAvatarStorageConfigured()}
+        openToWork={detail.preference?.openToWork ?? false}
       />
     </DashboardShell>
   );

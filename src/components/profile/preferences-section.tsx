@@ -64,9 +64,9 @@ export function PreferencesSection({
           render={({ field }) => (
             <PwTogglePanel
               title="Open to work"
-              text="Says whether you are looking right now. Separate from whether recruiters can find you at all — this switch does not change that."
-              checked={field.value}
-              onChange={field.onChange}
+              text="Says whether you are looking for a job right now."
+              checked={Boolean(field.value)}
+              onChange={(next) => field.onChange(next)}
             />
           )}
         />
@@ -129,7 +129,7 @@ export function PreferencesSection({
               <PwSelect
                 id="pref-mode"
                 value={field.value}
-                onChange={field.onChange}
+                onChange={(e) => field.onChange(e.target.value)}
               >
                 <option value="">Select</option>
                 {WORK_MODES.map((m) => (

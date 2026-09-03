@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import type { WizardStep } from "./profile-wizard";
+import { AvatarEditor } from "./avatar-editor";
 
 const RING_R = 48.5;
 const RING_C = 2 * Math.PI * RING_R;
@@ -67,6 +68,33 @@ function WarnMark() {
   );
 }
 
+const PERFORMANCE_TOOLTIP =
+  "Recruiter activity tracking is rolling out. These figures will start moving once it is live.";
+
+/**
+ * One half of the Profile performance panel.
+ *
+ * Order matters and matches the design: value, then the charcoal dot, then the
+ * orange chevron. The dot is a separator, not a status light — it is grey while
+ * the chevron carries the accent.
+ */
+function PerfColumn({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="pw-perf-column">
+      <div className="pw-col-label">{label}</div>
+      <div className="pw-col-value">
+        {value}
+        <span className="pw-dot" aria-hidden />
+        <span className="pw-chev" aria-hidden>
+          <svg viewBox="0 0 24 24">
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function ProfileCard({
   score,
   fullName,
@@ -77,6 +105,9 @@ export function ProfileCard({
   activeIndex,
   celebrate,
   onJump,
+  performance,
+  avatarUploadEnabled,
+  openToWork,
 }: {
   score: number;
   fullName: string;
@@ -87,6 +118,9 @@ export function ProfileCard({
   activeIndex: number;
   celebrate: boolean;
   onJump: (index: number) => void;
+  performance: { searchAppearances: number; recruiterActions: number };
+  avatarUploadEnabled: boolean;
+  openToWork?: boolean;
 }) {
   const uid = useId().replace(/:/g, "");
   const gradId = `pw-clayRingGrad-${uid}`;
@@ -159,16 +193,17 @@ export function ProfileCard({
             />
           </svg>
 
-          <div className="pw-avatar pw-lg" aria-hidden>
+          <div className="pw-avatar pw-lg">
             {imageUrl ? (
               // Avatar URLs are user-supplied remotes; next/image is not
               // configured for arbitrary hosts here.
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={imageUrl} alt="" />
+              <img src={imageUrl} alt="" aria-hidden />
             ) : (
-              initials(fullName)
+              <span aria-hidden>{initials(fullName)}</span>
             )}
           </div>
+          {avatarUploadEnabled ? <AvatarEditor /> : null}
 
           <div
             className={`pw-ring-check${complete ? " pw-show" : ""}`}
@@ -185,6 +220,9 @@ export function ProfileCard({
         </div>
 
         <div className="pw-user-details">
+          {openToWork ? (
+            <span className="pw-open-to-work">Open To Work</span>
+          ) : null}
           <h1 className="pw-user-name">{fullName || "Your name"}</h1>
           <div className="pw-education-degree">{personaLabel}</div>
           <div className="pw-last-updated" suppressHydrationWarning>
@@ -211,14 +249,46 @@ export function ProfileCard({
                 type="button"
                 className={classes}
                 onClick={() => onJump(i)}
+                aria-current={i === activeIndex ? "step" : undefined}
               >
                 {mark}
                 <span>{step.title}</span>
+                <span className="pw-sr-only">
+                  Step {i + 1} of {steps.length}
+                </span>
               </button>
             </li>
           );
         })}
       </ul>
+
+      <div className="pw-performance-section">
+        <div className="pw-performance-header">
+          <span className="pw-section-title">Profile performance</span>
+          <svg
+            viewBox="0 0 24 24"
+            className="pw-ico pw-info"
+            role="img"
+            aria-label={PERFORMANCE_TOOLTIP}
+          >
+            <title>{PERFORMANCE_TOOLTIP}</title>
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 8v4" />
+            <path d="M12 16h.01" />
+          </svg>
+        </div>
+        <div className="pw-performance-grid">
+          <PerfColumn
+            label="Search appearances"
+            value={performance.searchAppearances}
+          />
+          <div className="pw-grid-divider" aria-hidden />
+          <PerfColumn
+            label="Recruiter actions"
+            value={performance.recruiterActions}
+          />
+        </div>
+      </div>
     </section>
   );
 }

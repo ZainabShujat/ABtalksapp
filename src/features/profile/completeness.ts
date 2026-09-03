@@ -1,3 +1,4 @@
+import { isOtpVerificationRequired } from "@/lib/feature-flags";
 import type { CandidateDetail } from "@/repositories/candidate-detail";
 
 /**
@@ -58,7 +59,7 @@ const WEIGHTS: Record<SectionKey, number> = {
   evidence: 0,
 };
 
-const MIN_SKILLS = 3;
+const MIN_SKILLS = 1;
 
 export function computeCompleteness(
   detail: CandidateDetail,
@@ -69,7 +70,8 @@ export function computeCompleteness(
   const basicComplete =
     detail.fullName.trim().length > 0 &&
     (detail.headline?.trim() || detail.summary?.trim() ? true : false) &&
-    (detail.locationCity?.trim() ? true : false);
+    (detail.locationCity?.trim() ? true : false) &&
+    (!isOtpVerificationRequired() || detail.phoneVerified);
 
   const claimedSkills = detail.skills.filter((s) => s.claimedByCandidate);
 
@@ -79,15 +81,19 @@ export function computeCompleteness(
     Boolean(detail.portfolioUrl) ||
     detail.links.length > 0;
 
-  // Engagement with the section, not a particular answer. Requiring
-  // `openToWork` would push people into declaring they are job-hunting just to
-  // move a progress bar.
+  // Any saved engagement with the section counts. openToWork alone is enough
+  // once the candidate has opted in; roles/locations/types/mode/notice/dates
+  // also qualify. An empty save (all defaults) does not.
   const preferencesComplete = Boolean(
     pref &&
-      (pref.preferredRoles.length > 0 ||
+      (pref.openToWork ||
+        pref.preferredRoles.length > 0 ||
         pref.preferredLocations.length > 0 ||
         pref.opportunityTypes.length > 0 ||
-        pref.remotePreference),
+        Boolean(pref.remotePreference) ||
+        pref.willingToRelocate ||
+        pref.noticePeriodDays !== null ||
+        pref.availableFromYear !== null),
   );
 
   const sections: SectionStatus[] = [
@@ -96,7 +102,9 @@ export function computeCompleteness(
       label: "Basic information",
       complete: basicComplete,
       weight: WEIGHTS.basic,
-      hint: "Add a headline and your location",
+      hint: !detail.phoneVerified && isOtpVerificationRequired()
+        ? "Verify your phone number"
+        : "Add a headline and your location",
     },
     {
       key: "experience",
@@ -124,7 +132,7 @@ export function computeCompleteness(
       label: "Skills",
       complete: claimedSkills.length >= MIN_SKILLS,
       weight: WEIGHTS.skills,
-      hint: `Add at least ${MIN_SKILLS} skills`,
+      hint: "Add at least one skill",
     },
     {
       key: "certifications",
@@ -145,7 +153,7 @@ export function computeCompleteness(
       label: "Career preferences",
       complete: preferencesComplete,
       weight: WEIGHTS.preferences,
-      hint: "Tell us the roles and locations you want",
+      hint: "Tell us what you are looking for, or mark Open to work",
     },
     {
       key: "evidence",

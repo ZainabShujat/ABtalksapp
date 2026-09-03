@@ -2,6 +2,7 @@ import "server-only";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { skillSlug } from "@/features/skill/resolve-skill";
 
 /**
  * Typeahead over the canonical `Skill` vocabulary.
@@ -78,33 +79,45 @@ export async function searchSkills(query: string): Promise<SkillOption[]> {
 }
 
 /**
- * Quick-add chips: the skills most candidates on the platform already claim.
- * Popularity comes from live claims, so the list tracks what the cohort
- * actually does rather than a hard-coded guess.
+ * Resolve a curated name list against the active catalog, preserving list order.
+ * Names with no row are omitted — the Skills chips still render the constant
+ * and resolve on click.
  */
-export async function getPopularSkills(limit = 12): Promise<SkillOption[]> {
+export async function getSkillsByNames(
+  names: readonly string[],
+): Promise<SkillOption[]> {
+  const trimmed = names.map((n) => n.trim()).filter((n) => n.length > 0);
+  if (trimmed.length === 0) return [];
+
+  const slugs = [...new Set(trimmed.map(skillSlug).filter((s) => s.length > 0))];
+
   try {
-    const grouped = await prisma.candidateSkill.groupBy({
-      by: ["skillId"],
-      where: { claimedByCandidate: true },
-      _count: { skillId: true },
-      orderBy: { _count: { skillId: "desc" } },
-      take: limit,
-    });
-
-    if (grouped.length === 0) return [];
-
     const rows = await prisma.skill.findMany({
-      where: { id: { in: grouped.map((g) => g.skillId) }, isActive: true },
+      where: {
+        isActive: true,
+        OR: [
+          { slug: { in: slugs } },
+          ...trimmed.map((name) => ({
+            name: { equals: name, mode: Prisma.QueryMode.insensitive },
+          })),
+        ],
+      },
       select: SELECT,
     });
 
-    const rank = new Map(grouped.map((g, i) => [g.skillId, i]));
-    return rows
-      .sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0))
-      .map(shape);
+    const byName = new Map(rows.map((r) => [r.name.toLowerCase(), shape(r)]));
+    const bySlug = new Map(rows.map((r) => [r.slug, shape(r)]));
+    const out: SkillOption[] = [];
+    const seen = new Set<string>();
+    for (const name of trimmed) {
+      const hit = byName.get(name.toLowerCase()) ?? bySlug.get(skillSlug(name));
+      if (!hit || seen.has(hit.id)) continue;
+      seen.add(hit.id);
+      out.push(hit);
+    }
+    return out;
   } catch (error) {
-    logger.error("[skill] popular lookup failed", { error: String(error) });
+    logger.error("[skill] name lookup failed", { error: String(error) });
     return [];
   }
 }
