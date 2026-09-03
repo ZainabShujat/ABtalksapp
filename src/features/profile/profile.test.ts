@@ -582,13 +582,22 @@ suite("completeness ignores visibility and openToWork", () => {
 });
 
 suite("withdrawn skill claims do not count toward completeness", () => {
-  const result = computeCompleteness(
-    detailFixture({ skills: [skill("a"), skill("b"), skill("c", false)] }),
+  const withdrawn = computeCompleteness(
+    detailFixture({ skills: [skill("a", false), skill("b", false)] }),
     { hasAny: false },
   );
   assert(
-    result.sections.find((x) => x.key === "skills")?.complete === false,
-    "two live claims is under the threshold",
+    withdrawn.sections.find((x) => x.key === "skills")?.complete === false,
+    "withdrawn claims do not complete the section",
+  );
+
+  const one = computeCompleteness(
+    detailFixture({ skills: [skill("a")] }),
+    { hasAny: false },
+  );
+  assert(
+    one.sections.find((x) => x.key === "skills")?.complete === true,
+    "one claimed skill completes the section",
   );
 });
 

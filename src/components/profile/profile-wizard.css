@@ -404,7 +404,7 @@
 .pw-check-item.pw-completed,
 .pw-check-item.pw-completed:hover {
   color: var(--pw-green);
-  font-weight: 700;
+  font-weight: 400;
 }
 .pw-check-item.pw-completed .pw-mark {
   color: #fff;
@@ -460,7 +460,7 @@
 }
 .pw-check-item.pw-current.pw-completed {
   color: var(--pw-green);
-  font-weight: 700;
+  font-weight: 400;
 }
 
 /* ============================================================
@@ -577,6 +577,19 @@
   padding: 18px 33px 0;
   overflow: hidden;
   isolation: isolate;
+}
+.pw-section-track {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    #fff7ed 0%,
+    #ffedd5 45%,
+    rgba(255, 247, 237, 0) 100%
+  );
+  border-top-left-radius: var(--pw-card-radius);
+  z-index: -2;
+  pointer-events: none;
 }
 .pw-section-progress {
   position: absolute;
@@ -1234,6 +1247,16 @@
   border: 1px solid #e9e5e1;
   border-radius: 8px;
   padding: 6px 8px 6px 12px;
+}
+.pw-skill-saved-tick {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  fill: none;
+  stroke: var(--pw-green);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .pw-tag-chip select {
   height: 24px;

@@ -59,7 +59,7 @@ const WEIGHTS: Record<SectionKey, number> = {
   evidence: 0,
 };
 
-const MIN_SKILLS = 3;
+const MIN_SKILLS = 1;
 
 export function computeCompleteness(
   detail: CandidateDetail,
@@ -128,7 +128,7 @@ export function computeCompleteness(
       label: "Skills",
       complete: claimedSkills.length >= MIN_SKILLS,
       weight: WEIGHTS.skills,
-      hint: `Add at least ${MIN_SKILLS} skills`,
+      hint: "Add at least one skill",
     },
     {
       key: "certifications",

@@ -56,6 +56,9 @@ export function SkillsSection({
   const { formId, onSaved, setDirty } = useProfileWizard();
   const { save } = useSectionSave(saveSkillsAction, "Skills");
   const [rows, setRows] = useState<SkillRow[]>(initial);
+  const [persistedIds, setPersistedIds] = useState(
+    () => new Set(initial.map((r) => r.skillId)),
+  );
   const [otherOpen, setOtherOpen] = useState(false);
   const [otherDraft, setOtherDraft] = useState("");
   const [otherError, setOtherError] = useState<string | null>(null);
@@ -70,6 +73,10 @@ export function SkillsSection({
       !(s.id && selectedIds.includes(s.id)) &&
       !selectedNameSet.has(s.name.toLowerCase()),
   );
+
+  useEffect(() => {
+    setPersistedIds(new Set(initial.map((r) => r.skillId)));
+  }, [initial]);
 
   useEffect(() => {
     setDirty(JSON.stringify(rows) !== JSON.stringify(initial));
@@ -166,7 +173,10 @@ export function SkillsSection({
             selfRated: r.selfRated ?? "",
           })),
         });
-        if (ok) onSaved();
+        if (ok) {
+          setPersistedIds(new Set(rows.map((r) => r.skillId)));
+          onSaved();
+        }
       }}
     >
       <PwRow cols={1}>
@@ -252,11 +262,20 @@ export function SkillsSection({
           <div className="pw-tag-list pw-tag-list-boxed">
             {rows.length === 0 ? (
               <div className="pw-tag-empty">
-                No skills yet. Add at least three.
+                No skills yet. Add at least one.
               </div>
             ) : (
               rows.map((row) => (
                 <span key={row.skillId} className="pw-tag-chip">
+                  {persistedIds.has(row.skillId) ? (
+                    <svg
+                      className="pw-skill-saved-tick"
+                      viewBox="0 0 24 24"
+                      aria-hidden
+                    >
+                      <path d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : null}
                   <span>{row.name}</span>
                   <select
                     aria-label={`Self-rated proficiency for ${row.name}`}

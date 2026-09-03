@@ -162,6 +162,7 @@ export function ProfileWizard({
         >
           <section className="pw-form-card">
             <div className="pw-section-header">
+              <div className="pw-section-track" aria-hidden />
               <div
                 ref={barRef}
                 className={progressClass}
