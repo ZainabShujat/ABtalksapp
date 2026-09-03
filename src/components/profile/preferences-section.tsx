@@ -64,7 +64,7 @@ export function PreferencesSection({
           render={({ field }) => (
             <PwTogglePanel
               title="Open to work"
-              text="Says whether you are looking right now. Separate from whether recruiters can find you at all — this switch does not change that."
+              text="Says whether you are looking for a job right now."
               checked={field.value}
               onChange={field.onChange}
             />

@@ -161,7 +161,7 @@ export function BasicInfoSection({
         <PwField label="City" htmlFor="bi-city">
           <PwInput
             id="bi-city"
-            placeholder="e.g. Noida"
+            placeholder="e.g. Mumbai"
             autoComplete="address-level2"
             {...register("locationCity")}
           />
@@ -169,7 +169,7 @@ export function BasicInfoSection({
         <PwField label="State / region" htmlFor="bi-region">
           <PwInput
             id="bi-region"
-            placeholder="e.g. Uttar Pradesh"
+            placeholder="e.g. Maharashtra"
             autoComplete="address-level1"
             {...register("locationRegion")}
           />
@@ -180,7 +180,7 @@ export function BasicInfoSection({
         <PwField
           label="Country code"
           htmlFor="bi-country"
-          helper="2 letters, e.g. IN"
+          
         >
           <PwInput
             id="bi-country"
