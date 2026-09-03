@@ -23,9 +23,16 @@ export default function EventsTimeline() {
   // build-time date would freeze the split forever. null on the server keeps
   // the first render deterministic (no hydration mismatch).
   const [todayKey, setTodayKey] = useState<string | null>(null);
+  // The day key still splits upcoming from past; the instant decides which
+  // event is registrable, so the two cannot disagree between a workshop's end
+  // and IST midnight.
+  const [nowMs, setNowMs] = useState<number | null>(null);
 
   useEffect(() => {
-    const sync = () => setTodayKey(istTodayKey());
+    const sync = () => {
+      setTodayKey(istTodayKey());
+      setNowMs(Date.now());
+    };
     sync();
     // Rolls an already-open tab over at IST midnight without a reload.
     const id = setInterval(sync, 60_000);
@@ -39,9 +46,9 @@ export default function EventsTimeline() {
     return {
       upcoming: upcomingEvents(todayKey),
       past: pastEvents(todayKey),
-      openEventId: getRegistrableEvent(todayKey)?.id,
+      openEventId: nowMs === null ? undefined : getRegistrableEvent(nowMs)?.id,
     };
-  }, [todayKey]);
+  }, [todayKey, nowMs]);
 
   const isPastTab = tab === "past";
   const list = isPastTab ? past : upcoming;
@@ -205,16 +212,11 @@ export default function EventsTimeline() {
                         {ev.desc}
                       </p>
 
+                      {/* `By {ev.host}` used to lead this row. It named a real
+                          person on the September sessions, and /workshop/events
+                          is public and unauthenticated. The field is left in the
+                          data — this is a display decision, not a data one. */}
                       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] wk-faint">
-                        <span className="inline-flex items-center gap-1.5">
-                          <span
-                            className="flex h-4 w-4 items-center justify-center rounded-full text-[9px]"
-                            style={{ background: `${ev.accent}30` }}
-                          >
-                            ●
-                          </span>
-                          By {ev.host}
-                        </span>
                         <span className="inline-flex items-center gap-1">
                           <MapPin size={12} strokeWidth={1.75} />
                           {ev.location}

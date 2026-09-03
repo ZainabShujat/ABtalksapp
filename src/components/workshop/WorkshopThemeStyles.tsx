@@ -215,6 +215,118 @@ export default function WorkshopThemeStyles() {
         .wk-root .wk-bday-ring { animation: none; opacity: 0; }
       }
 
+      /* The month-navigation controls on the calendar card: both arrows and
+         Today.
+
+         They used to sit on --wk-chip, which is a 16% orange in dark mode and
+         a peach in light. Against the card that made three tinted blocks
+         floating in a header whose only other lines are the neutral
+         --wk-grid-line of the grid: the one orange-tinted surface inside an
+         otherwise neutral card, which is what read as odd shading. Today also
+         carried a border the arrows did not, so one row held two treatments.
+
+         At rest they are now the card itself behind the same hairline the grid
+         uses. The orange returns on hover, where an accent belongs — as a
+         response to the pointer rather than as permanent decoration. */
+      .wk-root .wk-cal-ctl {
+        background: transparent;
+        border: 1px solid var(--wk-card-border);
+        color: var(--wk-muted);
+        transition: background-color 0.16s ease, color 0.16s ease,
+          border-color 0.16s ease;
+      }
+      .wk-root .wk-cal-ctl:hover {
+        background: var(--wk-chip);
+        border-color: rgba(var(--wk-a1-rgb), 0.32);
+        color: var(--wk-a1);
+      }
+      .wk-root .wk-cal-ctl:active { transform: translateY(0.5px); }
+      @media (prefers-reduced-motion: reduce) {
+        .wk-root .wk-cal-ctl { transition: none; }
+        .wk-root .wk-cal-ctl:active { transform: none; }
+      }
+
+      /* Calendar event tiles: light at rest, deep on hover.
+
+         The tile used to sit at full-strength #E05226 permanently, which left
+         the hover nowhere to go — an orange glow around an orange tile reads
+         as nothing, and the gradient already tops out so brightness had no
+         headroom either. Resting on a tint and darkening on hover gives the
+         interaction the whole range, and reads the way a button does.
+
+         The fill comes from custom properties the component sets per track,
+         because a background written into the style attribute cannot be
+         restyled from here — inline outranks any stylesheet rule.
+
+         A placeholder keeps its dashed, muted chip. It answers the pointer
+         with a ring and a lift, but never takes the workshop fill: an
+         unannounced Saturday must not look like a scheduled session. */
+      .wk-root .wk-event-tile {
+        box-shadow: 0 2px 4px rgba(var(--wk-ink-a), 0.06);
+      }
+      .wk-root .wk-event-tile:not(.wk-event-tba) {
+        background: linear-gradient(
+          180deg,
+          var(--bar-rest-from),
+          var(--bar-rest-to)
+        );
+        color: var(--bar-rest-fg);
+        --bar-icon: var(--bar-rest-icon);
+        --bar-plate: var(--bar-rest-plate);
+      }
+      .wk-root .wk-event-bar {
+        transition:
+          background 190ms ease,
+          color 190ms ease,
+          box-shadow 190ms cubic-bezier(0.22, 1, 0.36, 1),
+          transform 190ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .wk-root .wk-event-bar:not(.wk-event-tba):hover,
+      .wk-root .wk-event-bar:not(.wk-event-tba):focus-visible {
+        background: linear-gradient(
+          180deg,
+          var(--bar-hover-from),
+          var(--bar-hover-to)
+        );
+        color: var(--bar-hover-fg);
+        --bar-icon: var(--bar-hover-icon);
+        --bar-plate: var(--bar-hover-plate);
+      }
+      .wk-root .wk-event-bar:hover,
+      .wk-root .wk-event-bar:focus-visible {
+        transform: translateY(-1px);
+        box-shadow:
+          0 0 0 2px var(--wk-card-bg),
+          0 0 0 3.5px rgba(var(--wk-a1-rgb), 0.55),
+          0 10px 22px -6px rgba(var(--wk-a1-rgb), 0.55);
+      }
+      .wk-root .wk-event-bar:focus-visible {
+        outline: none;
+        box-shadow:
+          0 0 0 2px var(--wk-card-bg),
+          0 0 0 4px rgba(var(--wk-a1-rgb), 0.9);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .wk-root .wk-event-bar { transition: none; }
+        .wk-root .wk-event-bar:hover,
+        .wk-root .wk-event-bar:focus-visible { transform: none; }
+      }
+
+      /* The dot inside the LIVE badge on an upcoming-workshop card. It pulses
+         because "live" is a claim about right now, and a static dot reads as
+         a label rather than a state. */
+      .wk-root .wk-live-dot {
+        background: #16a34a;
+        animation: wk-live-pulse 1.8s ease-in-out infinite;
+      }
+      @keyframes wk-live-pulse {
+        0%, 100% { opacity: 1; }
+        50%      { opacity: 0.35; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .wk-root .wk-live-dot { animation: none; }
+      }
+
       /* Shared by the theme toggle and the notification bell, so the two
          icon buttons in the charcoal bar cannot drift apart. */
       .wk-root .wk-bar-toggle button,

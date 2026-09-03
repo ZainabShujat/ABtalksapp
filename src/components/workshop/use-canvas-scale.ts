@@ -22,17 +22,31 @@ import { useEffect, useRef, useState } from "react";
 export function useCanvasScale(canvasWidth: number) {
   const ref = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  /**
+   * The container's own height, reported alongside the scale.
+   *
+   * A caller that lets the container grow past the scaled canvas — to match a
+   * neighbouring column, say — needs this to centre the canvas inside it.
+   * Without it the drawing pins to the top and the slack collects as a blank
+   * strip along the bottom, which reads as an unfinished box.
+   *
+   * Measuring here is safe: the observer already runs on this element, and the
+   * value is only ever read, never fed back into the element's own height.
+   */
+  const [height, setHeight] = useState(0);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const ro = new ResizeObserver(([entry]) => {
       const w = entry?.contentRect.width ?? 0;
+      const h = entry?.contentRect.height ?? 0;
       if (w > 0) setScale(w / canvasWidth);
+      if (h > 0) setHeight(h);
     });
     ro.observe(el);
     return () => ro.disconnect();
   }, [canvasWidth]);
 
-  return { ref, scale };
+  return { ref, scale, height };
 }
