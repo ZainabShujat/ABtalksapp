@@ -72,40 +72,80 @@ const cardHeight = (rows: number) => GRID_TOP + rows * ROW_H + BOTTOM_PAD;
 const rowsFor = (lead: number, days: number) => Math.ceil((lead + days) / 7);
 
 /**
- * Event-bar gradients, one per track (Figma nodes 1:242 / 1:247 / 1:253 /
- * 1:289 carried four distinct hues).
+ * Event-bar fills, per track — a light REST state and a deep HOVER state.
  *
- * The design system allows no oranges beyond #E05226 / #C9411C / #A93617 and
- * its tints, which cannot yield four distinguishable hues. So the three
- * workshop-family tracks are the SAME orange ramp at descending alpha — tints
- * of the approved colour rather than new ones — and the hackathon takes the
- * palette's charcoal so it still reads as a different kind of event.
+ * The tile used to sit at full-strength #E05226 all the time, which left the
+ * hover nowhere to go: an orange glow around an orange tile reads as nothing,
+ * and the gradient already tops out, so brightness has no headroom either.
+ * Resting light and darkening on hover gives the interaction the whole range
+ * to move through, and the direction — light settles, dark responds — matches
+ * the pressed-in feel of a button.
+ *
+ * Everything here is from the approved set: #E05226 / #C9411C / #A93617 and
+ * the #FFECE3 / #FFF1E9 tints. No new hues.
+ *
+ * The hackathon keeps the palette's charcoal rather than an orange, so its
+ * rest state is a neutral tint of the same idea.
  */
-const TRACK_GRADIENT: Record<WorkshopEvent["track"], [string, string]> = {
-  workshop: ["#e05226", "#c9411c"],
-  challenge: ["rgba(224, 82, 38, 0.62)", "rgba(201, 65, 28, 0.62)"],
-  cohort: ["rgba(224, 82, 38, 0.30)", "rgba(201, 65, 28, 0.30)"],
-  hackathon: ["#4b4b4b", "#111111"],
+type TrackFill = {
+  /** [from, to] of the resting 180deg gradient. */
+  rest: [string, string];
+  /** [from, to] on hover and focus. */
+  hover: [string, string];
+  /** Label colour at rest, measured against the rest fill. */
+  restFg: string;
+  /** Label colour on hover. */
+  hoverFg: string;
+  /** Icon glyph inside the plate, at rest and on hover. */
+  restIcon: string;
+  hoverIcon: string;
+  /** The plate behind the icon: it has to hold against both fills. */
+  restPlate: string;
+  hoverPlate: string;
 };
 
-/**
- * Label colour per track, chosen by measured contrast against each bar.
- * The two tinted tracks are far too light for white text — cohort sits at
- * 1.48:1 against white versus 12.8:1 against ink — so they take ink instead.
- */
-const TRACK_FG: Record<WorkshopEvent["track"], string> = {
-  workshop: "#ffffff",
-  challenge: "#111111",
-  cohort: "#111111",
-  hackathon: "#ffffff",
-};
-
-/** Icon colour inside the white tile — the deep end of each track's ramp. */
-const TRACK_ICON: Record<WorkshopEvent["track"], string> = {
-  workshop: "#c9411c",
-  challenge: "#c9411c",
-  cohort: "#c9411c",
-  hackathon: "#111111",
+const TRACK_FILL: Record<WorkshopEvent["track"], TrackFill> = {
+  workshop: {
+    rest: ["#fff1e9", "#ffece3"],
+    hover: ["#e05226", "#c9411c"],
+    // #a93617 on #ffece3 measures 5.45:1 — passes AA for the 10px label.
+    restFg: "#a93617",
+    hoverFg: "#ffffff",
+    restIcon: "#c9411c",
+    hoverIcon: "#c9411c",
+    restPlate: "#ffffff",
+    hoverPlate: "#ffffff",
+  },
+  challenge: {
+    rest: ["#fff1e9", "#ffece3"],
+    hover: ["rgba(224, 82, 38, 0.72)", "rgba(201, 65, 28, 0.72)"],
+    restFg: "#a93617",
+    hoverFg: "#111111",
+    restIcon: "#c9411c",
+    hoverIcon: "#c9411c",
+    restPlate: "#ffffff",
+    hoverPlate: "#ffffff",
+  },
+  cohort: {
+    rest: ["#fff5f0", "#fff1e9"],
+    hover: ["rgba(224, 82, 38, 0.42)", "rgba(201, 65, 28, 0.42)"],
+    restFg: "#a93617",
+    hoverFg: "#111111",
+    restIcon: "#c9411c",
+    hoverIcon: "#c9411c",
+    restPlate: "#ffffff",
+    hoverPlate: "#ffffff",
+  },
+  hackathon: {
+    rest: ["#f2f2f2", "#e6e6e6"],
+    hover: ["#4b4b4b", "#111111"],
+    restFg: "#111111",
+    hoverFg: "#ffffff",
+    restIcon: "#111111",
+    hoverIcon: "#111111",
+    restPlate: "#ffffff",
+    hoverPlate: "#ffffff",
+  },
 };
 
 /**
@@ -691,8 +731,16 @@ function EventBar({
 }) {
   const Icon = event.Icon;
   const label = `${event.title} — ${fullDate(event.date)}`;
-  const [from, to] = TRACK_GRADIENT[event.track];
+  const fill = TRACK_FILL[event.track];
 
+  /*
+   * Colours go out as custom properties, not as a resolved background.
+   *
+   * The fill has to change on hover, and a background written into the style
+   * attribute cannot be restyled from a stylesheet — inline wins. Handing CSS
+   * the four values and letting it pick keeps the swap in one place, with no
+   * JS hover state.
+   */
   const barStyle: React.CSSProperties = {
     display: "flex",
     alignItems: "center",
@@ -708,8 +756,20 @@ function EventBar({
       ? {
           background: "var(--wk-chip)",
           border: "1px dashed var(--wk-card-border)",
+          color: "var(--wk-muted)",
         }
-      : { background: `linear-gradient(180deg, ${from}, ${to})` }),
+      : ({
+          "--bar-rest-from": fill.rest[0],
+          "--bar-rest-to": fill.rest[1],
+          "--bar-hover-from": fill.hover[0],
+          "--bar-hover-to": fill.hover[1],
+          "--bar-rest-fg": fill.restFg,
+          "--bar-hover-fg": fill.hoverFg,
+          "--bar-rest-icon": fill.restIcon,
+          "--bar-hover-icon": fill.hoverIcon,
+          "--bar-rest-plate": fill.restPlate,
+          "--bar-hover-plate": fill.hoverPlate,
+        } as React.CSSProperties)),
   };
 
   /**
@@ -728,7 +788,9 @@ function EventBar({
         width: compact ? 14 : 24,
         height: compact ? 14 : 24,
         borderRadius: compact ? 4 : 7,
-        background: event.placeholder ? "var(--wk-chip-strong)" : "#ffffff",
+        background: event.placeholder
+          ? "var(--wk-chip-strong)"
+          : "var(--bar-plate, #ffffff)",
         // A hairline so the white tile still reads against the palest track,
         // where a plain white plate would dissolve into the bar.
         border: "1px solid rgba(var(--wk-ink-a),0.08)",
@@ -739,7 +801,7 @@ function EventBar({
         size={compact ? 9 : 13}
         strokeWidth={1.9}
         style={{
-          color: event.placeholder ? "var(--wk-muted)" : TRACK_ICON[event.track],
+          color: event.placeholder ? "var(--wk-muted)" : "var(--bar-icon)",
         }}
         aria-hidden
       />
@@ -749,14 +811,13 @@ function EventBar({
   // A calendar cell is only ~1/7 of the card wide, so the name always
   // truncates rather than wrapping the bar onto two lines. The full title
   // stays on the element's aria-label.
-  const fg = event.placeholder ? "var(--wk-muted)" : TRACK_FG[event.track];
+  // Inherited from the tile, which CSS sets from the rest/hover pair.
   const name = compact ? null : (
     <span
       style={{
         marginLeft: 6,
         minWidth: 0,
         flex: 1,
-        color: fg,
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",
@@ -811,7 +872,11 @@ function EventBar({
   // Only the three interactive branches below take this. A finished placeholder
   // renders an inert <span> and deliberately does not, so the glow never
   // promises a click that does nothing.
-  const interactive = "wk-event-bar cursor-pointer";
+  // A placeholder is interactive (it links to #register) but must not borrow
+  // the bright hover a scheduled workshop gets — see .wk-event-tba.
+  const interactive = `wk-event-bar cursor-pointer${
+    event.placeholder ? " wk-event-tba" : ""
+  }`;
 
   // Any finished real workshop → details modal (with or without a recording).
   if (todayKey && hasReplay(event, todayKey)) {

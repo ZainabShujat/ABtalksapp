@@ -34,24 +34,22 @@ export default function WorkshopEventsPage() {
           }}
         >
           <div className="mx-auto flex h-[54px] w-full max-w-6xl items-center justify-between gap-4">
+            {/*
+              The "Workshop" chip that used to sit here (logo | divider | pill)
+              is gone on THIS route only. It labelled the section you were
+              already in, next to a link that says "Back to Workshop" — the
+              word twice in one 54px bar.
+
+              Its divider went with it: left alone, the rule would have hung
+              off the logo pointing at nothing. The logo now sits by itself and
+              the flex row closes up on its own, with no fixed width to adjust.
+
+              This header is local to /workshop/events. /workshop renders the
+              shared `components/workshop/Header`, which never had this chip,
+              so nothing else in the app changes.
+            */}
             <div className="flex items-center gap-3">
               <WorkshopLogo />
-              <div
-                className="hidden h-4 w-px sm:block"
-                style={{ background: "var(--wk-bar-border)" }}
-              />
-              <span
-                className="hidden rounded-md px-2.5 py-1 text-[10px] font-bold uppercase leading-none tracking-widest sm:inline-block"
-                style={{
-                  // Orange text here measured 1.48:1 against the charcoal
-                  // bar. Bar text on the same tint clears 5:1.
-                  background: "rgba(var(--wk-a1-rgb),0.18)",
-                  color: "var(--wk-bar-text)",
-                  border: "1px solid rgba(var(--wk-a1-rgb),0.35)",
-                }}
-              >
-                Workshop
-              </span>
             </div>
             <Link
               href="/workshop"

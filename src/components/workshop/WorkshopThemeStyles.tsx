@@ -246,43 +246,70 @@ export default function WorkshopThemeStyles() {
         .wk-root .wk-cal-ctl:active { transform: none; }
       }
 
-      /* Hover on a real calendar event.
+      /* Calendar event tiles: light at rest, deep on hover.
 
-         Light and shadow only — no transform. The bar sits in a 7-column grid
-         where a 1px lift nudges its neighbours' optical alignment, and the tile
-         is small enough that movement reads as a wobble rather than a response.
-         The glow is the bar's own accent (--wk-a1 for every workshop-family
-         track), so it belongs to the palette rather than adding to it.
+         The tile used to sit at full-strength #E05226 permanently, which left
+         the hover nowhere to go — an orange glow around an orange tile reads
+         as nothing, and the gradient already tops out so brightness had no
+         headroom either. Resting on a tint and darkening on hover gives the
+         interaction the whole range, and reads the way a button does.
 
-         :focus-visible gets the same treatment plus a ring, so a keyboard user
-         sees at least as much as a mouse user. The existing outline is kept —
-         this adds to it rather than replacing it. */
-      /* The resting shadow lives here, not on the element's style attribute.
-         Inline styles outrank stylesheet rules, so while it sat there the hover
-         rule below could only ever change filter — the glow silently did half
-         its job. Every bar takes .wk-event-tile; only the clickable ones also
-         take .wk-event-bar. */
+         The fill comes from custom properties the component sets per track,
+         because a background written into the style attribute cannot be
+         restyled from here — inline outranks any stylesheet rule.
+
+         A placeholder keeps its dashed, muted chip. It answers the pointer
+         with a ring and a lift, but never takes the workshop fill: an
+         unannounced Saturday must not look like a scheduled session. */
       .wk-root .wk-event-tile {
         box-shadow: 0 2px 4px rgba(var(--wk-ink-a), 0.06);
       }
+      .wk-root .wk-event-tile:not(.wk-event-tba) {
+        background: linear-gradient(
+          180deg,
+          var(--bar-rest-from),
+          var(--bar-rest-to)
+        );
+        color: var(--bar-rest-fg);
+        --bar-icon: var(--bar-rest-icon);
+        --bar-plate: var(--bar-rest-plate);
+      }
       .wk-root .wk-event-bar {
-        transition: box-shadow 160ms ease, filter 160ms ease;
+        transition:
+          background 190ms ease,
+          color 190ms ease,
+          box-shadow 190ms cubic-bezier(0.22, 1, 0.36, 1),
+          transform 190ms cubic-bezier(0.22, 1, 0.36, 1);
       }
-      .wk-root .wk-event-bar:hover {
-        filter: brightness(1.06);
-        box-shadow:
-          0 2px 4px rgba(var(--wk-ink-a), 0.06),
-          0 0 0 1px rgba(var(--wk-a1-rgb), 0.35),
-          0 4px 14px -2px rgba(var(--wk-a1-rgb), 0.45);
+      .wk-root .wk-event-bar:not(.wk-event-tba):hover,
+      .wk-root .wk-event-bar:not(.wk-event-tba):focus-visible {
+        background: linear-gradient(
+          180deg,
+          var(--bar-hover-from),
+          var(--bar-hover-to)
+        );
+        color: var(--bar-hover-fg);
+        --bar-icon: var(--bar-hover-icon);
+        --bar-plate: var(--bar-hover-plate);
       }
+      .wk-root .wk-event-bar:hover,
       .wk-root .wk-event-bar:focus-visible {
-        filter: brightness(1.06);
+        transform: translateY(-1px);
         box-shadow:
           0 0 0 2px var(--wk-card-bg),
-          0 0 0 4px rgba(var(--wk-a1-rgb), 0.75);
+          0 0 0 3.5px rgba(var(--wk-a1-rgb), 0.55),
+          0 10px 22px -6px rgba(var(--wk-a1-rgb), 0.55);
+      }
+      .wk-root .wk-event-bar:focus-visible {
+        outline: none;
+        box-shadow:
+          0 0 0 2px var(--wk-card-bg),
+          0 0 0 4px rgba(var(--wk-a1-rgb), 0.9);
       }
       @media (prefers-reduced-motion: reduce) {
         .wk-root .wk-event-bar { transition: none; }
+        .wk-root .wk-event-bar:hover,
+        .wk-root .wk-event-bar:focus-visible { transform: none; }
       }
 
       /* The dot inside the LIVE badge on an upcoming-workshop card. It pulses
