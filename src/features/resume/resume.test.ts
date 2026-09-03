@@ -28,6 +28,9 @@ import {
 } from "@/features/resume/ingest";
 import {
   allSkills,
+  isGenuineCertification,
+  isLikelyAchievement,
+  isLikelyOpenSource,
   looksLikeResume,
   normalizeGithubUrl,
   normalizeLinkedinUrl,
@@ -48,6 +51,7 @@ import {
   resumeDocumentSchema,
 } from "@/features/resume/document";
 import {
+  inferCertificationIssuer,
   matchEducation,
   matchExperience,
   matchProject,
@@ -460,6 +464,110 @@ async function run() {
       parsed.projects[0]?.demo === "https://ai-bot.vercel.app",
       `demo url not recovered: ${parsed.projects[0]?.demo}`,
     );
+  });
+
+  await suite("open source contributions and non-certifications are sanitized from certifications", () => {
+    const raw = {
+      certifications: [
+        "AWS Certified Solutions Architect",
+        "Contributed to facebook/react open source repository (github.com/facebook/react)",
+        "Smart India Hackathon 2023 1st Runner Up",
+        "LeetCode Top 5% (Rating 1950, 600+ problems solved)",
+        "Relevant Coursework: Data Structures and Operating Systems",
+        "GDSC Club Lead & Student Coordinator",
+        "Published research paper in IEEE Conference on AI",
+        "Google Cloud Professional Data Engineer",
+      ],
+      achievements: ["Dean's List 2022"],
+      projects: [],
+    };
+
+    const parsed = normalizeParsedResume(raw);
+
+    // Only genuine certifications survive in certifications
+    assert(
+      parsed.certifications.length === 2,
+      `expected 2 genuine certifications, got ${parsed.certifications.length}: ${JSON.stringify(parsed.certifications)}`,
+    );
+    assert(
+      parsed.certifications.includes("AWS Certified Solutions Architect"),
+      "missing AWS cert",
+    );
+    assert(
+      parsed.certifications.includes("Google Cloud Professional Data Engineer"),
+      "missing GCP cert",
+    );
+
+    // Open source was rescued into projects
+    const osProj = parsed.projects.find((p) => p.github?.includes("facebook/react") || p.title?.includes("react") || p.title?.includes("Open Source"));
+    assert(Boolean(osProj), "open source contribution was not rescued into projects");
+    assert(osProj?.github === "https://github.com/facebook/react", `repo url: ${osProj?.github}`);
+
+    // Hackathon, LeetCode, GDSC, Paper, OS are saved as info in achievements
+    assert(
+      parsed.achievements.some((a) => a.toLowerCase().includes("smart india hackathon")),
+      "hackathon lost from achievements",
+    );
+    assert(
+      parsed.achievements.some((a) => a.toLowerCase().includes("leetcode")),
+      "leetcode lost from achievements",
+    );
+    assert(
+      parsed.achievements.some((a) => a.toLowerCase().includes("facebook/react")),
+      "open source lost from achievements info",
+    );
+  });
+
+  await suite("achievements are never merged into candidate profile certifications", () => {
+    const parsedWithAchievements = normalizeParsedResume({
+      candidate_name: "Test Candidate",
+      certifications: ["AWS Certified Developer"],
+      achievements: [
+        "Smart India Hackathon 2023 Winner",
+        "Contributed to Next.js open-source repository",
+        "LeetCode Knight rating 1950",
+      ],
+    });
+
+    const plan = planResumeMerge(parsedWithAchievements, emptyDetail);
+
+    // Only the 1 genuine certification must be created
+    assert(
+      plan.certifications.create.length === 1,
+      `expected 1 certification created, got ${plan.certifications.create.length}: ${JSON.stringify(plan.certifications.create)}`,
+    );
+    assert(
+      plan.certifications.create[0]?.name === "AWS Certified Developer",
+      "wrong certification created",
+    );
+    assert(
+      plan.certifications.create[0]?.issuer === "Amazon Web Services",
+      `inferred issuer was ${plan.certifications.create[0]?.issuer}`,
+    );
+    assert(
+      !plan.certifications.create.some((c) => c.name.toLowerCase().includes("hackathon")),
+      "hackathon leaked into profile certifications",
+    );
+    assert(
+      !plan.certifications.create.some((c) => c.name.toLowerCase().includes("next.js")),
+      "open source leaked into profile certifications",
+    );
+    assert(
+      !plan.certifications.create.some((c) => c.name.toLowerCase().includes("leetcode")),
+      "leetcode leaked into profile certifications",
+    );
+  });
+
+  await suite("certification issuer inference accurately recognizes major providers", () => {
+    assert(inferCertificationIssuer("AWS Certified Solutions Architect") === "Amazon Web Services", "AWS");
+    assert(inferCertificationIssuer("Google Cloud Associate Cloud Engineer") === "Google", "GCP");
+    assert(inferCertificationIssuer("Microsoft Certified: Azure Developer") === "Microsoft", "Azure");
+    assert(inferCertificationIssuer("Meta Front-End Developer Specialization") === "Meta", "Meta");
+    assert(inferCertificationIssuer("CompTIA Security+ (SY0-601)") === "CompTIA", "CompTIA");
+    assert(inferCertificationIssuer("Databricks Certified Data Engineer Associate") === "Databricks", "Databricks");
+    assert(inferCertificationIssuer("Deep Learning Specialization by Coursera") === "Coursera", "Coursera");
+    assert(inferCertificationIssuer("Custom Certification by Acme Academy") === "Acme Academy", "Delimited issuer");
+    assert(inferCertificationIssuer("Generic Internal Certificate") === "", "Unknown returns empty");
   });
 
   /* ─── Scoring ──────────────────────────────────────────────────────────── */

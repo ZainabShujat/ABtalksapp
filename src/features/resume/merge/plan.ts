@@ -1,5 +1,5 @@
 import { normalizeGithubUsername } from "@/lib/validations/candidate-profile";
-import { allSkills } from "@/features/resume/normalize";
+import { allSkills, isGenuineCertification } from "@/features/resume/normalize";
 import { newTerms, mergeTermLists } from "@/features/resume/merge/terms";
 import {
   joinBullets,
@@ -139,6 +139,37 @@ function clean(value: string | null, max: number): string | null {
   if (empty(value)) return null;
   const trimmed = value!.trim();
   return trimmed.length > max ? trimmed.slice(0, max) : trimmed;
+}
+
+/**
+ * Infers issuer name from standard certification titles.
+ * Returns an empty string if unknown so the field remains honest and user-editable.
+ */
+export function inferCertificationIssuer(name: string): string {
+  if (/\b(?:aws|amazon web services)\b/i.test(name)) return "Amazon Web Services";
+  if (/\b(?:gcp|google cloud|google)\b/i.test(name)) return "Google";
+  if (/\b(?:azure|microsoft)\b/i.test(name)) return "Microsoft";
+  if (/\b(?:meta|facebook)\b/i.test(name)) return "Meta";
+  if (/\b(?:cisco|ccna|ccnp)\b/i.test(name)) return "Cisco";
+  if (/\b(?:comptia)\b/i.test(name)) return "CompTIA";
+  if (/\b(?:oracle)\b/i.test(name)) return "Oracle";
+  if (/\b(?:databricks)\b/i.test(name)) return "Databricks";
+  if (/\b(?:red hat|redhat)\b/i.test(name)) return "Red Hat";
+  if (/\b(?:docker)\b/i.test(name)) return "Docker";
+  if (/\b(?:kubernetes|cncf|cka|ckad|cks)\b/i.test(name)) return "CNCF";
+  if (/\b(?:hashicorp|terraform)\b/i.test(name)) return "HashiCorp";
+  if (/\b(?:salesforce)\b/i.test(name)) return "Salesforce";
+  if (/\b(?:pmp|pmi)\b/i.test(name)) return "PMI";
+  if (/\b(?:coursera)\b/i.test(name)) return "Coursera";
+  if (/\b(?:udemy)\b/i.test(name)) return "Udemy";
+  if (/\b(?:deeplearning\.ai)\b/i.test(name)) return "DeepLearning.AI";
+  if (/\b(?:freecodecamp)\b/i.test(name)) return "freeCodeCamp";
+
+  const byMatch = /\s+(?:by|from|-|\|)\s+([A-Za-z0-9\s&.]+?)(?:\s*\(.*?\))?$/i.exec(name);
+  if (byMatch && byMatch[1] && byMatch[1].trim().length >= 2 && byMatch[1].trim().length <= 50) {
+    return byMatch[1].trim();
+  }
+  return "";
 }
 
 const MONTHS: Record<string, number> = {
@@ -584,11 +615,11 @@ export function planResumeMerge(
   }
   if (projCreate.length > 0 || projUpdate.length > 0) sections.add("projects");
 
-  /* ── Certifications & achievements: append what is new ──────────────── */
+  /* ── Certifications: append what is new ─────────────────────────────── */
   const existingCerts = detail.certifications.map((c) => c.name);
-  const incomingCerts = [...parsed.certifications, ...parsed.achievements]
+  const incomingCerts = parsed.certifications
     .map((c) => clean(c, 200))
-    .filter((c): c is string => c !== null);
+    .filter((c): c is string => c !== null && isGenuineCertification(c));
 
   const certCreate: CertificationCreate[] = [];
   const certSeen = [...existingCerts];
@@ -603,10 +634,8 @@ export function planResumeMerge(
       continue;
     }
     certSeen.push(name);
-    // `issuer` is NOT NULL and a résumé line rarely separates it out. An empty
-    // string is honest and the field stays editable; "Unknown" would be a
-    // fabrication shown to recruiters.
-    certCreate.push({ name, issuer: "" });
+    const issuer = inferCertificationIssuer(name);
+    certCreate.push({ name, issuer });
     decisions.push({
       section: "certifications",
       action: "created",

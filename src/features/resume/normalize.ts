@@ -327,7 +327,7 @@ function extractUrlsFromText(text: string): {
 }
 
 function project(raw: Raw): ParsedProject {
-  const title = str(raw, "title", "name", "project_name", "projectName");
+  let title = str(raw, "title", "name", "project_name", "projectName");
   const description = str(raw, "description", "summary");
   const contributions = strList(
     raw,
@@ -377,6 +377,18 @@ function project(raw: Raw): ParsedProject {
     if (!demo && inline.liveUrl) demo = inline.liveUrl;
   }
 
+  // Derive sensible title if missing but repository or description is present
+  if (!title && github) {
+    const match = /github\.com\/[^\/]+\/([^\/?#]+)/i.exec(github);
+    if (match && match[1]) {
+      title = match[1];
+    } else {
+      title = "Open Source Project";
+    }
+  } else if (!title && description) {
+    title = description.length > 40 ? `${description.slice(0, 37)}...` : description;
+  }
+
   return {
     title,
     description,
@@ -424,8 +436,122 @@ function internship(raw: Raw): ParsedInternship {
   };
 }
 
+/** Matches open-source contributions, PRs, or repository contributions. */
+export function isLikelyOpenSource(text: string): boolean {
+  return /\b(?:open[- ]source|github\.com|pull requests?|\bprs?\b|merged (?:pr|pull)|contribut(?:ed|ing|or) to (?:open[- ]source|\w+)|open source contribution)\b/i.test(
+    text,
+  );
+}
+
+/** Matches competitive programming ranks, hackathons, awards, scholarships, honors. */
+export function isLikelyAchievement(text: string): boolean {
+  return /\b(?:hackathon|codeforces|codechef|leetcode|hackerrank|kaggle|topcoder|geeksforgeeks|runner[- ]?up|1st place|2nd place|3rd place|finalist|winner|won\b|gold medal|silver medal|bronze medal|rank(?:ed)? \d|global rank|national rank|scholarship|dean'?s list|merit award|academic excellence|hall of fame)\b/i.test(
+    text,
+  );
+}
+
+/** Matches academic coursework / university subjects. */
+export function isLikelyCoursework(text: string): boolean {
+  return /\b(?:coursework|relevant courses|curriculum|subjects studied|passed with distinction|cgpa|gpa \d)\b/i.test(
+    text,
+  );
+}
+
+/** Matches extracurricular, student club, volunteer, or leadership roles. */
+export function isLikelyExtracurricular(text: string): boolean {
+  return /\b(?:volunteer(?:ed|ing)?|rotaract|ngo|club (?:president|lead|head|secretary|coordinator|member)|student (?:council|coordinator|lead)|organized (?:event|fest|workshop)|gdsc|acm chapter|ieee student branch|campus ambassador|event coordinator|society president)\b/i.test(
+    text,
+  );
+}
+
+/** Matches publications, research papers, patents. */
+export function isLikelyPublicationOrPatent(text: string): boolean {
+  return /\b(?:published paper|ieee|research paper|conference paper|journal|patent (?:filed|granted))\b/i.test(
+    text,
+  );
+}
+
+/**
+ * Returns true only if the string looks like a legitimate certification / credential.
+ * Rejects open source contributions, hackathons, awards, coursework, sentences, and degrees.
+ */
+export function isGenuineCertification(text: string): boolean {
+  if (!text || typeof text !== "string") return false;
+  const trimmed = text.trim();
+  if (trimmed.length < 3 || trimmed.length > 150) return false;
+
+  if (isLikelyOpenSource(trimmed)) return false;
+  if (isLikelyAchievement(trimmed)) return false;
+  if (isLikelyCoursework(trimmed)) return false;
+  if (isLikelyExtracurricular(trimmed)) return false;
+  if (isLikelyPublicationOrPatent(trimmed)) return false;
+
+  // Degrees (B.Tech, B.S., etc.)
+  if (/^(?:bachelor|master|b\.?tech|m\.?tech|b\.?s\.?|m\.?s\.?|ph\.?d|bca|mca)\b/i.test(trimmed)) {
+    return false;
+  }
+
+  // Multi-sentence or action-verb descriptions (e.g. "Built ...", "Developed ...", "Responsible for ...")
+  if (
+    /^(?:built|developed|designed|implemented|maintained|created|spearheaded|worked on|managed|led|collaborated|responsible for|helped with|participated in|attended)\b/i.test(
+      trimmed,
+    )
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 export function normalizeParsedResume(input: unknown): ParsedResume {
   const raw = asRecord(input);
+
+  const rawCerts = strList(raw, "certifications", "certificates");
+  const rawAchievements = strList(raw, "achievements", "awards");
+  const parsedProjects = objList(raw, "projects").map(project);
+
+  const cleanCerts: string[] = [];
+  const rescuedAchievements = [...rawAchievements];
+  const rescuedProjects = [...parsedProjects];
+
+  for (const cert of rawCerts) {
+    if (isLikelyOpenSource(cert)) {
+      // Rescue open-source contribution into projects if it has substance or link
+      const urls = extractUrlsFromText(cert);
+      let title = "Open Source Contribution";
+      if (urls.githubUrl) {
+        const repoMatch = /github\.com\/[^\/]+\/([^\/?#]+)/i.exec(urls.githubUrl);
+        if (repoMatch && repoMatch[1]) {
+          title = `${repoMatch[1]} (Open Source)`;
+        }
+      }
+      if (
+        !rescuedProjects.some(
+          (p) =>
+            p.title?.toLowerCase() === title.toLowerCase() ||
+            (urls.githubUrl && p.github === urls.githubUrl),
+        )
+      ) {
+        rescuedProjects.push({
+          title,
+          description: cert,
+          technologies: [],
+          github: urls.githubUrl,
+          demo: urls.liveUrl,
+          contributions: [cert],
+        });
+      }
+      rescuedAchievements.push(cert);
+    } else if (
+      isLikelyAchievement(cert) ||
+      isLikelyExtracurricular(cert) ||
+      isLikelyPublicationOrPatent(cert)
+    ) {
+      rescuedAchievements.push(cert);
+    } else if (isGenuineCertification(cert)) {
+      cleanCerts.push(cert);
+    }
+  }
 
   return {
     candidateName: str(raw, "candidate_name", "candidateName", "name"),
@@ -466,10 +592,10 @@ export function normalizeParsedResume(input: unknown): ParsedResume {
     databases: strList(raw, "databases"),
     cloudPlatforms: strList(raw, "cloud_platforms", "cloudPlatforms"),
     tools: strList(raw, "tools", "platforms"),
-    certifications: strList(raw, "certifications", "certificates"),
-    achievements: strList(raw, "achievements", "awards"),
+    certifications: dedupe(cleanCerts),
+    achievements: dedupe(rescuedAchievements),
     languages: strList(raw, "languages"),
-    projects: objList(raw, "projects").map(project),
+    projects: rescuedProjects,
     experience: objList(raw, "experience", "work_experience").map(experience),
     education: objList(raw, "education").map(education),
     internships: objList(raw, "internships").map(internship),
