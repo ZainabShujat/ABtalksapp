@@ -509,6 +509,7 @@ suite("completeness reaches 100 without every optional section", () => {
     detailFixture({
       headline: "Final-year CSE student",
       locationCity: "Bangalore",
+      phoneVerified: true,
       education: [{ id: "e1" } as never],
       projects: [{ id: "p1" } as never],
       skills: [skill("a"), skill("b"), skill("c")],
@@ -538,37 +539,74 @@ suite("completeness reaches 100 without every optional section", () => {
   );
 });
 
-suite("completeness ignores visibility and openToWork", () => {
-  const base = detailFixture({
-    headline: "x",
-    locationCity: "y",
-    preference: {
-      openToWork: false,
-      preferredRoles: ["Engineer"],
-      preferredLocations: [],
-      opportunityTypes: [],
-      remotePreference: null,
-      willingToRelocate: false,
-      noticePeriodDays: null,
-      availableFromMonth: null,
-      availableFromYear: null,
-    },
-  });
-  const notLooking = computeCompleteness(base, { hasAny: false });
-  const looking = computeCompleteness(
+suite("completeness treats preference engagement broadly", () => {
+  const withRoles = computeCompleteness(
     detailFixture({
-      ...base,
-      preference: { ...base.preference!, openToWork: true },
+      headline: "x",
+      locationCity: "y",
+      preference: {
+        openToWork: false,
+        preferredRoles: ["Engineer"],
+        preferredLocations: [],
+        opportunityTypes: [],
+        remotePreference: null,
+        willingToRelocate: false,
+        noticePeriodDays: null,
+        availableFromMonth: null,
+        availableFromYear: null,
+      },
     }),
     { hasAny: false },
   );
   assert(
-    notLooking.score === looking.score,
-    "declaring you are open to work changes nothing",
+    withRoles.sections.find((x) => x.key === "preferences")?.complete === true,
+    "roles complete the section",
+  );
+
+  const openOnly = computeCompleteness(
+    detailFixture({
+      headline: "x",
+      locationCity: "y",
+      preference: {
+        openToWork: true,
+        preferredRoles: [],
+        preferredLocations: [],
+        opportunityTypes: [],
+        remotePreference: null,
+        willingToRelocate: false,
+        noticePeriodDays: null,
+        availableFromMonth: null,
+        availableFromYear: null,
+      },
+    }),
+    { hasAny: false },
   );
   assert(
-    notLooking.sections.find((x) => x.key === "preferences")?.complete === true,
-    "engaging with the section is enough",
+    openOnly.sections.find((x) => x.key === "preferences")?.complete === true,
+    "openToWork alone completes the section after save",
+  );
+
+  const emptyPref = computeCompleteness(
+    detailFixture({
+      headline: "x",
+      locationCity: "y",
+      preference: {
+        openToWork: false,
+        preferredRoles: [],
+        preferredLocations: [],
+        opportunityTypes: [],
+        remotePreference: null,
+        willingToRelocate: false,
+        noticePeriodDays: null,
+        availableFromMonth: null,
+        availableFromYear: null,
+      },
+    }),
+    { hasAny: false },
+  );
+  assert(
+    emptyPref.sections.find((x) => x.key === "preferences")?.complete === false,
+    "empty defaults do not complete the section",
   );
 
   const src = code("src/features/profile/completeness.ts");
@@ -581,13 +619,22 @@ suite("completeness ignores visibility and openToWork", () => {
 });
 
 suite("withdrawn skill claims do not count toward completeness", () => {
-  const result = computeCompleteness(
-    detailFixture({ skills: [skill("a"), skill("b"), skill("c", false)] }),
+  const withdrawn = computeCompleteness(
+    detailFixture({ skills: [skill("a", false), skill("b", false)] }),
     { hasAny: false },
   );
   assert(
-    result.sections.find((x) => x.key === "skills")?.complete === false,
-    "two live claims is under the threshold",
+    withdrawn.sections.find((x) => x.key === "skills")?.complete === false,
+    "withdrawn claims do not complete the section",
+  );
+
+  const one = computeCompleteness(
+    detailFixture({ skills: [skill("a")] }),
+    { hasAny: false },
+  );
+  assert(
+    one.sections.find((x) => x.key === "skills")?.complete === true,
+    "one claimed skill completes the section",
   );
 });
 

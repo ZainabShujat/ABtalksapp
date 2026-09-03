@@ -29,7 +29,7 @@ import { Field } from "./fields";
 import { ResumeStrength } from "./resume-strength";
 
 /**
- * The Résumé section of the profile.
+ * The Resume section of the profile.
  *
  * Replaces what used to be a bare URL text box in Links. Upload is the primary
  * path; the link is kept because it was there first and people already have one
@@ -82,7 +82,7 @@ export function ResumeSection({ resume }: { resume: ResumeView | null }) {
       if (!result.ok) {
         toast.error(result.message);
       } else {
-        toast.success("Résumé analysed");
+        toast.success("Resume analysed");
       }
       router.refresh();
     } catch {
@@ -97,14 +97,14 @@ export function ResumeSection({ resume }: { resume: ResumeView | null }) {
   async function onSaveLink() {
     const url = linkDraft.trim();
     if (url.length === 0) {
-      toast.error("Paste a link to your résumé");
+      toast.error("Paste a link to your resume");
       return;
     }
     setPhase("processing");
     try {
       const result = await saveResumeLinkAction({ url });
       if (!result.ok) toast.error(result.message);
-      else toast.success("Résumé analysed");
+      else toast.success("Resume analysed");
       router.refresh();
     } catch {
       toast.error("Something went wrong. Please try again.");
@@ -121,7 +121,7 @@ export function ResumeSection({ resume }: { resume: ResumeView | null }) {
         return;
       }
       setLinkDraft("");
-      toast.success("Résumé removed");
+      toast.success("Resume removed");
       router.refresh();
     });
   }
@@ -134,8 +134,8 @@ export function ResumeSection({ resume }: { resume: ResumeView | null }) {
         <Loader2 className="size-6 animate-spin text-muted-foreground" aria-hidden />
         <p className="text-sm font-medium" aria-live="polite">
           {phase === "uploading"
-            ? "Uploading your résumé…"
-            : "Analysing your résumé…"}
+            ? "Uploading your resume…"
+            : "Analysing your resume…"}
         </p>
         <p className="text-xs text-muted-foreground">
           This usually takes a few seconds. Please keep this page open.
@@ -144,7 +144,7 @@ export function ResumeSection({ resume }: { resume: ResumeView | null }) {
     );
   }
 
-  /* ── Source controls: always available, so a résumé can be replaced ────── */
+  /* ── Source controls: always available, so a resume can be replaced ────── */
 
   const controls = (
     <div className="space-y-4">
@@ -155,7 +155,7 @@ export function ResumeSection({ resume }: { resume: ResumeView | null }) {
           disabled={busy}
         >
           <Upload className="size-4" aria-hidden />
-          {resume ? "Replace résumé" : "Upload résumé"}
+          {resume ? "Replace resume" : "Upload resume"}
         </Button>
         <input
           ref={fileRef}
@@ -181,14 +181,14 @@ export function ResumeSection({ resume }: { resume: ResumeView | null }) {
       */}
       <div className="border-t pt-4">
         <p className="text-xs text-muted-foreground">
-          Already have your résumé online? You can point us at it instead.
+          Already have your resume online? You can point us at it instead.
         </p>
       </div>
 
       <div className="flex items-start gap-3">
         <Link2 className="mt-8 size-5 shrink-0 text-muted-foreground" aria-hidden />
         <Field
-          label="Résumé link"
+          label="Resume link"
           htmlFor="resume-link"
           className="flex-1"
           hint="Must be publicly viewable — in Google Drive, set sharing to “Anyone with the link”. If we cannot open it, upload the PDF instead."
@@ -220,7 +220,7 @@ export function ResumeSection({ resume }: { resume: ResumeView | null }) {
             onClick={onRemove}
             disabled={busy}
           >
-            {removing ? "Removing…" : "Remove résumé"}
+            {removing ? "Removing…" : "Remove resume"}
           </Button>
         ) : null}
       </div>
@@ -237,9 +237,9 @@ export function ResumeSection({ resume }: { resume: ResumeView | null }) {
             className="mx-auto size-6 text-muted-foreground"
             aria-hidden
           />
-          <p className="mt-2 text-sm font-medium">No résumé yet</p>
+          <p className="mt-2 text-sm font-medium">No resume yet</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Upload your résumé to see how strong it is and what to improve.
+            Upload your resume to see how strong it is and what to improve.
           </p>
         </div>
         {controls}
@@ -258,7 +258,7 @@ export function ResumeSection({ resume }: { resume: ResumeView | null }) {
             aria-hidden
           />
           <div className="min-w-0 space-y-1">
-            <p className="text-sm font-medium">We could not analyse that résumé</p>
+            <p className="text-sm font-medium">We could not analyse that resume</p>
             <p className="text-sm text-muted-foreground">
               {resume.failureReason ??
                 "Something went wrong. Please try again or upload the PDF directly."}
@@ -280,7 +280,7 @@ export function ResumeSection({ resume }: { resume: ResumeView | null }) {
             className="size-6 animate-spin text-muted-foreground"
             aria-hidden
           />
-          <p className="text-sm font-medium">Analysing your résumé…</p>
+          <p className="text-sm font-medium">Analysing your resume…</p>
           <Button type="button" variant="ghost" onClick={() => router.refresh()}>
             Refresh
           </Button>
@@ -300,7 +300,7 @@ export function ResumeSection({ resume }: { resume: ResumeView | null }) {
           <FileText className="size-5 shrink-0 text-muted-foreground" aria-hidden />
           <div className="min-w-0">
             <p className="truncate text-sm font-medium">
-              {resume.fileName ?? resume.sourceUrl ?? "Your résumé"}
+              {resume.fileName ?? resume.sourceUrl ?? "Your resume"}
             </p>
             <p className="text-xs text-muted-foreground">
               Added{" "}
@@ -339,10 +339,10 @@ export function ResumeSection({ resume }: { resume: ResumeView | null }) {
       </div>
 
       {/*
-        What the résumé contributed. The information itself is NOT repeated
+        What the resume contributed. The information itself is NOT repeated
         here — it went into the profile's own sections, which are editable and
         sit a few centimetres up this same page. Listing it twice would make
-        the résumé card a read-only shadow of the profile.
+        the resume card a read-only shadow of the profile.
       */}
       {resume.addedToProfile.length > 0 ? (
         <div className="flex gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">

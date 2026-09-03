@@ -15,6 +15,7 @@ import {
   PwMonthYear,
   PwRow,
   PwSelect,
+  PwSuggest,
   PwTextarea,
 } from "./wizard-fields";
 
@@ -107,7 +108,7 @@ export function ExperienceSection({
                 >
                   <PwInput
                     id={`exp-company-${index}`}
-                    placeholder="e.g. Zunno AI"
+                    placeholder="e.g. ABTalks"
                     autoComplete="off"
                     {...register(`rows.${index}.companyName`, {
                       required: true,
@@ -115,17 +116,12 @@ export function ExperienceSection({
                   />
                 </PwField>
                 <PwField label="Role" required htmlFor={`exp-title-${index}`}>
-                  <PwInput
+                  <PwSuggest
                     id={`exp-title-${index}`}
-                    list={`exp-title-list-${index}`}
                     placeholder="e.g. UI/UX Designer"
+                    suggestions={COMMON_ROLES}
                     {...register(`rows.${index}.title`, { required: true })}
                   />
-                  <datalist id={`exp-title-list-${index}`}>
-                    {COMMON_ROLES.map((r) => (
-                      <option key={r} value={r} />
-                    ))}
-                  </datalist>
                 </PwField>
               </PwRow>
 

@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { ActionResult } from "@/app/actions/candidate-profile-actions";
+import { useProfileWizard } from "./wizard-context";
 
 /**
  * Saves one section and refreshes the server tree so profile strength and every
@@ -15,11 +16,13 @@ export function useSectionSave(
   label: string,
 ) {
   const router = useRouter();
+  const { setSaving: setWizardSaving } = useProfileWizard();
   const [saving, setSaving] = useState(false);
 
   const save = useCallback(
     async (payload: unknown): Promise<boolean> => {
       setSaving(true);
+      setWizardSaving(true);
       try {
         const result = await action(payload);
         if (!result.ok) {
@@ -34,9 +37,10 @@ export function useSectionSave(
         return false;
       } finally {
         setSaving(false);
+        setWizardSaving(false);
       }
     },
-    [action, label, router],
+    [action, label, router, setWizardSaving],
   );
 
   return { saving, save };

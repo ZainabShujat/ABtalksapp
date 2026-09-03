@@ -21,6 +21,7 @@ import {
   PwMonthYear,
   PwRow,
   PwSelect,
+  PwSuggest,
   PwTextarea,
 } from "./wizard-fields";
 
@@ -131,33 +132,23 @@ export function EducationSection({ initial }: { initial: EducationFormRow[] }) {
 
               <PwRow cols={2}>
                 <PwField label="Degree" htmlFor={`edu-degree-${index}`}>
-                  <PwInput
+                  <PwSuggest
                     id={`edu-degree-${index}`}
-                    list={`edu-degree-list-${index}`}
                     placeholder="e.g. B.Tech"
+                    suggestions={DEGREES}
                     {...register(`rows.${index}.degree`)}
                   />
-                  <datalist id={`edu-degree-list-${index}`}>
-                    {DEGREES.map((d) => (
-                      <option key={d} value={d} />
-                    ))}
-                  </datalist>
                 </PwField>
                 <PwField
                   label="Department / field"
                   htmlFor={`edu-field-${index}`}
                 >
-                  <PwInput
+                  <PwSuggest
                     id={`edu-field-${index}`}
-                    list={`edu-field-list-${index}`}
                     placeholder="e.g. Computer Science and Engineering"
+                    suggestions={FIELDS_OF_STUDY}
                     {...register(`rows.${index}.fieldOfStudy`)}
                   />
-                  <datalist id={`edu-field-list-${index}`}>
-                    {FIELDS_OF_STUDY.map((d) => (
-                      <option key={d} value={d} />
-                    ))}
-                  </datalist>
                 </PwField>
               </PwRow>
 
