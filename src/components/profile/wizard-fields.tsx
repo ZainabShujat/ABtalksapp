@@ -2,6 +2,7 @@
 
 import {
   forwardRef,
+  useEffect,
   useId,
   useRef,
   useState,
@@ -305,6 +306,105 @@ export const PwSelect = forwardRef<
   );
 });
 
+/** Custom select that always opens downward (native `<select>` may flip up). */
+function PwMenuSelect({
+  id,
+  name,
+  "aria-label": ariaLabel,
+  value,
+  onChange,
+  options,
+  placeholder,
+  disabled,
+  invalid,
+}: {
+  id?: string;
+  name?: string;
+  "aria-label": string;
+  value: string;
+  onChange: (v: string) => void;
+  options: readonly string[];
+  placeholder: string;
+  disabled?: boolean;
+  invalid?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDoc(e: MouseEvent) {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const label = value || placeholder;
+
+  return (
+    <div
+      ref={rootRef}
+      className={`pw-menu-select${open ? " pw-open" : ""}${value ? " pw-filled" : ""}`}
+    >
+      <button
+        type="button"
+        id={id}
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        disabled={disabled}
+        className={`pw-menu-select-trigger${invalid && !value ? " pw-invalid" : ""}`}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className={value ? undefined : "pw-menu-select-placeholder"}>
+          {label}
+        </span>
+      </button>
+      {name ? <input type="hidden" name={name} value={value} /> : null}
+      {open ? (
+        <ul className="pw-menu-select-list" role="listbox">
+          <li role="option" aria-selected={!value}>
+            <button
+              type="button"
+              className="pw-menu-select-option"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onChange("");
+                setOpen(false);
+              }}
+            >
+              {placeholder}
+            </button>
+          </li>
+          {options.map((opt) => (
+            <li key={opt} role="option" aria-selected={opt === value}>
+              <button
+                type="button"
+                className={`pw-menu-select-option${opt === value ? " pw-selected" : ""}`}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onChange(opt);
+                  setOpen(false);
+                }}
+              >
+                {opt}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 export function PwMonthYear({
   monthId,
   yearId,
@@ -330,44 +430,28 @@ export function PwMonthYear({
 }) {
   return (
     <div className="pw-date-pair">
-      <select
+      <PwMenuSelect
         id={monthId}
         name={monthName}
         aria-label="Month"
         disabled={disabled}
-        className={invalid && month === null ? "pw-invalid" : undefined}
+        invalid={invalid}
+        placeholder="MM"
         value={month === null ? "" : String(month)}
-        onChange={(e) => {
-          const v = e.target.value;
-          onMonthChange(v === "" ? null : Number(v));
-        }}
-      >
-        <option value="">MM</option>
-        {MONTHS.map((m) => (
-          <option key={m} value={m}>
-            {m}
-          </option>
-        ))}
-      </select>
-      <select
+        options={MONTHS}
+        onChange={(v) => onMonthChange(v === "" ? null : Number(v))}
+      />
+      <PwMenuSelect
         id={yearId}
         name={yearName}
         aria-label="Year"
         disabled={disabled}
-        className={invalid && year === null ? "pw-invalid" : undefined}
+        invalid={invalid}
+        placeholder="YYYY"
         value={year === null ? "" : String(year)}
-        onChange={(e) => {
-          const v = e.target.value;
-          onYearChange(v === "" ? null : Number(v));
-        }}
-      >
-        <option value="">YYYY</option>
-        {YEARS.map((y) => (
-          <option key={y} value={y}>
-            {y}
-          </option>
-        ))}
-      </select>
+        options={YEARS}
+        onChange={(v) => onYearChange(v === "" ? null : Number(v))}
+      />
     </div>
   );
 }
