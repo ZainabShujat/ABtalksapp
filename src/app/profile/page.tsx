@@ -26,6 +26,7 @@ import { ResumeSection } from "@/components/profile/resume-section";
 import { PreferencesSection } from "@/components/profile/preferences-section";
 import { buttonVariants } from "@/components/ui/button";
 import { PERSONA_LABELS } from "@/lib/candidate-vocab";
+import { isOtpVerificationRequired } from "@/lib/feature-flags";
 import { isAvatarStorageConfigured } from "@/features/profile/avatar-storage";
 
 /**
@@ -168,6 +169,7 @@ export default async function ProfilePage() {
       node: (
         <BasicInfoSection
           phoneVerified={detail.phoneVerified}
+          otpRequired={isOtpVerificationRequired()}
           initial={{
             fullName: detail.fullName,
             phone: s(detail.phone),

@@ -77,10 +77,37 @@ export function SkillCombobox({
   const idSet = new Set(excludeIds.filter((x) => x.length > 0));
   const nameSet = new Set(excludeNames.map((n) => n.toLowerCase()));
 
-  const listed: SkillOption[] =
-    query.trim().length < 1
-      ? catalog.filter((s) => !isExcluded(s, idSet, nameSet))
-      : results.filter((s) => !isExcluded(s, idSet, nameSet));
+  const q = query.trim().toLowerCase();
+  const listed: SkillOption[] = (() => {
+    if (q.length < 1) {
+      return catalog.filter((s) => !isExcluded(s, idSet, nameSet));
+    }
+    const fromCatalog = catalog.filter(
+      (s) =>
+        !isExcluded(s, idSet, nameSet) &&
+        s.name.toLowerCase().includes(q),
+    );
+    const fromApi = results.filter((s) => !isExcluded(s, idSet, nameSet));
+    const out: SkillOption[] = [];
+    const seenIds = new Set<string>();
+    const seenNames = new Set<string>();
+    for (const s of [...fromApi, ...fromCatalog]) {
+      const nameKey = s.name.toLowerCase();
+      if (s.id) {
+        if (seenIds.has(s.id)) continue;
+        seenIds.add(s.id);
+      } else if (seenNames.has(nameKey)) {
+        continue;
+      }
+      seenNames.add(nameKey);
+      out.push(s);
+    }
+    // Prefer rows that already have a catalog id when both shapes exist.
+    return out.sort((a, b) => {
+      if (Boolean(a.id) !== Boolean(b.id)) return a.id ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+  })();
 
   const visible = [...listed, OTHER_ITEM];
 
@@ -157,9 +184,11 @@ export function SkillCombobox({
           align="start"
         >
           <Autocomplete.Popup className="pw-skill-popup relative isolate z-50 w-(--anchor-width) min-w-36 origin-(--transform-origin)">
-            <Autocomplete.Empty className="pw-skill-empty">
-              {query.trim() ? "No matching skill in the catalog" : null}
-            </Autocomplete.Empty>
+            {listed.length === 0 && query.trim() ? (
+              <div className="pw-skill-empty">
+                No matching skill in the catalog
+              </div>
+            ) : null}
             <Autocomplete.List>
               {(item: SkillOption) => (
                 <Autocomplete.Item

@@ -60,9 +60,8 @@ function GlobeIcon() {
 export function LinksSection({ initial }: { initial: LinksFormValues }) {
   const { formId, onSaved, setDirty } = useProfileWizard();
   const { save } = useSectionSave(saveLinksAction, "Links");
-  const { control, register, handleSubmit, formState } = useForm<LinksFormValues>(
-    { defaultValues: initial },
-  );
+  const { control, register, handleSubmit, watch, setValue, formState } =
+    useForm<LinksFormValues>({ defaultValues: initial });
   const { fields, append, remove } = useFieldArray({
     control,
     name: "extra",
@@ -128,55 +127,67 @@ export function LinksSection({ initial }: { initial: LinksFormValues }) {
 
       {fields.length > 0 ? (
         <div className="pw-entries">
-          {fields.map((field, index) => (
-            <PwEntryCard
-              key={field.id}
-              index={index}
-              title="Link"
-              onRemove={() => remove(index)}
-            >
-              <PwRow cols={2}>
-                <PwField label="Type">
-                  <Controller
-                    control={control}
-                    name={`extra.${index}.type`}
-                    render={({ field: f }) => (
-                      <PwSelect
-                        value={f.value}
-                        onChange={(e) =>
-                          f.onChange(e.target.value as CandidateLinkType)
-                        }
-                      >
-                        {EXTRA_LINK_TYPES.map((t) => (
-                          <option key={t} value={t}>
-                            {LINK_TYPE_LABELS[t] ?? t}
-                          </option>
-                        ))}
-                      </PwSelect>
-                    )}
-                  />
-                </PwField>
-                <PwField label="Label" htmlFor={`ln-label-${index}`}>
-                  <PwInput
-                    id={`ln-label-${index}`}
-                    placeholder="ex: LeetCode"
-                    {...register(`extra.${index}.label`)}
-                  />
-                </PwField>
-              </PwRow>
-              <PwRow cols={1}>
-                <PwField label="URL" htmlFor={`ln-url-${index}`}>
-                  <PwInput
-                    id={`ln-url-${index}`}
-                    type="url"
-                    inputMode="url"
-                    placeholder="https://…"
-                    {...register(`extra.${index}.url`)}
-                  />
-                </PwField>
-              </PwRow>
-            </PwEntryCard>
-          ))}
+          {fields.map((field, index) => {
+            const linkType = watch(`extra.${index}.type`);
+            const isOther = linkType === CandidateLinkType.OTHER;
+            return (
+              <PwEntryCard
+                key={field.id}
+                index={index}
+                title="Link"
+                onRemove={() => remove(index)}
+              >
+                <PwRow cols={isOther ? 2 : 1}>
+                  <PwField label="Type">
+                    <Controller
+                      control={control}
+                      name={`extra.${index}.type`}
+                      render={({ field: f }) => (
+                        <PwSelect
+                          value={f.value}
+                          onChange={(e) => {
+                            const next = e.target.value as CandidateLinkType;
+                            f.onChange(next);
+                            if (next !== CandidateLinkType.OTHER) {
+                              setValue(`extra.${index}.label`, "", {
+                                shouldDirty: true,
+                              });
+                            }
+                          }}
+                        >
+                          {EXTRA_LINK_TYPES.map((t) => (
+                            <option key={t} value={t}>
+                              {LINK_TYPE_LABELS[t] ?? t}
+                            </option>
+                          ))}
+                        </PwSelect>
+                      )}
+                    />
+                  </PwField>
+                  {isOther ? (
+                    <PwField label="Label" htmlFor={`ln-label-${index}`}>
+                      <PwInput
+                        id={`ln-label-${index}`}
+                        placeholder="ex: Personal blog"
+                        {...register(`extra.${index}.label`)}
+                      />
+                    </PwField>
+                  ) : null}
+                </PwRow>
+                <PwRow cols={1}>
+                  <PwField label="URL" htmlFor={`ln-url-${index}`}>
+                    <PwInput
+                      id={`ln-url-${index}`}
+                      type="url"
+                      inputMode="url"
+                      placeholder="https://…"
+                      {...register(`extra.${index}.url`)}
+                    />
+                  </PwField>
+                </PwRow>
+              </PwEntryCard>
+            );
+          })}
         </div>
       ) : null}
 

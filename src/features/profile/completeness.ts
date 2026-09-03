@@ -1,3 +1,4 @@
+import { isOtpVerificationRequired } from "@/lib/feature-flags";
 import type { CandidateDetail } from "@/repositories/candidate-detail";
 
 /**
@@ -69,7 +70,8 @@ export function computeCompleteness(
   const basicComplete =
     detail.fullName.trim().length > 0 &&
     (detail.headline?.trim() || detail.summary?.trim() ? true : false) &&
-    (detail.locationCity?.trim() ? true : false);
+    (detail.locationCity?.trim() ? true : false) &&
+    (!isOtpVerificationRequired() || detail.phoneVerified);
 
   const claimedSkills = detail.skills.filter((s) => s.claimedByCandidate);
 
@@ -96,7 +98,9 @@ export function computeCompleteness(
       label: "Basic information",
       complete: basicComplete,
       weight: WEIGHTS.basic,
-      hint: "Add a headline and your location",
+      hint: !detail.phoneVerified && isOtpVerificationRequired()
+        ? "Verify your phone number"
+        : "Add a headline and your location",
     },
     {
       key: "experience",

@@ -509,6 +509,7 @@ suite("completeness reaches 100 without every optional section", () => {
     detailFixture({
       headline: "Final-year CSE student",
       locationCity: "Bangalore",
+      phoneVerified: true,
       education: [{ id: "e1" } as never],
       projects: [{ id: "p1" } as never],
       skills: [skill("a"), skill("b"), skill("c")],

@@ -33,6 +33,8 @@ import {
   isOurAvatarUrl,
   storeAvatarFile,
 } from "@/features/profile/avatar-storage";
+import { isOtpVerificationRequired } from "@/lib/feature-flags";
+import { isIndianPhone } from "@/lib/validations/phone";
 import { resolveOrCreateSkill } from "@/features/skill/resolve-skill";
 import type { SkillOption } from "@/features/skill/search-skills";
 
@@ -85,19 +87,65 @@ async function runSection<S extends z.ZodType>(
 }
 
 export async function saveBasicInfoAction(raw: unknown): Promise<ActionResult> {
-  return runSection(basicInfoSchema, raw, "basic-info", (userId, value) =>
-    saveBasicInfo(userId, {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { ok: false, message: "You must be signed in." };
+  }
+
+  const parsed = basicInfoSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { ok: false, message: firstIssue(parsed.error) };
+  }
+
+  const value = parsed.data;
+  const phone = value.phone === "" ? null : value.phone;
+
+  if (isOtpVerificationRequired()) {
+    const profile = await prisma.candidateProfile.findUnique({
+      where: { userId: session.user.id },
+      select: { phone: true, phoneVerified: true },
+    });
+    const effectivePhone = phone ?? profile?.phone ?? null;
+    if (
+      effectivePhone &&
+      isIndianPhone(effectivePhone) &&
+      !profile?.phoneVerified
+    ) {
+      return {
+        ok: false,
+        message: "Please verify your phone number to continue.",
+      };
+    }
+    // Empty India-intent: OTP required and still unverified.
+    if (!effectivePhone && !profile?.phoneVerified) {
+      return {
+        ok: false,
+        message: "Please verify your phone number to continue.",
+      };
+    }
+  }
+
+  try {
+    await saveBasicInfo(session.user.id, {
       fullName: value.fullName,
-      // `optionalPhoneSchema` yields "" for absent; the column is nullable.
-      phone: value.phone === "" ? null : value.phone,
+      phone,
       headline: value.headline,
       summary: value.summary,
       locationCity: value.locationCity,
       locationRegion: value.locationRegion,
       countryCode: value.countryCode,
       primaryPersona: value.primaryPersona,
-    }),
-  );
+    });
+  } catch (error) {
+    logger.error("[profile] basic-info save failed", {
+      userId: session.user.id,
+      error: String(error),
+    });
+    return { ok: false, message: "Could not save. Please try again." };
+  }
+
+  revalidatePath("/profile");
+  return { ok: true };
 }
 
 export async function saveExperienceAction(

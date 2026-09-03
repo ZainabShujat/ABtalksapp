@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { CandidatePersona } from "@prisma/client";
 import { saveBasicInfoAction } from "@/app/actions/candidate-profile-actions";
+import { PhoneVerifyField } from "@/components/shared/phone-verify-field";
 import { PERSONA_LABELS } from "@/lib/candidate-vocab";
+import {
+  INDIA_DIALING_CODE,
+  isIndianPhone,
+} from "@/lib/validations/phone";
 import { useSectionSave } from "./use-section-save";
 import { useProfileWizard } from "./wizard-context";
 import {
@@ -26,23 +32,48 @@ export type BasicInfoValues = {
   primaryPersona: CandidatePersona;
 };
 
+function splitPhone(e164: string): {
+  countryCode: string;
+  national: string;
+} {
+  const trimmed = e164.trim();
+  if (trimmed.startsWith(INDIA_DIALING_CODE) && trimmed.length >= 13) {
+    return {
+      countryCode: INDIA_DIALING_CODE,
+      national: trimmed.slice(INDIA_DIALING_CODE.length),
+    };
+  }
+  const match = trimmed.match(/^(\+\d{1,3})(\d+)$/);
+  if (match) {
+    return { countryCode: match[1]!, national: match[2]! };
+  }
+  return { countryCode: INDIA_DIALING_CODE, national: trimmed.replace(/^\+/, "") };
+}
+
 export function BasicInfoSection({
   initial,
   phoneVerified,
+  otpRequired,
 }: {
   initial: BasicInfoValues;
   phoneVerified: boolean;
+  otpRequired: boolean;
 }) {
+  const router = useRouter();
   const { formId, onSaved, setDirty } = useProfileWizard();
   const { save } = useSectionSave(saveBasicInfoAction, "Basic information");
   const {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors, isDirty },
   } = useForm<BasicInfoValues>({ defaultValues: initial });
 
   const summary = watch("summary") ?? "";
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+
+  const defaults = splitPhone(initial.phone);
 
   useEffect(() => {
     setDirty(isDirty);
@@ -52,6 +83,15 @@ export function BasicInfoSection({
     <form
       id={formId}
       onSubmit={handleSubmit(async (v) => {
+        setPhoneError(null);
+        if (
+          otpRequired &&
+          !phoneVerified &&
+          (v.phone.trim() === "" || isIndianPhone(v.phone))
+        ) {
+          setPhoneError("Please verify your phone number to continue.");
+          return;
+        }
         if (await save(v)) onSaved();
       })}
     >
@@ -73,17 +113,38 @@ export function BasicInfoSection({
         </PwField>
         <PwField
           label="Phone"
+          required={otpRequired}
           htmlFor="bi-phone"
           verified={phoneVerified}
+          error={phoneError}
         >
-          <PwInput
-            id="bi-phone"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            placeholder="+91-XXXXXXXXXX"
-            {...register("phone")}
-          />
+          {phoneVerified ? (
+            <PwInput
+              id="bi-phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              readOnly
+              {...register("phone")}
+            />
+          ) : (
+            <div className="pw-phone-verify">
+              <PhoneVerifyField
+                defaultCountryCode={defaults.countryCode}
+                defaultPhoneNumber={defaults.national}
+                verificationRequired={otpRequired}
+                onChange={(v) => {
+                  setValue("phone", v.e164, { shouldDirty: true });
+                  setPhoneError(null);
+                }}
+                onVerified={(e164) => {
+                  setValue("phone", e164, { shouldDirty: true });
+                  setPhoneError(null);
+                  router.refresh();
+                }}
+              />
+            </div>
+          )}
         </PwField>
       </PwRow>
 
