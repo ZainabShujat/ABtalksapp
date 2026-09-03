@@ -25,6 +25,17 @@ import { ResumeSection } from "@/components/profile/resume-section";
 import { PreferencesSection } from "@/components/profile/preferences-section";
 import { buttonVariants } from "@/components/ui/button";
 import { PERSONA_LABELS } from "@/lib/candidate-vocab";
+import { isAvatarStorageConfigured } from "@/features/profile/avatar-storage";
+
+/**
+ * Placeholder figures — nothing measures these yet.
+ *
+ * Search appearances needs a write when a candidate is returned by a /hire
+ * search; recruiter actions needs one when a recruiter opens or shortlists
+ * them. Neither exists. When that tracking lands, replace this constant with
+ * the real read and delete this comment — no other file needs to change.
+ */
+const PROFILE_PERFORMANCE = { searchAppearances: 1, recruiterActions: 0 } as const;
 
 /**
  * Résumé parsing runs inline in a Server Action invoked from this route, and one
@@ -373,7 +384,6 @@ export default async function ProfilePage() {
       user={{ ...shellUser, name: detail.fullName || shellUser.name }}
       isAdmin={session.user.isAdmin ?? false}
       showSectionNav={false}
-      contentClassName="min-[1025px]:flex min-[1025px]:min-h-0 min-[1025px]:flex-col min-[1025px]:overflow-hidden"
     >
       <ProfileWizard
         steps={steps}
@@ -385,6 +395,8 @@ export default async function ProfilePage() {
         }
         imageUrl={user.image ?? null}
         updatedAtIso={detail.updatedAt.toISOString()}
+        performance={PROFILE_PERFORMANCE}
+        avatarUploadEnabled={isAvatarStorageConfigured()}
       />
     </DashboardShell>
   );

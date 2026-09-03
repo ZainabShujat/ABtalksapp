@@ -8,6 +8,8 @@ export type WizardCtx = {
   formId: string;
   onSaved: () => void;
   setDirty: (dirty: boolean) => void;
+  saving: boolean;
+  setSaving: (saving: boolean) => void;
 };
 
 const ProfileWizardContext = createContext<WizardCtx | null>(null);

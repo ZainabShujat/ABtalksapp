@@ -1,5 +1,13 @@
 # 106 — /profile redesign: the profile-completion wizard
 
+**Status: implemented** — commit `6c5593f` "profile v2". Follow-on work lives in
+`107-profile-wizard-polish.md`.
+
+> **Number collision.** `106-resume-upload-parsing-and-strength.md` also carries
+> 106, and `docs/CHANGELOG.md` uses "Plan 106" to mean **that** one. Cite these
+> by filename. As built, the wizard has **ten** steps, not the nine planned
+> here — Résumé was added by the résumé plan.
+
 Reference build: `docs/reference-profile/` (`index.html`, `style.css`,
 `script.js`). Static HTML/CSS/JS, Figma frame `1323:5` (1920 × 900).
 

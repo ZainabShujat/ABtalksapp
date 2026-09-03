@@ -4,8 +4,11 @@
    ============================================================ */
 
 .pw-root {
-  --pw-orange: #e05226;
-  --pw-orange-soft: #ffece3;
+  --pw-orange: #f15a3a;
+  --pw-orange-soft: #feefea;
+  --pw-orange-hover: #de4e30;
+  /* rgb triple of --pw-orange, for the rgba() shadows below */
+  --pw-orange-rgb: 241, 90, 58;
   --pw-green: #27b95a;
   --pw-green-deep: #1e9e4a;
   --pw-text: #273142;
@@ -13,8 +16,8 @@
   --pw-border: #e5e7eb;
   --pw-card-radius: 24px;
   --pw-profile-card-w: 326px;
-  --pw-profile-card-h: 629px;
-  --pw-form-card-h: 669px;
+  --pw-profile-card-h: 555px;
+  --pw-form-card-h: 555px;
   --pw-ws-pad-top: 41px;
   --pw-ws-pad-left: 35px;
   --pw-ws-pad-right: 45px;
@@ -25,9 +28,16 @@
   --pw-background: #fafafa;
   --pw-filter-ring: none;
   --pw-filter-track: none;
+  /* Tied to DashboardHeader: h-[72px] + 1px bottom border. */
+  --pw-shell-offset: 73px;
+  /* Tied to SIDEBAR_FOOTER_ROW_CLASS (h-[148px]) in dashboard-hub/nav-items.ts. */
+  --pw-footer-h: 148px;
 
   box-sizing: border-box;
   width: 100%;
+  min-height: calc(100svh - var(--pw-shell-offset));
+  display: flex;
+  flex-direction: column;
   color: var(--pw-text);
   font-size: 14px;
   line-height: 1.45;
@@ -57,13 +67,14 @@
    ============================================================ */
 .pw-workspace {
   width: 100%;
+  flex: 1;
   min-height: 0;
   background: var(--pw-background);
   padding: var(--pw-ws-pad-top) var(--pw-ws-pad-right) 24px var(--pw-ws-pad-left);
   display: grid;
   grid-template-columns: var(--pw-profile-card-w) minmax(0, 1fr);
   gap: var(--pw-ws-gap);
-  align-items: start;
+  align-items: stretch;
 }
 
 /* ============================================================
@@ -77,9 +88,8 @@
 
 .pw-profile-card {
   width: var(--pw-profile-card-w);
-  height: var(--pw-profile-card-h);
+  min-height: var(--pw-profile-card-h);
   overflow: hidden;
-  align-self: start;
   background: var(--pw-white);
   border-radius: var(--pw-card-radius);
   box-shadow: var(--pw-shadow-card);
@@ -133,7 +143,7 @@
     filter: var(--pw-filter-ring) drop-shadow(0 0 9px rgba(76, 212, 108, 0.75));
   }
   100% {
-    filter: var(--pw-filter-ring) drop-shadow(0 0 4px rgba(224, 82, 38, 0.26));
+    filter: var(--pw-filter-ring) drop-shadow(0 0 4px rgba(var(--pw-orange-rgb), 0.26));
   }
 }
 
@@ -166,6 +176,75 @@
   line-height: 1;
   box-shadow: 0 1.5px 4px rgba(23, 32, 51, 0.1), 0 0 0 3px #fff,
     inset 0 2px 5px rgba(255, 255, 255, 0.3);
+}
+
+.pw-avatar-edit {
+  position: absolute;
+  right: 8px;
+  bottom: 10px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--pw-border);
+  background: var(--pw-white);
+  color: var(--pw-orange);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  z-index: 2;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12);
+}
+.pw-avatar-edit:hover {
+  background: var(--pw-orange-soft);
+}
+.pw-avatar-edit:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.pw-avatar-edit:focus-visible {
+  outline: 2px solid var(--pw-orange);
+  outline-offset: 2px;
+}
+.pw-avatar-edit svg {
+  width: 12px;
+  height: 12px;
+}
+.pw-avatar-spin {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--pw-border);
+  border-top-color: var(--pw-orange);
+  border-radius: 50%;
+  animation: pw-spin 0.6s linear infinite;
+}
+@keyframes pw-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.pw-photo-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.pw-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .pw-pct-badge {
@@ -390,11 +469,104 @@
 }
 
 /* ============================================================
+   PROFILE PERFORMANCE
+   ============================================================ */
+.pw-performance-section {
+  margin-top: auto;
+  background: #fdf5f1;
+  border-radius: 18px;
+  padding: 16px;
+  flex: none;
+}
+.pw-performance-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.pw-section-title {
+  font-weight: 700;
+  color: #111827;
+  font-size: 14.5px;
+  line-height: 18px;
+}
+/* Outranks `.pw-root svg.pw-ico` (0,2,1), which would otherwise force 20px. */
+.pw-root .pw-performance-header svg.pw-info {
+  width: 15px;
+  height: 15px;
+  color: #6b7280;
+  stroke-width: 1.7;
+  margin-top: 1px;
+  flex: none;
+  cursor: help;
+}
+.pw-performance-grid {
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  column-gap: 16px;
+  margin-top: 10px;
+  align-items: start;
+}
+.pw-grid-divider {
+  background: #e5e7eb;
+  width: 1px;
+  height: 100%;
+  border-radius: 1px;
+  align-self: stretch;
+}
+.pw-col-label {
+  font-size: 12.5px;
+  line-height: 17px;
+  color: #4b5563;
+  white-space: nowrap;
+}
+.pw-col-value {
+  margin-top: 2px;
+  font-size: 26px;
+  line-height: 30px;
+  font-weight: 800;
+  color: var(--pw-orange);
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+.pw-col-value .pw-dot,
+.pw-col-value .pw-chev {
+  flex: none;
+}
+/* the dot is charcoal, the chevron orange — as in the design */
+.pw-col-value .pw-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #4b5563;
+  margin-left: 7px;
+}
+.pw-col-value .pw-chev {
+  width: 11px;
+  height: 11px;
+  margin-left: 6px;
+  display: grid;
+  place-items: center;
+  color: var(--pw-orange);
+}
+.pw-col-value .pw-chev svg {
+  width: 11px;
+  height: 11px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ============================================================
    FORM CARD
    ============================================================ */
 .pw-form-card {
   min-height: min(var(--pw-form-card-h), 100%);
-  align-self: start;
   background: var(--pw-white);
   border-radius: var(--pw-card-radius);
   box-shadow: var(--pw-shadow-card);
@@ -407,7 +579,7 @@
   min-height: 73px;
   flex: none;
   position: relative;
-  padding: 18px 33px 16px;
+  padding: 18px 33px 0;
   overflow: hidden;
   isolation: isolate;
 }
@@ -452,7 +624,7 @@
   border: 1px solid #cfebd8;
   color: var(--pw-green-deep);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   padding: 6px 12px;
   border-radius: 999px;
   opacity: 0;
@@ -479,7 +651,7 @@
 }
 .pw-section-progress.pw-restored {
   background: #fff7ed;
-  box-shadow: 0 0 18px rgba(224, 82, 38, 0.14);
+  box-shadow: 0 0 18px rgba(var(--pw-orange-rgb), 0.14);
 }
 @keyframes pw-profileComplete {
   0% {
@@ -496,7 +668,7 @@
   }
   100% {
     background: #fff7ed;
-    box-shadow: 0 0 18px rgba(224, 82, 38, 0.13);
+    box-shadow: 0 0 18px rgba(var(--pw-orange-rgb), 0.13);
   }
 }
 
@@ -635,7 +807,7 @@
 .pw-root .pw-tag-input-row input:focus {
   outline: none;
   border-color: #c9a28f !important;
-  box-shadow: 0 0 0 3px rgba(224, 82, 38, 0.08) !important;
+  box-shadow: 0 0 0 3px rgba(var(--pw-orange-rgb), 0.08) !important;
 }
 .pw-root input.pw-filled,
 .pw-root textarea.pw-filled,
@@ -768,14 +940,14 @@
   padding: 11px 18px;
   cursor: pointer;
   text-decoration: none;
-  box-shadow: 0 1px 2px rgba(224, 82, 38, 0.3);
+  box-shadow: 0 1px 2px rgba(var(--pw-orange-rgb), 0.3);
   transition: background-color 0.2s ease, transform 0.2s ease,
     box-shadow 0.2s ease;
 }
 .pw-btn-action:hover {
-  background: #c9411c;
+  background: var(--pw-orange-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(224, 82, 38, 0.26);
+  box-shadow: 0 4px 12px rgba(var(--pw-orange-rgb), 0.26);
   color: #fff;
 }
 .pw-btn-action svg {
@@ -1270,12 +1442,12 @@
 .pw-btn-primary {
   background: var(--pw-orange);
   color: #fff;
-  box-shadow: 0 1px 2px rgba(224, 82, 38, 0.28);
+  box-shadow: 0 1px 2px rgba(var(--pw-orange-rgb), 0.28);
 }
 .pw-btn-primary:hover {
-  background: #c9411c;
+  background: var(--pw-orange-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(224, 82, 38, 0.26);
+  box-shadow: 0 4px 12px rgba(var(--pw-orange-rgb), 0.26);
 }
 .pw-btn-primary:active {
   transform: translateY(0);
@@ -1510,32 +1682,21 @@
   }
 }
 
-/* Desktop: pin the profile card; only the form body scrolls. */
 @media (min-width: 1025px) {
   .pw-root {
-    flex: 1 1 auto;
+    height: auto;
+    max-height: none;
     min-height: 0;
-    height: calc(100svh - 72px - 148px);
-    max-height: calc(100svh - 72px - 148px);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+    overflow: visible;
   }
   .pw-workspace {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: hidden;
-    grid-template-rows: minmax(0, 1fr);
+    overflow: visible;
   }
-  .pw-profile-card {
-    max-height: 100%;
-    min-height: 0;
-  }
+  .pw-profile-card,
   .pw-form-card {
-    align-self: stretch;
-    height: auto;
-    max-height: 100%;
-    min-height: 0;
+    height: var(--pw-profile-card-h);
+    max-height: var(--pw-profile-card-h);
+    min-height: var(--pw-profile-card-h);
     overflow: hidden;
   }
   .pw-section-body {
@@ -1545,6 +1706,9 @@
 }
 
 @media (max-width: 1024px) {
+  .pw-root {
+    min-height: 0;
+  }
   .pw-workspace {
     grid-template-columns: minmax(0, 1fr);
     height: auto;
@@ -1555,6 +1719,7 @@
     width: 100%;
     height: auto;
     max-height: none;
+    min-height: 0;
   }
   .pw-row.pw-grow {
     flex: none;
@@ -1607,6 +1772,19 @@
   .pw-user-details {
     margin-left: 0;
     padding-top: 0;
+  }
+  .pw-performance-grid {
+    grid-template-columns: 1fr;
+  }
+  .pw-grid-divider {
+    display: none;
+  }
+  .pw-perf-column:last-child {
+    padding-left: 0;
+    margin-top: 10px;
+  }
+  .pw-performance-section {
+    height: auto;
   }
 }
 

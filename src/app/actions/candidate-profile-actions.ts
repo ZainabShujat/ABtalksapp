@@ -1,8 +1,10 @@
 "use server";
 
+import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import type { z } from "zod";
 import { auth } from "@/auth";
+import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import {
   basicInfoSchema,
@@ -24,6 +26,12 @@ import {
   saveProjects,
   saveSkillClaims,
 } from "@/repositories/candidate-detail";
+import {
+  deleteAvatarBlob,
+  isAvatarStorageConfigured,
+  isOurAvatarUrl,
+  storeAvatarFile,
+} from "@/features/profile/avatar-storage";
 
 export type ActionResult = { ok: true } | { ok: false; message: string };
 
@@ -144,4 +152,126 @@ export async function savePreferencesAction(
   return runSection(preferencesSchema, raw, "preferences", (userId, value) =>
     savePreferences(userId, value),
   );
+}
+
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+const AVATAR_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+function sniffImageType(
+  bytes: Uint8Array,
+): { mime: "image/jpeg" | "image/png" | "image/webp"; ext: "jpg" | "png" | "webp" } | null {
+  if (bytes.length < 12) return null;
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return { mime: "image/jpeg", ext: "jpg" };
+  }
+  if (
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  ) {
+    return { mime: "image/png", ext: "png" };
+  }
+  if (
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return { mime: "image/webp", ext: "webp" };
+  }
+  return null;
+}
+
+export async function uploadAvatarAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { ok: false, message: "You must be signed in." };
+  }
+  const userId = session.user.id;
+
+  if (!isAvatarStorageConfigured()) {
+    logger.warn("[avatar] upload attempted while storage is unconfigured");
+    return { ok: false, message: "Photo upload is not available right now." };
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, message: "Choose a photo to upload." };
+  }
+  if (file.size > MAX_AVATAR_BYTES) {
+    return {
+      ok: false,
+      message: "That file is too large. Please choose a photo under 2 MB.",
+    };
+  }
+  if (file.type === "image/svg+xml" || !AVATAR_TYPES.has(file.type)) {
+    return {
+      ok: false,
+      message: "Please choose a JPEG, PNG, or WebP photo.",
+    };
+  }
+
+  let bytes: Uint8Array;
+  try {
+    bytes = new Uint8Array(await file.arrayBuffer());
+  } catch (error) {
+    logger.error("[avatar] failed to read upload", {
+      userId,
+      error: String(error),
+    });
+    return { ok: false, message: "Could not read that file. Please try again." };
+  }
+
+  const sniffed = sniffImageType(bytes);
+  if (!sniffed || sniffed.mime !== file.type) {
+    return {
+      ok: false,
+      message: "Please choose a JPEG, PNG, or WebP photo.",
+    };
+  }
+
+  const contentHash = createHash("sha256").update(Buffer.from(bytes)).digest("hex");
+
+  try {
+    const existing = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { image: true },
+    });
+    const url = await storeAvatarFile({
+      userId,
+      contentHash,
+      ext: sniffed.ext,
+      bytes,
+      mimeType: sniffed.mime,
+    });
+    if (!url) {
+      return { ok: false, message: "Photo upload is not available right now." };
+    }
+
+    if (existing?.image && isOurAvatarUrl(existing.image) && existing.image !== url) {
+      await deleteAvatarBlob(existing.image);
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { image: url },
+      select: { id: true },
+    });
+  } catch (error) {
+    logger.error("[avatar] upload failed", {
+      userId,
+      error: String(error),
+    });
+    return { ok: false, message: "Could not save. Please try again." };
+  }
+
+  revalidatePath("/profile");
+  return { ok: true };
 }
