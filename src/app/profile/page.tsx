@@ -9,7 +9,8 @@ import { getCandidateDetail } from "@/repositories/candidate-detail";
 import { getProfileEvidence } from "@/features/profile/get-evidence";
 import { getResumeView } from "@/features/resume/service";
 import { computeCompleteness } from "@/features/profile/completeness";
-import { getPopularSkills } from "@/features/skill/search-skills";
+import { getSkillsByNames } from "@/features/skill/search-skills";
+import { PROFILE_QUICK_SKILLS } from "@/lib/candidate-vocab";
 import { getActiveAttempt, getHistory } from "@/features/interview/platform/service";
 import { DashboardShell } from "@/components/dashboard-hub/dashboard-shell";
 import { ProfileWizard, type WizardStep } from "@/components/profile/profile-wizard";
@@ -102,13 +103,13 @@ export default async function ProfilePage() {
 
   const [
     evidence,
-    popularSkills,
+    catalogSkills,
     mockInterviewHistory,
     activeMockInterview,
     resume,
   ] = await Promise.all([
     getProfileEvidence(userId),
-    getPopularSkills(10),
+    getSkillsByNames(PROFILE_QUICK_SKILLS),
     // The MockInterview tables exist on demo but the migration has not been
     // applied to production, so this query throws there until it is. The
     // profile must not 500 over it — it degrades to an empty list, which
@@ -278,7 +279,7 @@ export default async function ProfilePage() {
       savable: true,
       node: (
         <SkillsSection
-          popular={popularSkills}
+          catalog={catalogSkills}
           initial={claimedSkills.map((sk) => ({
             skillId: sk.skillId,
             name: sk.name,

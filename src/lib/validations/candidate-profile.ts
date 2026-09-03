@@ -247,6 +247,10 @@ export const skillSectionSchema = z.object({
 
 export type SkillClaimInput = z.infer<typeof skillClaimSchema>;
 
+export const resolveSkillSchema = z.object({
+  name: z.string().trim().min(1, "Skill name is required").max(80),
+});
+
 /* ─── Certifications ─────────────────────────────────────────────────────── */
 
 const certificationRowSchema = z

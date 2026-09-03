@@ -167,6 +167,104 @@ export const PwInput = forwardRef<
   );
 });
 
+/**
+ * Text input with a white suggestion panel. Suggestions are optional — any
+ * typed value is kept (same contract as the old `<datalist>` Role field).
+ */
+export const PwSuggest = forwardRef<
+  HTMLInputElement,
+  InputHTMLAttributes<HTMLInputElement> & {
+    suggestions: readonly string[];
+  }
+>(function PwSuggest(
+  { suggestions, className, onChange, onFocus, onBlur, onInput, ...props },
+  ref,
+) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState(() =>
+    String(props.value ?? props.defaultValue ?? ""),
+  );
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const blurTimer = useRef<number | null>(null);
+
+  function setRefs(node: HTMLInputElement | null) {
+    inputRef.current = node;
+    if (typeof ref === "function") ref(node);
+    else if (ref) ref.current = node;
+  }
+
+  const q = text.trim().toLowerCase();
+  const filtered = suggestions
+    .filter((s) => (q ? s.toLowerCase().includes(q) : true))
+    .slice(0, 12);
+
+  function pick(value: string) {
+    const el = inputRef.current;
+    if (!el) return;
+    const proto = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "value",
+    );
+    proto?.set?.call(el, value);
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+    setText(value);
+    markFilled(el);
+    setOpen(false);
+  }
+
+  return (
+    <div className="pw-suggest">
+      <input
+        {...props}
+        ref={setRefs}
+        className={className}
+        autoComplete="off"
+        onFocus={(e) => {
+          if (blurTimer.current != null) {
+            window.clearTimeout(blurTimer.current);
+            blurTimer.current = null;
+          }
+          setOpen(true);
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          blurTimer.current = window.setTimeout(() => setOpen(false), 120);
+          onBlur?.(e);
+        }}
+        onInput={(e) => {
+          markFilled(e.currentTarget);
+          onInput?.(e);
+        }}
+        onChange={(e) => {
+          setText(e.target.value);
+          setOpen(true);
+          markFilled(e.currentTarget);
+          onChange?.(e);
+        }}
+      />
+      {open && filtered.length > 0 ? (
+        <ul className="pw-suggest-list" role="listbox">
+          {filtered.map((s) => (
+            <li key={s} role="option">
+              <button
+                type="button"
+                className="pw-suggest-option"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  pick(s);
+                }}
+              >
+                {s}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+});
+
 export const PwTextarea = forwardRef<
   HTMLTextAreaElement,
   TextareaHTMLAttributes<HTMLTextAreaElement>

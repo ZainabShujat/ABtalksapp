@@ -14,6 +14,7 @@ import {
   linksSectionSchema,
   preferencesSchema,
   projectSectionSchema,
+  resolveSkillSchema,
   skillSectionSchema,
 } from "@/lib/validations/candidate-profile";
 import {
@@ -32,6 +33,8 @@ import {
   isOurAvatarUrl,
   storeAvatarFile,
 } from "@/features/profile/avatar-storage";
+import { resolveOrCreateSkill } from "@/features/skill/resolve-skill";
+import type { SkillOption } from "@/features/skill/search-skills";
 
 export type ActionResult = { ok: true } | { ok: false; message: string };
 
@@ -121,6 +124,38 @@ export async function saveSkillsAction(raw: unknown): Promise<ActionResult> {
   return runSection(skillSectionSchema, raw, "skills", (userId, value) =>
     saveSkillClaims(userId, value.claims),
   );
+}
+
+export type ResolveSkillResult =
+  | { ok: true; data: SkillOption }
+  | { ok: false; message: string };
+
+export async function resolveSkillAction(
+  raw: unknown,
+): Promise<ResolveSkillResult> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { ok: false, message: "You must be signed in." };
+  }
+
+  const parsed = resolveSkillSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { ok: false, message: firstIssue(parsed.error) };
+  }
+
+  try {
+    const skill = await resolveOrCreateSkill(parsed.data.name);
+    if (!skill) {
+      return { ok: false, message: "Please enter a skill name." };
+    }
+    return { ok: true, data: skill };
+  } catch (error) {
+    logger.error("[profile] resolve skill failed", {
+      userId: session.user.id,
+      error: String(error),
+    });
+    return { ok: false, message: "Could not add that skill. Please try again." };
+  }
 }
 
 export async function saveCertificationsAction(

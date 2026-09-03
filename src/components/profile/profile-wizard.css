@@ -39,6 +39,7 @@
   display: flex;
   flex-direction: column;
   color: var(--pw-text);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
@@ -80,12 +81,6 @@
 /* ============================================================
    PROFILE CARD
    ============================================================ */
-.pw-profile-card,
-.pw-profile-card * {
-  font-family: var(--font-hub-instrument-sans), Inter, -apple-system,
-    BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
-
 .pw-profile-card {
   width: var(--pw-profile-card-w);
   min-height: var(--pw-profile-card-h);
@@ -460,8 +455,8 @@
   stroke-width: 1.8;
 }
 .pw-check-item.pw-current {
-  color: #4b5563;
-  font-weight: 500;
+  color: #111827;
+  font-weight: 700;
 }
 .pw-check-item.pw-current.pw-completed {
   color: var(--pw-green);
@@ -749,6 +744,50 @@
   margin-top: 8px;
 }
 
+.pw-suggest {
+  position: relative;
+  width: 100%;
+}
+.pw-suggest-list {
+  position: absolute;
+  z-index: 40;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  max-height: 240px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: #ffffff;
+  color: #273142;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: var(--pw-shadow-card);
+  color-scheme: light;
+}
+.pw-suggest-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.35;
+  color: #273142;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.pw-suggest-option:hover,
+.pw-suggest-option:focus-visible {
+  background: var(--pw-orange-soft);
+  color: var(--pw-orange);
+  outline: none;
+}
+
 .pw-root input[type="text"],
 .pw-root input[type="tel"],
 .pw-root input[type="email"],
@@ -819,6 +858,8 @@
   appearance: none;
   cursor: pointer;
   padding-right: 40px;
+  color-scheme: light;
+  background-color: var(--pw-white);
   background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 14px center;
@@ -1009,6 +1050,9 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  max-height: 120px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .pw-quick-chip {
   font: inherit;
@@ -1026,6 +1070,94 @@
   background: var(--pw-orange-soft);
   border-color: #f3c4b6;
   color: var(--pw-orange);
+}
+.pw-quick-chip.pw-quick-other {
+  border-style: dashed;
+  color: #6b7280;
+}
+.pw-quick-chip.pw-quick-other:hover,
+.pw-quick-chip.pw-quick-other.pw-open {
+  background: var(--pw-orange-soft);
+  border-color: #f3c4b6;
+  border-style: dashed;
+  color: var(--pw-orange);
+}
+.pw-skill-other {
+  margin-top: 12px;
+}
+.pw-skill-search {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+}
+.pw-skill-other-error {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: #b42318;
+}
+
+/* Portaled to <body> (outside .theme-abtalks-light) — force a light panel so
+   dark-mode / UA canvas colors cannot paint this list black. */
+.pw-skill-popup {
+  --pw-orange: #f15a3a;
+  --pw-orange-soft: #feefea;
+  --pw-border: #e5e7eb;
+  --pw-shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04),
+    0 8px 24px rgba(16, 24, 40, 0.05);
+  --pw-white: #ffffff;
+  --background: 0 0% 100%;
+  --foreground: 224 71% 4%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 224 71% 4%;
+  --accent: 14 88% 95%;
+  --accent-foreground: 14 87% 48%;
+  --muted-foreground: 220 8% 46%;
+  color-scheme: light;
+  box-sizing: border-box;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  background-color: #ffffff !important;
+  color: #273142 !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 12px;
+  box-shadow: var(--pw-shadow-card);
+  max-height: 240px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 6px;
+}
+.pw-skill-option {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.35;
+  color: #273142 !important;
+  background-color: transparent;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  outline: none;
+}
+.pw-skill-option[data-highlighted],
+.pw-skill-option[data-selected],
+.pw-skill-option:hover,
+.pw-skill-option:focus,
+.pw-skill-option:focus-visible {
+  background-color: #feefea !important;
+  color: #f15a3a !important;
+}
+.pw-skill-option-cat {
+  flex: none;
+  font-size: 12px;
+  color: #6b7280 !important;
+}
+.pw-skill-empty {
+  padding: 8px 10px;
+  font-size: 13px;
+  color: #6b7280 !important;
 }
 
 .pw-tag-list {

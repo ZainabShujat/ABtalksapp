@@ -2,7 +2,6 @@
 
 import { Autocomplete } from "@base-ui/react/autocomplete";
 import { useEffect, useRef, useState } from "react";
-import { cn } from "@/lib/utils";
 
 export type SkillOption = {
   id: string;
@@ -11,8 +10,18 @@ export type SkillOption = {
   categoryName: string | null;
 };
 
-const INPUT_CLASS =
-  "h-10 w-full min-w-0 rounded-xl border border-input bg-transparent px-3 py-2 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-input focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80";
+const OTHER_ID = "__other__";
+
+const OTHER_ITEM: SkillOption = {
+  id: OTHER_ID,
+  name: "Other",
+  slug: OTHER_ID,
+  categoryName: null,
+};
+
+function isOther(item: SkillOption): boolean {
+  return item.id === OTHER_ID;
+}
 
 type SearchEnvelope =
   | { ok: true; data: SkillOption[] }
@@ -29,23 +38,35 @@ function isSearchEnvelope(value: unknown): value is SearchEnvelope {
   return envelope.ok === false;
 }
 
+function isExcluded(
+  skill: SkillOption,
+  excludeIds: ReadonlySet<string>,
+  excludeNames: ReadonlySet<string>,
+): boolean {
+  if (skill.id && excludeIds.has(skill.id)) return true;
+  return excludeNames.has(skill.name.toLowerCase());
+}
+
 /**
- * Typeahead over the canonical skill catalog.
+ * Typeahead over the canonical skill catalog, plus a curated empty-query list.
  *
- * Selection only — there is no "create" path. Skills must come from `Skill` so
- * that slug and alias normalization keeps "Python", "python" and "Python 3"
- * from becoming three separate things a recruiter has to search for
- * individually.
+ * Selection of catalog rows only — "Other" is a UI switch, not a skill.
  */
 export function SkillCombobox({
   id,
+  catalog,
   excludeIds,
+  excludeNames,
   onSelect,
+  onOther,
   placeholder = "Search for skills",
 }: {
   id?: string;
+  catalog: readonly SkillOption[];
   excludeIds: readonly string[];
+  excludeNames: readonly string[];
   onSelect: (skill: SkillOption) => void;
+  onOther: () => void;
   placeholder?: string;
 }) {
   const [query, setQuery] = useState("");
@@ -53,16 +74,20 @@ export function SkillCombobox({
   const abortRef = useRef<AbortController | null>(null);
   const queryRef = useRef("");
 
-  const exclude = new Set(excludeIds);
-  const visible =
-    query.trim().length < 1 ? [] : results.filter((r) => !exclude.has(r.id));
+  const idSet = new Set(excludeIds.filter((x) => x.length > 0));
+  const nameSet = new Set(excludeNames.map((n) => n.toLowerCase()));
+
+  const listed: SkillOption[] =
+    query.trim().length < 1
+      ? catalog.filter((s) => !isExcluded(s, idSet, nameSet))
+      : results.filter((s) => !isExcluded(s, idSet, nameSet));
+
+  const visible = [...listed, OTHER_ITEM];
 
   useEffect(() => {
     queryRef.current = query;
     const q = query.trim();
     if (q.length < 1) {
-      // No setState here: `visible` already returns [] for a short query, so
-      // clearing would only trigger a second render for the same output.
       abortRef.current?.abort();
       return;
     }
@@ -95,6 +120,12 @@ export function SkillCombobox({
   }, [query]);
 
   function choose(skill: SkillOption) {
+    if (isOther(skill)) {
+      onOther();
+      setQuery("");
+      setResults([]);
+      return;
+    }
     onSelect(skill);
     setQuery("");
     setResults([]);
@@ -117,7 +148,7 @@ export function SkillCombobox({
         autoCapitalize="none"
         spellCheck={false}
         data-1p-ignore=""
-        className={INPUT_CLASS}
+        className="pw-skill-search"
       />
       <Autocomplete.Portal>
         <Autocomplete.Positioner
@@ -125,25 +156,21 @@ export function SkillCombobox({
           sideOffset={4}
           align="start"
         >
-          <Autocomplete.Popup
-            className={cn(
-              "relative isolate z-50 max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10",
-            )}
-          >
-            <Autocomplete.Empty className="px-2 py-1.5 text-sm text-muted-foreground">
+          <Autocomplete.Popup className="pw-skill-popup relative isolate z-50 w-(--anchor-width) min-w-36 origin-(--transform-origin)">
+            <Autocomplete.Empty className="pw-skill-empty">
               {query.trim() ? "No matching skill in the catalog" : null}
             </Autocomplete.Empty>
             <Autocomplete.List>
               {(item: SkillOption) => (
                 <Autocomplete.Item
-                  key={item.id}
+                  key={item.id || item.name}
                   value={item}
-                  className="relative flex w-full cursor-default items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
+                  className="pw-skill-option"
                   onClick={() => choose(item)}
                 >
                   <span>{item.name}</span>
-                  {item.categoryName ? (
-                    <span className="shrink-0 text-xs text-muted-foreground">
+                  {item.categoryName && !isOther(item) ? (
+                    <span className="pw-skill-option-cat">
                       {item.categoryName}
                     </span>
                   ) : null}
