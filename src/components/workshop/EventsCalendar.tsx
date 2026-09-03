@@ -24,11 +24,17 @@ const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
  * positions cannot survive being re-laid-out with flexbox. Only the design
  * size moved, from 1749 to 900.
  *
+ * 900 was kept when the section's outer bound widened to 1560. Raising it to
+ * 1000 to fill the wider column was tried and reverted: it buys a full-width
+ * card at 1920 but drops the scale at 1280 from 0.85 to 0.76, and 1280 is the
+ * commoner screen. The card is capped at CARD_W and centred, so a very wide
+ * viewport leaves ~47px either side of the grid inside its column — a far
+ * cheaper cost than shrinking the calendar on every laptop.
+ *
  * It had to move. `useCanvasScale` divides available width by this number, so
  * a 1749 canvas dropped into ~65% of the row would render at scale 0.48 — the
  * whole calendar, fonts and all, at half size. At 900 the same column scales
- * to ~0.93 at 1440 and 1.0 from ~1400 up, so the grid reads at its intended
- * size instead of being shrunk to fit.
+ * so the grid reads at its intended size instead of being shrunk to fit.
  *
  * The cells are also deliberately less wide-and-flat than the original 100/240
  * ratio. That proportion was drawn for a full-bleed 1749 card; at a seventh of
@@ -216,8 +222,7 @@ function NavButton({ dir, onClick }: { dir: -1 | 1; onClick: () => void }) {
       type="button"
       aria-label={dir === -1 ? "Previous month" : "Next month"}
       onClick={onClick}
-      className="flex h-full w-full items-center justify-center rounded-[12px] transition-opacity hover:opacity-70"
-      style={{ background: "var(--wk-chip)", color: "var(--wk-muted)" }}
+      className="wk-cal-ctl flex h-full w-full items-center justify-center rounded-[10px]"
     >
       {dir === -1 ? (
         <ChevronLeft className="size-4" aria-hidden />
@@ -354,7 +359,7 @@ export default function EventsCalendar() {
   // ~1920px wide and let the card run edge to edge on every laptop.
   return (
     <section
-      className="w-full px-4 pb-14 pt-10 lg:px-[4.4%] lg:pb-[63px] lg:pt-[50px]"
+      className="w-full px-4 pb-14 pt-10 lg:px-8 lg:pb-[63px] lg:pt-[50px] xl:px-10"
       style={{ background: "var(--wk-bg-alt)" }}
     >
       {/* A section heading, not a second hero. At 64px it out-weighed the
@@ -372,10 +377,11 @@ export default function EventsCalendar() {
           costing legibility. There the card keeps the full width and the
           sidebar sits underneath it.
 
-          The outer max-width is what keeps the split honest on a wide screen —
-          without it the 1.85fr column would grow past the 900px card and the
-          calendar would float in its own dead space. */}
-      <div className="mx-auto w-full max-w-[1380px]">
+          The outer max-width keeps the split honest on a wide screen: without
+          it the 1.85fr column grows past the card's own width and the calendar
+          floats in its own dead space. It is paired with CARD_W — raise one
+          and the other has to follow, or the card stops filling its column. */}
+      <div className="mx-auto w-full max-w-[1560px]">
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.85fr)_minmax(300px,1fr)] xl:gap-7">
           {/* The positioned ancestor the contained details modal resolves
               against. This is the whole containment mechanism — the modal was
@@ -423,51 +429,52 @@ export default function EventsCalendar() {
             transform: "scale(var(--wk-scale, 1))",
           }}
         >
-          {/* ---------- month nav (nodes 1:207 / 1:210 / 1:203) ---------- */}
+          {/* ---------- month nav (nodes 1:207 / 1:210 / 1:203) ----------
+              One flex group, not three absolutely-positioned elements.
+
+              Each used to carry its own `left`: 24, 70 and 246. The title's
+              width is the month name's, so only the LEFT gap was stable —
+              measured, the right gap swung from 11px on "September 2026" to
+              40px on "October 2026", because the next arrow stayed pinned at
+              246 whatever the title did.
+
+              The group is still absolutely placed (the card is a fixed canvas),
+              but inside it the three children are laid out by one `gap`, so
+              both sides are equal for every month name. */}
           <div
             style={{
               position: "absolute",
               left: PAD,
               top: NAV_TOP,
-              width: NAV_SIZE,
               height: NAV_SIZE,
-              display: "grid",
-            }}
-          >
-            <NavButton dir={-1} onClick={step(-1)} />
-          </div>
-
-          <h3
-            style={{
-              position: "absolute",
-              left: 70,
-              top: NAV_TOP,
-              height: NAV_SIZE,
-              margin: 0,
               display: "flex",
               alignItems: "center",
-              fontSize: 21,
-              fontWeight: 700,
-              letterSpacing: "-0.01em",
-              whiteSpace: "nowrap",
-              color: "var(--wk-heading)",
+              gap: 12,
             }}
-            aria-live="polite"
           >
-            {cursor ? monthLabel(cursor.y, cursor.m) : " "}
-          </h3>
+            <div style={{ width: NAV_SIZE, height: NAV_SIZE, display: "grid" }}>
+              <NavButton dir={-1} onClick={step(-1)} />
+            </div>
 
-          <div
-            style={{
-              position: "absolute",
-              left: 246,
-              top: NAV_TOP,
-              width: NAV_SIZE,
-              height: NAV_SIZE,
-              display: "grid",
-            }}
-          >
-            <NavButton dir={1} onClick={step(1)} />
+            <h3
+              style={{
+                margin: 0,
+                display: "flex",
+                alignItems: "center",
+                fontSize: 21,
+                fontWeight: 700,
+                letterSpacing: "-0.01em",
+                whiteSpace: "nowrap",
+                color: "var(--wk-heading)",
+              }}
+              aria-live="polite"
+            >
+              {cursor ? monthLabel(cursor.y, cursor.m) : " "}
+            </h3>
+
+            <div style={{ width: NAV_SIZE, height: NAV_SIZE, display: "grid" }}>
+              <NavButton dir={1} onClick={step(1)} />
+            </div>
           </div>
 
           {/* Jumps back to the current month — the one control the reference
@@ -476,6 +483,7 @@ export default function EventsCalendar() {
           <button
             type="button"
             onClick={jumpToToday}
+            className="wk-cal-ctl"
             style={{
               position: "absolute",
               right: PAD,
@@ -485,9 +493,6 @@ export default function EventsCalendar() {
               borderRadius: 10,
               fontSize: 12.5,
               fontWeight: 600,
-              background: "var(--wk-chip)",
-              color: "var(--wk-text-dim)",
-              border: "1px solid var(--wk-card-border)",
             }}
           >
             Today
@@ -593,12 +598,7 @@ export default function EventsCalendar() {
           <button
             type="button"
             onClick={jumpToToday}
-            className="ml-auto rounded-[10px] px-3 py-1.5 text-[12px] font-semibold"
-            style={{
-              background: "var(--wk-chip)",
-              color: "var(--wk-text-dim)",
-              border: "1px solid var(--wk-card-border)",
-            }}
+            className="wk-cal-ctl ml-auto rounded-[10px] px-3 py-1.5 text-[12px] font-semibold"
           >
             Today
           </button>
@@ -704,7 +704,6 @@ function EventBar({
     borderRadius: compact ? 6 : 12,
     paddingLeft: compact ? 2 : 4,
     paddingRight: compact ? 2 : 5,
-    boxShadow: "0 2px 4px rgba(var(--wk-ink-a),0.06)",
     ...(event.placeholder
       ? {
           background: "var(--wk-chip)",
@@ -809,7 +808,10 @@ function EventBar({
     </>
   );
 
-  const interactive = "cursor-pointer transition-transform hover:-translate-y-px";
+  // Only the three interactive branches below take this. A finished placeholder
+  // renders an inert <span> and deliberately does not, so the glow never
+  // promises a click that does nothing.
+  const interactive = "wk-event-bar cursor-pointer";
 
   // Any finished real workshop → details modal (with or without a recording).
   if (todayKey && hasReplay(event, todayKey)) {
@@ -818,7 +820,7 @@ function EventBar({
         type="button"
         aria-label={`${label} — view details`}
         onClick={(e) => onOpen(event, e.currentTarget)}
-        className={interactive}
+        className={`wk-event-tile ${interactive}`}
         style={barStyle}
       >
         {inner}
@@ -834,7 +836,7 @@ function EventBar({
         href={event.href}
         aria-label={label}
         {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-        className={interactive}
+        className={`wk-event-tile ${interactive}`}
         style={barStyle}
       >
         {inner}
@@ -848,7 +850,7 @@ function EventBar({
       <a
         href="#register"
         aria-label={`${label} — register`}
-        className={interactive}
+        className={`wk-event-tile ${interactive}`}
         style={barStyle}
       >
         {inner}
@@ -858,7 +860,7 @@ function EventBar({
 
   // A Saturday placeholder whose date has since passed — nothing to open.
   return (
-    <span style={{ ...barStyle, opacity: 0.75 }} title={label}>
+    <span className="wk-event-tile" style={{ ...barStyle, opacity: 0.75 }} title={label}>
       {inner}
     </span>
   );

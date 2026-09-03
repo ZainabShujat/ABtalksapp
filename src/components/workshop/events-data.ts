@@ -338,16 +338,6 @@ export const pastEvents = (todayKey: string) =>
     b.date.localeCompare(a.date),
   );
 
-/**
- * The one event currently accepting signups: the soonest upcoming event
- * flagged `register`. A finished event can therefore never show a live
- * Register button, even if its flag was left set.
- */
-export const getRegistrableEvent = (
-  todayKey: string,
-): WorkshopEvent | undefined =>
-  upcomingEvents(todayKey).find((e) => e.register && e.registrationOpen);
-
 export const fullDate = (iso: string) =>
   utc(iso).toLocaleString("en-US", {
     day: "numeric",
@@ -537,18 +527,61 @@ export const eventStatus = (ev: WorkshopEvent, nowMs: number): EventStatus => {
  * Because the cut-off is `eventEndMs`, a workshop drops out of this list by
  * itself once it finishes; nothing has to be edited when the week turns over.
  */
-export const sidebarEvents = (nowMs: number, limit = 3): WorkshopEvent[] =>
+/**
+ * Every workshop that has not finished yet, soonest first.
+ *
+ * THE single source of truth for "what is coming up". The sidebar, the
+ * registrable event, the hero title and the poster all read this list, so they
+ * cannot drift apart — which they previously did, because the sidebar filtered
+ * on absolute time while registration filtered on two hand-set booleans.
+ *
+ * Non-workshop tracks are excluded: the column is headed "Upcoming Workshops",
+ * and the hackathon, the cohort start day and the challenge kickoff each have
+ * their own destination. Placeholders are excluded too — "Workshop — TBA" is a
+ * promise that the cadence continues, which reads correctly as a calendar tile
+ * and would read as vapourware as a card with a Register button.
+ *
+ * The cut-off is `eventEndMs`, so a session leaves this list the minute it
+ * finishes and the next one becomes current with no edit anywhere.
+ */
+const openWorkshops = (nowMs: number): WorkshopEvent[] =>
   EVENTS.filter(
     (e) =>
-      // The column is headed "Upcoming Workshops", so it holds workshops.
-      // Without this the hackathon, the cohort start day and the challenge
-      // kickoff would file in beside them as soon as a future one is added —
-      // each carrying a Register button bound to a workshop it has nothing to
-      // do with. They are already on the grid, where their own colour and
-      // their own destination say what they are.
       e.track === "workshop" &&
       !e.placeholder &&
       eventStatus(e, nowMs) !== "PAST",
-  )
-    .sort((a, b) => eventStartMs(a) - eventStartMs(b))
-    .slice(0, limit);
+  ).sort((a, b) => eventStartMs(a) - eventStartMs(b));
+
+export const sidebarEvents = (nowMs: number, limit = 3): WorkshopEvent[] =>
+  openWorkshops(nowMs).slice(0, limit);
+
+/**
+ * The one event currently accepting signups.
+ *
+ * Derived from the clock, not from a flag somebody has to remember to move.
+ * It used to be `upcomingEvents(todayKey).find(e => e.register &&
+ * e.registrationOpen)`, which had two failure modes a week apart:
+ *
+ *   - only ONE event ever carried both flags, so the Saturday after that
+ *     workshop ran, this returned `undefined` and the server answered every
+ *     signup with "Registration is closed right now" until a developer edited
+ *     the data file;
+ *   - `upcomingEvents` compares calendar DAYS, while the sidebar compares
+ *     absolute time, so between a workshop's end and IST midnight the two
+ *     disagreed about which event was current.
+ *
+ * Both now read the same list. See `openWorkshops`.
+ *
+ * `registrationOpen: false` stays meaningful as an explicit kill switch —
+ * setting it closes signups for that session without deleting it. Absent or
+ * true means open, so the common case needs no edit at all.
+ *
+ * The instant defaults to now, read here rather than in the caller: a Server
+ * Component body that calls `Date.now()` during render trips React's purity
+ * rule, and every caller that simply means "right now" should not have to
+ * thread a clock. Tests and the frozen-clock checks pass one explicitly.
+ */
+export const getRegistrableEvent = (
+  nowMs: number = Date.now(),
+): WorkshopEvent | undefined =>
+  openWorkshops(nowMs).find((e) => e.registrationOpen !== false);

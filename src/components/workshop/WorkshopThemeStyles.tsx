@@ -215,6 +215,76 @@ export default function WorkshopThemeStyles() {
         .wk-root .wk-bday-ring { animation: none; opacity: 0; }
       }
 
+      /* The month-navigation controls on the calendar card: both arrows and
+         Today.
+
+         They used to sit on --wk-chip, which is a 16% orange in dark mode and
+         a peach in light. Against the card that made three tinted blocks
+         floating in a header whose only other lines are the neutral
+         --wk-grid-line of the grid: the one orange-tinted surface inside an
+         otherwise neutral card, which is what read as odd shading. Today also
+         carried a border the arrows did not, so one row held two treatments.
+
+         At rest they are now the card itself behind the same hairline the grid
+         uses. The orange returns on hover, where an accent belongs — as a
+         response to the pointer rather than as permanent decoration. */
+      .wk-root .wk-cal-ctl {
+        background: transparent;
+        border: 1px solid var(--wk-card-border);
+        color: var(--wk-muted);
+        transition: background-color 0.16s ease, color 0.16s ease,
+          border-color 0.16s ease;
+      }
+      .wk-root .wk-cal-ctl:hover {
+        background: var(--wk-chip);
+        border-color: rgba(var(--wk-a1-rgb), 0.32);
+        color: var(--wk-a1);
+      }
+      .wk-root .wk-cal-ctl:active { transform: translateY(0.5px); }
+      @media (prefers-reduced-motion: reduce) {
+        .wk-root .wk-cal-ctl { transition: none; }
+        .wk-root .wk-cal-ctl:active { transform: none; }
+      }
+
+      /* Hover on a real calendar event.
+
+         Light and shadow only — no transform. The bar sits in a 7-column grid
+         where a 1px lift nudges its neighbours' optical alignment, and the tile
+         is small enough that movement reads as a wobble rather than a response.
+         The glow is the bar's own accent (--wk-a1 for every workshop-family
+         track), so it belongs to the palette rather than adding to it.
+
+         :focus-visible gets the same treatment plus a ring, so a keyboard user
+         sees at least as much as a mouse user. The existing outline is kept —
+         this adds to it rather than replacing it. */
+      /* The resting shadow lives here, not on the element's style attribute.
+         Inline styles outrank stylesheet rules, so while it sat there the hover
+         rule below could only ever change filter — the glow silently did half
+         its job. Every bar takes .wk-event-tile; only the clickable ones also
+         take .wk-event-bar. */
+      .wk-root .wk-event-tile {
+        box-shadow: 0 2px 4px rgba(var(--wk-ink-a), 0.06);
+      }
+      .wk-root .wk-event-bar {
+        transition: box-shadow 160ms ease, filter 160ms ease;
+      }
+      .wk-root .wk-event-bar:hover {
+        filter: brightness(1.06);
+        box-shadow:
+          0 2px 4px rgba(var(--wk-ink-a), 0.06),
+          0 0 0 1px rgba(var(--wk-a1-rgb), 0.35),
+          0 4px 14px -2px rgba(var(--wk-a1-rgb), 0.45);
+      }
+      .wk-root .wk-event-bar:focus-visible {
+        filter: brightness(1.06);
+        box-shadow:
+          0 0 0 2px var(--wk-card-bg),
+          0 0 0 4px rgba(var(--wk-a1-rgb), 0.75);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .wk-root .wk-event-bar { transition: none; }
+      }
+
       /* The dot inside the LIVE badge on an upcoming-workshop card. It pulses
          because "live" is a claim about right now, and a static dot reads as
          a label rather than a state. */

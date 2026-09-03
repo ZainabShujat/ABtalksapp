@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, Clock3, LayoutGrid, UserRound } from "lucide-react";
+import { CalendarDays, Clock3, LayoutGrid } from "lucide-react";
 import {
   type EventStatus,
   type WorkshopEvent,
   eventStatus,
   fullDate,
+  getRegistrableEvent,
   sidebarEvents,
 } from "@/components/workshop/events-data";
 
@@ -23,10 +24,14 @@ import {
  * and client HTML. Null means "not resolved yet" and renders nothing.
  */
 
-/** Which event the `#register` form is actually bound to, if any. */
-function registerableId(events: WorkshopEvent[]): string | undefined {
-  return events.find((e) => e.register && e.registrationOpen)?.id;
-}
+/**
+ * Which event the `#register` form is actually bound to.
+ *
+ * Asks the same helper the SERVER asks, rather than re-deriving it from the
+ * static flags — that second copy is how the card could offer Register Now for
+ * one workshop while `submitWorkshopRegistrationAction` filed the row under
+ * another.
+ */
 
 function StatusBadge({ status }: { status: EventStatus }) {
   if (status === "LIVE") {
@@ -136,13 +141,16 @@ function WorkshopCard({
           <dt className="sr-only">Time</dt>
           <dd>{event.time}</dd>
         </div>
-        {event.host && (
-          <div className="flex items-center gap-1.5">
-            <UserRound size={12} style={{ color: "var(--wk-muted)" }} aria-hidden />
-            <dt className="sr-only">Host</dt>
-            <dd>{event.host}</dd>
-          </div>
-        )}
+        {/*
+          `host` is deliberately NOT rendered. It names a real person on the
+          three September sessions, and this page is public and unauthenticated
+          — a speaker's name does not need to be on it to sell the workshop.
+
+          The field stays on WorkshopEvent and in the data: it is useful
+          internally, and removing it would be a schema change for a display
+          decision. This is the display decision. The same removal is applied
+          to the other public surface that showed it, EventsTimeline.
+        */}
       </dl>
 
       {/*
@@ -175,7 +183,7 @@ export default function UpcomingWorkshops({ nowMs }: { nowMs: number | null }) {
   // Nothing is rendered until the client has a clock. Server and client agree
   // on "empty", so there is no hydration mismatch to reconcile.
   const events = nowMs === null ? [] : sidebarEvents(nowMs);
-  const openId = registerableId(events);
+  const openId = nowMs === null ? undefined : getRegistrableEvent(nowMs)?.id;
 
   return (
     <aside className="flex h-full flex-col gap-3" aria-labelledby="wk-upcoming-heading">
@@ -230,7 +238,7 @@ export default function UpcomingWorkshops({ nowMs }: { nowMs: number | null }) {
         }}
       >
         <LayoutGrid size={13} aria-hidden />
-        Browse all workshops
+        Browse all events
         <span className="transition-transform group-hover:translate-x-0.5" aria-hidden>
           →
         </span>

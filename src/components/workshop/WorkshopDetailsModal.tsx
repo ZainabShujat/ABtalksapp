@@ -129,10 +129,25 @@ export default function WorkshopDetailsModal({
               <X className="size-4" aria-hidden />
             </button>
 
+            {/*
+              Contained mode is a BLOCK scroller, not a grid.
+
+              It was `grid max-h-[70vh] overflow-y-auto`, and a max-height on a
+              grid container does not make it overflow — it compresses the auto
+              rows to fit. Measured: content needed 757px, the box was capped at
+              630, and `scrollHeight === clientHeight === 630`, so it never even
+              scrolled. The player carries `aspect-ratio: 16/9`, which held its
+              height at 330px regardless of the row it had been squeezed into,
+              so it spilled 107px over the text underneath.
+
+              A block container with the same max-height overflows normally, its
+              children keep their natural heights, and the scroll works. The
+              single-column grid was buying nothing here anyway.
+            */}
             <div
               className={
                 contained
-                  ? "grid max-h-[70vh] gap-5 overflow-y-auto pr-1"
+                  ? "max-h-[70vh] space-y-5 overflow-y-auto pr-1"
                   : "grid gap-6 lg:grid-cols-[1.35fr_1fr] lg:gap-8"
               }
             >

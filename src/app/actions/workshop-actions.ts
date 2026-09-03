@@ -6,7 +6,6 @@ import { auth } from "@/auth";
 import {
   fullDate,
   getRegistrableEvent,
-  istTodayKey,
 } from "@/components/workshop/events-data";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -66,8 +65,13 @@ export async function submitWorkshopRegistrationAction(
   const { name, phone, role, organization, graduationYear } = parsed.data;
 
   // Resolved server-side rather than trusted from the client, so a forged event
-  // id can never file a signup under another workshop.
-  const event = getRegistrableEvent(istTodayKey());
+  // id can never file a signup under another workshop. Still the only source of
+  // the eventId that gets written — the client sends none, and cannot.
+  //
+  // The argument is now an instant rather than an IST day key: registration
+  // rolls to the next workshop the moment the current one ends, instead of at
+  // IST midnight, and never falls to "closed" because a flag went unedited.
+  const event = getRegistrableEvent();
   if (!event) {
     return { ok: false, message: CLOSED_MESSAGE };
   }

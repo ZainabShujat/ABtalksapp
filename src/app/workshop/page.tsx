@@ -10,7 +10,6 @@ import WorkshopThemeStyles from "@/components/workshop/WorkshopThemeStyles";
 import { auth } from "@/auth";
 import {
   getRegistrableEvent,
-  istTodayKey,
 } from "@/components/workshop/events-data";
 import { getWorkshopPrefill } from "@/features/workshop/get-prefill";
 import { getMyRegistration } from "@/features/workshop/registration-status";
@@ -34,7 +33,7 @@ export default async function AIWorkshopPage() {
   // render for logged-out cold traffic. Only the form overlay is gated.
   const [config, session] = await Promise.all([getWorkshopConfig(), auth()]);
 
-  const event = getRegistrableEvent(istTodayKey());
+  const event = getRegistrableEvent();
   const userId = session?.user?.id ?? null;
 
   const [alreadyRegistered, prefill] = userId
@@ -59,14 +58,22 @@ export default async function AIWorkshopPage() {
 
       <WorkshopHeader isSignedIn={Boolean(userId)} />
 
+      {/* The hero, the topics and the registration form all describe the SAME
+          workshop — the one `getRegistrableEvent` resolved above. Passing it
+          down as primitives keeps that true and keeps the LucideIcon on the
+          event off the Server→Client boundary. */}
       <WorkshopHero
         webinarDate={config.webinarDate}
         webinarTime={config.webinarTime}
         webinarTargetUtc={config.webinarTargetUtc}
+        eventTitle={event?.title ?? null}
+        eventAccents={event?.titleAccents ?? null}
+        eventDesc={event?.desc ?? null}
+        eventPoster={event?.posterSrc ?? null}
       />
 
       <div id="curriculum" className="scroll-mt-16">
-        <TopicsSection />
+        <TopicsSection topics={event?.topics ?? null} />
       </div>
 
       <CommunityStats />
