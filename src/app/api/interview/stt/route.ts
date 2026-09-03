@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import { recordSpan } from "@/features/interview/telemetry";
 import { resolveInterviewMemberId } from "@/features/interview/provider";
 import { resolvePlatformUserId } from "@/features/interview/platform/provider";
 import { checkLanguage } from "@/features/interview/language-gate";
@@ -152,12 +153,26 @@ export async function POST(request: Request) {
     looksWebm: head.startsWith("1a45dfa3"),
   });
 
+  // Observation only. Absent for any client that does not send it, in which
+  // case no span is recorded and transcription is entirely unaffected.
+  const spanAttemptId = form.get("interviewId");
+  const sttStartedMs = Date.now();
   const result = await transcribeAnswer(
     file,
     filename,
     safetyIdentifierFor(speakerId),
     surface,
   );
+
+  if (typeof spanAttemptId === "string" && spanAttemptId.length > 0) {
+    recordSpan({
+      attemptId: spanAttemptId,
+      name: "stt",
+      ms: Date.now() - sttStartedMs,
+      // Bytes, not words. No transcript ever reaches a span.
+      failureReason: result.ok ? undefined : result.message,
+    });
+  }
 
   if (!result.ok) {
     return NextResponse.json(

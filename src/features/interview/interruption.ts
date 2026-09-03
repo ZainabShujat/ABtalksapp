@@ -141,6 +141,26 @@ const REPEAT_PATTERNS: RegExp[] = [
   /^(sorry[,.\s]*)?(pardon|repeat)\??$/i,
 ];
 
+/**
+ * Shapes that are ASKING ABOUT THE QUESTION.
+ *
+ * NOT a fast path any more, and that reversal is the point. These used to
+ * short-circuit to CLARIFY with an empty `reply`, which meant the single most
+ * natural thing a candidate says — "what do you mean by X?" — reliably produced
+ * no explanation at all: the caller had nothing to speak, so it restated the
+ * question verbatim and moved on. The candidate asked a reasonable question and
+ * the interviewer ignored it.
+ *
+ * A CLARIFY is the one kind whose whole value IS the sentence that comes back,
+ * and recognising the shape of a request tells you nothing about what was asked
+ * about. So these are now used only to guarantee the opposite: an utterance
+ * matching one of them is never claimed by the fast path and always reaches the
+ * model, which has the question and the utterance in front of it and can
+ * actually answer.
+ *
+ * REPEAT keeps its fast path, because "say that again" needs no understanding —
+ * the reply is the authored restatement either way.
+ */
 const CLARIFY_PATTERNS: RegExp[] = [
   /^(sorry[,.\s]*)?what do you mean\b/i,
   /^(sorry[,.\s]*)?(can|could) you (clarify|explain|rephrase)\b/i,
@@ -191,24 +211,73 @@ export function preClassifyInterruption(
     }
   }
 
-  for (const pattern of CLARIFY_PATTERNS) {
-    if (pattern.test(text)) {
-      return {
-        kind: "CLARIFY",
-        reason: "Unambiguous request to explain the question.",
-        subject: text,
-        // Deliberately empty even though this is a CLARIFY. The fast path
-        // recognises the SHAPE of the request without understanding what was
-        // asked about, so it cannot write the answer — the caller falls back to
-        // restating the question, which is what happened before any of this
-        // existed and is never wrong, only plainer.
-        reply: "",
-        confidence: 0.9,
-      };
-    }
-  }
-
+  // Deliberately falls through for CLARIFY. See `CLARIFY_PATTERNS`: claiming
+  // one here would produce a classification with nothing to say.
   return null;
+}
+
+/**
+ * Whether this utterance is asking about the question rather than answering it.
+ *
+ * Exported so the classifier's own reading can be checked against it: a request
+ * that plainly opens "what do you mean by…" must never come back as ANSWER,
+ * because that is the misreading that costs a candidate a question for asking
+ * something reasonable.
+ */
+export function looksLikeClarificationRequest(utterance: string): boolean {
+  const text = utterance.trim();
+  if (text.length === 0 || CARRIES_CONTENT.test(text)) return false;
+  return CLARIFY_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+/**
+ * Said when the classifier could not be reached and a clarification was asked
+ * for.
+ *
+ * It admits the failure instead of papering over it. The alternative that
+ * shipped, "Let me clarify what I mean." followed by the unchanged question,
+ * promises an explanation and then does not give one, which reads worse than
+ * saying nothing. The question is still re-put immediately after this, so the
+ * candidate is never left without something to answer.
+ */
+export const CLARIFY_UNAVAILABLE_LINE =
+  "Sorry, I did not catch which part you wanted me to explain. Here it is again.";
+
+/** Blank line between a spoken reply and the question re-put after it. */
+export function joinSpoken(lead: string, question: string): string {
+  const head = lead.trim();
+  const tail = question.trim();
+  if (head.length === 0) return tail;
+  if (tail.length === 0) return head;
+  return `${head}\n\n${tail}`;
+}
+
+/** Hard ceiling on a spoken interruption reply, matching `resolveClarification`. */
+const MAX_REPLY_CHARS = 320;
+
+/**
+ * The sentence the interviewer actually says back after an interruption.
+ *
+ * The same three rules `policy.ts:resolveClarification` applies to the ordinary
+ * CLARIFY path, applied here so the two cannot drift:
+ *
+ *   - no question mark. A reply that asks something is an unbudgeted extra
+ *     question, and the real question is re-put verbatim immediately after it.
+ *   - length-capped, so a model that starts monologuing cannot turn a
+ *     clarification into a lecture.
+ *   - no em/en dashes, which speech synthesis reads as an audible stumble.
+ *
+ * Returns null when nothing usable came back, so the caller can decide what to
+ * do about it rather than being handed an empty string that reads as success.
+ */
+export function resolveInterruptionReply(reply: string | undefined): string | null {
+  const cleaned = (reply ?? "")
+    .replace(/[—–]/g, ", ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (cleaned.length === 0 || cleaned.length > MAX_REPLY_CHARS) return null;
+  if (cleaned.includes("?")) return null;
+  return cleaned;
 }
 
 /**

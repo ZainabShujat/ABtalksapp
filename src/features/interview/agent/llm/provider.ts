@@ -98,6 +98,15 @@ export type AnalyzeAnswerInput = {
    * prompt is used and the behaviour is unchanged.
    */
   conversational?: boolean;
+  /**
+   * Which attempt this call belongs to, for latency and cost spans.
+   *
+   * Optional and observation-only: nothing about the interview changes when it
+   * is absent, and no candidate text is ever put on a span. It exists because
+   * tokens and model identity are known HERE and nowhere else, so a span
+   * emitted anywhere further out could not carry them.
+   */
+  attemptId?: string;
 };
 
 export interface InterviewLLM {
@@ -179,8 +188,15 @@ export type TurnPhrasing = {
 };
 
 export type PhraseTurnInput = {
-  /** Already routed. Stage 2 cannot change it. */
-  action: "FOLLOW_UP" | "NEXT_QUESTION";
+  /**
+   * Already routed. Stage 2 cannot change it.
+   *
+   * ESCALATE is included for the ACKNOWLEDGEMENT ONLY. The harder question
+   * itself is always the banked rung and is never model-written, because an
+   * escalation everyone receives differently stops being comparable. Stage 2
+   * writes the sentence that reacts to the answer; the rung follows it.
+   */
+  action: "FOLLOW_UP" | "NEXT_QUESTION" | "ESCALATE";
   candidateAnswer: string;
   currentQuestion: string;
   followUpReason: string | null;
@@ -201,6 +217,7 @@ export type PhraseTurnInput = {
   calibratedLevel?: "FOUNDATIONS" | "WORKING" | "ADVANCED" | null;
   /** Only for NEXT_QUESTION, so the bridge can lead into it. Never reworded. */
   nextQuestionText?: string | null;
+  attemptId?: string;
 };
 
 export type ClassifyInterruptionInput = {

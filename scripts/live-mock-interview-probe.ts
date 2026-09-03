@@ -267,6 +267,23 @@ async function main() {
   await service.abandonAttempt(user.id, attemptId);
 
   /* ----------------------------------------------------- measurements */
+  // Server-recorded spans: the per-stage breakdown inside a turn. The probe
+  // timers above measure whole legs from the outside; these separate the
+  // assessment call from the phrasing call, the planner and the database.
+  console.log("\n=== PER-STAGE SPANS (server-recorded) ===\n");
+  const byName = new Map<string, number[]>();
+  for (const s of telemetry.readSpans(attemptId)) {
+    const list = byName.get(s.name) ?? [];
+    list.push(s.ms);
+    byName.set(s.name, list);
+  }
+  for (const [name, values] of [...byName.entries()].sort()) {
+    const q = telemetry.percentiles(values);
+    console.log(
+      `  ${name.padEnd(20)} n=${String(q.n).padEnd(3)} p50=${String(q.p50).padEnd(6)} p90=${String(q.p90).padEnd(6)} max=${q.max}`,
+    );
+  }
+
   console.log("\n=== MEASURED LATENCY (real providers) ===\n");
   for (const [name, values] of Object.entries(samples)) {
     const p = telemetry.percentiles(values);

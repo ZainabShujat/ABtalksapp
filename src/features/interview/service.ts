@@ -48,7 +48,11 @@ import {
 import { resolveInterviewLLM } from "@/features/interview/agent/llm/registry";
 import { repeatLine } from "@/features/interview/room-lines";
 import {
+  CLARIFY_UNAVAILABLE_LINE,
   isFreshGeneration,
+  joinSpoken,
+  looksLikeClarificationRequest,
+  resolveInterruptionReply,
   preClassifyInterruption,
 } from "@/features/interview/interruption";
 import { questionAsAsked } from "@/features/interview/agent/depth";
@@ -438,9 +442,10 @@ export async function recordCohortInterruption(
   if (!classification) {
     classification = {
       kind: "CLARIFY",
-      reason: "Fallback classification",
+      reason: "Classifier unavailable; using the non-advancing branch.",
       subject: "",
-      reply: "Let me clarify what I mean.",
+      // Left EMPTY rather than promising an explanation we cannot give.
+      reply: "",
       confidence: 0,
     };
   }
@@ -463,6 +468,31 @@ export async function recordCohortInterruption(
   });
 
   // 4. Invariant: only ANSWER calls recordCohortAnswer
+  // AN UTTERANCE THAT PLAINLY ASKS ABOUT THE QUESTION IS NEVER AN ANSWER.
+  //
+  // The classifier is instructed at length not to make this mistake, and it
+  // mostly does not. But ANSWER is the only label that advances the interview
+  // and awards evidence, so a single bad reading costs a candidate a question
+  // for having asked something reasonable. The asymmetry justifies a cheap
+  // deterministic backstop: if the utterance opens with an unmistakable
+  // clarification shape, the ANSWER reading is overruled.
+  //
+  // It can only ever move a turn from ANSWER to CLARIFY, never the reverse, so
+  // the worst case is a few seconds of the candidate repeating themselves.
+  if (
+    classification.kind === "ANSWER" &&
+    looksLikeClarificationRequest(cleanUtterance)
+  ) {
+    logger.info("[interview] ANSWER overruled to CLARIFY by shape guard", {
+      utterance: cleanUtterance.slice(0, 80),
+    });
+    classification = {
+      ...classification,
+      kind: "CLARIFY",
+      reason: "Utterance is a clarification request; ANSWER reading overruled.",
+    };
+  }
+
   if (classification.kind === "ANSWER") {
     return recordCohortAnswer(
       memberId,
@@ -486,21 +516,31 @@ export async function recordCohortInterruption(
     promptText = repeatLine(questionText);
   } else if (classification.kind === "CLARIFY") {
     action = "CLARIFY";
-    const reply = classification.reply?.trim();
-    promptText = reply ? `${reply}\n\n${questionText}` : questionText;
+    // A CLARIFY WITHOUT A CLARIFICATION IS NOT A CLARIFY.
+    //
+    // This used to fall back to `questionText` alone, so a candidate who asked
+    // what a term meant got the identical sentence read back at them. The fast
+    // path guaranteed it: it claimed every "what do you mean by X" before the
+    // model ever saw it and returned an empty reply. That path is gone, so a
+    // real reply is now the normal case, and the branch below is reserved for
+    // an actual model failure, where saying so plainly beats miming an answer.
+    const reply = resolveInterruptionReply(classification.reply);
+    promptText = reply
+      ? joinSpoken(reply, questionText)
+      : joinSpoken(CLARIFY_UNAVAILABLE_LINE, questionText);
   } else if (
     classification.kind === "CORRECT" ||
     classification.kind === "ADD_INFORMATION"
   ) {
     action = "CLARIFY";
-    const reply = classification.reply?.trim() || "Got it.";
+    const reply = resolveInterruptionReply(classification.reply) ?? "Got it.";
     promptText = `${reply}\n\n${questionText}`;
   } else {
     // OTHER
     action = "REDIRECT";
     const reply =
-      classification.reply?.trim() ||
-      "Understood. Let's return to the question:";
+      resolveInterruptionReply(classification.reply) ??
+      "Understood. Let's come back to the question.";
     promptText = `${reply}\n\n${questionText}`;
   }
 

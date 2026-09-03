@@ -40,7 +40,11 @@ import { buildCandidateContext } from "@/features/interview/candidate-context";
 import { formatProfileContext } from "@/features/interview/platform/profile-context";
 import { repeatLine } from "@/features/interview/room-lines";
 import {
+  CLARIFY_UNAVAILABLE_LINE,
   isFreshGeneration,
+  joinSpoken,
+  looksLikeClarificationRequest,
+  resolveInterruptionReply,
   preClassifyInterruption,
 } from "@/features/interview/interruption";
 import { recordSpan } from "@/features/interview/telemetry";
@@ -411,7 +415,13 @@ export async function recordAnswer(
    */
   stampInterruptionGeneration?: number,
 ): Promise<ServiceResult<AnswerTurnData>> {
+  const loadStartedMs = Date.now();
   const attempt = await repo.loadActiveAttempt(attemptId, userId);
+  recordSpan({
+    attemptId,
+    name: "db_load",
+    ms: Date.now() - loadStartedMs,
+  });
   if (!attempt) {
     return { ok: false, message: "This interview is no longer in progress." };
   }
@@ -457,7 +467,17 @@ export async function recordAnswer(
         considered: [],
       };
     }
-    return selectNextPlatformTarget(p, st, answer);
+    // Timed in place rather than around `runInterviewTurn`: the planner runs
+    // INSIDE the graph, so this is the only point where its own cost is
+    // separable from the model call that surrounds it.
+    const plannerStartedMs = Date.now();
+    const target = selectNextPlatformTarget(p, st, answer);
+    recordSpan({
+      attemptId,
+      name: "planner",
+      ms: Date.now() - plannerStartedMs,
+    });
+    return target;
   };
 
   // Started before the model call and awaited after it: the next turn index
@@ -526,11 +546,20 @@ export async function recordAnswer(
     record,
   );
 
+  const persistMs = Date.now() - persistStartedMs;
+  recordSpan({ attemptId, name: "db_save", ms: persistMs });
+  recordSpan({
+    attemptId,
+    name: "turn_server",
+    ms: Date.now() - startedMs,
+    degraded: turn.data.degraded,
+  });
+
   logger.info("[mock-interview] turn latency", {
     attemptId,
     action: turn.data.action,
     llmMs,
-    persistMs: Date.now() - persistStartedMs,
+    persistMs,
     serverMs: Date.now() - startedMs,
   });
 
@@ -649,9 +678,10 @@ export async function recordInterruption(
   if (!classification) {
     classification = {
       kind: "CLARIFY",
-      reason: "Fallback classification",
+      reason: "Classifier unavailable; using the non-advancing branch.",
       subject: "",
-      reply: "Let me clarify what I mean.",
+      // Left EMPTY rather than promising an explanation we cannot give.
+      reply: "",
       confidence: 0,
     };
   }
@@ -673,6 +703,31 @@ export async function recordInterruption(
   });
 
   // 4. Invariant: only ANSWER calls recordAnswer
+  // AN UTTERANCE THAT PLAINLY ASKS ABOUT THE QUESTION IS NEVER AN ANSWER.
+  //
+  // The classifier is instructed at length not to make this mistake, and it
+  // mostly does not. But ANSWER is the only label that advances the interview
+  // and awards evidence, so a single bad reading costs a candidate a question
+  // for having asked something reasonable. The asymmetry justifies a cheap
+  // deterministic backstop: if the utterance opens with an unmistakable
+  // clarification shape, the ANSWER reading is overruled.
+  //
+  // It can only ever move a turn from ANSWER to CLARIFY, never the reverse, so
+  // the worst case is a few seconds of the candidate repeating themselves.
+  if (
+    classification.kind === "ANSWER" &&
+    looksLikeClarificationRequest(cleanUtterance)
+  ) {
+    logger.info("[interview] ANSWER overruled to CLARIFY by shape guard", {
+      utterance: cleanUtterance.slice(0, 80),
+    });
+    classification = {
+      ...classification,
+      kind: "CLARIFY",
+      reason: "Utterance is a clarification request; ANSWER reading overruled.",
+    };
+  }
+
   if (classification.kind === "ANSWER") {
     return recordAnswer(
       userId,
@@ -700,21 +755,31 @@ export async function recordInterruption(
     promptText = repeatLine(questionText);
   } else if (classification.kind === "CLARIFY") {
     action = "CLARIFY";
-    const reply = classification.reply?.trim();
-    promptText = reply ? `${reply}\n\n${questionText}` : questionText;
+    // A CLARIFY WITHOUT A CLARIFICATION IS NOT A CLARIFY.
+    //
+    // This used to fall back to `questionText` alone, so a candidate who asked
+    // what a term meant got the identical sentence read back at them. The fast
+    // path guaranteed it: it claimed every "what do you mean by X" before the
+    // model ever saw it and returned an empty reply. That path is gone, so a
+    // real reply is now the normal case, and the branch below is reserved for
+    // an actual model failure, where saying so plainly beats miming an answer.
+    const reply = resolveInterruptionReply(classification.reply);
+    promptText = reply
+      ? joinSpoken(reply, questionText)
+      : joinSpoken(CLARIFY_UNAVAILABLE_LINE, questionText);
   } else if (
     classification.kind === "CORRECT" ||
     classification.kind === "ADD_INFORMATION"
   ) {
     action = "CLARIFY";
-    const reply = classification.reply?.trim() || "Got it.";
+    const reply = resolveInterruptionReply(classification.reply) ?? "Got it.";
     promptText = `${reply}\n\n${questionText}`;
   } else {
     // OTHER
     action = "REDIRECT";
     const reply =
-      classification.reply?.trim() ||
-      "Understood. Let's return to the question:";
+      resolveInterruptionReply(classification.reply) ??
+      "Understood. Let's come back to the question.";
     promptText = `${reply}\n\n${questionText}`;
   }
 

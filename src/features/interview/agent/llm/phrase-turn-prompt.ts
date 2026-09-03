@@ -204,7 +204,24 @@ function renderExamples(): string {
 }
 
 export function buildPhraseTurnUserMessage(input: PhraseTurnInput): string {
+  // ESCALATE gets its own intent, and it asks for LESS than the others:
+  // the harder question is already chosen and is spoken verbatim from the
+  // bank straight after this sentence. All stage 2 contributes is the beat
+  // that shows the previous answer landed. Asking it for a question here
+  // would produce one that is then thrown away.
   const intent =
+    input.action === "ESCALATE"
+      ? [
+          "YOUR DECISION: they answered this well, so you are about to ask a harder",
+          "question on the same topic. That question is already written and will be",
+          "spoken immediately after your sentence.",
+          "",
+          "Write ONLY the acknowledgement: one short sentence naming something they",
+          "actually said, so it is clear you heard it before you push further. Do not",
+          "praise them, do not say the next question is harder, and do not preview it.",
+          "Leave followUpQuestion and bridge EMPTY.",
+        ].join("\n")
+      :
     input.action === "FOLLOW_UP"
       ? [
           "YOUR DECISION: follow up on this answer. Write the follow-up question.",

@@ -28,6 +28,11 @@ import {
   type InterviewLLM,
 } from "@/features/interview/agent/llm/provider";
 import { z } from "zod";
+import {
+  llmCostUsd,
+  recordSpan,
+  type SpanName,
+} from "@/features/interview/telemetry";
 
 /**
  * Stage 2's output shape.
@@ -78,7 +83,24 @@ export type AskJson = (args: {
    */
   temperature?: number;
 }) => Promise<
-  | { ok: true; data: unknown }
+  | {
+      ok: true;
+      data: unknown;
+      /**
+       * What the call actually cost, when the vendor reports it.
+       *
+       * Optional because only some vendors return usage. It is carried back
+       * here rather than accumulated in a module-level total because a
+       * PER-CALL figure is what a latency span needs: a running total cannot
+       * say which stage of which turn spent what. The existing process-wide
+       * accounting in `openai-provider.ts` is untouched and still runs.
+       */
+      usage?: {
+        promptTokens: number;
+        completionTokens: number;
+        cachedPromptTokens?: number;
+      };
+    }
   /**
    * `retryable: false` means a second immediate attempt cannot succeed — a quota
    * or rate-limit rejection, say. Retrying those does not just waste time, it
@@ -196,6 +218,51 @@ function validate(
   };
 }
 
+/**
+ * Records one model-call span, if the caller supplied an attempt to record it
+ * against.
+ *
+ * Lives HERE rather than in the service because this is the only layer that
+ * knows the model name, the token counts and whether the call actually
+ * succeeded. A span emitted further out could time the call but could not say
+ * what it cost or why it failed.
+ *
+ * NO CANDIDATE TEXT. Spans carry a duration, a model, counts and a failure
+ * reason. The answer, the question and the transcript never reach them.
+ */
+function emitStageSpan(
+  name: SpanName,
+  attemptId: string | undefined,
+  startedMs: number,
+  result: Awaited<ReturnType<AskJson>>,
+  model?: string,
+  extra: { retries?: number; degraded?: boolean } = {},
+): void {
+  if (!attemptId) return;
+  const usage = result.ok ? result.usage : undefined;
+  const resolvedModel = model ?? "";
+  recordSpan({
+    attemptId,
+    name,
+    ms: Date.now() - startedMs,
+    model: resolvedModel || undefined,
+    promptTokens: usage?.promptTokens,
+    completionTokens: usage?.completionTokens,
+    costUsd: usage
+      ? llmCostUsd(
+          resolvedModel,
+          usage.promptTokens,
+          usage.completionTokens,
+          usage.cachedPromptTokens ?? 0,
+        )
+      : undefined,
+    // Never collapsed. A 429, a truncation and a bad JSON body need different
+    // fixes and must not arrive as one opaque line.
+    failureReason: result.ok ? undefined : result.message,
+    ...extra,
+  });
+}
+
 export function createJsonInterviewLLM(
   options: JsonProviderOptions,
 ): InterviewLLM {
@@ -207,6 +274,9 @@ export function createJsonInterviewLLM(
   // That is what produced "could not be judged" on answers the candidate had
   // actually given well.
   const { name, askJson, maxTokens = 1100, retries = 1 } = options;
+  // "openai:gpt-4o" -> "gpt-4o". The pricing table is keyed by the bare
+  // model id, and the vendor prefix is what makes `name` a stable log key.
+  const modelId = name.includes(":") ? name.slice(name.indexOf(":") + 1) : name;
 
   return {
     name,
@@ -274,6 +344,7 @@ export function createJsonInterviewLLM(
      * deterministic pools, so a phrasing outage costs tone and nothing else.
      */
     async phraseTurn(input) {
+      const startedMs = Date.now();
       try {
         const res = await askJson({
           system: PHRASE_TURN_SYSTEM_PROMPT,
@@ -283,6 +354,8 @@ export function createJsonInterviewLLM(
           maxTokens: 400,
           temperature: 0.8,
         });
+
+        emitStageSpan("phrasing", input.attemptId, startedMs, res, modelId);
 
         if (!res.ok) {
           logger.warn("[interview-agent] turn phrasing rejected", {
@@ -384,12 +457,18 @@ export function createJsonInterviewLLM(
 
         // A provider that throws is a provider that ends someone's interview.
         // Treat an exception exactly like a failed response.
+        const attemptStartedMs = Date.now();
         let result: Awaited<ReturnType<AskJson>>;
         try {
           result = await askJson({ system, user, maxTokens });
         } catch (error) {
           result = { ok: false, message: String(error) };
         }
+
+        emitStageSpan("evaluator", input.attemptId, attemptStartedMs, result, modelId, {
+          retries: attempt,
+          degraded: !result.ok && attempt === retries,
+        });
 
         if (!result.ok) {
           attemptFailures.push(result.message);

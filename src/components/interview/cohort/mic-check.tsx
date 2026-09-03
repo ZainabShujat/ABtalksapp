@@ -253,11 +253,19 @@ export function MicCheck({
     }
   }, [onResultAction, stop]);
 
-  useEffect(() => {
-    if (state === "idle") {
-      void start();
-    }
-  }, [start, state]);
+  /*
+   * NO AUTO-START.
+   *
+   * This used to record the moment the page mounted. Two things were wrong
+   * with that. It takes the microphone without being asked, before the
+   * candidate has read anything or decided to sit down and do this. And it
+   * records whoever is NOT yet talking: five seconds of a quiet room, which
+   * the transcriber resolves into confident nonsense from its training data —
+   * the observed failure was a silent clip coming back as "Thank you for
+   * watching." and passing as proof the pipeline worked.
+   *
+   * The check now begins only when the candidate presses the button.
+   */
 
   const bars = 14;
   const active = Math.round(Math.min(1, level / 0.25) * bars);

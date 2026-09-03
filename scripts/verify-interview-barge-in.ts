@@ -34,6 +34,7 @@ import {
 import {
   preClassifyInterruption,
   advancesInterview,
+  looksLikeClarificationRequest,
   interruptionClassificationSchema,
   INTERRUPTION_KINDS,
 } from "../src/features/interview/interruption";
@@ -195,7 +196,14 @@ for (const phrase of repeatPhrases) {
   );
 }
 
-// Test 11: Fast-path CLARIFY patterns
+// Test 11: CLARIFY must NOT be fast-pathed — it must reach the model.
+//
+// This assertion is INVERTED from what it used to say, deliberately. The fast
+// path returned CLARIFY with an empty `reply`, so the caller had nothing to
+// speak and simply restated the question: the commonest clarification request
+// in the interview reliably produced no clarification. Deferring to the model
+// is the fix, and this test now pins the deferral so it cannot be "optimised"
+// back into a fast path.
 const clarifyPhrases = [
   "What do you mean by that?",
   "Can you clarify the question?",
@@ -203,10 +211,13 @@ const clarifyPhrases = [
   "In what sense?",
 ];
 for (const phrase of clarifyPhrases) {
-  const result = preClassifyInterruption(phrase);
   assert(
-    result !== null && result.kind === "CLARIFY",
-    `preClassifyInterruption fast-paths unambiguous CLARIFY: "${phrase}"`,
+    preClassifyInterruption(phrase) === null,
+    `clarification defers to the classifier rather than fast-pathing: "${phrase}"`,
+  );
+  assert(
+    looksLikeClarificationRequest(phrase),
+    `clarification shape is still recognised for the ANSWER guard: "${phrase}"`,
   );
 }
 

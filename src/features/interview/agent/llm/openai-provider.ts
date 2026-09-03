@@ -37,6 +37,7 @@ type ChatCompletion = {
   usage?: {
     prompt_tokens?: number;
     completion_tokens?: number;
+    prompt_tokens_details?: { cached_tokens?: number };
   };
 };
 
@@ -184,7 +185,18 @@ export function createOpenAiInterviewLLM(
         const slice = extractJson(content);
         if (!slice) return { ok: false, message: "OpenAI returned no JSON object." };
 
-        return { ok: true, data: JSON.parse(slice) };
+        return {
+          ok: true,
+          data: JSON.parse(slice),
+          // Reported straight back so the caller can put real token counts on
+          // its span. `recordUsage` above still keeps the process-wide total.
+          usage: {
+            promptTokens: json.usage?.prompt_tokens ?? 0,
+            completionTokens: json.usage?.completion_tokens ?? 0,
+            cachedPromptTokens:
+              json.usage?.prompt_tokens_details?.cached_tokens ?? 0,
+          },
+        };
       } catch (error) {
         return { ok: false, message: `OpenAI call failed: ${String(error)}` };
       }

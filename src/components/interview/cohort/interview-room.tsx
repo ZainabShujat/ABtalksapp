@@ -772,6 +772,10 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
       audio.onerror = null;
       audioRef.current = null;
     }
+    logRoom("cancelSpeech", {
+      hadAudio: audioRef.current !== null,
+      speaking: speakingRef.current !== null,
+    });
     if (typeof window !== "undefined") window.speechSynthesis?.cancel();
     // QUEUED AUDIO TOO, not just what is sounding. A line whose synthesis
     // request is still in flight would otherwise arrive after the interruption
@@ -1101,6 +1105,11 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
             setReveal({ text, chars: text.length });
             resolve();
           };
+          logRoom("speak: browser voice fallback", {
+            voices: window.speechSynthesis.getVoices().length,
+            speaking: window.speechSynthesis.speaking,
+            pending: window.speechSynthesis.pending,
+          });
           window.speechSynthesis.speak(utterance);
         });
 
@@ -1136,6 +1145,10 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
 
         if (stale()) return;
 
+        logRoom("speak: TTS response", {
+          status: res.status,
+          type: res.headers.get("content-type"),
+        });
         if (res.ok) {
           const reported = decodeSpokenLine(res.headers.get("X-Interview-Line"));
           if (reported) spoken = reported;
@@ -1167,6 +1180,12 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
           // room, so autoplay policy can block it. Falling back to a plain
           // element guarantees a route to the speakers even if the prepared one
           // is missing entirely.
+          logRoom("speak: play()", {
+            usingPreparedElement: playbackElRef.current !== null,
+            graphAttached: ttsAnalyserRef.current !== null,
+            ctx: playbackCtxRef.current?.state ?? "none",
+            bytes: url.length,
+          });
           const audio = playbackElRef.current ?? new Audio();
           audio.src = url;
           audioRef.current = audio;
@@ -1194,20 +1213,44 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
             // So: if the clock has not moved shortly after play(), stop waiting
             // and read the line with the browser voice instead.
             const startedAt = performance.now();
+            const settle = (why: string) => {
+              clearInterval(watchdog);
+              logRoom("speak: playback settled", {
+                why,
+                currentTime: Number(audio.currentTime.toFixed(2)),
+                paused: audio.paused,
+                ended: audio.ended,
+                ctx: playbackCtxRef.current?.state ?? "none",
+              });
+              resolve();
+            };
             const watchdog = setInterval(() => {
-              const dead =
+              // PAUSED COUNTS AS SETTLED, and this is the bug it fixes.
+              //
+              // The previous version cleared the interval on `paused` WITHOUT
+              // resolving. `cancelSpeech` pauses the element and nulls
+              // `onended`, so a line that was interrupted or superseded left
+              // this promise pending forever: `finally` never ran,
+              // `speakingRef` and `duplexRef.speakingSince` stayed set, the
+              // phase stayed "speaking", and the analyser loop kept skipping
+              // the turn machine. The room simply stopped taking turns.
+              if (audio.ended) return settle("ended");
+              if (audio.paused) return settle("paused (cancelled or superseded)");
+              if (
                 audio.currentTime === 0 &&
-                performance.now() - startedAt > PLAYBACK_STALL_MS;
-              if (dead) {
-                clearInterval(watchdog);
-                logRoom("playback produced no audio; falling back to browser voice");
-                resolve();
+                performance.now() - startedAt > PLAYBACK_STALL_MS
+              ) {
+                logRoom("playback produced no audio; falling back to browser voice", {
+                  readyState: audio.readyState,
+                  networkState: audio.networkState,
+                  muted: audio.muted,
+                  volume: audio.volume,
+                  ctx: playbackCtxRef.current?.state ?? "none",
+                  graphAttached: ttsAnalyserRef.current !== null,
+                });
+                return settle("stalled at currentTime 0");
               }
-              if (audio.ended || audio.paused) clearInterval(watchdog);
             }, 250);
-            const clear = () => clearInterval(watchdog);
-            audio.addEventListener("ended", clear, { once: true });
-            audio.addEventListener("error", clear, { once: true });
           });
           URL.revokeObjectURL(url);
 
@@ -1494,6 +1537,219 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
     [interviewId, question, submitAnswerAction, applyTurn],
   );
 
+  /* ------------------------------------------------------------------------
+   * TURN-TAKING HELPERS, DECLARED BEFORE THEIR FIRST USE.
+   *
+   * These seven were previously declared several hundred lines BELOW
+   * `startRecording`, which calls three of them. That works at runtime because
+   * function declarations hoist, but the React Compiler lint analyses
+   * declaration order and reported "Cannot access variable before it is
+   * declared" for `sendInterruption`, `handleTurnEffect` and `stopRecording`.
+   *
+   * Moving whole `function` declarations is behaviour-neutral by construction:
+   * hoisting means position within the component body does not change when they
+   * are defined, and none of them is called during render, so no binding they
+   * close over can be in its temporal dead zone. Not one line of their bodies
+   * changed - they are the same functions in a different order.
+   * ---------------------------------------------------------------------- */
+
+  function clearAnswerCap() {
+    if (answerCapRef.current !== null) {
+      clearTimeout(answerCapRef.current);
+      answerCapRef.current = null;
+    }
+  }
+
+  function detachAnalyser() {
+    analyserActiveRef.current = false;
+    if (levelRafRef.current !== null) {
+      cancelAnimationFrame(levelRafRef.current);
+      levelRafRef.current = null;
+    }
+    try {
+      analyserSrcRef.current?.disconnect();
+      analyserRef.current?.disconnect();
+      if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
+        void audioCtxRef.current.close();
+      }
+    } catch {
+      // Already torn down.
+    }
+    analyserSrcRef.current = null;
+    analyserRef.current = null;
+    audioCtxRef.current = null;
+    levelRef.current = 0;
+    hasSpokenRef.current = false;
+    lastWordAtRef.current = null;
+  }
+
+  function stopLivePreview() {
+    try {
+      recognitionRef.current?.abort();
+    } catch {
+      // Already stopped.
+    }
+    recognitionRef.current = null;
+    recognitionActiveRef.current = false;
+  }
+
+  function stopRecording() {
+    clearAnswerCap();
+    stopLivePreview();
+    detachAnalyser();
+    recorderRef.current?.stop();
+    recorderRef.current = null;
+  }
+
+  /**
+   * Ends the turn and THROWS AWAY what was captured.
+   *
+   * Used when the room takes the floor back rather than the candidate handing it
+   * over: ending or abandoning the interview. It is deliberately NOT used by
+   * any turn-taking path any more — the nudge used to call it, which is exactly
+   * how a candidate who started speaking mid-nudge lost their answer.
+   */
+  function cancelRecording() {
+    discardRecordingRef.current = true;
+    stopRecording();
+  }
+
+  /**
+   * Sends an utterance that interrupted the interviewer.
+   *
+   * A different action from `send` on purpose: an interruption is not an answer
+   * until the server has decided it is one, and only one of the six
+   * classifications advances the interview. Routing it through `send` would
+   * score "sorry, what do you mean by that?" as a response to the question and
+   * cost the candidate a turn for asking something reasonable.
+   */
+  async function sendInterruption(utterance: string) {
+    const context = interruptedRef.current;
+    interruptedRef.current = null;
+
+    if (!context || !onInterruptionAction) {
+      // Barge-in fired but there is nowhere to send it. Treat the words as an
+      // ordinary answer rather than dropping them: losing what someone said is
+      // worse than mis-routing it.
+      await send(utterance);
+      return;
+    }
+
+    // One utterance cannot become two turns. The generation identifies the line
+    // that was interrupted, and a second submission carrying it is the same
+    // interruption arriving twice — a retry, a double `onstop`, a slow network.
+    if (submittedInterruptsRef.current.has(context.generation)) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[turn] duplicate interruption dropped", {
+          generation: context.generation,
+        });
+      }
+      setPhase("idle");
+      return;
+    }
+    submittedInterruptsRef.current.add(context.generation);
+
+    const text = utterance.trim();
+    if (text.length === 0) {
+      setPhase("idle");
+      return;
+    }
+
+    setTurns((prev) => [...prev, { role: "candidate", text }]);
+    setPhase("processing");
+    setError(null);
+
+    const turn = await onInterruptionAction({
+      interviewId,
+      utterance: text,
+      interruptedText: context.text,
+      interruptedChars: context.chars,
+      speechGeneration: context.generation,
+    });
+
+    if (!turn.ok) {
+      setError(turn.message);
+      setPhase("idle");
+      return;
+    }
+
+    // From here the response is shaped exactly like an answer turn, because the
+    // server has already decided what this was. The room does not need to know
+    // which classification it got — a REPEAT comes back as the question again,
+    // a CLARIFY as an explanation plus the question, an ANSWER as whatever
+    // normally follows an answer.
+    applyTurn(turn.data);
+  }
+
+  /**
+   * Acts on what the audio loop decided this frame.
+   *
+   * Every branch is reached from ONE place, synchronously, after the state has
+   * already moved. That is the whole point of the refactor: there is no second
+   * owner of the turn that could disagree about whether the candidate has
+   * spoken, and no path here can discard a recording that contains an answer.
+   */
+  function handleTurnEffect(effect: TurnEffect) {
+    if (effect === "finalize") {
+      // The machine only emits this from CANDIDATE_PAUSED, which is only
+      // reachable once `hasSpoken` is true. Submitting here can therefore never
+      // be a non-answer, and the state is already ANSWER_FINALIZING so a second
+      // frame cannot emit it again.
+      stopRecording();
+      return;
+    }
+
+    if (effect === "mutedWarning") {
+      setError(
+        "Your microphone has been muted for a few seconds. Resume when you're ready, or end this response.",
+      );
+      return;
+    }
+
+    if (effect === "nudge") {
+      // The recording KEEPS RUNNING. Nothing is cancelled and nothing is
+      // discarded — this is a prompt over the top of an open microphone, which
+      // is what makes "the nudge ate my answer" structurally impossible.
+      // Varied per occurrence: this fires on EVERY silence, and the same
+      // sentence four times in one interview is the loudest possible tell that
+      // nothing is listening. The transcript length is the counter, and the
+      // same value goes to the server so the spoken line matches the shown one.
+      const waitingVariant = roomLineCountRef.current++;
+      const waitingText = roomLineFor("waiting", waitingVariant);
+      setTurns((prev) => [...prev, { role: "interviewer", text: waitingText }]);
+      setReveal({ text: waitingText, chars: waitingText.length });
+      void speak(waitingText, "waiting", waitingVariant);
+      return;
+    }
+
+    if (effect === "moveOn") {
+      // Reached only from WAITING_FOR_SPEECH, so `hasSpoken` is false by
+      // construction and "(no response)" is the truth rather than a guess.
+      const movingOnVariant = roomLineCountRef.current++;
+      const movingOnText = roomLineFor("moving_on", movingOnVariant);
+      setTurns((prev) => [...prev, { role: "interviewer", text: movingOnText }]);
+      setReveal({ text: movingOnText, chars: movingOnText.length });
+      // "moveOn" means VOICE DETECTION never saw speech — which is not the same
+      // as nothing having been said. It was discarding thirteen seconds of
+      // captured audio on the strength of that guess, which is exactly the
+      // failure mode this pipeline is supposed to have stopped having.
+      //
+      // So the RECORDING decides, not the detector. If real audio was captured
+      // it is uploaded through the ordinary path and treated as the answer it
+      // probably is. Only a genuinely empty capture submits the marker.
+      const captured = chunksRef.current.reduce((n, c) => n + c.size, 0);
+      if (captured >= MIN_AUDIO_BYTES) {
+        stopRecording();
+        return;
+      }
+
+      cancelRecording();
+      void speak(movingOnText, "moving_on", movingOnVariant).then(() => {
+        void send(NO_RESPONSE_ANSWER);
+      });
+    }
+  }
+
   async function startRecording() {
     setError(null);
     discardRecordingRef.current = false;
@@ -1611,6 +1867,9 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
         // the `sttSurface` prop: the route defaults to the cohort's when this
         // is absent, so the graded path cannot inherit a practice override.
         form.append("surface", sttSurface);
+        // For latency spans only. The route keys its telemetry by attempt so
+        // transcription can be timed alongside the stages that follow it.
+        form.append("interviewId", interviewId);
 
         try {
           const res = await fetch("/api/interview/stt", {
@@ -1963,28 +2222,6 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
     }
   }
 
-  function detachAnalyser() {
-    analyserActiveRef.current = false;
-    if (levelRafRef.current !== null) {
-      cancelAnimationFrame(levelRafRef.current);
-      levelRafRef.current = null;
-    }
-    try {
-      analyserSrcRef.current?.disconnect();
-      analyserRef.current?.disconnect();
-      if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
-        void audioCtxRef.current.close();
-      }
-    } catch {
-      // Already torn down.
-    }
-    analyserSrcRef.current = null;
-    analyserRef.current = null;
-    audioCtxRef.current = null;
-    levelRef.current = 0;
-    hasSpokenRef.current = false;
-    lastWordAtRef.current = null;
-  }
 
   /**
    * Starts the browser's speech recognition purely for on-screen feedback.
@@ -2065,22 +2302,7 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
     }
   }
 
-  function stopLivePreview() {
-    try {
-      recognitionRef.current?.abort();
-    } catch {
-      // Already stopped.
-    }
-    recognitionRef.current = null;
-    recognitionActiveRef.current = false;
-  }
 
-  function clearAnswerCap() {
-    if (answerCapRef.current !== null) {
-      clearTimeout(answerCapRef.current);
-      answerCapRef.current = null;
-    }
-  }
 
   /**
    * Hands the floor back automatically when the interviewer stops talking.
@@ -2189,26 +2411,7 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
   }
 
   /** Ends the turn and SUBMITS what was captured. */
-  function stopRecording() {
-    clearAnswerCap();
-    stopLivePreview();
-    detachAnalyser();
-    recorderRef.current?.stop();
-    recorderRef.current = null;
-  }
 
-  /**
-   * Ends the turn and THROWS AWAY what was captured.
-   *
-   * Used when the room takes the floor back rather than the candidate handing it
-   * over: ending or abandoning the interview. It is deliberately NOT used by
-   * any turn-taking path any more — the nudge used to call it, which is exactly
-   * how a candidate who started speaking mid-nudge lost their answer.
-   */
-  function cancelRecording() {
-    discardRecordingRef.current = true;
-    stopRecording();
-  }
 
   // NOTE ON THE ONE REMAINING DISCARD PATH.
   //
@@ -2275,141 +2478,7 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
     }
   }
 
-  /**
-   * Sends an utterance that interrupted the interviewer.
-   *
-   * A different action from `send` on purpose: an interruption is not an answer
-   * until the server has decided it is one, and only one of the six
-   * classifications advances the interview. Routing it through `send` would
-   * score "sorry, what do you mean by that?" as a response to the question and
-   * cost the candidate a turn for asking something reasonable.
-   */
-  async function sendInterruption(utterance: string) {
-    const context = interruptedRef.current;
-    interruptedRef.current = null;
 
-    if (!context || !onInterruptionAction) {
-      // Barge-in fired but there is nowhere to send it. Treat the words as an
-      // ordinary answer rather than dropping them: losing what someone said is
-      // worse than mis-routing it.
-      await send(utterance);
-      return;
-    }
-
-    // One utterance cannot become two turns. The generation identifies the line
-    // that was interrupted, and a second submission carrying it is the same
-    // interruption arriving twice — a retry, a double `onstop`, a slow network.
-    if (submittedInterruptsRef.current.has(context.generation)) {
-      if (process.env.NODE_ENV !== "production") {
-        console.warn("[turn] duplicate interruption dropped", {
-          generation: context.generation,
-        });
-      }
-      setPhase("idle");
-      return;
-    }
-    submittedInterruptsRef.current.add(context.generation);
-
-    const text = utterance.trim();
-    if (text.length === 0) {
-      setPhase("idle");
-      return;
-    }
-
-    setTurns((prev) => [...prev, { role: "candidate", text }]);
-    setPhase("processing");
-    setError(null);
-
-    const turn = await onInterruptionAction({
-      interviewId,
-      utterance: text,
-      interruptedText: context.text,
-      interruptedChars: context.chars,
-      speechGeneration: context.generation,
-    });
-
-    if (!turn.ok) {
-      setError(turn.message);
-      setPhase("idle");
-      return;
-    }
-
-    // From here the response is shaped exactly like an answer turn, because the
-    // server has already decided what this was. The room does not need to know
-    // which classification it got — a REPEAT comes back as the question again,
-    // a CLARIFY as an explanation plus the question, an ANSWER as whatever
-    // normally follows an answer.
-    applyTurn(turn.data);
-  }
-
-  /**
-   * Acts on what the audio loop decided this frame.
-   *
-   * Every branch is reached from ONE place, synchronously, after the state has
-   * already moved. That is the whole point of the refactor: there is no second
-   * owner of the turn that could disagree about whether the candidate has
-   * spoken, and no path here can discard a recording that contains an answer.
-   */
-  function handleTurnEffect(effect: TurnEffect) {
-    if (effect === "finalize") {
-      // The machine only emits this from CANDIDATE_PAUSED, which is only
-      // reachable once `hasSpoken` is true. Submitting here can therefore never
-      // be a non-answer, and the state is already ANSWER_FINALIZING so a second
-      // frame cannot emit it again.
-      stopRecording();
-      return;
-    }
-
-    if (effect === "mutedWarning") {
-      setError(
-        "Your microphone has been muted for a few seconds. Resume when you're ready, or end this response.",
-      );
-      return;
-    }
-
-    if (effect === "nudge") {
-      // The recording KEEPS RUNNING. Nothing is cancelled and nothing is
-      // discarded — this is a prompt over the top of an open microphone, which
-      // is what makes "the nudge ate my answer" structurally impossible.
-      // Varied per occurrence: this fires on EVERY silence, and the same
-      // sentence four times in one interview is the loudest possible tell that
-      // nothing is listening. The transcript length is the counter, and the
-      // same value goes to the server so the spoken line matches the shown one.
-      const waitingVariant = roomLineCountRef.current++;
-      const waitingText = roomLineFor("waiting", waitingVariant);
-      setTurns((prev) => [...prev, { role: "interviewer", text: waitingText }]);
-      setReveal({ text: waitingText, chars: waitingText.length });
-      void speak(waitingText, "waiting", waitingVariant);
-      return;
-    }
-
-    if (effect === "moveOn") {
-      // Reached only from WAITING_FOR_SPEECH, so `hasSpoken` is false by
-      // construction and "(no response)" is the truth rather than a guess.
-      const movingOnVariant = roomLineCountRef.current++;
-      const movingOnText = roomLineFor("moving_on", movingOnVariant);
-      setTurns((prev) => [...prev, { role: "interviewer", text: movingOnText }]);
-      setReveal({ text: movingOnText, chars: movingOnText.length });
-      // "moveOn" means VOICE DETECTION never saw speech — which is not the same
-      // as nothing having been said. It was discarding thirteen seconds of
-      // captured audio on the strength of that guess, which is exactly the
-      // failure mode this pipeline is supposed to have stopped having.
-      //
-      // So the RECORDING decides, not the detector. If real audio was captured
-      // it is uploaded through the ordinary path and treated as the answer it
-      // probably is. Only a genuinely empty capture submits the marker.
-      const captured = chunksRef.current.reduce((n, c) => n + c.size, 0);
-      if (captured >= MIN_AUDIO_BYTES) {
-        stopRecording();
-        return;
-      }
-
-      cancelRecording();
-      void speak(movingOnText, "moving_on", movingOnVariant).then(() => {
-        void send(NO_RESPONSE_ANSWER);
-      });
-    }
-  }
 
   async function endInterview() {
     // CANCEL: whatever is in the recorder is a half-answer nobody asked for, and

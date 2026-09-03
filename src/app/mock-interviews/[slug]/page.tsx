@@ -109,6 +109,33 @@ export default async function MockInterviewDomainPage({
         </dl>
       </header>
 
+      {startable ? (
+        <section className="mt-7" aria-labelledby="start">
+          <h2 id="start" className="sr-only">
+            Start this interview
+          </h2>
+          {signedIn ? (
+            <MockInterviewSession
+              domainSlug={domain.slug}
+              domainLabel={domain.label}
+              minAnsweredToScore={MIN_ANSWERED_TO_SCORE}
+            />
+          ) : (
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                href="/login"
+                className="inline-flex h-11 items-center justify-center rounded-[12px] bg-[#E05226] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#C9411C]"
+              >
+                Sign in to practise
+              </Link>
+              <span className="text-[13px] text-[#8F8F8F]">
+                Free with any ABTalks account.
+              </span>
+            </div>
+          )}
+        </section>
+      ) : null}
+
       {domain.purpose ? (
         <section
           className="mt-7 rounded-[16px] border border-[#E0E0E0] bg-[#FFF5F0] p-5"
@@ -206,31 +233,6 @@ export default async function MockInterviewDomainPage({
                 challenge progress.
               </li>
             </ul>
-          </section>
-
-          <section className="mt-9" aria-labelledby="start">
-            <h2 id="start" className="sr-only">
-              Start this interview
-            </h2>
-            {signedIn ? (
-              <MockInterviewSession
-                domainSlug={domain.slug}
-                domainLabel={domain.label}
-                minAnsweredToScore={MIN_ANSWERED_TO_SCORE}
-              />
-            ) : (
-              <div className="flex flex-wrap items-center gap-3">
-                <Link
-                  href="/login"
-                  className="inline-flex h-11 items-center justify-center rounded-[12px] bg-[#E05226] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#C9411C]"
-                >
-                  Sign in to practise
-                </Link>
-                <span className="text-[13px] text-[#8F8F8F]">
-                  Free with any ABTalks account.
-                </span>
-              </div>
-            )}
           </section>
         </>
       )}

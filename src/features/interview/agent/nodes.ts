@@ -3,6 +3,7 @@ import { mergeEvidence } from "@/features/interview/evidence";
 import { buildInterviewMemory } from "@/features/interview/memory";
 import { curriculumFor } from "@/features/interview/cohort/curriculum-kb";
 import { NO_RESPONSE_ANSWER } from "@/features/interview/room-lines";
+import { joinSpoken } from "@/features/interview/interruption";
 import {
   activeQuestionView,
   classifyAnswer,
@@ -196,6 +197,8 @@ export function createAnalyzeAnswer(llm: InterviewLLM) {
       // three turns running the same way. Read off the transcript rather than
       // tracked separately, so it cannot drift from what was actually said.
       conversational: state.conversational ?? false,
+      // Observation only: lets the provider attach tokens and cost to a span.
+      attemptId: state.interviewId,
       recentOpeners: state.interviewState.transcript
         .filter((l) => l.role === "interviewer")
         .slice(-3)
@@ -310,7 +313,24 @@ export function createPhraseTurn(llm: InterviewLLM) {
     if (!state.decision || state.decision.noResponse) return {};
 
     const action = state.lastDecision;
-    if (action !== "FOLLOW_UP" && action !== "NEXT_QUESTION") return {};
+    // ESCALATE IS ADMITTED, for the acknowledgement only.
+    //
+    // Excluding it was a real regression. Stage 1 was moved onto the lean
+    // assessment prompt, which is told to leave `acknowledgement` empty, and
+    // stage 2 was the thing that wrote it instead. ESCALATE skipped stage 2,
+    // so it ended up with an acknowledgement from neither: a candidate gave a
+    // strong answer and the interviewer replied with a harder question and no
+    // sign it had heard the first one. That reads as moving the goalposts.
+    //
+    // REDIRECT, REPEAT and CLARIFY stay out: every one of them speaks authored
+    // or restated text where an added reaction would be noise.
+    if (
+      action !== "FOLLOW_UP" &&
+      action !== "NEXT_QUESTION" &&
+      action !== "ESCALATE"
+    ) {
+      return {};
+    }
 
     const question = getCurrentQuestion(state.plan, state.interviewState);
     if (!question) return {};
@@ -327,6 +347,7 @@ export function createPhraseTurn(llm: InterviewLLM) {
     ]);
 
     const phrasing = await llm.phraseTurn({
+      attemptId: state.interviewId,
       action,
       candidateAnswer: state.candidateAnswer,
       currentQuestion: asked.text,
@@ -448,12 +469,54 @@ export function applyEscalate(state: InterviewAgentState): NodeUpdate {
   return { nextPrompt: state.nextPrompt };
 }
 
-export function applyRedirect(state: InterviewAgentState): NodeUpdate {
-  return { nextPrompt: `${redirectLineFor(state.interviewId)}\n\n${state.currentQuestion}` };
+/**
+ * The question the candidate is ACTUALLY being assessed against right now.
+ *
+ * `state.currentQuestion` is the CORE question text and is only correct at
+ * depth 1. Once the interview escalates, the candidate is answering a deeper
+ * rung, and any line that re-puts "the question" has to re-put THAT one. Using
+ * the core text instead sends them back to something answered two turns ago,
+ * which reads as the interviewer having lost its place.
+ *
+ * Shared by REDIRECT and REPEAT rather than written twice, because the two had
+ * exactly this bug independently and fixing one while leaving the other is how
+ * it comes back. `questionAsAsked` is the same resolver the evaluator and the
+ * interruption path already use, so every site now agrees.
+ *
+ * Falls back to `state.currentQuestion` only when no question can be resolved
+ * at all, which is the pre-existing behaviour for an already-broken state.
+ */
+function questionOnTheFloor(state: InterviewAgentState): string {
+  const question = getCurrentQuestion(state.plan, state.interviewState);
+  if (!question) return state.currentQuestion;
+  const asked = questionAsAsked(question, state.interviewState.depthLevel ?? 1);
+  return asked.spokenText ?? asked.text ?? state.currentQuestion;
 }
 
+export function applyRedirect(state: InterviewAgentState): NodeUpdate {
+  return {
+    nextPrompt: joinSpoken(
+      redirectLineFor(state.interviewId),
+      questionOnTheFloor(state),
+    ),
+  };
+}
+
+/**
+ * Says the question again, at the depth it is actually being asked.
+ *
+ * This carried the same defect `applyRedirect` did: it re-put
+ * `state.currentQuestion`, so a candidate who asked to hear an escalated
+ * rung again was read the CORE question instead. The interruption path was
+ * already correct, which is what masked it in the live probe.
+ */
 export function applyRepeat(state: InterviewAgentState): NodeUpdate {
-  return { nextPrompt: `${repeatLineFor(state.interviewId)}\n\n${state.currentQuestion}` };
+  return {
+    nextPrompt: joinSpoken(
+      repeatLineFor(state.interviewId),
+      questionOnTheFloor(state),
+    ),
+  };
 }
 
 /**
