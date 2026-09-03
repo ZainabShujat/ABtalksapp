@@ -10,7 +10,6 @@ import {
   PlayCircle,
   type LucideIcon,
 } from "lucide-react";
-import { EVENTS } from "@/components/workshop/events-data";
 import CountdownTimer, { CountdownExact } from "@/components/workshop/CountdownTimer";
 import { useCanvasScale } from "@/components/workshop/use-canvas-scale";
 
@@ -108,19 +107,37 @@ export default function WorkshopHero({
   webinarDate,
   webinarTime,
   webinarTargetUtc,
+  eventTitle,
+  eventAccents,
+  eventDesc,
+  eventPoster,
 }: {
   webinarDate: string;
   webinarTime: string;
   webinarTargetUtc: string;
+  /**
+   * The current workshop, resolved on the SERVER by `getRegistrableEvent`.
+   *
+   * It used to be found here with `EVENTS.find(e => e.register &&
+   * e.registrationOpen)` — a third copy of "which event is current", on static
+   * flags, so the hero stayed on a finished workshop until someone edited the
+   * data file. Deriving it from the clock in this component instead would mean
+   * either a hydration mismatch or a visible swap-in on the largest text on the
+   * page, so the page resolves it and passes primitives (never the event: it
+   * carries a LucideIcon, which cannot cross the boundary).
+   */
+  eventTitle: string | null;
+  eventAccents: string[] | null;
+  eventDesc: string | null;
+  eventPoster: string | null;
 }) {
-  const event = EVENTS.find((e) => e.register && e.registrationOpen);
   const { ref, scale } = useCanvasScale(FRAME_W);
-  const desc = event?.desc ?? DEFAULT_DESC;
-  const poster = event?.posterSrc;
+  const desc = eventDesc ?? DEFAULT_DESC;
+  const poster = eventPoster ?? undefined;
 
   const title = accentedTitle(
-    event?.title ?? DEFAULT_TITLE,
-    event?.titleAccents ?? DEFAULT_TITLE_ACCENTS,
+    eventTitle ?? DEFAULT_TITLE,
+    eventAccents ?? DEFAULT_TITLE_ACCENTS,
   );
 
   return (
@@ -176,7 +193,7 @@ export default function WorkshopHero({
               {poster ? (
                 <Image
                   src={poster}
-                  alt={event?.title ?? "Workshop poster"}
+                  alt={eventTitle ?? "Workshop poster"}
                   fill
                   sizes="567px"
                   className="object-cover"
@@ -187,9 +204,28 @@ export default function WorkshopHero({
               )}
             </div>
 
-            {/* date + time chips — node 1:121 */}
-            <Chip x={86} y={102} w={143} text={webinarDate} Icon={CalendarDays} />
-            <Chip x={242} y={102} w={117} text={webinarTime} Icon={Clock} />
+            {/* date + time chips — node 1:121.
+                One flex row rather than two separately-placed pills. Each used
+                to carry a hardcoded width (143 and 117) with an absolutely
+                positioned label inside, so the pill could not size to its own
+                text: measured, "September 05, 2026" needed 114px against 104px
+                of room and spilled 10px past the background, while the time
+                pill left 28px of empty pill trailing its text. The second x
+                (242) was also just 86 + 143 + gap, so it moved whenever the
+                first pill's content changed length. */}
+            <div
+              style={{
+                position: "absolute",
+                left: 86,
+                top: 102,
+                display: "flex",
+                alignItems: "center",
+                gap: 13,
+              }}
+            >
+              <Chip text={webinarDate} Icon={CalendarDays} />
+              <Chip text={webinarTime} Icon={Clock} />
+            </div>
 
             {/* subtitle — node 1:120 */}
             <p
@@ -315,7 +351,7 @@ export default function WorkshopHero({
             <div className="relative mt-9 aspect-[567/716] w-full overflow-hidden rounded-[30px]">
               <Image
                 src={poster}
-                alt={event?.title ?? "Workshop poster"}
+                alt={eventTitle ?? "Workshop poster"}
                 fill
                 sizes="90vw"
                 className="object-cover"
@@ -354,38 +390,40 @@ export default function WorkshopHero({
   );
 }
 
-/** Node 1:122 — 30px pill, 23×22 plate at x9, label at x39. */
+/**
+ * Node 1:122 — a 30px pill carrying a 23×22 icon plate and a label.
+ *
+ * Sizes to its content. The design gave it a fixed width because the canvas is
+ * a fixed-size composition, but the text inside is data — a month name, a time
+ * — and a pill that cannot grow with it either clips the label or trails empty
+ * background. Padding and a gap reproduce the design's own 9/39px offsets while
+ * staying correct for "May" and for "September" alike.
+ */
 function Chip({
-  x,
-  y,
-  w,
   text,
   Icon,
 }: {
-  x: number;
-  y: number;
-  w: number;
   text: string;
   Icon: LucideIcon;
 }) {
   return (
     <div
       style={{
-        position: "absolute",
-        left: x,
-        top: y,
-        width: w,
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 7,
         height: 30,
+        paddingLeft: 9,
+        paddingRight: 12,
         borderRadius: 8,
         background: "var(--wk-navy-chip)",
+        whiteSpace: "nowrap",
       }}
     >
       <span
         aria-hidden
         style={{
-          position: "absolute",
-          left: 9,
-          top: 4,
+          flexShrink: 0,
           width: 23,
           height: 22,
           borderRadius: 10,
@@ -399,14 +437,10 @@ function Chip({
       </span>
       <span
         style={{
-          position: "absolute",
-          left: 39,
-          top: 8,
           fontSize: 12,
           lineHeight: 1.1,
           fontWeight: 500,
           color: "#ffffff",
-          whiteSpace: "nowrap",
         }}
       >
         {text}

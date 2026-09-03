@@ -20,9 +20,22 @@ import {
 export default function WorkshopDetailsModal({
   event,
   onClose,
+  contained = false,
 }: {
   event: WorkshopEvent | null;
   onClose: () => void;
+  /**
+   * Cover only the nearest positioned ancestor instead of the viewport.
+   *
+   * The calendar passes this so the replay overlay sits over the grid and
+   * leaves the Upcoming Workshops column readable beside it. It works because
+   * this component is rendered inside that column's wrapper and has never used
+   * a portal — the DOM position was already right, only `position` was wrong.
+   *
+   * Off by default, so the component keeps its page-level behaviour for any
+   * future caller that wants it.
+   */
+  contained?: boolean;
 }) {
   const [playing, setPlaying] = useState(false);
   const [thumbHq, setThumbHq] = useState(false);
@@ -41,20 +54,25 @@ export default function WorkshopDetailsModal({
     ? youtubeThumb(event.youtubeId, thumbHq ? "hq" : "maxres")
     : event?.posterSrc;
 
-  // Escape to close, and lock background scroll while open.
+  // Escape to close. Background scroll is locked ONLY when this covers the
+  // viewport: a contained overlay leaves the rest of the page visible, and
+  // freezing a page the reader can still see is a bug, not a safeguard.
   useEffect(() => {
     if (!event) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
+    window.addEventListener("keydown", onKey);
+
+    if (contained) return () => window.removeEventListener("keydown", onKey);
+
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", onKey);
     };
-  }, [event, onClose]);
+  }, [event, onClose, contained]);
 
   return (
     <AnimatePresence>
@@ -66,9 +84,17 @@ export default function WorkshopDetailsModal({
           transition={{ duration: 0.22 }}
           onClick={onClose}
           role="dialog"
-          aria-modal="true"
+          // Only claim modality when it is true. `aria-modal` tells assistive
+          // tech the rest of the document is inert — which it is for the
+          // full-viewport overlay, and is not in `contained` mode, where the
+          // Upcoming Workshops column stays visible and operable beside it.
+          // Announcing otherwise would hide a live part of the page from
+          // screen-reader users while it is still there for everyone else.
+          {...(contained ? {} : { "aria-modal": true })}
           aria-labelledby="wk-details-title"
-          className="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto p-4 sm:p-6"
+          className={`${
+            contained ? "absolute rounded-[32px]" : "fixed"
+          } inset-0 z-[90] flex items-center justify-center overflow-y-auto p-4 sm:p-6`}
           style={{
             background: "var(--wk-scrim)",
             backdropFilter: "blur(8px)",
@@ -81,7 +107,11 @@ export default function WorkshopDetailsModal({
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.98, opacity: 0 }}
             transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
-            className="relative my-auto w-full max-w-[1100px] overflow-hidden rounded-3xl p-5 sm:p-8"
+            className={`relative my-auto w-full overflow-hidden rounded-3xl ${
+              // Contained, the panel lives inside one calendar column, so the
+              // page-level 1100px would simply be clipped by its own scrim.
+              contained ? "max-w-[640px] p-5 sm:p-6" : "max-w-[1100px] p-5 sm:p-8"
+            }`}
             style={{
               background: "var(--wk-surface)",
               border: "1px solid var(--wk-card-border)",
@@ -99,7 +129,28 @@ export default function WorkshopDetailsModal({
               <X className="size-4" aria-hidden />
             </button>
 
-            <div className="grid gap-6 lg:grid-cols-[1.35fr_1fr] lg:gap-8">
+            {/*
+              Contained mode is a BLOCK scroller, not a grid.
+
+              It was `grid max-h-[70vh] overflow-y-auto`, and a max-height on a
+              grid container does not make it overflow — it compresses the auto
+              rows to fit. Measured: content needed 757px, the box was capped at
+              630, and `scrollHeight === clientHeight === 630`, so it never even
+              scrolled. The player carries `aspect-ratio: 16/9`, which held its
+              height at 330px regardless of the row it had been squeezed into,
+              so it spilled 107px over the text underneath.
+
+              A block container with the same max-height overflows normally, its
+              children keep their natural heights, and the scroll works. The
+              single-column grid was buying nothing here anyway.
+            */}
+            <div
+              className={
+                contained
+                  ? "max-h-[70vh] space-y-5 overflow-y-auto pr-1"
+                  : "grid gap-6 lg:grid-cols-[1.35fr_1fr] lg:gap-8"
+              }
+            >
               {/* ---------------- player ---------------- */}
               <div
                 className="relative aspect-video w-full overflow-hidden rounded-2xl"

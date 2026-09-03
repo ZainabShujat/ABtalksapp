@@ -6,11 +6,13 @@ import {
   BriefcaseBusiness,
   CalendarClock,
   Clapperboard,
+  GitBranch,
   GraduationCap,
   Palette,
   Rocket,
   Trophy,
   Users,
+  Workflow,
 } from "lucide-react";
 
 /** A resource link shown in the past-workshop details modal. */
@@ -105,6 +107,16 @@ export interface WorkshopEvent {
   topics?: string[];
   /** True only for auto-generated Saturday placeholders — never for real events. */
   placeholder?: boolean;
+  /**
+   * How long the session runs, in minutes. Optional and additive: every
+   * existing consumer of `WorkshopEvent` keeps compiling, and anything without
+   * it falls back to `DEFAULT_DURATION_MIN`.
+   *
+   * This is what makes a *live* window expressible. `date` + `time` give a
+   * start; without a length there is no honest way to say a workshop is
+   * running now rather than simply "today".
+   */
+  durationMinutes?: number;
 }
 
 export const EVENTS: WorkshopEvent[] = [
@@ -233,10 +245,10 @@ export const EVENTS: WorkshopEvent[] = [
     accent: "#e05226",
     track: "workshop",
     Icon: Clapperboard,
-    title: "Create Anything with AI: From Prompt to Published Content",
-    titleAccents: ["AI", "Published Content"],
-    desc: "Turn one idea into a week of content — generate scroll-stopping posts, carousels and short-form videos with AI, then edit and schedule them in minutes.",
-    host: "ABTalks",
+    title: "AI Image & Video Generation",
+    titleAccents: ["AI", "Video Generation"],
+    desc: "Learn how to create stunning images and videos using modern AI tools, from generating visuals to transforming creative ideas into polished content.",
+    host: "Swarit Ajay",
     location: "Live · YouTube",
     // The live workshop: hero, countdown, "What You'll Learn" and the
     // registration form all read off this entry. Supabase `workshop_config`
@@ -257,6 +269,38 @@ export const EVENTS: WorkshopEvent[] = [
       "AI + MCP Workflows",
       "Canva AI & Content Publishing",
     ],
+  },
+  {
+    // Dated slug, per the `id` convention above. These two occupy Saturdays
+    // that `placeholderSaturdays` would otherwise fill with "Workshop — TBA";
+    // a real entry on the date simply wins, so no placeholder logic changes.
+    id: "workshop-2026-09-19",
+    date: "2026-09-19",
+    time: "7:00 PM IST",
+    tag: "Developer",
+    accent: "#c9411c",
+    track: "workshop",
+    Icon: GitBranch,
+    title: "GitHub Essentials: From Code to Collaboration",
+    desc: "Learn how to use GitHub effectively for version control, collaboration, project management, and building a strong developer workflow.",
+    host: "Sohail",
+    location: "Live · YouTube",
+    // No `register` / `registrationOpen`: signups all land in one table keyed
+    // by `getRegistrableEvent()`, which returns the SOONEST open event. Opening
+    // two at once would silently file both rosters under the earlier workshop.
+  },
+  {
+    id: "workshop-2026-09-26",
+    date: "2026-09-26",
+    time: "7:00 PM IST",
+    tag: "Automation",
+    accent: "#a93617",
+    track: "workshop",
+    Icon: Workflow,
+    title: "AI Workflows, Automation & Model Showdown",
+    desc: "Build practical AI workflows with automation and n8n, while comparing Gemini, GPT, and Claude to understand which model works best for different use cases.",
+    host: "Sarthak Gupta",
+    location: "Live · YouTube",
   },
 ];
 
@@ -293,16 +337,6 @@ export const pastEvents = (todayKey: string) =>
   EVENTS.filter((e) => isPastEvent(e, todayKey)).sort((a, b) =>
     b.date.localeCompare(a.date),
   );
-
-/**
- * The one event currently accepting signups: the soonest upcoming event
- * flagged `register`. A finished event can therefore never show a live
- * Register button, even if its flag was left set.
- */
-export const getRegistrableEvent = (
-  todayKey: string,
-): WorkshopEvent | undefined =>
-  upcomingEvents(todayKey).find((e) => e.register && e.registrationOpen);
 
 export const fullDate = (iso: string) =>
   utc(iso).toLocaleString("en-US", {
@@ -415,3 +449,139 @@ export const youtubeThumb = (id: string, quality: "maxres" | "hq" = "maxres") =>
 
 export const hasReplay = (ev: WorkshopEvent, todayKey: string) =>
   ev.track === "workshop" && !ev.placeholder && isPastEvent(ev, todayKey);
+
+// -------------------------------------------------------------------------
+// Live / upcoming status, to the minute.
+//
+// `isPastEvent` compares calendar DAYS, which is the right rule for the
+// calendar grid — a workshop should sit under its own date all day. The
+// sidebar needs a finer one: a 7pm workshop is still upcoming at 6pm, live at
+// 7:30, and gone by 9. So these helpers work in absolute time and leave
+// `isPastEvent` untouched, because the grid still depends on it.
+// -------------------------------------------------------------------------
+
+/** Assumed length of a session that does not state its own. */
+export const DEFAULT_DURATION_MIN = 90;
+
+/**
+ * IST is UTC+05:30 year-round — India observes no daylight saving — so the
+ * offset can be written into the timestamp directly. That is exact, and it
+ * avoids depending on the runtime's zone database for a fixed number.
+ */
+const IST_OFFSET = "+05:30";
+
+/**
+ * Clock time out of a human `time` string, or null when there is none.
+ *
+ * `time` is free text across the dataset: "7:00 PM IST", "Starts 8:00 PM IST",
+ * but also "Day 1" and "Cohort start". Anything without a clock returns null
+ * and is treated as an all-day entry rather than being guessed at.
+ */
+const parseClock = (time: string): { h: number; m: number } | null => {
+  const m = /(\d{1,2}):(\d{2})\s*(am|pm)?/i.exec(time);
+  if (!m) return null;
+  let h = Number(m[1]);
+  const min = Number(m[2]);
+  const mer = m[3]?.toLowerCase();
+  if (h > 23 || min > 59) return null;
+  if (mer === "pm" && h < 12) h += 12;
+  if (mer === "am" && h === 12) h = 0;
+  return { h, m: min };
+};
+
+/** Start of the event as an epoch millisecond, read in IST. */
+export const eventStartMs = (ev: WorkshopEvent): number => {
+  const c = parseClock(ev.time);
+  const hh = String(c?.h ?? 0).padStart(2, "0");
+  const mm = String(c?.m ?? 0).padStart(2, "0");
+  return Date.parse(`${ev.date}T${hh}:${mm}:00${IST_OFFSET}`);
+};
+
+/**
+ * End of the event. An entry with no clock time (a cohort start day, say) runs
+ * to the end of its IST day, which matches how `isPastEvent` treats it.
+ */
+export const eventEndMs = (ev: WorkshopEvent): number => {
+  const start = eventStartMs(ev);
+  if (!parseClock(ev.time)) return start + 24 * 60 * 60 * 1000;
+  return start + (ev.durationMinutes ?? DEFAULT_DURATION_MIN) * 60 * 1000;
+};
+
+export type EventStatus = "LIVE" | "UPCOMING" | "PAST";
+
+/** Derived from the clock, never stored — nothing can be stuck reading LIVE. */
+export const eventStatus = (ev: WorkshopEvent, nowMs: number): EventStatus => {
+  if (nowMs >= eventEndMs(ev)) return "PAST";
+  if (nowMs >= eventStartMs(ev)) return "LIVE";
+  return "UPCOMING";
+};
+
+/**
+ * What the Upcoming Workshops sidebar shows: real sessions that have not
+ * finished yet, soonest first.
+ *
+ * Placeholders are excluded deliberately — "Workshop — TBA" is a promise that
+ * the cadence continues, which reads correctly as a calendar tile and would
+ * read as vapourware as a card with a Register button. They stay on the grid.
+ *
+ * Because the cut-off is `eventEndMs`, a workshop drops out of this list by
+ * itself once it finishes; nothing has to be edited when the week turns over.
+ */
+/**
+ * Every workshop that has not finished yet, soonest first.
+ *
+ * THE single source of truth for "what is coming up". The sidebar, the
+ * registrable event, the hero title and the poster all read this list, so they
+ * cannot drift apart — which they previously did, because the sidebar filtered
+ * on absolute time while registration filtered on two hand-set booleans.
+ *
+ * Non-workshop tracks are excluded: the column is headed "Upcoming Workshops",
+ * and the hackathon, the cohort start day and the challenge kickoff each have
+ * their own destination. Placeholders are excluded too — "Workshop — TBA" is a
+ * promise that the cadence continues, which reads correctly as a calendar tile
+ * and would read as vapourware as a card with a Register button.
+ *
+ * The cut-off is `eventEndMs`, so a session leaves this list the minute it
+ * finishes and the next one becomes current with no edit anywhere.
+ */
+const openWorkshops = (nowMs: number): WorkshopEvent[] =>
+  EVENTS.filter(
+    (e) =>
+      e.track === "workshop" &&
+      !e.placeholder &&
+      eventStatus(e, nowMs) !== "PAST",
+  ).sort((a, b) => eventStartMs(a) - eventStartMs(b));
+
+export const sidebarEvents = (nowMs: number, limit = 3): WorkshopEvent[] =>
+  openWorkshops(nowMs).slice(0, limit);
+
+/**
+ * The one event currently accepting signups.
+ *
+ * Derived from the clock, not from a flag somebody has to remember to move.
+ * It used to be `upcomingEvents(todayKey).find(e => e.register &&
+ * e.registrationOpen)`, which had two failure modes a week apart:
+ *
+ *   - only ONE event ever carried both flags, so the Saturday after that
+ *     workshop ran, this returned `undefined` and the server answered every
+ *     signup with "Registration is closed right now" until a developer edited
+ *     the data file;
+ *   - `upcomingEvents` compares calendar DAYS, while the sidebar compares
+ *     absolute time, so between a workshop's end and IST midnight the two
+ *     disagreed about which event was current.
+ *
+ * Both now read the same list. See `openWorkshops`.
+ *
+ * `registrationOpen: false` stays meaningful as an explicit kill switch —
+ * setting it closes signups for that session without deleting it. Absent or
+ * true means open, so the common case needs no edit at all.
+ *
+ * The instant defaults to now, read here rather than in the caller: a Server
+ * Component body that calls `Date.now()` during render trips React's purity
+ * rule, and every caller that simply means "right now" should not have to
+ * thread a clock. Tests and the frozen-clock checks pass one explicitly.
+ */
+export const getRegistrableEvent = (
+  nowMs: number = Date.now(),
+): WorkshopEvent | undefined =>
+  openWorkshops(nowMs).find((e) => e.registrationOpen !== false);

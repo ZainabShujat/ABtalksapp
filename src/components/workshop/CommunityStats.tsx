@@ -23,8 +23,19 @@ const STATS = [
   { value: 300, suffix: "+", label: "Organizations", sub: "Working professionals", x: 747, cx: 810.5 },
 ] as const;
 
-/** Gemunu Libre is what the design specifies for the figures (nodes 1:319-1:321). */
-const NUM_FONT = "var(--font-gemunu), var(--font-hub-instrument-sans), sans-serif";
+/**
+ * The figures use the page font, like everything else on /workshop.
+ *
+ * They were the one exception: Gemunu Libre, which the Figma file specifies for
+ * these numerals (nodes 1:319-1:321). It was also the ONLY non-Instrument-Sans
+ * text on the route — 12 text nodes against 230 — and a condensed display face
+ * beside the body font is what made the page read as typographically mixed.
+ *
+ * Size and weight are untouched, so the figures keep their prominence; only the
+ * family is unified. Restore the Gemunu stack here if the Figma spec is meant
+ * to win over route-wide consistency.
+ */
+const NUM_FONT = "inherit";
 
 function useInView(threshold = 0.3) {
   const ref = useRef<HTMLDivElement>(null);

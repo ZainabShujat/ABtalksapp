@@ -1,7 +1,8 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { motion } from "framer-motion";
-import { EVENTS } from "@/components/workshop/events-data";
 import { useCanvasScale } from "@/components/workshop/use-canvas-scale";
 import {
   CANVAS_H,
@@ -40,18 +41,19 @@ const DEFAULT_TOPICS = [
 ];
 
 /**
- * Read off the `register && registrationOpen` flags rather than today's date:
- * those are manual switches, so this resolves identically on the server and
- * the client and cannot produce a hydration mismatch or a swap-in flash.
+ * Passed in from the page, which resolves the current workshop on the server.
+ * This used to be a module-scope `EVENTS.find(...)` on the static flags, so it
+ * was computed once at import and stayed on a finished workshop forever.
  */
-const activeTopics =
-  EVENTS.find((e) => e.register && e.registrationOpen)?.topics ?? DEFAULT_TOPICS;
 
-/** Solved once at module load — pure function of constant input. */
-const PLACED = layoutTopics(activeTopics);
 
-export default function TopicsSection() {
+export default function TopicsSection({ topics }: { topics: string[] | null }) {
   const { ref: canvasRef, scale: canvasScale } = useCanvasScale(CANVAS_W);
+
+  // Was solved once at module load. It now depends on a prop, so it is memoised
+  // per topic list instead — layoutTopics is a pure function of its input, and
+  // the list only changes when the current workshop does.
+  const PLACED = useMemo(() => layoutTopics(topics ?? DEFAULT_TOPICS), [topics]);
 
   // No section padding: the design stacks sections edge to edge (hero
   // 78→884, this 884→1584, community 1584→2402), with the breathing room

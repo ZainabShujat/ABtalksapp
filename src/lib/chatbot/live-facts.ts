@@ -74,7 +74,7 @@ async function readEvents(todayKey: string): Promise<{
     });
 
     const upcoming = mod.upcomingEvents(todayKey);
-    const registrable = mod.getRegistrableEvent(todayKey);
+    const registrable = mod.getRegistrableEvent();
     const past = mod.pastEvents(todayKey);
 
     return {
