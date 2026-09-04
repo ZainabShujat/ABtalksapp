@@ -224,19 +224,32 @@ async function listDatabricksAttemptTimes(userId: string): Promise<Date[]> {
   return rows.map((r) => r.submittedAt ?? r.createdAt);
 }
 
+/** Data Solutions Architect mission runs — every verification run, pass or fail. */
+async function listDsArchitectAttemptTimes(userId: string): Promise<Date[]> {
+  const rows = await prisma.activityAttempt.findMany({
+    where: {
+      enrollment: { userId },
+      activityId: { startsWith: "act_dsa_day_" },
+    },
+    select: { submittedAt: true, createdAt: true },
+  });
+  return rows.map((r) => r.submittedAt ?? r.createdAt);
+}
+
 /**
- * Every submission the hub heatmap and streak card count, across all three
- * tracks the user can be in: 60-Day Challenge, AI Cohort, Databricks.
+ * Every submission the hub heatmap and streak card count, across all tracks
+ * the user can be in: 60-Day Challenge, AI Cohort, Databricks, DS Architect.
  */
 export async function listHubSubmissionTimes(
   userId: string,
 ): Promise<Date[]> {
-  const [challenge, program, databricks] = await Promise.all([
+  const [challenge, program, databricks, dsArchitect] = await Promise.all([
     listChallengeSubmissionTimes(userId),
     listProgramMissionTimes(userId),
     listDatabricksAttemptTimes(userId),
+    listDsArchitectAttemptTimes(userId),
   ]);
-  return [...challenge, ...program, ...databricks];
+  return [...challenge, ...program, ...databricks, ...dsArchitect];
 }
 
 export async function listChallengeSubmissions(

@@ -207,6 +207,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     abandonedDomains: data.abandonedDomains,
     hasProgramMembership: data.hasProgramMembership,
     hasDatabricksAccess: data.hasDatabricksAccess,
+    hasDsArchitectAccess: data.hasDsArchitectAccess,
     isAdmin,
     claudeEnabled: isClaudeEnabled(),
     programEnabled: isProgramEnabled(),
@@ -263,6 +264,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         abandonedDomains={data.abandonedDomains}
         hasProgramMembership={data.hasProgramMembership}
         showDatabricks={data.hasDatabricksAccess}
+        showDsArchitect={data.hasDsArchitectAccess}
       />
       <EventsSection />
       

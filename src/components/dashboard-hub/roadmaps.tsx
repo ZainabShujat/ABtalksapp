@@ -19,6 +19,7 @@ type RoadmapsProps = {
   abandonedDomains: Domain[];
   hasProgramMembership: boolean;
   showDatabricks?: boolean;
+  showDsArchitect?: boolean;
 };
 
 export function Roadmaps({
@@ -26,6 +27,7 @@ export function Roadmaps({
   abandonedDomains,
   hasProgramMembership,
   showDatabricks = false,
+  showDsArchitect = false,
 }: RoadmapsProps) {
   const joined = new Set(joinedDomains);
   const abandoned = new Set(abandonedDomains);
@@ -83,7 +85,7 @@ export function Roadmaps({
           <h2 className="font-heading text-xl font-semibold uppercase text-[#e05226] lg:ml-2">
             Prep Kit
           </h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div
               className={cn(
                 "flex flex-col rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6",
@@ -127,6 +129,29 @@ export function Roadmaps({
                 </div>
                 <Link
                   href="/program/databricks"
+                  className={cn(HUB_BUTTON_CLASS, "mt-4 w-full")}
+                >
+                  Open
+                </Link>
+              </div>
+            ) : null}
+            {showDsArchitect ? (
+              <div
+                className={cn(
+                  "flex flex-col rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6",
+                  HUB_CARD_HOVER_CLASS,
+                )}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="font-inter text-lg font-bold text-black">
+                    10 Days Data Solutions Architect
+                  </p>
+                  <p className="mt-1 text-sm text-[#555555]">
+                    Design AWS-first data and AI platforms in 10 days.
+                  </p>
+                </div>
+                <Link
+                  href="/program/ds-architect"
                   className={cn(HUB_BUTTON_CLASS, "mt-4 w-full")}
                 >
                   Open

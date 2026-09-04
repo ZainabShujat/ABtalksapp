@@ -1,0 +1,58 @@
+[
+  {
+    "number": 1,
+    "title": "Kickoff & Calibration",
+    "subtitle": "Architect mindset · C4 model · NFRs-first thinking · Rubric intro",
+    "color": "#6366f1",
+    "startDay": 1,
+    "endDay": 1
+  },
+  {
+    "number": 2,
+    "title": "Data Architecture Foundations",
+    "subtitle": "Kimball · Inmon · Data Vault · Lakehouse · Delta vs Iceberg vs Hudi",
+    "color": "#0ea5e9",
+    "startDay": 2,
+    "endDay": 3
+  },
+  {
+    "number": 3,
+    "title": "AWS Data Platform Deep Dive",
+    "subtitle": "Redshift · Glue · EMR · S3 · Lake Formation · Athena",
+    "color": "#14b8a6",
+    "startDay": 4,
+    "endDay": 5
+  },
+  {
+    "number": 4,
+    "title": "Solution Architecture",
+    "subtitle": "NFR-first design · Well-Architected · Enterprise patterns · Data Mesh",
+    "color": "#f59e0b",
+    "startDay": 6,
+    "endDay": 6
+  },
+  {
+    "number": 5,
+    "title": "Data + AI Platform",
+    "subtitle": "SageMaker · Bedrock · RAG · Feature Store · Responsible AI",
+    "color": "#ec4899",
+    "startDay": 7,
+    "endDay": 7
+  },
+  {
+    "number": 6,
+    "title": "Enterprise Transformation",
+    "subtitle": "Six R's · Strangler fig · DMS · SCT · Change management",
+    "color": "#8b5cf6",
+    "startDay": 8,
+    "endDay": 8
+  },
+  {
+    "number": 7,
+    "title": "Capstone — Design & Defense",
+    "subtitle": "Walking-skeleton · Decisions log · 2-page brief · Panel defense",
+    "color": "#22c55e",
+    "startDay": 9,
+    "endDay": 10
+  }
+]

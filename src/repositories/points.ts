@@ -1,6 +1,7 @@
 import "server-only";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { PointsSourceType, type Prisma } from "@prisma/client";
+import { istDateRangeToUtc } from "@/lib/date-utils";
 import { prisma, writeClient } from "@/lib/db";
 import {
   isNewPointsRepoEnabled,
@@ -185,6 +186,48 @@ export async function submissionAwardTotal(
     select: { points: true },
   });
   return event?.points ?? 0;
+}
+
+/**
+ * Has this user already been paid submission synergy inside the given IST
+ * calendar day? Flag-aware: reads the authoritative store for the current
+ * cutover state. The positive-amount filter keeps reconciliation debits from
+ * masking a genuine unpaid day. See plan 111.
+ */
+export async function hasEarnedSubmissionPointsOnIstDate(
+  tx: Tx,
+  opts: { userId: string; istDateKey: string },
+): Promise<boolean> {
+  const { startUtc, endExclusiveUtc } = istDateRangeToUtc(
+    opts.istDateKey,
+    opts.istDateKey,
+  );
+  if (!startUtc || !endExclusiveUtc) return false;
+  const createdAt = { gte: startUtc, lt: endExclusiveUtc };
+
+  if (isNewPointsWritesEnabled()) {
+    const hit = await tx.pointsTransaction.findFirst({
+      where: {
+        userId: opts.userId,
+        sourceType: PointsSourceType.ACTIVITY_ATTEMPT,
+        amount: { gt: 0 },
+        createdAt,
+      },
+      select: { id: true },
+    });
+    return hit !== null;
+  }
+
+  const hit = await tx.synergyEvent.findFirst({
+    where: {
+      userId: opts.userId,
+      type: "SUBMISSION",
+      points: { gt: 0 },
+      createdAt,
+    },
+    select: { id: true },
+  });
+  return hit !== null;
 }
 
 export async function applyPointsChange(

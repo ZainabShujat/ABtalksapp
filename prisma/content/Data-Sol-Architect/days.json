@@ -1,0 +1,742 @@
+[
+  {
+    "dayNumber": 1,
+    "moduleNumber": 1,
+    "title": "Kickoff, Calibration & Architect Mindset",
+    "missionType": "DATA_ROOM",
+    "briefMd": "## Mission: Kickoff, Calibration & Architect Mindset\n\n**Set the frame for the next 10 days and produce a baseline snapshot of where you stand today**\n\nThis is a recruitment-oriented cohort for architects with 8–15+ years of experience — not a Zero-to-Hero learning track. Today you meet the evaluation rubric, learn the shared vocabulary (C4 model, NFRs-first thinking), and produce the two artifacts that become the 'before' snapshot in your recruitment file. Everything you write goes into a GitHub repo the panel will look at.\n\n**Concepts to learn**\n\n- **The Data & Solution Architect role** — what you own vs a Data Engineer / ML Engineer / Enterprise Architect / Principal Engineer\n- **The C4 model** — Context (L1), Container (L2), Component (L3), Code (L4); where architects operate and what belongs at each level\n- **NFRs first, technology second** — the seven pillars (security, performance, scalability, reliability, cost, observability, maintainability) and why architecture derives from them, not the reverse\n- **The evaluation rubric** — 8 weighted dimensions used on Day 1 (baseline) and Day 10 (defense) to calibrate your seniority\n\n### Build steps\n\n1. **Clone the starter repo:** Create a new GitHub repo (e.g. `dsa-cohort-<yourname>`) and push an empty README. Every day's deliverables commit here.\n2. **Draw a baseline architecture:** Pick one production architecture you built in the last 2 years. Sketch it in Excalidraw or draw.io — one C4 Level 1 (System Context) view and one Level 2 (Container) view. Export both to PNG.\n3. **Save the diagram:** Commit as `diagrams/day01_baseline_architecture.png` in your repo.\n4. **Fill the self-assessed skills matrix:** Copy the template in the seed docs into `docs/day01_skills_matrix.md`. For each of the 8 rubric dimensions, rate yourself 1–5 with one honest sentence of evidence.\n5. **Write a top-of-README block:** In your repo's `README.md`, add a section 'About me' with role, years of experience, primary cloud, and one line on the biggest platform you have shipped.\n6. **Peer + facilitator feedback:** Present the baseline diagram in the kickoff session (~10 min). Note the top-3 pieces of feedback in the skills matrix file under 'Baseline feedback'.\n7. **Ship to your repo:** Commit and push. Then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. How many abstraction layers does the C4 model have? (number)\n2. NFR stands for ___-functional requirements. (one word)\n3. What is today's baseline diagram filename? (one token)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "C4 layer count",
+          "value": "4",
+          "caseInsensitive": true
+        },
+        {
+          "check": "NFR expansion",
+          "value": "non",
+          "caseInsensitive": true
+        },
+        {
+          "check": "day 1 diagram filename",
+          "value": "day01_baseline_architecture.png",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "README.md exists",
+          "kind": "fileExists",
+          "path": "README.md"
+        },
+        {
+          "check": "README.md contains an 'About me' section",
+          "kind": "contentMatches",
+          "path": "README.md",
+          "regex": "(?i)about me"
+        },
+        {
+          "check": "diagrams/day01_baseline_architecture.png exists",
+          "kind": "fileExists",
+          "path": "diagrams/day01_baseline_architecture.png"
+        },
+        {
+          "check": "docs/day01_skills_matrix.md exists",
+          "kind": "fileExists",
+          "path": "docs/day01_skills_matrix.md"
+        },
+        {
+          "check": "docs/day01_skills_matrix.md references the 8 rubric dimensions",
+          "kind": "contentMatches",
+          "path": "docs/day01_skills_matrix.md",
+          "regex": "(?i)data architecture|aws solution|lakehouse|transformation|leadership|communication"
+        }
+      ]
+    },
+    "objectives": [
+      "Understand the Data & Solution Architect role vs adjacent roles and the C4 model",
+      "Internalize 'NFRs first, technology second' and the seven NFR pillars",
+      "Read the 8-dimension recruitment scoring rubric that grades Day 10",
+      "Ship a baseline architecture diagram (C4 L1 + L2) and a self-assessed skills matrix to your GitHub repo"
+    ],
+    "tools": [
+      "C4 Model",
+      "Excalidraw / draw.io",
+      "GitHub"
+    ],
+    "estimatedMin": 180,
+    "missionPoints": 10,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 2,
+    "moduleNumber": 2,
+    "title": "Data Warehousing Depth — Kimball, Inmon & Data Vault",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Data Warehousing Depth — Kimball, Inmon & Data Vault\n\n**Prove you can pick a modeling paradigm from workload constraints, not habit**\n\nToday's calibration slice: three modeling paradigms, when each wins, when each fails, and how a senior architect picks. You will produce two competing models for the same retail scenario and defend which you would actually ship.\n\n**Concepts to learn**\n\n- **Inmon (CIF)** — top-down, 3NF enterprise DW, marts derived from it; strengths in integration, weaknesses in delivery speed\n- **Kimball** — bottom-up dimensional marts with conformed dimensions; grain, SCDs (Types 1/2/3/6), factless facts, degenerate dimensions\n- **Data Vault 2.0** — hubs (business keys), links (relationships), satellites (descriptive attributes with history); when regulated multi-source workloads justify the overhead\n- **Anti-patterns** — OBT (one big table) sprawl, over-normalization, snowflake explosion, silent grain violations\n\n### Build steps\n\n1. **Read the scenario:** A national retailer with 500M row/day POS + returns + loyalty data, 8 source systems, PCI + regional-privacy constraints. Requirements in the seed docs.\n2. **Build a Kimball dimensional model:** Star schema — declared grain, conformed dimensions (customer, product, store, date), fact tables (sales, returns, loyalty events). SCD Type 2 on customer + product. Save as `models/day02_kimball_retail.md` (tables + grain lines + SCD notes).\n3. **Build a Data Vault 2.0 model:** Hubs, links, satellites for the same domain. Show how source-schema churn is absorbed. Save as `models/day02_datavault_retail.md`.\n4. **Write the decision memo (~1 page):** In `docs/day02_decision_memo.md`, argue which model you would ship for THIS retailer and why — cite grain, governance, source-churn rate, team maturity, delivery timeline. End with an explicit decision line.\n5. **Update the repo README:** Add a 'Day 2' entry linking the three files.\n6. **Ship to your repo:** Commit and push. Then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. In Data Vault, what object type stores the unique list of business keys for a concept? (one word)\n2. Which SCD type preserves full history by adding a new row per change? (number)\n3. In Kimball, what is the term for the finest level of detail one row of a fact table represents? (one word)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "Data Vault business-key object",
+          "value": "hub",
+          "caseInsensitive": true
+        },
+        {
+          "check": "SCD full-history type",
+          "value": "2",
+          "caseInsensitive": true
+        },
+        {
+          "check": "Kimball fact detail level",
+          "value": "grain",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "models/day02_kimball_retail.md exists",
+          "kind": "fileExists",
+          "path": "models/day02_kimball_retail.md"
+        },
+        {
+          "check": "models/day02_kimball_retail.md declares grain",
+          "kind": "contentMatches",
+          "path": "models/day02_kimball_retail.md",
+          "regex": "(?i)grain"
+        },
+        {
+          "check": "models/day02_datavault_retail.md exists",
+          "kind": "fileExists",
+          "path": "models/day02_datavault_retail.md"
+        },
+        {
+          "check": "models/day02_datavault_retail.md references hub / link / satellite",
+          "kind": "contentMatches",
+          "path": "models/day02_datavault_retail.md",
+          "regex": "(?i)hub|link|satellite"
+        },
+        {
+          "check": "docs/day02_decision_memo.md exists",
+          "kind": "fileExists",
+          "path": "docs/day02_decision_memo.md"
+        },
+        {
+          "check": "docs/day02_decision_memo.md ends with an explicit decision",
+          "kind": "contentMatches",
+          "path": "docs/day02_decision_memo.md",
+          "regex": "(?i)decision|we would ship|choose|recommend"
+        }
+      ]
+    },
+    "objectives": [
+      "Compare Kimball, Inmon and Data Vault 2.0 across integration, delivery speed, and audit fit",
+      "Design a Kimball star schema for the retail scenario with declared grain and SCD Type 2",
+      "Design a Data Vault 2.0 model for the same scenario using hubs, links and satellites",
+      "Write a 1-page decision memo defending which model you would actually ship — and why"
+    ],
+    "tools": [
+      "Kimball",
+      "Data Vault 2.0",
+      "SCD"
+    ],
+    "estimatedMin": 240,
+    "missionPoints": 15,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 3,
+    "moduleNumber": 2,
+    "title": "Data Lakes & Lakehouse — Open Table Formats",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Data Lakes & Lakehouse — Open Table Formats\n\n**Choose an open table format for an AWS-first enterprise and defend the choice**\n\nToday: the evolution from DW → Data Lake → Lakehouse, the small-files problem, storage layout at scale, and the Delta / Iceberg / Hudi decision. You ship a comparison matrix and an ADR that would survive an Architecture Review Board.\n\n**Concepts to learn**\n\n- **DW → Data Lake → Lakehouse** — what each fixed, what each broke, where each still wins\n- **Storage layout** — partitioning strategies, Z-ordering / clustering, compaction, the small-files problem\n- **Open table formats** — Delta Lake vs Apache Iceberg vs Apache Hudi — ACID guarantees, time travel, schema evolution, hidden partitioning, catalog integration, vendor lock-in\n- **The Medallion pattern** — bronze / silver / gold as a discipline, not a product\n- **When the Lakehouse is the wrong answer** — sub-100ms OLTP, tiny data, or single-consumer BI-only workloads\n\n### Build steps\n\n1. **Comparison matrix:** In `docs/day03_lakehouse_comparison.md`, build a table comparing DW vs Data Lake vs Lakehouse across at least 8 dimensions: cost, latency, governance, ecosystem, vendor lock-in, ACID, streaming, ML support. Name the failure mode of each.\n2. **Open-table-format matrix:** In the same file, add a second table comparing Delta / Iceberg / Hudi across: transactions, time travel, schema evolution, hidden partitioning, CDC support, engine ecosystem, cloud-vendor bias.\n3. **Write the ADR:** In `adrs/adr-001-iceberg-vs-delta.md`, choose ONE open table format for an AWS-first enterprise Lakehouse. Format: Context → Decision → Consequences → Alternatives considered. Cite S3 Tables, Redshift/Athena/EMR integration, and vendor lock-in. End with a clear decision line.\n4. **Small-files write-up:** Add a section to the comparison doc explaining how you would prevent the small-files problem in your Bronze layer (streaming ingestion realities).\n5. **Update the repo README:** Add a 'Day 3' entry linking the doc + the ADR.\n6. **Ship to your repo:** Commit and push. Then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. How many layers does the canonical Medallion architecture have? (number)\n2. Which open table format is known for 'hidden partitioning' and partition evolution without table rewrites? (one word)\n3. What does the Bronze layer hold — raw or cleaned data? (one word)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "Medallion layer count",
+          "value": "3",
+          "caseInsensitive": true
+        },
+        {
+          "check": "hidden partitioning format",
+          "value": "iceberg",
+          "caseInsensitive": true
+        },
+        {
+          "check": "bronze layer role",
+          "value": "raw",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "docs/day03_lakehouse_comparison.md exists",
+          "kind": "fileExists",
+          "path": "docs/day03_lakehouse_comparison.md"
+        },
+        {
+          "check": "comparison doc mentions delta and iceberg and hudi",
+          "kind": "contentMatches",
+          "path": "docs/day03_lakehouse_comparison.md",
+          "regex": "(?is)delta.*iceberg.*hudi|iceberg.*delta.*hudi"
+        },
+        {
+          "check": "comparison doc discusses small files",
+          "kind": "contentMatches",
+          "path": "docs/day03_lakehouse_comparison.md",
+          "regex": "(?i)small[- ]files?"
+        },
+        {
+          "check": "adrs/adr-001-iceberg-vs-delta.md exists",
+          "kind": "fileExists",
+          "path": "adrs/adr-001-iceberg-vs-delta.md"
+        },
+        {
+          "check": "ADR uses Context / Decision / Consequences structure",
+          "kind": "contentMatches",
+          "path": "adrs/adr-001-iceberg-vs-delta.md",
+          "regex": "(?is)context.*decision.*consequences"
+        }
+      ]
+    },
+    "objectives": [
+      "Compare DW, Data Lake and Lakehouse across cost, latency, governance and ecosystem — and name each's failure modes",
+      "Compare Delta Lake, Apache Iceberg and Apache Hudi as open table formats for an AWS-first platform",
+      "Write ADR-001 choosing an open table format, with an ARB-quality decision block",
+      "Explain how you would prevent the small-files problem in a streaming Bronze layer"
+    ],
+    "tools": [
+      "Delta Lake",
+      "Apache Iceberg",
+      "Apache Hudi",
+      "Medallion"
+    ],
+    "estimatedMin": 240,
+    "missionPoints": 15,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 4,
+    "moduleNumber": 3,
+    "title": "Amazon Redshift Deep Dive — Sizing, Serverless & Zero-ETL",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Amazon Redshift Deep Dive — Sizing, Serverless & Zero-ETL\n\n**Size a Redshift warehouse three ways and pick Provisioned vs Serverless from the workload**\n\nToday: RA3 architecture, managed storage, WLM, materialized views, Spectrum, Zero-ETL, Data Sharing, distribution styles, sort keys. You build a cost & capacity model, and write an ADR choosing Provisioned vs Serverless for a real workload shape.\n\n**Concepts to learn**\n\n- **Redshift architecture** — leader + compute nodes, RA3 with managed storage (RMS), separation of storage and compute\n- **Provisioned vs Serverless** — pricing model, concurrency scaling, when spiky workloads justify Serverless\n- **WLM / Auto-WLM** — queue-based isolation for interactive vs ETL vs BI\n- **Spectrum & Zero-ETL** — querying S3 directly from Redshift; managed CDC from Aurora / RDS / DynamoDB / Kinesis\n- **Data distribution styles** — KEY / ALL / EVEN / AUTO — and sort keys for zone-map pruning\n- **Materialized views + result cache** — the two free tiers of performance every architect should know\n\n### Build steps\n\n1. **Read the workload:** A 50 TB warehouse serving 3 concurrency tiers — Dev (5 users, small clusters), Staging (20 users, moderate ETL), Prod (100 concurrent BI users + 6 hr nightly ETL window). Details in the seed doc.\n2. **Build the cost & capacity model:** In `models/day04_redshift_cost_model.md` (Markdown table is fine; or an .xlsx), size RA3 Provisioned AND Serverless for each tier. Include per-hour cost, storage cost, concurrency-scaling budget, and a total monthly $ estimate. Aim within 15% of AWS list pricing.\n3. **Distribution & sort key exercise:** Given a 10 TB `fact_claims` table joined heavily to `dim_provider` (100 K rows) and `dim_patient` (10 M rows), pick a distribution style + sort key for each of the three tables. Document reasoning in the cost model file.\n4. **Write the ADR:** In `adrs/adr-002-redshift-provisioned-vs-serverless.md`, decide Provisioned vs Serverless PER tier (they may differ). Context → Decision → Consequences → Alternatives. Cite spiky workload profile, budget predictability, and Concurrency Scaling.\n5. **Update the repo README:** Add a 'Day 4' entry linking the model + the ADR.\n6. **Ship to your repo:** Commit and push. Then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. How many table distribution styles does Redshift support? (number)\n2. Redshift Spectrum queries data that lives directly in which AWS storage service? (short answer)\n3. What is the primary benefit a sort key provides — the one word ending in -ing that describes it? (one word)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "distribution style count",
+          "value": "4",
+          "caseInsensitive": true
+        },
+        {
+          "check": "Spectrum storage service",
+          "value": "s3",
+          "caseInsensitive": true
+        },
+        {
+          "check": "sort key benefit",
+          "value": "pruning",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "models/day04_redshift_cost_model.md exists",
+          "kind": "fileExists",
+          "path": "models/day04_redshift_cost_model.md"
+        },
+        {
+          "check": "cost model mentions Provisioned and Serverless",
+          "kind": "contentMatches",
+          "path": "models/day04_redshift_cost_model.md",
+          "regex": "(?is)provisioned.*serverless|serverless.*provisioned"
+        },
+        {
+          "check": "cost model covers three tiers",
+          "kind": "contentMatches",
+          "path": "models/day04_redshift_cost_model.md",
+          "regex": "(?is)dev.*staging.*prod|dev.*stag.*prod"
+        },
+        {
+          "check": "adrs/adr-002-redshift-provisioned-vs-serverless.md exists",
+          "kind": "fileExists",
+          "path": "adrs/adr-002-redshift-provisioned-vs-serverless.md"
+        },
+        {
+          "check": "ADR follows Context/Decision/Consequences structure",
+          "kind": "contentMatches",
+          "path": "adrs/adr-002-redshift-provisioned-vs-serverless.md",
+          "regex": "(?is)context.*decision.*consequences"
+        }
+      ]
+    },
+    "objectives": [
+      "Explain Redshift RA3 architecture, managed storage, and the separation of storage + compute",
+      "Size Redshift Provisioned AND Serverless across Dev/Staging/Prod within 15% of realistic AWS pricing",
+      "Choose distribution style + sort key for a 10 TB fact table joined to two dimensions",
+      "Write ADR-002 choosing Provisioned vs Serverless per environment, defensible under ARB"
+    ],
+    "tools": [
+      "Redshift",
+      "RA3",
+      "Redshift Serverless",
+      "Spectrum",
+      "Zero-ETL"
+    ],
+    "estimatedMin": 240,
+    "missionPoints": 15,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 5,
+    "moduleNumber": 3,
+    "title": "Glue + EMR + S3 + Lake Formation — AWS-Native Ingestion",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Glue + EMR + S3 + Lake Formation — AWS-Native Ingestion\n\n**Design the ingestion + transformation layer for a bank using ONLY AWS-native services**\n\nToday: the AWS data-lake stack — Glue Data Catalog as the schema single source of truth, Glue Jobs vs EMR (three flavors) for transformation, S3 as governed storage (including S3 Tables), and Lake Formation for fine-grained access. Whiteboard the reference architecture for a 2 TB/day transaction workload.\n\n**Concepts to learn**\n\n- **AWS Glue** — Data Catalog, Crawlers (and their gotchas), Jobs (Spark + Python shell), Studio, DataBrew\n- **EMR flavors** — EMR on EC2 vs EMR Serverless vs EMR on EKS — when to pick which\n- **Spark tuning at architect level** — executor sizing, shuffle partitions, broadcast joins, AQE, dynamic allocation\n- **S3 as data lake foundation** — bucket layout, prefix design, S3 Tables (Iceberg-native), lifecycle policies, encryption (SSE-S3/KMS), Access Points\n- **Lake Formation** — fine-grained access (row/column/cell), LF-tags, cross-account sharing\n\n### Build steps\n\n1. **Read the workload:** A retail bank processing 2 TB/day of transaction data, 50+ downstream analytical use cases, PCI + regional-privacy constraints, no Databricks / Snowflake spend allowed. Details in the seed doc.\n2. **Design the reference architecture:** Draw the ingestion + transformation layer in Excalidraw / draw.io as a C4 Level 2 diagram. Cover: source systems → ingestion (Kinesis / MSK / DMS) → Bronze on S3 → Glue Catalog → transformation (Glue Jobs and/or EMR Serverless) → Silver → Gold on S3 Tables → consumers (Athena, Redshift Spectrum, QuickSight). Save as `diagrams/day05_bank_reference_architecture.png`.\n3. **Bucket / catalog layout:** In `docs/day05_bucket_layout.md`, propose the S3 bucket + prefix strategy (env / domain / dataset / partitioning) and the Glue Catalog database / table naming convention.\n4. **Lake Formation grants:** In the same doc, sketch the LF-tag taxonomy and 3 example grants (analyst-role, engineer-role, compliance-role) that enforce PCI + regional-privacy constraints.\n5. **Write the ADR:** In `adrs/adr-003-glue-vs-emr.md`, decide Glue Jobs vs EMR Serverless vs EMR on EC2 for the transformation layer. Context → Decision → Consequences → Alternatives. Cite Spark-tuning ceiling, cost, ops overhead.\n6. **Update the repo README:** Add a 'Day 5' entry linking the diagram + docs + ADR.\n7. **Ship to your repo:** Commit and push. Then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. How many EMR deployment flavors are there (EC2, Serverless, EKS)? (number)\n2. Which open table format do Amazon S3 Tables use natively? (one word)\n3. Which AWS service holds the central schema / metadata catalog shared across Athena, Redshift Spectrum and EMR? (one word — the product family name)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "EMR flavor count",
+          "value": "3",
+          "caseInsensitive": true
+        },
+        {
+          "check": "S3 Tables format",
+          "value": "iceberg",
+          "caseInsensitive": true
+        },
+        {
+          "check": "AWS catalog service",
+          "value": "glue",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "diagrams/day05_bank_reference_architecture.png exists",
+          "kind": "fileExists",
+          "path": "diagrams/day05_bank_reference_architecture.png"
+        },
+        {
+          "check": "docs/day05_bucket_layout.md exists",
+          "kind": "fileExists",
+          "path": "docs/day05_bucket_layout.md"
+        },
+        {
+          "check": "bucket layout doc mentions Lake Formation",
+          "kind": "contentMatches",
+          "path": "docs/day05_bucket_layout.md",
+          "regex": "(?i)lake formation|LF-?tag"
+        },
+        {
+          "check": "adrs/adr-003-glue-vs-emr.md exists",
+          "kind": "fileExists",
+          "path": "adrs/adr-003-glue-vs-emr.md"
+        },
+        {
+          "check": "ADR compares Glue and EMR",
+          "kind": "contentMatches",
+          "path": "adrs/adr-003-glue-vs-emr.md",
+          "regex": "(?is)glue.*emr|emr.*glue"
+        }
+      ]
+    },
+    "objectives": [
+      "Design an AWS-native reference architecture (ingestion + transformation) for a 2 TB/day bank workload",
+      "Propose an S3 bucket / prefix layout and Glue Catalog naming convention that scales",
+      "Sketch Lake Formation LF-tags + grants that enforce PCI and regional-privacy constraints",
+      "Write ADR-003 choosing Glue Jobs vs EMR Serverless vs EMR on EC2 for the transformation layer"
+    ],
+    "tools": [
+      "AWS Glue",
+      "EMR",
+      "S3",
+      "S3 Tables",
+      "Lake Formation",
+      "Athena"
+    ],
+    "estimatedMin": 240,
+    "missionPoints": 15,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 6,
+    "moduleNumber": 4,
+    "title": "NFRs + Enterprise Patterns — the Dense Calibration Day",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: NFRs + Enterprise Patterns — the Dense Calibration Day\n\n**Derive architecture from NFRs, then pick the right enterprise pattern for the scale**\n\nToday is dense by design — two halves. Morning: NFR-first thinking and the AWS Well-Architected Data Analytics Lens. Afternoon: Lambda / Kappa / Delta, CDC patterns, Data Mesh vs Centralized. This day calibrates candidates who have already lived through these ideas in production; it does not teach them from scratch.\n\n**Concepts to learn**\n\n- **The seven NFR pillars** — security, performance, scalability, reliability (RTO/RPO), cost (FinOps), observability, maintainability\n- **AWS Well-Architected Framework** — 6 pillars plus the Data Analytics Lens and ML Lens as scoring rubrics\n- **Batch / micro-batch / streaming** — Kinesis Data Streams, Firehose, MSK/Kafka on AWS, Flink on KDA\n- **Lambda vs Kappa vs Delta architectures** — what each solved, what each broke\n- **CDC patterns** — AWS DMS, Debezium, Zero-ETL — when each wins\n- **Data Mesh** (Zhamak Dehghani's 4 pillars) vs **Centralized data platform** — org size, governance maturity, and mesh's overhead cost\n- **Multi-tenancy** — pool vs silo vs bridge for regulated data\n\n### Build steps\n\n1. **Read the scenario:** A US health-insurance payer with 8 BUs, HIPAA-regulated, planning a real-time member 360° + fraud + regulatory-reporting platform. Details in the seed doc.\n2. **NFR matrix:** In `docs/day06_nfr_matrix.md`, produce a table with rows = 7 NFR pillars, columns = target / measurement / current state / architectural implication. Include RTO, RPO, PII / PHI handling, cost ceiling, and observability SLOs.\n3. **HLD diagram:** In Excalidraw / draw.io, draw C4 Level 1 (System Context) and Level 2 (Container) views for the payer platform. Save as `diagrams/day06_healthcare_hld.png`.\n4. **Well-Architected scorecard:** In `docs/day06_wellarchitected_scorecard.md`, fill in the Data Analytics Lens rubric — for each pillar, note 3–5 checks that your HLD passes or explicitly parks with justification.\n5. **Write the ADR:** In `adrs/adr-004-datamesh-vs-centralized.md`, decide Data Mesh vs Centralized Lakehouse for this 8-BU payer. Context → Decision → Consequences → Alternatives. Cite BU count, data-team maturity, and mesh's federation cost.\n6. **Update the repo README:** Add a 'Day 6' entry linking all four artifacts.\n7. **Ship to your repo:** Commit and push. Then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. How many pillars does the AWS Well-Architected Framework have (as of 2025)? (number)\n2. How many principles does Zhamak Dehghani's Data Mesh define? (number)\n3. RTO stands for ___ Time Objective. (one word)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "Well-Architected pillar count",
+          "value": "6",
+          "caseInsensitive": true
+        },
+        {
+          "check": "Data Mesh pillar count",
+          "value": "4",
+          "caseInsensitive": true
+        },
+        {
+          "check": "RTO expansion",
+          "value": "recovery",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "docs/day06_nfr_matrix.md exists",
+          "kind": "fileExists",
+          "path": "docs/day06_nfr_matrix.md"
+        },
+        {
+          "check": "NFR matrix names RTO and RPO",
+          "kind": "contentMatches",
+          "path": "docs/day06_nfr_matrix.md",
+          "regex": "(?is)RTO.*RPO|RPO.*RTO"
+        },
+        {
+          "check": "diagrams/day06_healthcare_hld.png exists",
+          "kind": "fileExists",
+          "path": "diagrams/day06_healthcare_hld.png"
+        },
+        {
+          "check": "docs/day06_wellarchitected_scorecard.md exists",
+          "kind": "fileExists",
+          "path": "docs/day06_wellarchitected_scorecard.md"
+        },
+        {
+          "check": "scorecard references Data Analytics Lens",
+          "kind": "contentMatches",
+          "path": "docs/day06_wellarchitected_scorecard.md",
+          "regex": "(?i)data analytics lens|analytics lens"
+        },
+        {
+          "check": "adrs/adr-004-datamesh-vs-centralized.md exists",
+          "kind": "fileExists",
+          "path": "adrs/adr-004-datamesh-vs-centralized.md"
+        }
+      ]
+    },
+    "objectives": [
+      "Turn a vague CIO ask into a full NFR matrix across 7 pillars",
+      "Draw a C4 L1 + L2 HLD for an 8-BU HIPAA-regulated health-insurance payer",
+      "Fill an AWS Well-Architected Data Analytics Lens scorecard against your HLD",
+      "Write ADR-004 choosing Data Mesh vs Centralized Lakehouse for this org shape"
+    ],
+    "tools": [
+      "AWS Well-Architected",
+      "Data Analytics Lens",
+      "Data Mesh",
+      "Lambda / Kappa / Delta"
+    ],
+    "estimatedMin": 300,
+    "missionPoints": 20,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 7,
+    "moduleNumber": 5,
+    "title": "Data + AI Platform — Where the Two Meet",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Data + AI Platform — Where the Two Meet\n\n**Design one platform where analytics, MLOps and Generative AI share the same governance plane**\n\n'Scalable enterprise Data + AI platforms' is the north star of this role. Today you design them together: feature stores, MLOps on SageMaker, Bedrock for foundation models, RAG architectures, and the shared governance plane (Lake Formation + IAM + KMS + CloudTrail) that keeps AI accountable.\n\n**Concepts to learn**\n\n- **Feature Store** — SageMaker Feature Store, offline + online, preventing training-serving skew\n- **MLOps on AWS** — SageMaker Pipelines, Model Registry, Model Monitor, Clarify (bias / drift)\n- **Inference patterns** — online, offline batch, real-time streaming — and their SLOs\n- **Amazon Bedrock** — foundation models, Knowledge Bases, Agents, Guardrails\n- **RAG architecture** — vector stores (OpenSearch Serverless, Aurora pgvector, Kendra, Pinecone), chunking strategies, re-ranking\n- **Fine-tune vs RAG vs prompt engineering** — the ADR-worthy trade-off (freshness, cost, latency, style/format control)\n- **Responsible AI** — bias, drift, PII leakage in prompts, hallucination guardrails, model cards, evaluation harnesses\n- **The shared governance plane** — Lake Formation + IAM + KMS + CloudTrail govern data, features, models AND Bedrock the same way\n\n### Build steps\n\n1. **Pick your capstone industry:** From the pool (retail / bank / health-payer / telco), pick the one you will use for the Day 9 capstone build. Note it in the repo README.\n2. **Draw the Data + AI reference architecture:** In Excalidraw / draw.io, extend the Day 6 HLD with the AI/ML plane — Feature Store, SageMaker training + serving, Bedrock + Knowledge Base + Guardrails, vector store, RAG retrieval path, feedback / eval loop. Save as `diagrams/day07_data_ai_reference_architecture.png`.\n3. **Vector store trade-off:** In `docs/day07_vector_store_choice.md`, compare OpenSearch Serverless vs Aurora pgvector vs Kendra vs Pinecone across latency, cost, hybrid-search support, and AWS-native fit. Recommend one.\n4. **Write the ADR:** In `adrs/adr-005-rag-vs-finetuning.md`, decide RAG vs Fine-tuning (vs Prompt Engineering) for a customer-support Copilot in your capstone industry. Context → Decision → Consequences → Alternatives. Cite freshness, cost per query, latency budget, and behavior/style control.\n5. **Responsible-AI checklist:** Add a section to the ADR listing the guardrails you would ship on Day 1 (PII masking in prompts + responses, hallucination-detection eval, drift monitoring on outputs, model cards).\n6. **Update the repo README:** Add a 'Day 7' entry linking all three artifacts.\n7. **Ship to your repo:** Commit and push. Then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. Which AWS service hosts foundation models, Knowledge Bases, Agents, and Guardrails? (one word)\n2. Which AWS service hosts the offline + online feature store? (one word)\n3. RAG stands for ___-augmented generation. (one word)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "foundation-model service",
+          "value": "bedrock",
+          "caseInsensitive": true
+        },
+        {
+          "check": "feature store service",
+          "value": "sagemaker",
+          "caseInsensitive": true
+        },
+        {
+          "check": "RAG expansion",
+          "value": "retrieval",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "diagrams/day07_data_ai_reference_architecture.png exists",
+          "kind": "fileExists",
+          "path": "diagrams/day07_data_ai_reference_architecture.png"
+        },
+        {
+          "check": "docs/day07_vector_store_choice.md exists",
+          "kind": "fileExists",
+          "path": "docs/day07_vector_store_choice.md"
+        },
+        {
+          "check": "vector store doc mentions at least two options",
+          "kind": "contentMatches",
+          "path": "docs/day07_vector_store_choice.md",
+          "regex": "(?is)opensearch|pgvector|kendra|pinecone"
+        },
+        {
+          "check": "adrs/adr-005-rag-vs-finetuning.md exists",
+          "kind": "fileExists",
+          "path": "adrs/adr-005-rag-vs-finetuning.md"
+        },
+        {
+          "check": "ADR discusses responsible AI guardrails",
+          "kind": "contentMatches",
+          "path": "adrs/adr-005-rag-vs-finetuning.md",
+          "regex": "(?i)guardrail|responsible|pii|hallucination"
+        },
+        {
+          "check": "README notes chosen capstone industry",
+          "kind": "contentMatches",
+          "path": "README.md",
+          "regex": "(?i)capstone|day 7|day 9"
+        }
+      ]
+    },
+    "objectives": [
+      "Extend the Day 6 HLD with an AI/ML plane (Feature Store, SageMaker, Bedrock, vector store, feedback loop)",
+      "Compare vector store options and recommend one for the capstone industry",
+      "Write ADR-005 choosing RAG vs Fine-tuning vs Prompt Engineering for a customer-support Copilot",
+      "List Responsible-AI guardrails that ship on Day 1 (not bolted on after an incident)"
+    ],
+    "tools": [
+      "SageMaker",
+      "Bedrock",
+      "Knowledge Bases",
+      "Guardrails",
+      "OpenSearch Serverless",
+      "pgvector"
+    ],
+    "estimatedMin": 240,
+    "missionPoints": 15,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 8,
+    "moduleNumber": 6,
+    "title": "Enterprise Transformation & Migration",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Enterprise Transformation & Migration\n\n**Plan a real 400 TB Teradata → AWS Lakehouse migration end-to-end**\n\nToday: legacy modernization at enterprise scale. The AWS Six R's, the Strangler Fig pattern, dual-write / shadow-read realities, reconciliation harnesses, and the change-management side that decides whether a migration ships or dies. You produce a migration strategy document and a CFO-facing exec summary.\n\n**Concepts to learn**\n\n- **The AWS Six R's** — Retire, Retain, Rehost, Replatform, Refactor, Repurchase — applied to data workloads\n- **Migration patterns** — Teradata → Redshift, Oracle DW → Snowflake / Databricks, on-prem Hadoop → EMR + S3 + Iceberg, Informatica → Glue / dbt\n- **Strangler Fig** — route-by-route incremental replacement so the legacy system dies slowly and safely\n- **Dual-write and shadow-read** — the risks (drift, reconciliation complexity) and when CDC-into-single-writer is safer\n- **Zero-downtime migration** — the hardest problem in the playbook\n- **AWS Migration Acceleration Program (MAP)**, **Schema Conversion Tool (SCT)**, **Database Migration Service (DMS)** — what each does\n- **Change management** — Kotter's 8 steps applied to a data-platform migration; ARB (Architecture Review Board), RFC / ADR discipline; stakeholder RACI\n\n### Build steps\n\n1. **Read the scenario:** A 400 TB on-prem Teradata warehouse serving 1200 reports across 6 BUs, 12-month migration budget, must stay online through the migration. Details in the seed doc.\n2. **Migration Strategy Document:** In `docs/day08_migration_strategy.md`, produce:\n   - Workload inventory table (top 20 workloads) with a Six R's decision per workload and one-line rationale.\n   - 3-wave rollout plan (which workloads move first / second / third and why).\n   - Reconciliation approach — how you prove the new platform's numbers match the old.\n   - Rollback strategy — what triggers it and how you execute.\n   - Risk register — top 5 risks with detection + mitigation.\n   - Tooling — where AWS SCT, DMS, MAP fit.\n3. **CFO exec summary (1 page):** In `docs/day08_cfo_exec_summary.md`, write ONE page for the CFO — cost estimate (with range), timeline (with confidence), top 3 risks, and the ask. Prose, no jargon, executive register.\n4. **Update the repo README:** Add a 'Day 8' entry linking both docs.\n5. **Ship to your repo:** Commit and push. Then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. How many R's are in the AWS migration decision framework? (number)\n2. Which AWS service moves data during a heterogeneous migration (source engine ≠ target engine)? (short form — the 3-letter acronym)\n3. What is the phased-migration pattern called (where routes move to the new system one at a time until the old system dies)? Named after a plant. (one word)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "AWS R count",
+          "value": "6",
+          "caseInsensitive": true
+        },
+        {
+          "check": "heterogeneous data-migration service",
+          "value": "dms",
+          "caseInsensitive": true
+        },
+        {
+          "check": "phased-migration pattern",
+          "value": "strangler",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "docs/day08_migration_strategy.md exists",
+          "kind": "fileExists",
+          "path": "docs/day08_migration_strategy.md"
+        },
+        {
+          "check": "migration strategy uses the Six R's",
+          "kind": "contentMatches",
+          "path": "docs/day08_migration_strategy.md",
+          "regex": "(?i)retire|retain|rehost|replatform|refactor|repurchase"
+        },
+        {
+          "check": "migration strategy has a wave / phase plan",
+          "kind": "contentMatches",
+          "path": "docs/day08_migration_strategy.md",
+          "regex": "(?i)wave|phase"
+        },
+        {
+          "check": "migration strategy has a risk register",
+          "kind": "contentMatches",
+          "path": "docs/day08_migration_strategy.md",
+          "regex": "(?i)risk"
+        },
+        {
+          "check": "docs/day08_cfo_exec_summary.md exists",
+          "kind": "fileExists",
+          "path": "docs/day08_cfo_exec_summary.md"
+        },
+        {
+          "check": "exec summary mentions cost and timeline",
+          "kind": "contentMatches",
+          "path": "docs/day08_cfo_exec_summary.md",
+          "regex": "(?is)cost.*timeline|timeline.*cost|budget"
+        }
+      ]
+    },
+    "objectives": [
+      "Apply the AWS Six R's per workload to a 400 TB Teradata → AWS Lakehouse migration",
+      "Design a 3-wave rollout with reconciliation, rollback and a top-5 risk register",
+      "Place AWS SCT and DMS in the migration toolchain correctly",
+      "Write a CFO-facing 1-page exec summary in executive register — cost, timeline, top-3 risks, ask"
+    ],
+    "tools": [
+      "AWS SCT",
+      "AWS DMS",
+      "AWS MAP",
+      "Strangler Fig",
+      "Kotter change management"
+    ],
+    "estimatedMin": 240,
+    "missionPoints": 15,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 9,
+    "moduleNumber": 7,
+    "title": "Capstone Build — Walking-Skeleton & 2-Page Brief",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Capstone Build — Walking-Skeleton & 2-Page Brief\n\n**Produce the artifacts you will defend tomorrow in front of a mock CTO/CDO panel**\n\nThis is a walking-skeleton day, not a finished-portfolio day. Your job: sketch the shape of an enterprise Data + AI platform for the scenario assigned this morning, capture your reasoning in a decisions log, and write the 2-page prose brief HR / the panel will read. Detail comes tomorrow on the whiteboard.\n\n**Concepts to learn**\n\n- **Walking-skeleton vs finished portfolio** — the smallest end-to-end sketch that shows every layer + every major decision boundary, without finishing any component\n- **Time-boxing architecture work** — what belongs on paper, what belongs on a whiteboard, what stays in the architect's head\n- **The decisions log** — 3 decisions (with rejected alternative + reason) / 3 risks (with detection + mitigation) / 3 week-1 validations (the 'known unknowns' made concrete — a senior signal)\n- **The 2-page brief** — prose only, no diagrams, no bullets on the second page — the artifact HR / a non-panel reviewer / a week-later comparison rests on\n\n### Build steps\n\n1. **Read your scenario:** Revealed this morning. Pool: global retailer (customer + supply-chain), bank (real-time fraud + regulatory reporting), health-insurance payer (claims + risk-scoring + member Copilot), telco (network analytics + churn prediction).\n2. **Walking-skeleton HLD:** Whiteboard or Excalidraw a C4 Level 1 + Level 2 view of your platform. Export as `capstone/day09_hld.png`. Do NOT polish — the sketch is the point.\n3. **One LLD:** Pick ONE critical component (real-time fraud detection path / feature store / regulatory reporting engine / whatever the scenario stresses) and draw one Level 3 (Component) diagram. Save as `capstone/day09_lld.png`.\n4. **Decisions log:** In `capstone/day09_decisions_log.md`, write exactly three sections — Decisions (3 items), Risks (3 items), Week-1 Validations (3 items). Each item: 2–4 lines, concrete, non-generic.\n5. **The 2-page brief:** In `capstone/day09_architecture_brief.md`, write PROSE only — no bullets, no diagrams, no tables — in exactly two pages.\n   - Page 1: What it is / Why this shape / What it deliberately isn't.\n   - Page 2: Top 3 decisions / Top 3 risks / Top 3 week-1 validations, each as a paragraph.\n6. **Rehearse tomorrow's defense:** 10 min exec pitch → 15 min technical deep-dive → 15 min hostile Q&A → 5 min leadership scenario. Do one dry-run out loud.\n7. **Ship to your repo:** Commit and push. Then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. How many decisions are in the decisions log's Decisions section? (number)\n2. How many pages is the written Architecture Brief? (number)\n3. What kind of skeleton are you building today? ___-skeleton. (one word)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "decisions count",
+          "value": "3",
+          "caseInsensitive": true
+        },
+        {
+          "check": "brief page count",
+          "value": "2",
+          "caseInsensitive": true
+        },
+        {
+          "check": "skeleton type",
+          "value": "walking",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "capstone/day09_hld.png exists",
+          "kind": "fileExists",
+          "path": "capstone/day09_hld.png"
+        },
+        {
+          "check": "capstone/day09_lld.png exists",
+          "kind": "fileExists",
+          "path": "capstone/day09_lld.png"
+        },
+        {
+          "check": "capstone/day09_decisions_log.md exists",
+          "kind": "fileExists",
+          "path": "capstone/day09_decisions_log.md"
+        },
+        {
+          "check": "decisions log has all three sections",
+          "kind": "contentMatches",
+          "path": "capstone/day09_decisions_log.md",
+          "regex": "(?is)decisions.*risks.*(week[- ]1|validation)"
+        },
+        {
+          "check": "capstone/day09_architecture_brief.md exists",
+          "kind": "fileExists",
+          "path": "capstone/day09_architecture_brief.md"
+        }
+      ]
+    },
+    "objectives": [
+      "Deliver a walking-skeleton HLD (C4 L1 + L2) and one LLD (C4 L3) for the assigned capstone scenario",
+      "Write a concrete decisions log — 3 decisions, 3 risks, 3 week-1 validations — that reads as senior-architect judgment",
+      "Produce a 2-page written Architecture Brief in prose that holds together for the HR / panel file",
+      "Rehearse the Day 10 defense structure end-to-end at least once"
+    ],
+    "tools": [
+      "Excalidraw / draw.io",
+      "C4 model",
+      "GitHub"
+    ],
+    "estimatedMin": 480,
+    "missionPoints": 25,
+    "isProjectDay": true
+  },
+  {
+    "dayNumber": 10,
+    "moduleNumber": 7,
+    "title": "Live Whiteboard Defense — Panel & Seniority Calibration",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Live Whiteboard Defense — Panel & Seniority Calibration\n\n**Defend your walking-skeleton in front of a mock CTO/CDO panel — the recruitment output the hiring committee reads**\n\nToday is graded live. Each candidate gets 45 minutes with a mock panel (CTO + CDO + Senior Engineer + Head of Data). The panel scores on the 8-dimension rubric from Day 1, then produces the seniority calibration note that goes into the recruitment file.\n\n**Concepts to learn**\n\n- **Defense structure** — 10 min executive pitch → 15 min technical deep-dive → 15 min hostile Q&A → 5 min leadership scenario\n- **Register flex** — moving between CTO exec-pitch and engineer whiteboard registers in the same session\n- **Handling hostile Q&A** — pushback without ego, disagreeing with the panel when correct, updating on new information without collapsing\n- **The leadership scenario** — 'your best engineer just quit mid-migration, what do you do?' — concrete moves, not platitudes\n- **The seniority ladder** — Senior Architect / Principal Architect / Distinguished / Not-Yet-Ready — what closes any gap\n- **Career / role fit** — customer-facing solution architect vs platform architect vs domain architect vs head of architecture\n\n### Build steps\n\n1. **Prep (30 min before your slot):** Re-read your Day 9 decisions log and 2-page brief. Anticipate the 3 hardest questions.\n2. **Deliver the defense:** 45 min live, recorded. Structure below. Bring nothing but your Day 9 artifacts and a whiteboard marker.\n   - **10 min — Executive pitch:** What the platform is, why this shape, what it deliberately isn't. Register: CTO briefing.\n   - **15 min — Technical deep-dive:** Walk the HLD; drill into the LLD component; defend the top 3 decisions and their rejected alternatives.\n   - **15 min — Hostile Q&A:** The panel will ask 'we already have Databricks, why AWS-native?', 'how do you handle a $2M/month cost overrun?', 'explain your DR posture across regions', 'what breaks first at 10× scale?', 'walk me through onboarding a junior engineer to this platform'.\n   - **5 min — Leadership scenario:** 'Your best engineer just quit mid-migration. What do you do in week 1?'\n3. **Post-defense — record the artifacts:** Commit these to `capstone/`:\n   - `day10_defense_recording.md` — link to the video (Loom / Zoom / Google Drive) plus a 5-line summary.\n   - `day10_rubric_scores.md` — the panel's 8-dimension score sheet (Data architecture / AWS solution / Lakehouse-DW-Lake / Enterprise transformation / Data + AI / Technical leadership / Communication / Cost & operational).\n   - `day10_seniority_calibration.md` — the panel's calibration note: level placement (Senior / Principal / Distinguished / Not-Yet-Ready), what closes any gap, and role-fit recommendation.\n4. **Retrospective:** Update the repo README with a Day 10 section — what worked, what you would do differently, and where you rank yourself relative to the panel's score.\n5. **Ship to your repo:** Commit and push. Then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. Total defense length in minutes (10 + 15 + 15 + 5). (number)\n2. How many dimensions are in the recruitment scoring rubric? (number)\n3. Hostile Q&A duration in minutes. (number)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "defense total minutes",
+          "value": "45",
+          "caseInsensitive": true
+        },
+        {
+          "check": "rubric dimension count",
+          "value": "8",
+          "caseInsensitive": true
+        },
+        {
+          "check": "hostile Q&A minutes",
+          "value": "15",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "capstone/day10_defense_recording.md exists",
+          "kind": "fileExists",
+          "path": "capstone/day10_defense_recording.md"
+        },
+        {
+          "check": "recording note links a video",
+          "kind": "contentMatches",
+          "path": "capstone/day10_defense_recording.md",
+          "regex": "(?i)https?://"
+        },
+        {
+          "check": "capstone/day10_rubric_scores.md exists",
+          "kind": "fileExists",
+          "path": "capstone/day10_rubric_scores.md"
+        },
+        {
+          "check": "rubric scores cover the 8 dimensions",
+          "kind": "contentMatches",
+          "path": "capstone/day10_rubric_scores.md",
+          "regex": "(?is)data architecture.*aws.*lakehouse.*transformation.*ai.*leadership.*communication.*cost"
+        },
+        {
+          "check": "capstone/day10_seniority_calibration.md exists",
+          "kind": "fileExists",
+          "path": "capstone/day10_seniority_calibration.md"
+        },
+        {
+          "check": "calibration note places on the seniority ladder",
+          "kind": "contentMatches",
+          "path": "capstone/day10_seniority_calibration.md",
+          "regex": "(?i)senior|principal|distinguished|not[- ]yet[- ]ready"
+        },
+        {
+          "check": "README has a Day 10 retro section",
+          "kind": "contentMatches",
+          "path": "README.md",
+          "regex": "(?i)day 10|retro"
+        }
+      ]
+    },
+    "objectives": [
+      "Deliver a 45-min recorded defense in front of a mock CTO/CDO panel with the 10/15/15/5 structure",
+      "Handle hostile Q&A across cost, DR, scale, onboarding without ego or collapse",
+      "Answer the leadership scenario with concrete moves — hiring, communication, scope, timeline",
+      "Ship the recruitment output: defense recording + 8-dimension rubric scores + seniority calibration note"
+    ],
+    "tools": [
+      "Whiteboard",
+      "Video recording",
+      "Rubric",
+      "GitHub"
+    ],
+    "estimatedMin": 240,
+    "missionPoints": 30,
+    "isProjectDay": true
+  }
+]

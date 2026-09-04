@@ -67,9 +67,11 @@ export function DaySubmitPanel({
       if (result.ok) {
         refresh();
         const synergyMsg =
-          result.synergyAwarded !== undefined
-            ? `Day ${dayNumber} submitted! +${result.synergyAwarded} synergy`
-            : `Day ${dayNumber} submitted!`;
+          result.synergyAwarded === undefined
+            ? `Day ${dayNumber} submitted!`
+            : result.synergyAwarded > 0
+              ? `Day ${dayNumber} submitted! +${result.synergyAwarded} synergy`
+              : `Day ${dayNumber} submitted! You've already earned today's synergy.`;
         toast.success(synergyMsg);
         if (dayNumber === 1) {
           try {

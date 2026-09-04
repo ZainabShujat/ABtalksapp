@@ -26,6 +26,7 @@ export {
   applyPointsChange,
   lockWalletBalance,
   submissionAwardTotal,
+  hasEarnedSubmissionPointsOnIstDate,
   withLegacyPointsMirrorFlush,
 } from "./points";
 export { getByPublicId, listForUser } from "./credentials";
