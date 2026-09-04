@@ -165,6 +165,24 @@ export default function WorkshopThemeStyles() {
         .wk-root .wk-cta:hover { transform: none; transition: none; }
       }
 
+      /* A scrollbar for the Upcoming Workshops column — thin, in the page's own
+         warm neutrals, and only visible where it is actually scrolling. The
+         default is a wide grey bar that reads as a browser artefact sitting
+         inside the design rather than part of it. Firefox takes the two
+         standard properties; WebKit needs its own pseudo-elements. */
+      .wk-root .wk-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: var(--wk-card-border) transparent;
+        overscroll-behavior: contain;
+      }
+      .wk-root .wk-scroll::-webkit-scrollbar { width: 6px; }
+      .wk-root .wk-scroll::-webkit-scrollbar-track { background: transparent; }
+      .wk-root .wk-scroll::-webkit-scrollbar-thumb {
+        background: var(--wk-card-border);
+        border-radius: 999px;
+      }
+      .wk-root .wk-scroll:hover::-webkit-scrollbar-thumb { background: var(--wk-muted); }
+
       /* The shared ui/checkbox paints itself with the app-wide primary, which
          is still indigo. Base UI exposes data-slot / data-checked, so the
          workshop palette is scoped on here rather than forking the component.
