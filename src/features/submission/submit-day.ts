@@ -111,7 +111,6 @@ export async function submitDay(input: {
   const githubStored = trimOrNull(input.githubUrl);
   const linkedinStored = trimOrNull(input.linkedinUrl);
   const hasGithub = githubStored !== null;
-  const hasLinkedin = linkedinStored !== null;
   const githubNormalized = hasGithub
     ? normalizeGithubUrl(githubStored)
     : null;
@@ -232,8 +231,7 @@ export async function submitDay(input: {
           enrollmentId: enrollment.id,
           challengeId: enrollment.challengeId,
           dayNumber,
-          hasGithub,
-          hasLinkedin,
+          istDateKey: submittedAtIst,
         });
       } else {
         submission = await tx.submission.update({

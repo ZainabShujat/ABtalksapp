@@ -131,9 +131,11 @@ export function SubmissionFlow({
       setSuccessDaysCompleted(res.daysCompleted);
       setStep("success");
       const synergyMsg =
-        res.synergyAwarded !== undefined
-          ? `Day ${dayNumber} complete! +${res.synergyAwarded} synergy`
-          : `Day ${dayNumber} complete!`;
+        res.synergyAwarded === undefined
+          ? `Day ${dayNumber} complete!`
+          : res.synergyAwarded > 0
+            ? `Day ${dayNumber} complete! +${res.synergyAwarded} synergy`
+            : `Day ${dayNumber} complete! You've already earned today's synergy.`;
       toast.success(synergyMsg);
     } finally {
       setIsSubmitting(false);
