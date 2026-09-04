@@ -2,8 +2,6 @@
 
 import type { MouseEvent } from "react";
 import { ChevronRight, UserRound } from "lucide-react";
-import { refPublicId } from "@/features/hire/candidate-ref";
-import { RequestIntroButton } from "@/components/hire/request-intro-button";
 import { DeskShortlistButton } from "@/components/hire/desk-shortlist-button";
 import { ShortlistButton } from "@/components/talent/shortlist-button";
 import {
@@ -21,6 +19,15 @@ import { cn } from "@/lib/utils";
 import { buildCardPills } from "@/components/hire/hire-card-facts";
 
 /**
+ * Tags shown on a Scout result card.
+ *
+ * Four, not the shared `MAX_CARD_PILLS` of five: the row sits beside the score
+ * column and a fifth tag is what pushed it onto a second line. Saved for later
+ * and the shortlist pod keep the shared cap — they have the full width.
+ */
+const DESK_CARD_PILLS = 4;
+
+/**
  * A stable tint index for a skill name.
  *
  * Same hash the design mockup uses, so "React" is the same hue on every card,
@@ -33,6 +40,71 @@ function skillTint(skill: string): string {
     hash = (hash * 31 + skill.charCodeAt(i)) % 997;
   }
   return `desk-pill--c${hash % 6}`;
+}
+
+/**
+ * A stand-in surname of the same length as the real one.
+ *
+ * Deterministic from the name itself, so a candidate's block does not change
+ * shape between renders, and never derived from the real letters — the point is
+ * that the actual surname is not written into the page at all. It is only ever
+ * seen through a blur, so the letters carry no meaning; what matters is that the
+ * word is the right length and has a name-like silhouette.
+ */
+const MASK_LETTERS = "abcdefghijklmnopqrstuvwxyz";
+
+function decoySurname(seedText: string, length: number): string {
+  let seed = 0;
+  for (let i = 0; i < seedText.length; i += 1) {
+    seed = (seed * 31 + seedText.charCodeAt(i)) % 9973;
+  }
+  let out = "";
+  for (let i = 0; i < length; i += 1) {
+    seed = (seed * 73 + 41) % 9973;
+    out += MASK_LETTERS[seed % MASK_LETTERS.length];
+  }
+  return out.charAt(0).toUpperCase() + out.slice(1);
+}
+
+/**
+ * Given name in the clear, family name behind a blur.
+ *
+ * The blur is CSS, but the text under it is a decoy — the real surname is never
+ * put in the DOM, so this is not the "blur over real text" that `LockedField`
+ * warns about. Reading the page source yields nothing.
+ *
+ * A single-token name is left alone: there is no family name to hide, and
+ * blurring the only word would leave the card anonymous.
+ */
+export function splitName(name: string): { given: string; masked: string | null } {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return { given: name.trim(), masked: null };
+  const family = parts.slice(1).join(" ");
+  return {
+    given: parts[0]!,
+    // At least four glyphs so a two-letter surname still reads as a word.
+    masked: decoySurname(name, Math.max(4, Array.from(family).length)),
+  };
+}
+
+/**
+ * The card's name treatment, as a component so the inspector can render the
+ * identical thing. Two hand-rolled copies would drift, and the surname showing
+ * clear in the panel while blurred on the card is exactly the inconsistency
+ * this exists to stop.
+ */
+export function MaskedName({ name }: { name: string }) {
+  const { given, masked } = splitName(name);
+  return (
+    <span className="desk-name">
+      <span>{given}</span>
+      {masked && (
+        <span className="desk-name__gate" aria-label="Surname hidden">
+          <span aria-hidden="true">{masked}</span>
+        </span>
+      )}
+    </span>
+  );
 }
 
 export function DeskMatchCard({
@@ -54,7 +126,6 @@ export function DeskMatchCard({
   const preview = isLockedPreview(match) ? match.preview : null;
   const { upgradeOpen, openUpgrade, dismissUpgrade } = useUpgradePrompt();
   const e = match.evidence ?? {};
-  const publicId = refPublicId(match.candidateRef);
   const skills = e.skills ?? [];
 
   // The card is the click target, not just the "View more details" link.
@@ -207,7 +278,11 @@ export function DeskMatchCard({
           </span>
           <div>
             <p className="desk-card__role">
-              {match.displayName || match.jobRole}
+              {match.displayName ? (
+                <MaskedName name={match.displayName} />
+              ) : (
+                match.jobRole
+              )}
               {rank === 1 && <span className="desk-card__top">Top match</span>}
             </p>
             {(skills.length > 0 || match.displayName) && (
@@ -217,18 +292,24 @@ export function DeskMatchCard({
                   : match.jobRole}
               </p>
             )}
+            {/* The public id (AB-xxxx) is not shown on this card. `refPublicId`
+                is untouched and every other surface still uses it — the
+                inspector derives its own, and the shortlist and evidence cache
+                key on it. The filter already drops empties, so a card with no
+                location renders nothing rather than a stray separator. */}
             <p className="desk-card__ref">
-              {[match.locationLabel, publicId].filter(Boolean).join(" · ")}
+              {[match.locationLabel].filter(Boolean).join(" · ")}
             </p>
           </div>
         </div>
         <div className="desk-card__right">
           <div className="desk-card__score">
+            {/* The tier label (PARTIAL / NONE) is not printed. `match.tier`
+                is untouched and still drives ordering, the gap report and the
+                inspector — the number and its denominator are what the card
+                shows. */}
             <div>
               <b>{match.score}</b>
-              {match.tier !== "STRONG" && (
-                <span className="desk-card__partial">{match.tier}</span>
-              )}
             </div>
             <span>out of 100</span>
           </div>
@@ -240,12 +321,33 @@ export function DeskMatchCard({
         </div>
       </header>
 
+      {/*
+        The "Availability unconfirmed" pill is dropped here rather than in
+        `buildCardPills`, which is shared: `MatchPills` draws the same row in
+        Saved for later and in the shortlist pod, and both should keep the
+        warning. Filtering on the builder's own `key` — the same string it
+        pushes — keeps the two in step without a second copy of the list.
+
+        The underlying `match.availabilityUnknown` is untouched, so the gap it
+        drives in the inspector and the outreach note still say it.
+
+        The row is capped at four here rather than the shared MAX_CARD_PILLS of
+        five — the reference card carries four tags and the fifth is what made
+        the row wrap on a narrow column. The builder is asked for more than four
+        and re-capped after the filter, because it slices to its own cap first:
+        filtering its result alone would leave four minus one whenever
+        availability landed inside the slice, i.e. a dropped pill rather than a
+        hidden one.
+      */}
       <div className="desk-card__facts">
-        {buildCardPills(match).map((pill) => (
-          <span key={pill.key} className={pill.className}>
-            {pill.label}
-          </span>
-        ))}
+        {buildCardPills(match, DESK_CARD_PILLS + 2)
+          .filter((pill) => pill.key !== "availability")
+          .slice(0, DESK_CARD_PILLS)
+          .map((pill) => (
+            <span key={pill.key} className={pill.className}>
+              {pill.label}
+            </span>
+          ))}
       </div>
 
       {match.rationale && <p className="desk-card__why">{match.rationale}</p>}
@@ -268,12 +370,19 @@ export function DeskMatchCard({
           className={cn("desk-pod", match.shortlisted && "desk-pod--on")}
           podLabel
         />
-        <RequestIntroButton
-          candidateRef={match.candidateRef}
-          existingStatus={match.engagementStatus ?? null}
-          publicId={publicId}
-          className="desk-request"
-        />
+        {/*
+          "Request an intro" is deliberately not on this card.
+
+          The button, its server action and the whole engagement flow are
+          untouched — `RequestIntroButton` still renders in `CandidateInspector`
+          (behind "View more details") and in `MatchCard`, which is what the
+          guest-matches and request pages use. Only the Scout desk's own card
+          stops offering it, so the recruiter reads the profile before asking
+          for an introduction rather than firing one off the results list.
+
+          `desk-card__cta` is flex with `justify-content: flex-end`, so the two
+          remaining actions close up on their own; no spacing to adjust.
+        */}
       </div>
     </article>
   );

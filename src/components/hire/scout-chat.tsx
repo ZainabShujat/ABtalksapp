@@ -769,16 +769,21 @@ export function ScoutChat({
     setOpenMatch(null);
   }
 
-  // The strip is feedback, not a form. Nine grey labels under an empty composer
-  // tell the recruiter nothing and cost the field a row of height, so the strip
-  // only appears once something has actually been captured, and only shows what
-  // was captured. `criteria` itself stays whole — the Requirement menu still
-  // lists all nine with their on/off state.
-  const metCriteria = criteria.filter((c) => c.on);
-  const stripOpen = metCriteria.length > 0;
-  const stripItemsRef = useRef(metCriteria);
-  if (stripOpen) stripItemsRef.current = metCriteria;
-  const stripItems = stripOpen ? metCriteria : stripItemsRef.current;
+  // The strip shows all nine criteria from the first render, muted until each
+  // one is captured.
+  //
+  // It used to render only `criteria.filter(c => c.on)` and stay collapsed
+  // until one was — the idea being that grey labels under an empty composer
+  // said nothing. In practice the opposite was true: a recruiter could not see
+  // what Scout was even trying to collect, and the row appearing mid-typing
+  // moved the composer under their hands. Showing the whole list makes the
+  // strip a legible target, and its height is now constant, so nothing shifts
+  // as ticks land.
+  //
+  // `is-open` is permanent for the same reason: the slot animates
+  // grid-template-rows between 0fr and 1fr, and there is no longer a state
+  // where the strip should be closed.
+  const stripItems = criteria;
 
   return (
     <section className={cn("scout", expanded && "is-expanded")} aria-label="Scout assistant">
@@ -936,7 +941,11 @@ export function ScoutChat({
                     )}
                   >
                     {m.role === "assistant" && (
-                      <span className="scout-mark">
+                      // `scout-mark--id` gives this the header's identity:
+                      // same Sparkles, same solid orange plate. Plain
+                      // `scout-mark` is the shared geometry, still used by the
+                      // user's "You" chip and by the loader core.
+                      <span className="scout-mark scout-mark--id">
                         <Sparkles className="size-3" />
                       </span>
                     )}
@@ -1091,7 +1100,10 @@ export function ScoutChat({
                   else runSearch();
                 }
               }}
-              placeholder="Type your answer, or ask me anything..."
+              /* No placeholder by request — the field reads empty. The
+                 accessible name comes from aria-label below, so screen readers
+                 still get one. */
+              placeholder=""
               disabled={pending}
               maxLength={2000}
             />
@@ -1104,25 +1116,28 @@ export function ScoutChat({
             {pending ? "…" : "Search"}
           </button>
         </div>
-        <div className={cn("scout-criteria-slot", stripOpen && "is-open")}>
+        <div className="scout-criteria-slot is-open">
           <div className="scout-criteria-slot__clip">
-            {stripItems.length > 0 && (
-              <ul
-                className="scout-criteria"
-                aria-label="Requirements captured"
-                aria-hidden={!stripOpen}
-                ref={criteriaRef}
-              >
-                {stripItems.map((c) => (
-                  <li key={c.key} className="scout-criterion is-on">
-                    <span className="scout-criterion__box" aria-hidden="true">
-                      ✓
-                    </span>
-                    <span>{c.key}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <ul
+              className="scout-criteria"
+              aria-label="Requirements"
+              ref={criteriaRef}
+            >
+              {stripItems.map((c) => (
+                <li
+                  key={c.key}
+                  className={cn("scout-criterion", c.on && "is-on")}
+                >
+                  {/* The tick is drawn for every item so the row does not
+                      re-measure when one turns on; `.scout-criterion` already
+                      carries the muted colour and `.is-on` the green. */}
+                  <span className="scout-criterion__box" aria-hidden="true">
+                    ✓
+                  </span>
+                  <span>{c.key}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </form>

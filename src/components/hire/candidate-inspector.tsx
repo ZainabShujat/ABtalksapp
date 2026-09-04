@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ExternalLink } from "lucide-react";
+import { ChevronLeft, ExternalLink, Lock } from "lucide-react";
 import { refPublicId, type CandidateSource } from "@/features/hire/candidate-ref";
 import { isLockedPreview } from "@/features/hire/locked-preview";
 import {
@@ -11,7 +11,6 @@ import {
   useUpgradePrompt,
 } from "@/components/hire/locked-field";
 import { COMPENSATION_DISCLAIMER } from "@/features/hire/compensation";
-import { RequestIntroButton } from "@/components/hire/request-intro-button";
 import { DeskShortlistButton } from "@/components/hire/desk-shortlist-button";
 import {
   evidenceResumeHref,
@@ -22,6 +21,11 @@ import { HireScoreChart } from "@/components/hire/hire-score-chart";
 import { skillTint, trackLabel } from "@/components/hire/hire-card-facts";
 import type { MatchCardData } from "@/components/hire/match-card";
 import { cn } from "@/lib/utils";
+import { MaskedName } from "@/components/hire/desk-match-card";
+import {
+  SubscriptionGate,
+  type GateReason,
+} from "@/components/hire/subscription-gate";
 
 function trackLongLabel(source?: CandidateSource): string | null {
   switch (source) {
@@ -111,6 +115,7 @@ export function CandidateInspector({
     ? e.projectScores.join(" / ")
     : null;
   const resumeHref = evidenceResumeHref(match.candidateRef);
+  const [gate, setGate] = useState<GateReason | null>(null);
 
   useEffect(() => {
     rememberEvidence([match]);
@@ -134,7 +139,12 @@ export function CandidateInspector({
                   onReveal={openUpgrade}
                 />
               ) : (
-                match.displayName || match.jobRole
+                // Same treatment as the result card — see `MaskedName`.
+                match.displayName ? (
+                  <MaskedName name={match.displayName} />
+                ) : (
+                  match.jobRole
+                )
               )}
             </h3>
             <p className="hire-detail__ref">
@@ -235,15 +245,22 @@ export function CandidateInspector({
           )}
         </div>
 
+        {/* Was a link reading "View full evidence profile" that opened
+            `resumeHref` in a new tab. It is now the gated "Resume" action from
+            the reference: the click opens the plan dialog rather than the
+            document. `evidenceResumeHref` and the route behind it are
+            untouched — nothing about the evidence data changed, only what this
+            control does. */}
         {!sample && (
-          <Link
-            href={resumeHref}
+          <button
+            type="button"
             className="hire-detail__resume"
-            target="_blank"
+            onClick={() => setGate("resume")}
+            aria-haspopup="dialog"
           >
-            <ExternalLink className="size-3.5" aria-hidden="true" />
-            View full evidence profile
-          </Link>
+            <Lock className="size-3.5" aria-hidden="true" />
+            Resume
+          </button>
         )}
 
         <p className="hire-detail__lede">
@@ -252,11 +269,31 @@ export function CandidateInspector({
             : coverageLede(match)}
         </p>
 
+        {/* Two controls on one row, as in the reference: the collapse on the
+            left and the evidence profile beside it. "See less details" sat here
+            alone before, which is why it read as an orphaned control.
+
+            The evidence link is kept rather than dropped when "Resume" took
+            over the gated slot above — deleting it would have made a working
+            route unreachable from the desk, which is a functional loss, not a
+            UI one. `justify-content: space-between` puts them at the two ends
+            and the existing `flex-wrap` still stacks them on a narrow panel. */}
         <div className="hire-detail__topcta">
           <button type="button" className="desk-ghost" onClick={onClose}>
             See less details
             <ChevronLeft className="size-3.5" aria-hidden="true" />
           </button>
+          {!sample && (
+            <Link
+              href={resumeHref}
+              className="desk-ghost"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Full evidence profile
+              <ExternalLink className="size-3.5" aria-hidden="true" />
+            </Link>
+          )}
         </div>
 
         <div className="hire-detail__rule" />
@@ -380,18 +417,11 @@ export function CandidateInspector({
           </section>
         )}
 
-        {match.gaps.length > 0 && (
-          <section className="hire-detail__section">
-            <h3 className="hire-detail__h">Gaps</h3>
-            <ul className="m-0 list-none p-0">
-              {match.gaps.slice(0, 8).map((g) => (
-                <li key={g} className="hire-detail__p" style={{ marginTop: 8 }}>
-                  • {g}
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+        {/* The Gaps block is not rendered on the Scout desk. `match.gaps` is
+            untouched and still produced by the scorer — the panel simply does
+            not print it. The whole element goes rather than being hidden, so
+            no empty row or margin is left behind. */}
+
 
         <div className="hire-detail__actions">
           {!sample && (
@@ -417,16 +447,17 @@ export function CandidateInspector({
                 jobRole={match.jobRole}
                 match={match}
               />
-              <RequestIntroButton
-                candidateRef={match.candidateRef}
-                existingStatus={match.engagementStatus ?? null}
-                publicId={publicId}
-                className="desk-request"
-              />
+              {/* "Request an intro" is not offered from the desk any more —
+                  neither on the result card nor here. `RequestIntroButton`,
+                  its server action and the whole engagement flow are untouched;
+                  `MatchCard` (the guest-matches and request pages) still
+                  renders it. Only the Scout desk stops surfacing it. */}
             </>
           )}
         </div>
       </div>
+
+      <SubscriptionGate reason={gate} onClose={() => setGate(null)} />
     </aside>
   );
 }
