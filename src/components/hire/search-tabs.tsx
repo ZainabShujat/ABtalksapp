@@ -18,7 +18,7 @@ export function SearchTabs({
     <div
       role="tablist"
       aria-label="Searches"
-      className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1"
+      className="-mx-1 flex gap-5 overflow-x-auto px-1"
     >
       {tabs.map((tab, i) => {
         const selected = tab.id === activeId;
@@ -29,14 +29,16 @@ export function SearchTabs({
             role="tab"
             aria-selected={selected}
             onClick={() => onSelect(tab.id)}
+            /* Text tabs, not pills. A row of outlined capsules above a list of
+               outlined cards is the same shape twice; an underline says which
+               search you are looking at without adding another container. */
             className={cn(
-              "shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium",
-              "transition-[color,background-color,border-color,transform] duration-150 ease-out",
-              "active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100",
+              "shrink-0 border-b-2 px-1 pb-1.5 pt-1 text-sm",
+              "transition-colors duration-150 ease-out",
               "focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none",
               selected
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground",
+                ? "border-primary font-medium text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >
             {tab.label || `Search ${i + 1}`}

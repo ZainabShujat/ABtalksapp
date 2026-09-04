@@ -74,8 +74,7 @@ export function HireJourney() {
             Tell us who you&apos;re looking for
           </h2>
           <p className="hire-journey__desc">
-            Describe the role in plain language. Scout ranks on work we
-            verified, never resumes.
+            Ranked on work we verified, never resumes.
           </p>
         </div>
       </div>
@@ -103,7 +102,6 @@ export function HireJourney() {
         <div>
           <h2 className="hire-journey__title">Track your requests</h2>
           <p className="hire-journey__desc">
-            We confirm availability with the candidate, then share contact.{" "}
             <Link href="/hire/requests" className="hire-journey__link">
               Open requests
             </Link>
@@ -148,7 +146,6 @@ export function HireRail() {
         <strong>
           {step === 1 ? "Tell us who you're looking for" : countLabel}
         </strong>
-        Scout ranks candidates on verified platform work, never resumes.
       </p>
     </section>
   );

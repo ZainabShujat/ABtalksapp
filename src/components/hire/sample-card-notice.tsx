@@ -52,10 +52,13 @@ export function SampleCardNotice({
 
   return (
     <div className="space-y-3">
-      <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 text-xs leading-relaxed text-amber-900 dark:text-amber-100">
-        <strong className="font-semibold">Sample profile.</strong> Nobody in
-        the pool matches this yet. Tell us and we&apos;ll find or train
-        someone. You&apos;ll hear from us when they exist.
+      {/* A line, not an alert. The amber box read as a warning about something
+          going wrong; nobody matching yet is ordinary, and the card it labels
+          already says the same thing by being a sample. */}
+      <p className="text-muted-foreground text-xs leading-relaxed">
+        <strong className="text-foreground font-medium">Sample profile.</strong>{" "}
+        Nobody in the pool matches this yet. Tell us and we&apos;ll find or
+        train someone.
       </p>
       {recorded ? (
         <p className="text-sm font-medium">Noted. We&apos;ll be in touch.</p>

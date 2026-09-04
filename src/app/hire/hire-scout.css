@@ -337,15 +337,16 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
   overflow: hidden;
 }
 
+/* A rail, not a card. One rounded bordered box beside another rounded bordered
+   box reads as a component demo; the column only needs to sit there quietly. */
 .hire-journey {
   position: relative;
   flex: none;
   width: 300px;
   margin: 8px 0 20px 16px;
-  padding: 28px 22px;
-  border: 1px solid var(--h-border);
-  border-radius: 20px;
-  background: var(--h-surface);
+  padding: 24px 18px;
+  border: 0;
+  background: transparent;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -394,47 +395,35 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
   align-items: start;
 }
 
+/* Flat. These were 40px orange discs carrying five box-shadow layers, inset
+   highlights, a glow and a permanent pulse, which is a lot of decoration for
+   a step indicator that is meant to be secondary to the search. */
 .hire-node {
-  width: 40px;
-  height: 40px;
+  width: 26px;
+  height: 26px;
   border-radius: 100px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-hub-display), var(--font-inter), sans-serif;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .hire-node--on {
   background: var(--h-primary);
   color: #fff;
-  box-shadow:
-    0 0 0 4px rgba(224, 82, 38, 0.1),
-    0 0 16px rgba(224, 82, 38, 0.2),
-    0 6px 12px rgba(224, 82, 38, 0.26),
-    inset 0 -3px 6px rgba(169, 54, 23, 0.45),
-    inset 0 3px 6px rgba(255, 255, 255, 0.34);
-  animation: hire-node-pulse 2.2s ease-in-out infinite;
 }
 
+/* A finished step is context, not an achievement to celebrate. */
 .hire-node--done {
-  background: var(--h-primary);
-  color: #fff;
-  box-shadow:
-    0 5px 10px rgba(224, 82, 38, 0.2),
-    inset 0 -3px 6px rgba(169, 54, 23, 0.45),
-    inset 0 3px 6px rgba(255, 255, 255, 0.34);
-  animation: hire-tick-pop 320ms var(--ease) both;
+  background: var(--h-peach);
+  color: var(--h-primary);
 }
 
 .hire-node--off {
-  background: var(--h-peach);
-  color: var(--h-primary);
-  box-shadow:
-    0 5px 10px rgba(17, 17, 17, 0.06),
-    inset 0 -3px 6px rgba(224, 82, 38, 0.14),
-    inset 0 3px 6px rgba(255, 255, 255, 0.75);
+  background: transparent;
+  border: 1px solid var(--h-border-strong);
+  color: var(--h-gray-400);
 }
 
 .hire-journey__title {
@@ -561,9 +550,9 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
   flex-direction: column;
   overflow: hidden;
   background: var(--h-surface);
-  border: 1px solid var(--h-border-strong);
-  border-radius: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--h-border);
+  border-radius: var(--r-md);
+  box-shadow: none;
 }
 
 .scout.is-expanded {
@@ -589,7 +578,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
      spent on the avatar mark and the Search button. */
   background: var(--h-surface);
   border-bottom: 1px solid var(--h-border);
-  border-radius: 19px 19px 0 0;
+  border-radius: var(--r-md) var(--r-md) 0 0;
 }
 
 .scout__id {
@@ -1349,8 +1338,8 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 }
 
 .hire-app .desk-card:hover {
-  border-color: var(--h-primary);
-  box-shadow: 0 8px 22px rgba(224, 82, 38, 0.12);
+  border-color: var(--h-border-strong);
+  box-shadow: none;
 }
 
 /* Top match.
@@ -2199,15 +2188,16 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-podbar {
   }
 }
 
+/* The disclosure stays, the box around it does not. It is a standing fact
+   about how the desk works, not a notice competing with the results. */
 .scout-privacy {
-  margin: 0 0 12px;
-  padding: 10px 14px;
-  border: 1px solid #ffd2ba;
-  background: var(--h-peach-wash);
-  border-radius: 10px;
-  font-size: 12px;
+  margin: 0 0 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: var(--fs-caption);
   line-height: 1.5;
-  color: var(--h-gray-700);
+  color: var(--h-gray-500);
 }
 
 .scout-gap {
@@ -2218,10 +2208,10 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-podbar {
 }
 
 .scout-results__h {
-  margin: 0 0 8px;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--h-ink);
+  margin: 0 0 10px;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--h-gray-600);
 }
 
 .scout-tabs {
@@ -2268,18 +2258,14 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-podbar {
   color: var(--h-primary);
 }
 
-.hire-rail__nodes span.is-on,
-.hire-rail__nodes span.is-done {
+.hire-rail__nodes span.is-on {
   background: var(--h-primary);
   color: #fff;
 }
 
-.hire-rail__nodes span.is-on {
-  animation: hire-node-pulse 2.2s ease-in-out infinite;
-}
-
 .hire-rail__nodes span.is-done {
-  animation: hire-tick-pop 320ms var(--ease) both;
+  background: var(--h-peach);
+  color: var(--h-primary);
 }
 
 .hire-rail__nodes i {
