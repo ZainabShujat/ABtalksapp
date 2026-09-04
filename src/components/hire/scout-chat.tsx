@@ -548,7 +548,7 @@ export function ScoutChat({
     el.addEventListener("transitionend", onEnd);
     // A transition that never fires (interrupted by a tab switch, or a height
     // that resolves to the same value) must not leave the card pinned.
-    const failsafe = window.setTimeout(done, 1200);
+    const failsafe = window.setTimeout(done, 1600);
     return () => {
       window.clearTimeout(failsafe);
       el.removeEventListener("transitionend", onEnd);

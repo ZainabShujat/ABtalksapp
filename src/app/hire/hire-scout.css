@@ -41,11 +41,11 @@
      and at half these durations they registered as a snap rather than as
      something travelling. Feedback timings (--dur-fast) are untouched: a press
      that answers slowly reads as lag, not as calm. */
-  --dur-state: 640ms;
+  --dur-state: 880ms;
   /* The one long move on the page: the journey column sliding out of the way
      when the desk goes full width. Long enough to be followed, eased so it
      leaves quickly and settles rather than stopping. */
-  --dur-slide: 1040ms;
+  --dur-slide: 1400ms;
   /* Gentler than the old curve. That one left almost instantly and coasted,
      which at these lengths read as a lurch followed by a wait; this one eases
      in as well as out, so the whole move is even. */
@@ -5698,7 +5698,7 @@ html.dark .vc-card {
 
 .scout-turn:not(.scout-turn--user),
 .scout-lede {
-  animation: scout-turn-in 380ms var(--ease-out) both;
+  animation: scout-turn-in 460ms var(--ease-out) both;
 }
 
 @keyframes scout-turn-in {
@@ -5716,8 +5716,8 @@ html.dark .vc-card {
 /* --i is set per list item in MatchResults and capped there, so a long result
    list still finishes arriving inside ~360ms. */
 .hire-app .desk-card--in {
-  animation: scout-card-in 440ms var(--ease-out) both;
-  animation-delay: calc(var(--i, 0) * 70ms);
+  animation: scout-card-in 560ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 90ms);
 }
 
 @keyframes scout-card-in {
