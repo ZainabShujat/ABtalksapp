@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 
-import { motion } from "framer-motion";
+import { motion, useInView, useReducedMotion } from "framer-motion";
 import { useCanvasScale } from "@/components/workshop/use-canvas-scale";
 import {
   CANVAS_H,
@@ -22,6 +22,67 @@ const SPRING = (t: number) =>
 
 /** Drop distance, in the design's canvas units. */
 const DROP = -900;
+
+/**
+ * When the drop is allowed to start.
+ *
+ * `amount: 0.25` alone was not a trigger at all here: the hero is a 1920×806
+ * canvas scaled to fit, so on a 1440×900 window it ends 658px down and this
+ * section starts right at the fold — 241 of its 525px were already on screen
+ * at first paint, a ratio of 0.46. The observer fired during page load, the
+ * capsules had finished dropping before anyone scrolled, and by the time the
+ * reader arrived the animation was simply over.
+ *
+ * The negative bottom margin pulls the observation box up to the top 75% of the
+ * window, so the strip of section that peeks above the fold does not count, and
+ * 0.35 then asks for a real third of it. Measured, that means no window we care
+ * about fires on load — 1440×900, 1280×800, 1536×864 and 1920×1080 all start
+ * outside the box entirely — and each needs 150–300px of scroll, at which point
+ * the heading is mid-screen and the capsule field is filling the lower half.
+ *
+ * On a window tall enough to show the whole section without scrolling it does
+ * fire immediately, which is the right answer: the reader is already looking
+ * at it.
+ */
+const REVEAL_MARGIN = "0px 0px -25% 0px";
+/** Fraction of the section that must be inside the box before the drop starts. */
+const REVEAL_IN = 0.35;
+/**
+ * …and the smaller fraction it has to fall below before the drop is undone.
+ *
+ * Two thresholds, not one. A single boundary sits at exactly one scroll
+ * position, so a reader resting a trackpad there would flip the whole field in
+ * and out on every stray pixel. Entering at 0.35 and leaving at 0.12 puts a
+ * band between the two where nothing changes — a Schmitt trigger, and the
+ * reason this is two observers rather than one.
+ */
+const REVEAL_OUT = 0.12;
+
+/**
+ * `on` — whether the capsules should be in place, in BOTH directions.
+ *
+ * Not `whileInView` with `once`: that is a one-way switch, so scrolling back up
+ * left the field frozen in its landed state. Driving `animate` from a boolean
+ * means leaving the section replays the entrance backwards — up and out, the
+ * same 900 units it dropped through.
+ */
+function useRevealState(ref: React.RefObject<Element | null>): boolean {
+  const entered = useInView(ref, { amount: REVEAL_IN, margin: REVEAL_MARGIN });
+  const present = useInView(ref, { amount: REVEAL_OUT, margin: REVEAL_MARGIN });
+
+  // Adjusted during render rather than in an effect. Both inputs are state
+  // inside useInView, so the render that changes one of them is the render that
+  // can settle this; an effect would commit, then set state, then render again
+  // just to catch up. React re-runs this component immediately on a set during
+  // its own render, before anything reaches the DOM.
+  //
+  // Inside the hysteresis band `next` evaluates to the current value, so the
+  // set is skipped and there is no loop.
+  const [on, setOn] = useState(false);
+  const next = entered ? true : present ? on : false;
+  if (next !== on) setOn(next);
+  return next;
+}
 
 /**
  * Used when the promoted workshop carries no `topics` of its own, so this
@@ -49,6 +110,22 @@ const DEFAULT_TOPICS = [
 
 export default function TopicsSection({ topics }: { topics: string[] | null }) {
   const { ref: canvasRef, scale: canvasScale } = useCanvasScale(CANVAS_W);
+
+  /**
+   * The `prefers-reduced-motion` block in this file's <style> cannot reach
+   * this animation: framer-motion writes the transform inline on every frame,
+   * and `animation: none` only silences CSS keyframes. Starting from "shown"
+   * is what actually honours the setting — the capsules are simply there.
+   */
+  const reduceMotion = useReducedMotion();
+
+  const stackRef = useRef<HTMLDivElement>(null);
+  const canvasOn = useRevealState(canvasRef);
+  const stackOn = useRevealState(stackRef);
+  // A hidden breakpoint's element never intersects, so only the rendered one
+  // is ever true; reduced motion pins both on and nothing ever moves.
+  const canvasState = reduceMotion || canvasOn ? "shown" : "hidden";
+  const stackState = reduceMotion || stackOn ? "shown" : "hidden";
 
   // Was solved once at module load. It now depends on a prop, so it is memoised
   // per topic list instead — layoutTopics is a pure function of its input, and
@@ -100,7 +177,10 @@ export default function TopicsSection({ topics }: { topics: string[] | null }) {
           <h2
             style={{
               position: "absolute",
-              top: 47,
+              // 47 in the design. The hero frame already leaves 29 units below
+              // its card, so 47 on top of that was 76 units of nothing between
+              // two sections that belong together.
+              top: 16,
               left: 0,
               width: CANVAS_W,
               margin: 0,
@@ -119,12 +199,14 @@ export default function TopicsSection({ topics }: { topics: string[] | null }) {
           <p
             style={{
               position: "absolute",
-              top: 117,
+              top: 84,
               left: 0,
               width: CANVAS_W,
               margin: 0,
               textAlign: "center",
-              fontSize: 32,
+              // 32 in the design, which at half the heading's 64 read as a
+              // second heading rather than a caption under one.
+              fontSize: 26,
               fontWeight: 500,
               lineHeight: 1.2,
               color: "var(--wk-text-faint)",
@@ -142,14 +224,23 @@ export default function TopicsSection({ topics }: { topics: string[] | null }) {
         <motion.div
           className="wk-learn-canvas"
           initial="hidden"
-          whileInView="shown"
-          viewport={{ once: true, amount: 0.25 }}
+          animate={canvasState}
         >
           {PLACED.map((p) => (
             <motion.div
               key={p.text}
               variants={{
-                hidden: { opacity: 0, y: DROP },
+                hidden: {
+                  opacity: 0,
+                  y: DROP,
+                  // The way back out. Quicker than the drop and eased the other
+                  // way, so leaving reads as the field lifting away rather than
+                  // as a second, slower entrance played in reverse.
+                  transition: {
+                    y: { duration: 0.4, delay: p.delay * 0.35, ease: "easeIn" },
+                    opacity: { duration: 0.22, delay: p.delay * 0.35 },
+                  },
+                },
                 shown: {
                   opacity: 1,
                   y: 0,
@@ -181,7 +272,7 @@ export default function TopicsSection({ topics }: { topics: string[] | null }) {
       </div>
 
       {/* ---------- wrapped cluster (below lg) ---------- */}
-      <div className="px-4 py-14 lg:hidden">
+      <div ref={stackRef} className="px-4 pb-14 pt-9 lg:hidden">
         <h2
           className="mb-4 text-center text-[34px] font-bold leading-[1.1] tracking-tight sm:text-[48px]"
           style={{ color: "var(--wk-text)" }}
@@ -199,14 +290,17 @@ export default function TopicsSection({ topics }: { topics: string[] | null }) {
         <motion.div
           className="mx-auto flex max-w-2xl flex-wrap justify-center gap-2.5"
           initial="hidden"
-          whileInView="shown"
-          viewport={{ once: true, amount: 0.25 }}
+          animate={stackState}
         >
         {PLACED.map((p) => (
           <motion.span
             key={p.text}
             variants={{
-              hidden: { opacity: 0, y: -24 },
+              hidden: {
+                opacity: 0,
+                y: -24,
+                transition: { duration: 0.3, delay: p.delay * 0.25, ease: "easeIn" },
+              },
               shown: {
                 opacity: 1,
                 y: 0,

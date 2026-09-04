@@ -13,7 +13,7 @@
  */
 
 export const CANVAS_W = 1920;
-export const CANVAS_H = 700;
+export const CANVAS_H = 660;
 
 /** Capsule height, from the design. */
 export const CAP_H = 62;
@@ -21,14 +21,23 @@ const CAP_R = CAP_H / 2;
 /** Horizontal padding inside a capsule (Tailwind `px-8`, both sides). */
 const PAD_X = 64;
 /** Minimum clear space required between any two capsules. */
-const GAP = 14;
-/** Clear space kept between a capsule and the canvas edge. */
+const GAP = 9;
+/** Clear space kept between a capsule and the canvas's left and right edges. */
 const MARGIN = 12;
 /**
- * Capsules stay below this line. The heading (top 47) and subtitle (top 117)
- * share the canvas, and the design's own capsules start at y=217.
+ * …and a larger one at the bottom, because that edge is not an edge: the
+ * community section starts immediately below it. At MARGIN the lowest capsules
+ * sat 9 units off the seam and read as though they were falling into the next
+ * section.
  */
-const TOP_BOUND = 200;
+const BOTTOM_BOUND = 44;
+/**
+ * Capsules stay below this line. The heading and subtitle share the canvas, so
+ * this tracks their offsets in TopicsSection — it was 200 when the heading sat
+ * at 47 and the subtitle at 117; both have since moved up and the subtitle has
+ * shrunk, so the field starts higher too.
+ */
+const TOP_BOUND = 158;
 
 /**
  * The eleven slots from Figma node 1:167 — rotation, skew, colours, and the
@@ -153,7 +162,7 @@ const extents = (p: Pill) => {
 function clampToCanvas(p: Pill) {
   const { hx, hy } = extents(p);
   p.cx = Math.min(CANVAS_W - hx - MARGIN, Math.max(hx + MARGIN, p.cx));
-  p.cy = Math.min(CANVAS_H - hy - MARGIN, Math.max(hy + TOP_BOUND, p.cy));
+  p.cy = Math.min(CANVAS_H - hy - BOTTOM_BOUND, Math.max(hy + TOP_BOUND, p.cy));
 }
 
 /**
