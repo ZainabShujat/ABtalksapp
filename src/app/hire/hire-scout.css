@@ -1229,6 +1229,10 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 .scout-criteria-slot__clip {
   overflow: hidden;
   min-height: 0;
+  /* Column flex items default to min-width:auto, so the strip's own
+     overflow-x scroller could not clip anything and pushed its width onto
+     every ancestor. */
+  min-width: 0;
 }
 
 /* Wraps, never scrolls.
@@ -4253,7 +4257,8 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
      Full screen, its own scroll, above everything including the shortlist bar
      at z-index 90. It already carries its own Back button, so there is a way
      out. The desk underneath keeps its state; this only covers it. */
-  .scout__body.is-open .hire-detail {
+  .scout__body.is-open .hire-detail,
+  .scout-results-page.is-open .hire-detail {
     position: fixed;
     inset: 0;
     z-index: 95;
@@ -4261,19 +4266,22 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
     background: var(--h-surface);
   }
 
-  .scout__body.is-open .hire-detail__scroll {
+  .scout__body.is-open .hire-detail__scroll,
+  .scout-results-page.is-open .hire-detail__scroll {
     padding: 16px 16px calc(28px + env(safe-area-inset-bottom));
     overscroll-behavior: contain;
   }
 
   /* Stacked, full width and thumb-height — they were a right-aligned row that
      wrapped into an awkward staircase at this width. */
-  .scout__body.is-open .hire-detail__actions {
+  .scout__body.is-open .hire-detail__actions,
+  .scout-results-page.is-open .hire-detail__actions {
     justify-content: stretch;
     gap: 8px;
   }
 
-  .scout__body.is-open .hire-detail__actions>* {
+  .scout__body.is-open .hire-detail__actions>*,
+  .scout-results-page.is-open .hire-detail__actions>* {
     flex: 1 1 100%;
     justify-content: center;
     min-height: 44px;
@@ -4806,24 +4814,15 @@ html.dark .vc-card {
    same rate. Fading alone looks like a dissolve; travelling alone looks like a
    jump once the width lands. */
 .hire-journey-slot > .hire-journey {
-  width: 300px;
+  width: 100%;
   margin-left: 0;
-  min-width: 300px;
-  transition:
-    transform var(--dur-slide) var(--ease-slide),
-    opacity var(--dur-slide) var(--ease-slide);
+  min-width: 0;
 }
 
-.hire-workspace.is-started .hire-journey-slot {
-  width: 0;
-  padding-left: 0;
-}
-
-.hire-workspace.is-started .hire-journey-slot > .hire-journey {
-  transform: translateX(-40px);
-  opacity: 0;
-}
-
+/* Carries the height chain the desk depends on. `.hire-workspace` is a flex
+   row locked to the viewport, and everything below grows through `flex: 1`;
+   without a flex column here the region sizes to its content and the results
+   list runs off the bottom of the page instead of scrolling. */
 .hire-workspace__main {
   flex: 1;
   min-width: 0;
@@ -4832,58 +4831,56 @@ html.dark .vc-card {
   flex-direction: column;
 }
 
-/* The phone stacks the rail (nodes over text) because it has no width to
-   spare. The desk does, so it reads as one line: progress on the left, what is
-   happening beside it. The `<i/>` connectors are `flex: 1` for the phone, which
-   across 1200px would draw two very long rules — capped here instead. */
-.hire-workspace.is-started .hire-rail {
-  display: flex;
+/* Narrows rather than disappears. Losing the column entirely traded one
+   problem for another: the workflow context went with it and the results had
+   no left edge to sit against. It keeps the three nodes, drops the prose, and
+   costs 108px instead of 316. Desktop only; the phone keeps its top rail. */
+.hire-workspace.is-started .hire-journey-slot {
+  width: 108px;
+}
+
+.hire-workspace.is-started .hire-journey {
+  padding: 26px 0;
   align-items: center;
-  gap: 16px;
-  flex: none;
-  margin: 8px 24px 0 10px;
-  padding: 10px 16px;
-  border: 1px solid var(--h-border);
-  border-radius: 12px;
-  background: linear-gradient(
-    to bottom,
-    var(--h-peach) 0%,
-    var(--h-surface) 100%
-  );
-  animation: scout-rail-in var(--dur-slide) var(--ease-slide) both;
+  overflow: hidden;
 }
 
-.hire-workspace.is-started .hire-rail__nodes {
-  flex: none;
-  margin-bottom: 0;
+.hire-workspace.is-started .hire-journey__stage {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
 }
 
-.hire-workspace.is-started .hire-rail__nodes i {
-  flex: none;
-  width: 28px;
+/* The titles and the copy are what made it a 300px column. A number on its
+   own says nothing, so a short label takes their place. */
+.hire-workspace.is-started .hire-journey__stage > div {
+  display: none;
 }
 
-.hire-workspace.is-started .hire-rail p {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  min-width: 0;
+.hire-journey__short {
+  display: none;
 }
 
-.hire-workspace.is-started .hire-rail p strong {
-  flex: none;
+.hire-workspace.is-started .hire-journey__short {
+  display: block;
+  max-width: 76px;
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 500;
+  color: var(--h-gray-500);
+}
+
+.hire-workspace.is-started
+  .hire-journey__stage.is-active
+  .hire-journey__short {
   color: var(--h-ink);
+  font-weight: 600;
 }
 
-@keyframes scout-rail-in {
-  from {
-    opacity: 0;
-    transform: translateY(-12px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+.hire-workspace.is-started .hire-journey__track {
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 @media (max-width: 900px) {
@@ -4892,10 +4889,6 @@ html.dark .vc-card {
     display: none;
   }
 
-  .hire-workspace.is-started .hire-rail {
-    margin: 8px 12px 0;
-    animation: none;
-  }
 }
 
 /* --- Tapping a criterion writes into the composer -------------------------
@@ -5060,6 +5053,205 @@ html.dark .vc-card {
 .scout.is-landing .scout-criterion {
   font-size: var(--fs-caption);
   color: var(--h-gray-400);
+}
+
+/* ==========================================================================
+   Results state: Scout becomes the bar, candidates become the page
+
+   Before a search the card is the interaction and fills the region. After
+   one, the candidates are what the recruiter came for, so the card shrinks to
+   its own content and sticks to the top while the region scrolls past it.
+
+   Scrolling moves one level up, from `.chat-output` to `.hire-scout-region`.
+   That is the same move `.hire-pod-region` already makes on a phone, and for
+   the same reason: the desk shell is locked to the viewport, so the only way
+   a long list can be reached is for a region to own the overflow and for
+   everything inside it to size to content.
+   ========================================================================== */
+
+.hire-scout-region:has(.scout-results-page) {
+  overflow-y: auto;
+  /* Vertical only. Setting overflow-y promotes overflow-x to auto, which
+     exposed the phone breakpoint's horizontal criteria strip as a scrollbar
+     across the whole region. The strip keeps its own scroller. */
+  overflow-x: hidden;
+  /* Scroll anchoring off. Folding the card removes ~236px from above the
+     viewport, and the browser compensates by subtracting the same amount from
+     scrollTop. That silently dragged the reader back up and, because the new
+     position fell under the fold threshold, reopened the card and undid the
+     scroll entirely. Without it the position is left alone and the list simply
+     closes the gap. */
+  overflow-anchor: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* `.hire-scout-region > *` stretches its children to fill the column. Once
+   there is a page of results below, both children size to content instead and
+   hand their overflow to the region. */
+.hire-scout-region:has(.scout-results-page) > * {
+  flex: none;
+}
+
+.scout.is-compact {
+  flex: none;
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  overflow: visible;
+}
+
+/* The card no longer owns a scroller: it holds one line of guidance, the
+   composer and the strip. Anything longer than that is the page's job. */
+.scout.is-compact .scout__body {
+  display: block;
+  overflow: visible;
+}
+
+.scout.is-compact .chat-output {
+  overflow: visible;
+}
+
+/* Folded state: the query, not the conversation.
+
+   Scrolling into the results folds the card down to a single line naming the
+   search that produced them, so the candidates own the screen. Tapping it
+   restores the full copilot in place, without moving the list underneath, and
+   scrolling back to the top restores it on its own. Scout keeps every ability
+   it had; this is only how much room it takes while you are reading. */
+.scout__folded {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.scout__folded[hidden] {
+  display: none;
+}
+
+.scout__folded-q {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-body);
+  font-weight: 500;
+  color: var(--h-ink);
+}
+
+.scout__folded-meta {
+  flex: none;
+  font-size: var(--fs-caption);
+  color: var(--h-gray-500);
+}
+
+.scout__folded-caret {
+  flex: none;
+  color: var(--h-gray-400);
+}
+
+.scout__folded:hover .scout__folded-caret {
+  color: var(--h-primary);
+}
+
+.scout.is-condensed .scout__bar,
+.scout.is-condensed .scout__body,
+.scout.is-condensed .scout-composer {
+  display: none;
+}
+
+.scout.is-condensed {
+  border-radius: var(--r-lg);
+  box-shadow: 0 6px 18px rgba(24, 24, 27, 0.07);
+}
+
+/* The card's height is driven for one transition from scout-chat; everything
+   inside it clips while that runs, so the parts leaving read as being covered
+   rather than as vanishing. */
+.scout.is-compact .scout__folded,
+.scout.is-compact .scout__bar,
+.scout.is-compact .scout__body,
+.scout.is-compact .scout-composer {
+  animation: scout-fold-in var(--dur-state) var(--ease-slide) both;
+}
+
+@keyframes scout-fold-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Once results exist the header line already reads back the whole
+   requirement, so the nine-item checklist under the composer is saying it
+   twice and costing the results a row of screen. */
+.scout.is-compact .scout-criteria-slot {
+  display: none;
+}
+
+/* Not the hero any more. The composer keeps every ability it had, at the size
+   a bar deserves rather than the size a landing page does. */
+.scout.is-compact .scout-lede {
+  padding: 12px 20px 2px;
+}
+
+.scout.is-compact .scout-lede__text {
+  font-size: var(--fs-small);
+  line-height: 1.45;
+}
+
+.scout.is-compact .scout-composer {
+  padding: 6px 20px 12px;
+}
+
+.scout.is-compact .scout-field {
+  min-height: var(--ctl-md);
+  padding: 9px 16px;
+}
+
+.scout.is-compact .scout-send {
+  height: var(--ctl-md);
+}
+
+.scout.is-compact .scout__bar {
+  min-height: 44px;
+}
+
+.scout-results-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 0fr;
+  align-items: start;
+  gap: 0;
+  padding: 16px 0 28px;
+  transition: grid-template-columns var(--dur-state) var(--ease-out);
+}
+
+.scout-results-page.is-open {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+}
+
+.scout-results-page__list {
+  min-width: 0;
+}
+
+/* The inspector was the second column of `.scout__body`; it is the second
+   column here now, and sticks so it stays beside the list while it scrolls. */
+.scout-results-page .hire-detail {
+  position: sticky;
+  top: 8px;
+  max-height: calc(100dvh - 160px);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--h-border);
+  margin-left: 16px;
 }
 
 /* --- A: the empty desk is a search workspace, not an opening question ------ */
@@ -5562,7 +5754,10 @@ html.dark .vc-card {
   .scout-criterion.is-fresh .scout-criterion__box,
   .scout-loader__label,
   .scout-understood,
-  .hire-workspace.is-started .hire-rail,
+  .scout.is-compact .scout__folded,
+  .scout.is-compact .scout__bar,
+  .scout.is-compact .scout__body,
+  .scout.is-compact .scout-composer,
   .desk-skel::after,
   .scout-turn:not(.scout-turn--user),
   .scout-lede,

@@ -352,6 +352,15 @@ export function ScoutChat({
   const [hint, setHint] = useState<{ prefix: string; text: string } | null>(
     null,
   );
+  /**
+   * Once a search has run the card is folded to the query that produced it,
+   * because the candidates are what the recruiter came for. `reopened` is
+   * them asking for the full copilot back; scrolling into the list clears it.
+   */
+  const [reopened, setReopened] = useState(false);
+  const shellRef = useRef<HTMLElement>(null);
+  /** Folded unless the recruiter asked for the copilot back, or Scout is busy. */
+  const condensed = searched && !reopened && !pending;
   const [expanded, setExpanded] = useState(false);
   const [openMatch, setOpenMatch] = useState<MatchCardData | null>(null);
   /** Cards sit under this message index so a later turn starts below them. */
@@ -485,6 +494,67 @@ export function ScoutChat({
     expanded,
     detailsOpen,
   ]);
+
+  /**
+   * Collapse and expand at a measured height.
+   *
+   * The card's parts are removed from layout when it folds, so there is no
+   * intrinsic height to interpolate between. The previous height is kept and
+   * replayed on the element for one transition, then handed back to the
+   * stylesheet. Only a change of fold state animates, so ordinary reflows
+   * inside the card (a new chip row, a longer line) are not caught up in it.
+   */
+  const foldHeightRef = useRef<number | null>(null);
+  const wasCondensedRef = useRef(condensed);
+  useLayoutEffect(() => {
+    const el = shellRef.current;
+    const changed = wasCondensedRef.current !== condensed;
+    wasCondensedRef.current = condensed;
+    if (!el || !searched) {
+      foldHeightRef.current = null;
+      return;
+    }
+    const to = el.offsetHeight;
+    const from = foldHeightRef.current;
+    foldHeightRef.current = to;
+    if (!changed || from == null || from === to) return;
+
+    el.style.overflow = "hidden";
+    el.style.height = `${from}px`;
+    // Force the start height to be committed before the target is set.
+    void el.offsetHeight;
+    el.style.transition = "height var(--dur-state) var(--ease-slide)";
+    el.style.height = `${to}px`;
+    const done = () => {
+      el.style.height = "";
+      el.style.transition = "";
+      el.style.overflow = "";
+    };
+    el.addEventListener("transitionend", done, { once: true });
+    return () => {
+      el.removeEventListener("transitionend", done);
+      done();
+    };
+  }, [condensed, searched]);
+
+  /**
+   * Re-fold when the recruiter scrolls into the list.
+   *
+   * The fold is the default once a search has run, so this only undoes a
+   * manual expand. It deliberately does not expand on the way back up: at the
+   * top the results are what should be on screen, and a card that reopened by
+   * itself was the reason half the viewport went back to being Scout.
+   */
+  useEffect(() => {
+    if (!searched || !reopened) return;
+    const region = shellRef.current?.closest(".hire-scout-region");
+    if (!region) return;
+    const onScroll = () => {
+      if (region.scrollTop > 120) setReopened(false);
+    };
+    region.addEventListener("scroll", onScroll, { passive: true });
+    return () => region.removeEventListener("scroll", onScroll);
+  }, [searched, reopened]);
 
   // Contextual loading. The stage index only advances while a search is the
   // thing being waited on; a one-line reply keeps a single calm label.
@@ -650,6 +720,7 @@ export function ScoutChat({
           return;
         }
         setSearched(true);
+        setReopened(false);
         setMatchCount(res.data.matchCount);
         setMessages((m) => {
           const next: Msg[] = [
@@ -948,13 +1019,18 @@ export function ScoutChat({
    */
   const stripOpen = text.trim().length > 0 || criteria.some((c) => c.on);
 
+  /** What the recruiter actually asked for, to show on the folded card. */
+  const lastAsk = [...messages].reverse().find((m) => m.role === "user");
+  const queryLabel = lastAsk?.content.trim() || summary || "your search";
+
   const loadingLabel =
     phase === "search"
       ? (SEARCH_STAGES[Math.min(stage, SEARCH_STAGES.length - 1)] as string)
       : REPLY_LABEL;
 
   return (
-    <section
+    <>
+      <section
       className={cn(
         "scout",
         expanded && "is-expanded",
@@ -962,9 +1038,36 @@ export function ScoutChat({
         // the card and centres with the heading, and Scout's identity drops
         // back to a line of text. Everything else about the desk is unchanged.
         !talked && "is-landing",
+        // Once results exist Scout stops being the page and becomes the bar
+        // above it: fixed height, stuck to the top, still fully conversational.
+        searched && "is-compact",
+        condensed && "is-condensed",
       )}
+      ref={shellRef}
       aria-label="Scout assistant"
     >
+
+      {/* Folded: the search, not the conversation. Tapping it brings the whole
+          copilot back without moving the results underneath. */}
+      {searched && (
+        <button
+          type="button"
+          className="scout__folded"
+          hidden={!condensed}
+          onClick={() => setReopened(true)}
+        >
+          <span className="scout-mark scout-mark--id" aria-hidden="true">
+            <Sparkles className="size-3" />
+          </span>
+          <span className="scout__folded-q">{queryLabel}</span>
+          {matchCount != null && (
+            <span className="scout__folded-meta">
+              {matchCount} {matchCount === 1 ? "match" : "matches"}
+            </span>
+          )}
+          <ChevronDown className="size-4 scout__folded-caret" aria-hidden="true" />
+        </button>
+      )}
       <div className="scout__bar">
         <div className="scout__id">
           <span className="scout__avatar" aria-hidden="true">
@@ -1173,83 +1276,6 @@ export function ScoutChat({
             </div>
           )}
 
-          {searched && (
-            <div className="scout-thread__results">
-              {!persist && searchTabs.length > 1 && (
-                <div className="scout-tabs">
-                  <SearchTabs
-                    tabs={searchTabs}
-                    activeId={activeSearchId}
-                    onSelect={(id) => {
-                      setActiveSearchId(id);
-                      setActiveGuestSearch(id);
-                      const tab = searchTabs.find((t) => t.id === id);
-                      setMatchCount(tab?.matches.length ?? 0);
-                      setOpenMatch(null);
-                    }}
-                  />
-                </div>
-              )}
-              {deskMatches.length > 0 && (
-                <p className="scout-privacy">
-                  Contact stays hidden until you place a request and the
-                  candidate agrees.
-                </p>
-              )}
-              {/* The lede already carries this sentence when it is the newest
-                  turn; printing it twice reads as the interface stuttering. */}
-              {deskGap && deskGap !== lede?.content && (
-                <p className="scout-gap">{deskGap}</p>
-              )}
-              {pending && phase === "search" ? (
-                <DeskCardSkeleton
-                  count={Math.min(2, Math.max(1, matchCount ?? 2))}
-                />
-              ) : (
-                <MatchResults
-                  desk
-                  matches={deskMatches}
-                  samples={deskSamples}
-                  sampleDemand={{
-                    spec,
-                    requestId,
-                    alreadyRecorded: alertWhenAvailable,
-                  }}
-                  cartCount={persist ? resultsCartCount : readGuestCart().length}
-                  onOpen={setOpenMatch}
-                  selectedRef={openMatch?.candidateRef}
-                />
-              )}
-              {persist && requestId && matchCount === 0 && !pending && (
-                <div className="hire-gap">
-                  <GapReport
-                    requestId={requestId}
-                    overallGap={
-                      deskGap?.trim() ||
-                      "No verified matches in the published pool for this requirement yet. Your demand is saved."
-                    }
-                    alertWhenAvailable={alertWhenAvailable}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          {pending && phase === "search" && rows.length > 0 && (
-            <ScoutUnderstood rows={rows} onEdit={() => setDetailsOpen(true)} />
-          )}
-
-          {pending && (
-            <div className="scout-turn">
-              <ScoutLoader />
-              <p
-                key={loadingLabel}
-                className="scout-turn__text scout-loader__label"
-              >
-                {loadingLabel}
-              </p>
-            </div>
-          )}
 
           <div
             ref={bottomRef}
@@ -1258,15 +1284,6 @@ export function ScoutChat({
           />
         </div>
 
-        {openMatch && (
-          <CandidateInspector
-            match={openMatch}
-            onClose={() => setOpenMatch(null)}
-            onCartToggle={(inCart) =>
-              setOpenMatch((m) => (m ? { ...m, shortlisted: inCart } : m))
-            }
-          />
-        )}
       </div>
 
       <form
@@ -1408,6 +1425,105 @@ export function ScoutChat({
         </div>
       </form>
     </section>
+
+      {/* The results are the page, not a panel inside the chat.
+          They live beside the Scout card rather than in it, so the region
+          scrolls through candidates while the card stays put at the top.
+          Nothing about the cards, the ranking or the actions changed; only
+          which element they hang off. */}
+      {(searched || openMatch) && (
+        <div className={cn("scout-results-page", openMatch && "is-open")}>
+          <div className="scout-results-page__list">
+        {searched && (
+          <div className="scout-thread__results">
+            {!persist && searchTabs.length > 1 && (
+              <div className="scout-tabs">
+                <SearchTabs
+                  tabs={searchTabs}
+                  activeId={activeSearchId}
+                  onSelect={(id) => {
+                    setActiveSearchId(id);
+                    setActiveGuestSearch(id);
+                    const tab = searchTabs.find((t) => t.id === id);
+                    setMatchCount(tab?.matches.length ?? 0);
+                    setOpenMatch(null);
+                  }}
+                />
+              </div>
+            )}
+            {deskMatches.length > 0 && (
+              <p className="scout-privacy">
+                Contact stays hidden until you place a request and the
+                candidate agrees.
+              </p>
+            )}
+            {/* The lede already carries this sentence when it is the newest
+                turn; printing it twice reads as the interface stuttering. */}
+            {deskGap && deskGap !== lede?.content && (
+              <p className="scout-gap">{deskGap}</p>
+            )}
+            {pending && phase === "search" ? (
+              <DeskCardSkeleton
+                count={Math.min(2, Math.max(1, matchCount ?? 2))}
+              />
+            ) : (
+              <MatchResults
+                desk
+                matches={deskMatches}
+                samples={deskSamples}
+                sampleDemand={{
+                  spec,
+                  requestId,
+                  alreadyRecorded: alertWhenAvailable,
+                }}
+                cartCount={persist ? resultsCartCount : readGuestCart().length}
+                onOpen={setOpenMatch}
+                selectedRef={openMatch?.candidateRef}
+              />
+            )}
+            {persist && requestId && matchCount === 0 && !pending && (
+              <div className="hire-gap">
+                <GapReport
+                  requestId={requestId}
+                  overallGap={
+                    deskGap?.trim() ||
+                    "No verified matches in the published pool for this requirement yet. Your demand is saved."
+                  }
+                  alertWhenAvailable={alertWhenAvailable}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {pending && phase === "search" && rows.length > 0 && (
+          <ScoutUnderstood rows={rows} onEdit={() => setDetailsOpen(true)} />
+        )}
+
+        {pending && (
+          <div className="scout-turn">
+            <ScoutLoader />
+            <p
+              key={loadingLabel}
+              className="scout-turn__text scout-loader__label"
+            >
+              {loadingLabel}
+            </p>
+          </div>
+        )}
+          </div>
+        {openMatch && (
+          <CandidateInspector
+            match={openMatch}
+            onClose={() => setOpenMatch(null)}
+            onCartToggle={(inCart) =>
+              setOpenMatch((m) => (m ? { ...m, shortlisted: inCart } : m))
+            }
+          />
+        )}
+        </div>
+      )}
+    </>
   );
 }
 

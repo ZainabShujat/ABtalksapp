@@ -66,6 +66,9 @@ export function HireJourney() {
         >
           {step > 1 ? "✓" : "1"}
         </span>
+        {/* Shown only once the column has narrowed, where the full title and
+            copy are hidden and a number on its own says nothing. */}
+        <span className="hire-journey__short">Describe the role</span>
         <div>
           <h2 className="hire-journey__title">
             Tell us who you&apos;re looking for
@@ -82,6 +85,7 @@ export function HireJourney() {
         >
           2
         </span>
+        <span className="hire-journey__short">Ranked candidates</span>
         <div>
           <h2 className="hire-journey__title">{countLabel}</h2>
           <p className="hire-journey__desc">
@@ -95,6 +99,7 @@ export function HireJourney() {
         >
           3
         </span>
+        <span className="hire-journey__short">Track requests</span>
         <div>
           <h2 className="hire-journey__title">Track your requests</h2>
           <p className="hire-journey__desc">
