@@ -1,5 +1,5 @@
 import type { Domain } from "@prisma/client";
-import { isDatabricksEnabled, isProgramEnabled } from "@/lib/feature-flags";
+import { isDatabricksEnabled, isDsArchitectEnabled, isProgramEnabled } from "@/lib/feature-flags";
 import { prisma } from "@/lib/db";
 import { isUserRegistered } from "@/features/hackathon/registration-status";
 import { resolveProgramMemberForUser } from "@/lib/program-auth";
@@ -33,6 +33,7 @@ export type HubData = {
   abandonedDomains: Domain[];
   hasProgramMembership: boolean;
   hasDatabricksAccess: boolean;
+  hasDsArchitectAccess: boolean;
   isHackathonRegistered: boolean;
   heatmap: ActivityHeatmap;
   streak: ActivityStreak;
@@ -98,6 +99,7 @@ export async function getHubData(
     abandonedDomains,
     hasProgramMembership,
     hasDatabricksAccess: isDatabricksEnabled(),
+    hasDsArchitectAccess: isDsArchitectEnabled(),
     isHackathonRegistered,
     heatmap,
     streak: heatmap.streak,

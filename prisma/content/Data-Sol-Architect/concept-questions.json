@@ -1,0 +1,652 @@
+[
+  {
+    "dayNumber": 1,
+    "questions": [
+      {
+        "order": 1,
+        "question": "How many abstraction layers does Simon Brown's C4 model have?",
+        "options": [
+          "2 (High-level and Low-level)",
+          "3 (System, Component, Code)",
+          "4 (Context, Container, Component, Code)",
+          "5 (Enterprise, System, Container, Component, Code)"
+        ],
+        "correctIndex": 2,
+        "explanation": "C4 = Context (Level 1), Container (Level 2), Component (Level 3), Code (Level 4)."
+      },
+      {
+        "order": 2,
+        "question": "What does 'NFRs first, technology second' mean for an architect?",
+        "options": [
+          "Non-Functional Requirements (latency, availability, cost, security) drive technology choice — not the reverse",
+          "You pick the newest technology first, then measure whether it meets NFRs",
+          "NFRs are optional if the functional spec is strong",
+          "NFRs are only for the ops team, not the architect"
+        ],
+        "correctIndex": 0,
+        "explanation": "Solution architecture is derived from NFRs; choosing tech first and hoping NFRs fit is the classic anti-pattern."
+      },
+      {
+        "order": 3,
+        "question": "Which best distinguishes a Solution Architect from an Enterprise Architect?",
+        "options": [
+          "Solution Architects only write code; Enterprise Architects only write docs",
+          "Solution Architects design a specific solution for a business problem; Enterprise Architects set org-wide standards and reference architectures",
+          "Enterprise Architects are always more senior in every organization",
+          "They are the same role with different titles"
+        ],
+        "correctIndex": 1,
+        "explanation": "SA = solution-scope depth. EA = org-scope breadth and standards. Both are architects; different altitudes."
+      },
+      {
+        "order": 4,
+        "question": "For a Data & Solution Architect, what does 'still hands-on' mean at 8–15 yrs?",
+        "options": [
+          "Writes every line of production code themselves",
+          "Never touches code — only reviews",
+          "Can prototype, debug, review PRs and stand up a proof-of-concept when a design needs proving out",
+          "Only writes documentation"
+        ],
+        "correctIndex": 2,
+        "explanation": "Senior architects don't own the codebase, but they can still get a PoC running to validate a design decision."
+      },
+      {
+        "order": 5,
+        "question": "What belongs in a C4 Level 1 (System Context) diagram, and what does NOT?",
+        "options": [
+          "Internal containers, databases, and code classes",
+          "The system as a single box, plus its users and neighbouring systems — no internals",
+          "Deployment nodes and network subnets only",
+          "Every microservice and its APIs"
+        ],
+        "correctIndex": 1,
+        "explanation": "L1 zooms all the way out: your system as one box, who uses it, what it talks to. Internals appear at L2 (Containers) and below."
+      }
+    ]
+  },
+  {
+    "dayNumber": 2,
+    "questions": [
+      {
+        "order": 1,
+        "question": "Which best describes the Inmon vs Kimball philosophy?",
+        "options": [
+          "Inmon: bottom-up dimensional marts; Kimball: top-down 3NF enterprise DW",
+          "Inmon: top-down 3NF enterprise DW; Kimball: bottom-up conformed dimensional marts",
+          "Both are top-down and identical",
+          "Both are bottom-up and identical"
+        ],
+        "correctIndex": 1,
+        "explanation": "Inmon builds an integrated 3NF corporate DW first, then marts. Kimball builds conformed dimensional marts that add up to an enterprise view."
+      },
+      {
+        "order": 2,
+        "question": "In Data Vault 2.0, what does a Hub store?",
+        "options": [
+          "Descriptive attributes over time",
+          "Relationships between business keys",
+          "The unique list of business keys for a concept (e.g. Customer, Product)",
+          "Aggregated KPIs"
+        ],
+        "correctIndex": 2,
+        "explanation": "Hub = business keys. Links = relationships. Satellites = descriptive attributes with history."
+      },
+      {
+        "order": 3,
+        "question": "What does SCD Type 2 do when a dimension attribute changes?",
+        "options": [
+          "Overwrites the old value in place (no history)",
+          "Adds a new row with an effective date range and an is_current flag, preserving history",
+          "Deletes the row and re-inserts it",
+          "Copies the value into a separate audit table only"
+        ],
+        "correctIndex": 1,
+        "explanation": "Type 2 preserves history via a new row per change; Type 1 overwrites; Type 3 keeps prior value in a column."
+      },
+      {
+        "order": 4,
+        "question": "What is the 'grain' of a fact table?",
+        "options": [
+          "The compression codec used for storage",
+          "The finest level of detail one row represents (e.g. one claim line per row)",
+          "The number of columns",
+          "The partition size"
+        ],
+        "correctIndex": 1,
+        "explanation": "Grain declared explicitly (\"one row = one claim line\") is the single most important Kimball discipline; violating grain is the classic silent bug."
+      },
+      {
+        "order": 5,
+        "question": "Which scenario favors Data Vault over Kimball?",
+        "options": [
+          "A small startup with one source system and simple BI",
+          "A regulated enterprise with many source systems, heavy audit needs, and frequently changing source schemas",
+          "A pure real-time streaming workload with no history",
+          "A read-only reference-data workload"
+        ],
+        "correctIndex": 1,
+        "explanation": "Data Vault's hub-link-satellite pattern absorbs source-schema churn and preserves full auditable history — regulated multi-source environments are its home turf."
+      }
+    ]
+  },
+  {
+    "dayNumber": 3,
+    "questions": [
+      {
+        "order": 1,
+        "question": "How many layers does the Medallion architecture have?",
+        "options": [
+          "2 (raw, curated)",
+          "3 (bronze, silver, gold)",
+          "4 (raw, bronze, silver, gold)",
+          "5 (raw, bronze, silver, gold, platinum)"
+        ],
+        "correctIndex": 1,
+        "explanation": "Bronze = raw, Silver = cleaned/conformed, Gold = business-ready. Some teams add a 'raw' zone before Bronze but the canonical answer is 3."
+      },
+      {
+        "order": 2,
+        "question": "What is Apache Iceberg's 'hidden partitioning' advantage?",
+        "options": [
+          "Partitions are encrypted",
+          "Partition expressions are stored in table metadata so users query by natural columns and the engine prunes automatically — partitions can also evolve without rewriting data",
+          "Partitions are randomly assigned",
+          "There are no partitions at all"
+        ],
+        "correctIndex": 1,
+        "explanation": "Hidden partitioning removes the classic Hive footgun where users had to know the partition column; Iceberg lets partitioning evolve without table rewrites."
+      },
+      {
+        "order": 3,
+        "question": "When is a Lakehouse the wrong answer?",
+        "options": [
+          "Petabyte-scale analytics workloads",
+          "Sub-100ms OLTP transactions, sub-100ms online serving, or tiny (KB–MB) datasets",
+          "Any workload with governance requirements",
+          "Any workload needing schema evolution"
+        ],
+        "correctIndex": 1,
+        "explanation": "Lakehouse is optimized for analytical scale on object storage. For OLTP, low-latency point lookups, or trivially small data, a purpose-built DB wins."
+      },
+      {
+        "order": 4,
+        "question": "What causes the 'small-files problem' on a data lake?",
+        "options": [
+          "Files stored in cheap storage tiers",
+          "Many tiny files (thousands of KB-sized files per partition) forcing engines to open and read metadata for each, killing scan performance",
+          "Files being too large to fit in memory",
+          "Using columnar formats"
+        ],
+        "correctIndex": 1,
+        "explanation": "Streaming ingestion or over-partitioning creates thousands of small files; compaction (OPTIMIZE / rewrite_data_files) fixes it."
+      },
+      {
+        "order": 5,
+        "question": "What does an ACID open table format (Delta / Iceberg / Hudi) give a data lake that raw Parquet does not?",
+        "options": [
+          "Better compression",
+          "Transactional writes, schema evolution, time travel, and safe concurrent readers/writers",
+          "Faster storage tier",
+          "Encryption at rest"
+        ],
+        "correctIndex": 1,
+        "explanation": "Raw Parquet gives you files; open table formats give you a table — transactions, isolation, evolution, and time travel on top of those files."
+      }
+    ]
+  },
+  {
+    "dayNumber": 4,
+    "questions": [
+      {
+        "order": 1,
+        "question": "How many table distribution styles does Amazon Redshift support?",
+        "options": [
+          "2 (KEY, EVEN)",
+          "3 (KEY, ALL, EVEN)",
+          "4 (KEY, ALL, EVEN, AUTO)",
+          "5 (KEY, ALL, EVEN, AUTO, HASH)"
+        ],
+        "correctIndex": 2,
+        "explanation": "KEY = distribute by column hash, ALL = replicate on every node (small dims), EVEN = round-robin, AUTO = Redshift picks."
+      },
+      {
+        "order": 2,
+        "question": "What problem does Redshift Zero-ETL solve?",
+        "options": [
+          "Removes the need for a data model",
+          "Streams changes from operational sources (Aurora / RDS / DynamoDB / Kinesis) into Redshift without a customer-managed pipeline",
+          "Encrypts all data at rest",
+          "Replaces all BI tools"
+        ],
+        "correctIndex": 1,
+        "explanation": "Zero-ETL is a managed CDC path — it removes the pipeline you would otherwise build with DMS or a custom Kinesis consumer."
+      },
+      {
+        "order": 3,
+        "question": "What does Redshift Spectrum let you query?",
+        "options": [
+          "Only data physically loaded into Redshift",
+          "Data in Amazon S3 directly from Redshift, using an external schema in the Glue Data Catalog",
+          "Data in DynamoDB only",
+          "Data in Snowflake"
+        ],
+        "correctIndex": 1,
+        "explanation": "Spectrum extends Redshift SQL to S3; often used for cold data (leave it in S3) or lakehouse-style joins between Redshift-native and S3 data."
+      },
+      {
+        "order": 4,
+        "question": "What is the primary purpose of a Redshift sort key?",
+        "options": [
+          "Sort query results alphabetically",
+          "Control how data is physically ordered on disk, so range-scanned columns (like event_date) get zone-map pruning and much less I/O",
+          "Enforce uniqueness",
+          "Encrypt sorted columns"
+        ],
+        "correctIndex": 1,
+        "explanation": "Sort keys drive zone maps → the query planner can skip blocks that don't match the predicate, cutting I/O dramatically for range scans."
+      },
+      {
+        "order": 5,
+        "question": "What does Redshift Workload Management (WLM) do?",
+        "options": [
+          "Automates VACUUM",
+          "Routes queries to queues with different memory + concurrency budgets, so BI dashboards and ETL don't fight each other",
+          "Manages user passwords",
+          "Handles S3 encryption keys"
+        ],
+        "correctIndex": 1,
+        "explanation": "WLM (or Auto-WLM) gives you queue-level isolation — critical when short interactive queries share a cluster with heavy ETL."
+      }
+    ]
+  },
+  {
+    "dayNumber": 5,
+    "questions": [
+      {
+        "order": 1,
+        "question": "What role does the AWS Glue Data Catalog play in a data lake?",
+        "options": [
+          "Runs Spark jobs",
+          "Serves as the central metadata store for schemas, partitions and table definitions — shared across Athena, Redshift Spectrum, EMR and Glue jobs",
+          "Encrypts S3 objects",
+          "Provides compute for BI dashboards"
+        ],
+        "correctIndex": 1,
+        "explanation": "The Glue Catalog is AWS's Hive-metastore-compatible catalog — one schema definition, many engines consume it."
+      },
+      {
+        "order": 2,
+        "question": "Which three EMR deployment flavors does AWS offer?",
+        "options": [
+          "EMR on EC2, EMR Serverless, EMR on EKS",
+          "EMR on Lambda, EMR Serverless, EMR on Fargate",
+          "EMR Studio, EMR Notebook, EMR Console",
+          "EMR Basic, EMR Standard, EMR Enterprise"
+        ],
+        "correctIndex": 0,
+        "explanation": "EMR on EC2 = classic clusters, EMR Serverless = pay-per-job Spark, EMR on EKS = share Kubernetes capacity with other workloads."
+      },
+      {
+        "order": 3,
+        "question": "What granularity of access control does AWS Lake Formation provide?",
+        "options": [
+          "Only table-level grants",
+          "Only column-level grants",
+          "Row-, column-, and cell-level fine-grained access on tables governed by the Glue Data Catalog, plus tag-based grants (LF-tags)",
+          "No access control — it is just a UI"
+        ],
+        "correctIndex": 2,
+        "explanation": "Lake Formation adds fine-grained access on top of IAM/S3 permissions — critical for HIPAA/PII workloads."
+      },
+      {
+        "order": 4,
+        "question": "What is the native table format used by Amazon S3 Tables?",
+        "options": [
+          "Delta Lake",
+          "Apache Hudi",
+          "Apache Iceberg",
+          "Parquet-only (no table format)"
+        ],
+        "correctIndex": 2,
+        "explanation": "S3 Tables are AWS-managed Iceberg tables with auto-compaction, snapshot management, and native integration with Athena / Redshift / EMR."
+      },
+      {
+        "order": 5,
+        "question": "When does EMR (Spark) beat AWS Glue for transformation?",
+        "options": [
+          "For small ad-hoc jobs the ops team never wants to think about",
+          "For long-running, deeply-tuned Spark workloads where you need control over executor sizing, custom libraries, or non-default Spark configs — Glue's abstractions get in the way",
+          "For any workload — Glue is always slower",
+          "For any workload — EMR is always cheaper"
+        ],
+        "correctIndex": 1,
+        "explanation": "Glue is the fast-path for common transforms; EMR is chosen when you need Spark tuning depth or a specific runtime that Glue does not expose."
+      }
+    ]
+  },
+  {
+    "dayNumber": 6,
+    "questions": [
+      {
+        "order": 1,
+        "question": "What does RTO stand for, and what does it mean?",
+        "options": [
+          "Rate of Throughput Optimization — target queries per second",
+          "Recovery Time Objective — the maximum acceptable time between a failure and full service restoration",
+          "Runtime Overhead — cost of observability tooling",
+          "Read Transaction Order — DB consistency guarantee"
+        ],
+        "correctIndex": 1,
+        "explanation": "RTO answers 'how long can we be down?'. Its sibling RPO (Recovery Point Objective) answers 'how much data can we lose?'."
+      },
+      {
+        "order": 2,
+        "question": "What is the core difference between Lambda and Kappa architectures?",
+        "options": [
+          "Lambda uses AWS Lambda; Kappa does not",
+          "Lambda has separate batch and speed layers merged at query time; Kappa uses a single streaming layer for everything, replaying the stream for reprocessing",
+          "Kappa is only for machine learning",
+          "There is no difference"
+        ],
+        "correctIndex": 1,
+        "explanation": "Kappa argues one stream engine is simpler than maintaining two code paths; Lambda is the older two-layer design."
+      },
+      {
+        "order": 3,
+        "question": "How many principles / pillars does Zhamak Dehghani's Data Mesh define?",
+        "options": [
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "correctIndex": 2,
+        "explanation": "The four principles: domain-oriented decentralized data ownership, data as a product, self-serve data platform, federated computational governance."
+      },
+      {
+        "order": 4,
+        "question": "How many pillars does the AWS Well-Architected Framework have (as of 2025)?",
+        "options": [
+          "5 (the original set)",
+          "6 (added Sustainability)",
+          "7 (added Sustainability + Data)",
+          "4"
+        ],
+        "correctIndex": 1,
+        "explanation": "Operational Excellence, Security, Reliability, Performance Efficiency, Cost Optimization, Sustainability. Domain-specific lenses (Data Analytics, ML) sit on top."
+      },
+      {
+        "order": 5,
+        "question": "When would you pick a centralized data platform over Data Mesh?",
+        "options": [
+          "Always — Data Mesh is a fad",
+          "When the org has few domains (2–5 BUs), immature data-engineering culture, or strong central governance requirements — Data Mesh's federation cost outweighs its autonomy benefit at that scale",
+          "Only when the CTO says so",
+          "Only for real-time workloads"
+        ],
+        "correctIndex": 1,
+        "explanation": "Data Mesh's overhead (data products, federated governance) pays off at 10+ domains with mature data teams; smaller orgs usually ship faster centralized."
+      }
+    ]
+  },
+  {
+    "dayNumber": 7,
+    "questions": [
+      {
+        "order": 1,
+        "question": "What is the primary role of a Feature Store in an ML platform?",
+        "options": [
+          "Storage for trained model artifacts",
+          "A governed store for engineered features, serving them consistently to both training pipelines (offline) and inference (online) — preventing training-serving skew",
+          "A cache of raw inputs",
+          "A UI for data scientists"
+        ],
+        "correctIndex": 1,
+        "explanation": "One feature definition, two access paths (offline + online), same values — this is the whole point of a feature store."
+      },
+      {
+        "order": 2,
+        "question": "What causes training-serving skew?",
+        "options": [
+          "Different data or feature transformations at training time vs inference time, so the model sees a distribution it was never trained on",
+          "Training on GPUs and serving on CPUs",
+          "Using different programming languages",
+          "Different model file formats"
+        ],
+        "correctIndex": 0,
+        "explanation": "The classic cause: a Python pandas transform in the training pipeline is silently different from the SQL transform in the serving path. Feature stores solve this at the platform level."
+      },
+      {
+        "order": 3,
+        "question": "What are the core components of a RAG (Retrieval-Augmented Generation) architecture?",
+        "options": [
+          "Only a foundation model",
+          "A retriever (vector store + embeddings), a generator (LLM), a chunking + embedding pipeline for source docs, and typically a re-ranker",
+          "Only a vector database",
+          "A fine-tuned model and nothing else"
+        ],
+        "correctIndex": 1,
+        "explanation": "RAG grounds an LLM in retrieved context — the retrieval quality (chunking, embeddings, re-ranking) usually dominates the answer quality, not the LLM."
+      },
+      {
+        "order": 4,
+        "question": "When does fine-tuning beat RAG?",
+        "options": [
+          "Always — fine-tuning is strictly better",
+          "When you need the model to internalize a specific style, format, or domain vocabulary that prompt+retrieval cannot reliably enforce, and your data is stable enough to justify the training cost",
+          "When you need up-to-the-minute information",
+          "When you have no training data"
+        ],
+        "correctIndex": 1,
+        "explanation": "RAG wins for freshness and factual grounding; fine-tuning wins for behavior/style/format/domain-vocab that must be baked in. Cost-latency trade-offs then decide."
+      },
+      {
+        "order": 5,
+        "question": "Which is a Responsible-AI guardrail worth designing into an LLM platform from day one?",
+        "options": [
+          "PII detection and masking in prompts + responses, bias / drift monitoring on outputs, and a hallucination-detection eval harness in the deploy pipeline",
+          "A larger context window",
+          "Faster GPUs",
+          "A prettier UI"
+        ],
+        "correctIndex": 0,
+        "explanation": "Guardrails are architectural, not decorative — they belong on the platform's critical path, not bolted on after an incident."
+      }
+    ]
+  },
+  {
+    "dayNumber": 8,
+    "questions": [
+      {
+        "order": 1,
+        "question": "In the AWS Migration 'Six R's', which one means 'keep the workload as-is on the source system for now'?",
+        "options": [
+          "Rehost",
+          "Retire",
+          "Retain",
+          "Repurchase"
+        ],
+        "correctIndex": 2,
+        "explanation": "The Six R's: Retire, Retain, Rehost, Replatform, Refactor, Repurchase. Retain = deliberately not migrating this workload right now."
+      },
+      {
+        "order": 2,
+        "question": "What is the Strangler Fig pattern in a legacy modernization?",
+        "options": [
+          "Rewrite the entire legacy system in one big-bang release",
+          "Route traffic incrementally away from the legacy system to the new one, workload-by-workload, until the legacy system has nothing left to serve and can be shut down",
+          "Delete the legacy database on day one",
+          "Freeze the legacy system and never touch it again"
+        ],
+        "correctIndex": 1,
+        "explanation": "Named for a fig that grows around and eventually replaces its host tree — the new system 'strangles' the old one one route at a time."
+      },
+      {
+        "order": 3,
+        "question": "What does AWS Schema Conversion Tool (SCT) do?",
+        "options": [
+          "Encrypts schemas at rest",
+          "Analyzes and converts source-database schemas and SQL objects (procedures, functions, views) to a target database engine — flagging what can be auto-converted and what needs manual rewrite",
+          "Runs Spark jobs on schemas",
+          "Manages IAM permissions"
+        ],
+        "correctIndex": 1,
+        "explanation": "SCT handles the schema/code side of a heterogeneous migration (e.g. Oracle → PostgreSQL/Redshift); AWS DMS handles the data movement."
+      },
+      {
+        "order": 4,
+        "question": "What is the main risk of a dual-write strategy during a phased migration?",
+        "options": [
+          "It saves too much money",
+          "Two systems can silently drift out of sync if one write succeeds and the other fails, and reconciliation logic is complex to get right",
+          "It requires shutting down both systems",
+          "It only works on relational databases"
+        ],
+        "correctIndex": 1,
+        "explanation": "Dual-write requires idempotency, retry, and reconciliation — the failure modes are the hard part. Change-data-capture into a single writer is often safer."
+      },
+      {
+        "order": 5,
+        "question": "How many steps are in Kotter's Leading Change model?",
+        "options": [
+          "5",
+          "6",
+          "7",
+          "8"
+        ],
+        "correctIndex": 3,
+        "explanation": "Kotter's 8 steps — create urgency, build a coalition, form a vision, communicate it, empower action, generate short-term wins, sustain acceleration, institute change."
+      }
+    ]
+  },
+  {
+    "dayNumber": 9,
+    "questions": [
+      {
+        "order": 1,
+        "question": "What is a 'walking-skeleton' architecture in an interview / capstone context?",
+        "options": [
+          "A fully-polished production design document",
+          "The smallest end-to-end sketch that shows every layer of the system and every major decision boundary, without finishing any one component — enough to defend the design, not to build it",
+          "A skeleton diagram with no data flow",
+          "A UML class diagram"
+        ],
+        "correctIndex": 1,
+        "explanation": "Walking-skeleton captures the architecture's shape and reasoning under time pressure. Detail comes on the whiteboard during the defense."
+      },
+      {
+        "order": 2,
+        "question": "What three lists make up the capstone Decisions Log?",
+        "options": [
+          "3 tools / 3 vendors / 3 acronyms",
+          "3 decisions / 3 risks / 3 week-1 validation items (the 'known unknowns' made concrete)",
+          "3 diagrams / 3 tables / 3 endpoints",
+          "3 users / 3 stories / 3 sprints"
+        ],
+        "correctIndex": 1,
+        "explanation": "Decisions (with rejected alternative + reason), risks (with detection + mitigation), and week-1 validations (things you would go find out on the job) — a senior signal."
+      },
+      {
+        "order": 3,
+        "question": "What is the purpose of the 2-page written Architecture Brief?",
+        "options": [
+          "To replace the diagrams",
+          "To give a non-panel reviewer (HR, hiring manager, week-later panelist) a prose artifact they can read in 10 minutes and compare across candidates — grades communication as well as content",
+          "To document detailed IAM permissions",
+          "To list every service used"
+        ],
+        "correctIndex": 1,
+        "explanation": "Prose forces reasoning to hold together — bullets hide fuzzy thinking. The brief is the HR-file artifact of the capstone."
+      },
+      {
+        "order": 4,
+        "question": "In the walking-skeleton discipline, what belongs on paper vs on the whiteboard vs only in the architect's head?",
+        "options": [
+          "Everything on paper; nothing on the whiteboard",
+          "Decisions, NFRs and top risks on paper; the diagram and its evolution on the whiteboard; deliberate 'parked' decisions and known unknowns kept in the architect's head, ready to name if asked",
+          "Everything on the whiteboard; nothing on paper",
+          "Only tools on paper; only code on the whiteboard"
+        ],
+        "correctIndex": 1,
+        "explanation": "Architects are not stenographers; they choose what to write down and what to defend live. Naming what you deliberately did NOT decide is itself seniority signal."
+      },
+      {
+        "order": 5,
+        "question": "Why is the 'known unknowns' list a senior-signal in the Decisions Log?",
+        "options": [
+          "It shows the candidate memorized more acronyms",
+          "It shows the candidate can articulate what they deliberately did NOT decide and why — junior architects list what they built; senior architects can name what they parked and why",
+          "It gets bonus points from HR",
+          "It shortens the defense"
+        ],
+        "correctIndex": 1,
+        "explanation": "Naming a parked decision (\"I did not decide DR region until Compliance gives me the RPO\") is one of the clearest signals of architect-level judgment."
+      }
+    ]
+  },
+  {
+    "dayNumber": 10,
+    "questions": [
+      {
+        "order": 1,
+        "question": "How many minutes is the executive pitch portion of the Day-10 defense?",
+        "options": [
+          "5 minutes",
+          "10 minutes",
+          "15 minutes",
+          "20 minutes"
+        ],
+        "correctIndex": 1,
+        "explanation": "Structure: 10 min exec pitch → 15 min technical deep-dive → 15 min hostile Q&A → 5 min leadership scenario, totaling 45 min."
+      },
+      {
+        "order": 2,
+        "question": "How long is the hostile Q&A portion?",
+        "options": [
+          "5 minutes",
+          "10 minutes",
+          "15 minutes",
+          "30 minutes"
+        ],
+        "correctIndex": 2,
+        "explanation": "15 min is enough to test how the candidate handles pushback across cost, DR, scale, onboarding — the highest-signal portion of the defense."
+      },
+      {
+        "order": 3,
+        "question": "How long is the leadership-scenario portion at the end of the defense?",
+        "options": [
+          "5 minutes",
+          "10 minutes",
+          "15 minutes",
+          "20 minutes"
+        ],
+        "correctIndex": 0,
+        "explanation": "5 min at the end — one scenario (\"your best engineer just quit mid-migration, what do you do?\") answered concretely, not with platitudes."
+      },
+      {
+        "order": 4,
+        "question": "How many dimensions are in the recruitment scoring rubric used on Days 1 and 10?",
+        "options": [
+          "5",
+          "6",
+          "7",
+          "8"
+        ],
+        "correctIndex": 3,
+        "explanation": "Data architecture, AWS solution architecture, Lakehouse/DW/Lake trade-offs, enterprise transformation, Data + AI, technical leadership, communication, cost & operational reasoning — 8 dimensions, weighted."
+      },
+      {
+        "order": 5,
+        "question": "What is the purpose of the seniority calibration note produced on Day 10?",
+        "options": [
+          "To tell the candidate they failed",
+          "To place the candidate on a defensible ladder (Senior / Principal / Distinguished / Not-Yet-Ready), name what closes any gap, and point to where in the target org they best fit — the recruitment output the hiring committee reads",
+          "To replace the recorded defense",
+          "To rank all candidates against one leaderboard"
+        ],
+        "correctIndex": 1,
+        "explanation": "The note is the hiring-decision artifact: level, gap analysis, role-fit — the calibration that makes the recruitment defensible."
+      }
+    ]
+  }
+]

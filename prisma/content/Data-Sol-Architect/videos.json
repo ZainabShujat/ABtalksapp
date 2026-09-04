@@ -1,0 +1,172 @@
+[
+  {
+    "dayNumber": 1,
+    "videos": [
+      {
+        "order": 1,
+        "title": "The C4 Model for Software Architecture (Simon Brown)",
+        "youtubeId": "x2-rSnhpw0g",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "AWS Well-Architected Framework — Overview",
+        "youtubeId": "5Un1QoDLbSs",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 2,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Master Dimensional Modeling — Why Use a Dimensional Model?",
+        "youtubeId": "CZM__QtHCB0",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Data Vault 2.0 — Introduction and Modeling Concepts",
+        "youtubeId": "M1MjHKzXhtY",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 3,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Delta Lake vs Apache Iceberg vs Apache Hudi — a comparison",
+        "youtubeId": "fryfx0Zg7KA",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "The Lakehouse Architecture — Explained",
+        "youtubeId": "kBRBWEwbNvo",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 4,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Amazon Redshift Deep Dive & Best Practices (re:Invent)",
+        "youtubeId": "Cd1YvRVK0Uw",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Redshift Serverless vs Provisioned — Choosing the Right Model",
+        "youtubeId": "6QYT-jZH7oM",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 5,
+    "videos": [
+      {
+        "order": 1,
+        "title": "AWS Glue, EMR and Lake Formation — a Modern Data Stack",
+        "youtubeId": "d67cSa4qNsU",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Building a Data Lake on Amazon S3 — Best Practices",
+        "youtubeId": "0P5lXqNIPnE",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 6,
+    "videos": [
+      {
+        "order": 1,
+        "title": "AWS Well-Architected Data Analytics Lens Walkthrough",
+        "youtubeId": "PQ3rlaGRYPQ",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Data Mesh — Principles and Logical Architecture (Zhamak Dehghani)",
+        "youtubeId": "TVxUmXaAJmM",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 7,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Amazon Bedrock — Foundation Models, Knowledge Bases, Agents",
+        "youtubeId": "b0PjrhKMhH8",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "RAG vs Fine-tuning — When to Pick Which",
+        "youtubeId": "00Q0G84kq3M",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 8,
+    "videos": [
+      {
+        "order": 1,
+        "title": "AWS Database Migration — DMS and SCT Deep Dive",
+        "youtubeId": "z6ni7yiFxWM",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Strangler Fig Pattern for Legacy Modernization",
+        "youtubeId": "V9V4nJnPjKI",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 9,
+    "videos": [
+      {
+        "order": 1,
+        "title": "How to Sketch a Software Architecture Diagram (Simon Brown)",
+        "youtubeId": "6UbfPjLKQwI",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Writing Great Architecture Decision Records (ADRs)",
+        "youtubeId": "41NVge3_cYo",
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 10,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Defending a Software Architecture Design — Interview Playbook",
+        "youtubeId": "-frNQkRz_IU",
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Staff+ Engineer Communication — How to Talk to Executives",
+        "youtubeId": "0RQXreG-GwM",
+        "durationMin": null
+      }
+    ]
+  }
+]

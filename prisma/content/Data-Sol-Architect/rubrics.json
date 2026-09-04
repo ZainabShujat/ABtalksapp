@@ -1,0 +1,106 @@
+[
+  {
+    "moduleNumber": 1,
+    "title": "Module 1 — Data Architecture Foundations",
+    "criteria": [
+      {
+        "name": "Modeling depth & fit-for-purpose",
+        "weight": 30,
+        "description": "Kimball / Inmon / Data Vault chosen from workload + governance constraints (not habit); grain declared; SCDs applied correctly; anti-patterns avoided."
+      },
+      {
+        "name": "Lakehouse trade-off reasoning",
+        "weight": 30,
+        "description": "Delta vs Iceberg vs Hudi picked with a defensible reason (ACID / partition evolution / catalog fit / vendor lock-in); ADR is decision-shaped, not survey-shaped."
+      },
+      {
+        "name": "DW vs Lake vs Lakehouse comparison",
+        "weight": 25,
+        "description": "Comparison matrix covers cost, latency, governance, ecosystem, ACID, streaming, ML support; failure modes of each named."
+      },
+      {
+        "name": "Documentation & clarity",
+        "weight": 15,
+        "description": "Decision memo reads like an architect wrote it — concise, opinionated, cites constraints, ends with a decision line."
+      }
+    ]
+  },
+  {
+    "moduleNumber": 2,
+    "title": "Module 2 — AWS Solution Design",
+    "criteria": [
+      {
+        "name": "Redshift architecture literacy",
+        "weight": 25,
+        "description": "RA3 vs Serverless picked from workload shape; distribution + sort keys chosen for the fact table given; concurrency scaling, Spectrum, Zero-ETL used where they fit."
+      },
+      {
+        "name": "AWS-native reference architecture",
+        "weight": 30,
+        "description": "Ingestion + transformation layer for the bank scenario uses only Glue / EMR / S3 / Lake Formation / Kinesis / MSK / Step Functions — no Databricks / Snowflake — and the choices are defended."
+      },
+      {
+        "name": "Cost & capacity modeling",
+        "weight": 25,
+        "description": "Sizing spreadsheet within 15% of realistic AWS pricing across dev/staging/prod; unit economics per workload; FinOps guardrails named."
+      },
+      {
+        "name": "ADR quality",
+        "weight": 20,
+        "description": "Provisioned-vs-Serverless and Glue-vs-EMR ADRs surface non-obvious trade-offs (spiky workloads, catalog fit, Spark tuning ceiling), not textbook comparisons."
+      }
+    ]
+  },
+  {
+    "moduleNumber": 3,
+    "title": "Module 3 — Solution Architecture + Data & AI",
+    "criteria": [
+      {
+        "name": "NFR-first design",
+        "weight": 25,
+        "description": "Architecture derives from NFRs (security, performance, scalability, reliability, cost, observability, maintainability), not the reverse; Well-Architected Data Analytics Lens scorecard fills honestly."
+      },
+      {
+        "name": "Enterprise pattern selection",
+        "weight": 25,
+        "description": "Data mesh vs centralized picked from org shape (BU count, governance maturity); Lambda / Kappa / Delta chosen from freshness SLOs; multi-tenancy pattern matches regulatory constraints."
+      },
+      {
+        "name": "Data + AI integration",
+        "weight": 30,
+        "description": "AI/ML treated as first-class citizens of the platform (feature store, training-serving skew, MLOps hooks); RAG vs fine-tune vs prompt-engineering ADR shows real cost/latency reasoning; responsible-AI guardrails present."
+      },
+      {
+        "name": "Diagram & documentation quality",
+        "weight": 20,
+        "description": "C4 L1+L2 diagrams are readable, correctly abstracted per level, and match the written NFR matrix."
+      }
+    ]
+  },
+  {
+    "moduleNumber": 4,
+    "title": "Module 4 — Enterprise Transformation & Capstone",
+    "criteria": [
+      {
+        "name": "Migration strategy realism",
+        "weight": 20,
+        "description": "Six R's applied per workload; 3-wave rollout has real dependencies; risk register names the top 5 risks the panel would raise; rollback strategy is concrete, not aspirational."
+      },
+      {
+        "name": "Capstone architectural reasoning",
+        "weight": 30,
+        "description": "Walking-skeleton HLD + LLD hold together under Q&A; decisions log's 3 decisions + 3 risks + 3 week-1 validations are non-generic; the 2-page brief reads like an executive artifact."
+      },
+      {
+        "name": "Live defense (hostile Q&A + leadership scenario)",
+        "weight": 30,
+        "description": "Candidate handles pushback without ego; flexes register from CTO exec-pitch to engineer whiteboard; leadership scenario (\"best engineer quit mid-migration\") answered with concrete moves, not platitudes."
+      },
+      {
+        "name": "Communication (written + spoken)",
+        "weight": 20,
+        "description": "CFO exec summary lands in one page; 2-page brief is prose that holds together; defense pitch stays on time and on point."
+      }
+    ]
+  }
+]

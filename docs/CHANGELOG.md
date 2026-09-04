@@ -50,6 +50,7 @@ _(Cleared 2026-08-24 — the 17 entries that were under this heading were folded
 reconciled against `3b040d8`. The un-headed block above (2026-08-06 → 2026-08-20) was logged outside this
 heading and was never reconciled; its facts were folded into the same pass, but the lines were left in place
 rather than deleted without authorization. Cursor appends new lines below.)_
+- 2026-09-04 [schema|rule|convention] Data Solutions Architect cohort (plan 110) ships 078-native at /program/ds-architect: LearningProgram "ds-architect" + ROLLING open Cohort "ds-architect-open", ProgramEnrollment/ActivityAttempt/ActivityEvaluation/EnrollmentProgress/EnrollmentDayActivity with PLAIN CUID ids (never pe_*/aa_* prefixes), no dual-write and no legacy ProgramMember/ProgramDay row. Content from prisma/content/Data-Sol-Architect only (modules + days.missionSpec + videos). Day 1 = enrolment date in IST, 10 days, 175 pts, 30 runs/day, 15s spacing. Missions reuse verify-mission.ts unchanged. Gated by ENABLE_DS_ARCHITECT.
 - 2026-09-03 [rule] /profile Career Preferences completes on any saved engagement (incl. openToWork); profile card shows orange Open To Work tag when set
 - 2026-09-03 [rule] /profile Skills section completes with ≥1 claimed skill (was MIN_SKILLS = 3)
 - 2026-09-03 [rule] /profile Basic Information requires phone OTP when verification is on (India); verified state shows green badge only
