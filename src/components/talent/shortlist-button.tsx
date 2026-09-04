@@ -138,18 +138,24 @@ export function ShortlistButton({
       ) : inCart ? (
         <X className="size-3.5" aria-hidden="true" />
       ) : podLabel ? (
-        // The Shortlist mark from the desk header (`/hire/talentpod.jpg`), so
-        // the button on a card and the nav item it feeds are recognisably the
-        // same thing. Only the `podLabel` — i.e. Scout desk — variant takes it;
-        // the generic cart button keeps its lucide glyph.
-        <img
-          src="/hire/talentpod.jpg"
-          alt=""
-          width={14}
-          height={16}
+        // The desk header's own Shortlist mark, reusing its markup and classes
+        // rather than pointing a bare <img> at the same file.
+        //
+        // `.hire-hbtn__icon` is a crop viewport, not a plain image slot: the
+        // JPEG carries a wide white margin, and `--pod` scales it ~180% and
+        // offsets it to frame just the glyph. Rendering the file at its natural
+        // size — which is what a bare <img> does — shows the padding too, so
+        // the mark comes out small and washed out. The same rules also carry
+        // the dark-mode invert.
+        //
+        // Only the `podLabel` (Scout desk) variant takes it; the generic cart
+        // button keeps its lucide glyph.
+        <span
+          className="hire-hbtn__icon hire-hbtn__icon--pod"
           aria-hidden="true"
-          className="shrink-0"
-        />
+        >
+          <img src="/hire/talentpod.jpg" alt="" width={18} height={20} />
+        </span>
       ) : (
         <BookmarkPlus className="size-3.5" aria-hidden="true" />
       )}
