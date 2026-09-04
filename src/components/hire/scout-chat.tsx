@@ -1013,567 +1013,436 @@ export function ScoutChat({
     setHint(null);
   }
 
-  // The strip shows all nine criteria from the first render, muted until each
-  // one is captured.
-  //
-  // It used to render only `criteria.filter(c => c.on)` and stay collapsed
-  // until one was — the idea being that grey labels under an empty composer
-  // said nothing. In practice the opposite was true: a recruiter could not see
-  // what Scout was even trying to collect, and the row appearing mid-typing
-  // moved the composer under their hands. Showing the whole list makes the
-  // strip a legible target, and its height is now constant, so nothing shifts
-  // as ticks land.
-  //
-  // `is-open` is permanent for the same reason: the slot animates
-  // grid-template-rows between 0fr and 1fr, and there is no longer a state
-  // where the strip should be closed.
-  const stripItems = criteria;
-  /**
-   * The strip appears when there is something to interpret.
-   *
-   * On an untouched desk it is nine grey labels under an empty field, which
-   * says nothing and pushes the composer off centre. It opens on the first
-   * keystroke, which is also the first moment it can be right, and once
-   * anything has been captured it stays open so the row never flickers
-   * between turns.
-   */
-  const stripOpen = text.trim().length > 0 || criteria.some((c) => c.on);
-
-  /** What the recruiter actually asked for, to show on the folded card. */
-  const lastAsk = [...messages].reverse().find((m) => m.role === "user");
-  const queryLabel = lastAsk?.content.trim() || summary || "your search";
-
-  const loadingLabel =
-    phase === "search"
-      ? (SEARCH_STAGES[Math.min(stage, SEARCH_STAGES.length - 1)] as string)
-      : REPLY_LABEL;
+  // The strip is feedback, not a form. Nine grey labels under an empty composer
+  // tell the recruiter nothing and cost the field a row of height, so the strip
+  // only appears once something has actually been captured, and only shows what
+  // was captured. `criteria` itself stays whole — the Requirement menu still
+  // lists all nine with their on/off state.
+  const metCriteria = criteria.filter((c) => c.on);
+  const stripOpen = metCriteria.length > 0;
+  const stripItemsRef = useRef(metCriteria);
+  if (stripOpen) stripItemsRef.current = metCriteria;
+  const stripItems = stripOpen ? metCriteria : stripItemsRef.current;
 
   return (
     <>
       <section
-      className={cn(
-        "scout",
-        expanded && "is-expanded",
-        // Landing: the query is the page. The composer leaves the bottom of
-        // the card and centres with the heading, and Scout's identity drops
-        // back to a line of text. Everything else about the desk is unchanged.
-        !talked && "is-landing",
-        // Once results exist Scout stops being the page and becomes the bar
-        // above it: fixed height, stuck to the top, still fully conversational.
-        searched && "is-compact",
-        condensed && "is-condensed",
-      )}
-      ref={shellRef}
-      aria-label="Scout assistant"
-    >
+        className={cn(
+          "scout",
+          expanded && "is-expanded",
+          // Landing: the query is the page. The composer leaves the bottom of
+          // the card and centres with the heading, and Scout's identity drops
+          // back to a line of text. Everything else about the desk is unchanged.
+          !talked && "is-landing",
+          // Once results exist Scout stops being the page and becomes the bar
+          // above it: fixed height, stuck to the top, still fully conversational.
+          searched && "is-compact",
+          condensed && "is-condensed",
+        )}
+        ref={shellRef}
+        aria-label="Scout assistant"
+      >
 
-      {/* Folded: the search, not the conversation. Tapping it brings the whole
+        {/* Folded: the search, not the conversation. Tapping it brings the whole
           copilot back without moving the results underneath. */}
-      {searched && (
-        <button
-          type="button"
-          className="scout__folded"
-          hidden={!condensed}
-          onClick={() => setReopened(true)}
-        >
-          <span className="scout-mark scout-mark--id" aria-hidden="true">
-            <Sparkles className="size-3" />
-          </span>
-          <span className="scout__folded-q">{queryLabel}</span>
-          {matchCount != null && (
-            <span className="scout__folded-meta">
-              {matchCount} {matchCount === 1 ? "match" : "matches"}
+        {searched && (
+          <button
+            type="button"
+            className="scout__folded"
+            hidden={!condensed}
+            onClick={() => setReopened(true)}
+          >
+            <span className="scout-mark scout-mark--id" aria-hidden="true">
+              <Sparkles className="size-3" />
             </span>
-          )}
-          <ChevronDown className="size-4 scout__folded-caret" aria-hidden="true" />
-        </button>
-      )}
-      <div className="scout__bar">
-        <div className="scout__id">
-          <span className="scout__avatar" aria-hidden="true">
-            <Sparkles className="size-4" />
-          </span>
-          <div className="scout__meta">
-            <span className="scout__name">Scout</span>
-            <span className="scout__status">
-              {summary || "Not started"}
-            </span>
-          </div>
-        </div>
-        <div className="scout__tools">
-          <button type="button" className="scout-tbtn" onClick={resetDesk}>
-            New search
-          </button>
-          <div className="hire-req" ref={reqMenuRef}>
-            <button
-              type="button"
-              className="scout-tbtn"
-              aria-expanded={detailsOpen}
-              onClick={() => setDetailsOpen((o) => !o)}
-            >
-              Requirement
-              <ChevronDown
-                className={cn("size-3.5", detailsOpen && "rotate-180")}
-              />
-            </button>
-            {detailsOpen && (
-              <div className="hire-req__menu" role="menu">
-                <p className="hire-req__label">Requirement</p>
-                {criteria.map((c) => (
-                  <button
-                    key={c.key}
-                    type="button"
-                    className={cn("hire-req__item", c.on && "is-on")}
-                    role="menuitemcheckbox"
-                    aria-checked={c.on}
-                    onClick={() => pickRequirement(c.key, c.on)}
-                  >
-                    {c.key}
-                    <span className="hire-req__dot" />
-                  </button>
-                ))}
-                <p className="hire-req__label hire-req__label--filter">
-                  Employment type
-                </p>
-                <div
-                  className="hire-req__filter"
-                  role="radiogroup"
-                  aria-label="Filter by employment type"
-                >
-                  {EMP_FILTERS.map((f) => {
-                    const checked =
-                      f.value === "All"
-                        ? spec.employmentType == null
-                        : spec.employmentType === f.value;
-                    return (
-                      <button
-                        key={f.value}
-                        type="button"
-                        className={cn(
-                          "hire-req__item hire-req__item--radio",
-                          checked && "is-on",
-                        )}
-                        role="menuitemradio"
-                        aria-checked={checked}
-                        onClick={() => pickEmployment(f.value)}
-                      >
-                        {f.label}
-                        <span className="hire-req__dot" />
-                      </button>
-                    );
-                  })}
-                </div>
-                {rows.length > 0 && (
-                  <dl className="hire-req__rows">
-                    {rows.map((r) => (
-                      <div key={r.label}>
-                        <dt>{r.label}</dt>
-                        <dd>{r.value}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                )}
-                {recent.length > 0 && (
-                  <div className="hire-req__recent">
-                    <p className="hire-req__label">Pick up where you left off</p>
-                    {recent.map((r) => (
-                      <button
-                        key={r.id}
-                        type="button"
-                        className="hire-req__item"
-                        onClick={() => router.push(`/hire/${r.id}`)}
-                      >
-                        <span className="truncate">{r.title}</span>
-                        <span className="hire-req__meta">
-                          {r.status} · {r.date}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+            <span className="scout__folded-q">{queryLabel}</span>
+            {matchCount != null && (
+              <span className="scout__folded-meta">
+                {matchCount} {matchCount === 1 ? "match" : "matches"}
+              </span>
             )}
-          </div>
-          {/* The same corner button, reversed once results exist.
-              Full screen is the right offer while Scout is the page; once the
-              candidates are the page it would cover the very list it sits
-              above, so it folds the card down to the query instead, which is
-              the gesture that actually matters there. */}
-          {searched ? (
-            <button
-              type="button"
-              className="scout-tbtn scout-tbtn--icon"
-              aria-label="Collapse Scout to the search bar"
-              title="Collapse"
-              onClick={() => setReopened(false)}
-            >
-              <Minimize2 className="size-3.5" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              className={cn("scout-tbtn scout-tbtn--icon", expanded && "is-on")}
-              aria-label={expanded ? "Exit full screen" : "Expand Scout"}
-              onClick={() => setExpanded((e) => !e)}
-            >
-              {expanded ? (
-                <Minimize2 className="size-3.5" />
-              ) : (
-                <Maximize2 className="size-3.5" />
-              )}
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className={cn("scout__body", openMatch && "is-open")}>
-        <div ref={scrollRef} className="chat-output" id="hire-results">
-          {!talked && (
-            <div className="scout-hero">
-              <h2 className="scout-hero__h">Who are you hiring?</h2>
+            <ChevronDown className="size-4 scout__folded-caret" aria-hidden="true" />
+          </button>
+        )}
+        <div className="scout__bar">
+          <div className="scout__id">
+            <span className="scout__avatar" aria-hidden="true">
+              <Sparkles className="size-4" />
+            </span>
+            <div className="scout__meta">
+              <span className="scout__name">Scout</span>
+              <span className="scout__status">
+                {summary || "Not started"}
+              </span>
             </div>
-          )}
-
-          {/* Scout's latest line reads as interpretation of the query, not as
-              a message in a thread. It keeps every ability it had — asking for
-              something missing included — but an ask arrives as guidance above
-              the workspace rather than as a question the recruiter owes an
-              answer to. */}
-          {talked && lede && (
-            <div className="scout-lede">
-              {priorTurns.length > 0 && (
-                <div className="scout-lede__prior">
-                  <button
-                    type="button"
-                    className="scout-history__toggle"
-                    aria-expanded={historyOpen}
-                    onClick={() => setHistoryOpen((o) => !o)}
-                  >
-                    <ChevronDown
-                      className={cn("size-3.5", historyOpen && "rotate-180")}
-                    />
-                    {historyOpen
-                      ? "Hide conversation"
-                      : `Conversation (${priorTurns.length})`}
-                  </button>
-                  {historyOpen && (
-                    <ol
-                      className="scout-history"
-                      aria-label="Earlier in this conversation"
+          </div>
+          <div className="scout__tools">
+            <button type="button" className="scout-tbtn" onClick={resetDesk}>
+              New search
+            </button>
+            <div className="hire-req" ref={reqMenuRef}>
+              <button
+                type="button"
+                className="scout-tbtn"
+                aria-expanded={detailsOpen}
+                onClick={() => setDetailsOpen((o) => !o)}
+              >
+                Requirement
+                <ChevronDown
+                  className={cn("size-3.5", detailsOpen && "rotate-180")}
+                />
+              </button>
+              {detailsOpen && (
+                <div className="hire-req__menu" role="menu">
+                  <p className="hire-req__label">Requirement</p>
+                  {criteria.map((c) => (
+                    <button
+                      key={c.key}
+                      type="button"
+                      className={cn("hire-req__item", c.on && "is-on")}
+                      role="menuitemcheckbox"
+                      aria-checked={c.on}
+                      onClick={() => pickRequirement(c.key, c.on)}
                     >
-                      {priorTurns.map((m, i) => (
-                        <li
-                          key={`${m.role}-${i}`}
-                          className={cn(
-                            "scout-history__row",
-                            m.role === "user" && "is-user",
-                          )}
-                        >
-                          <span className="scout-history__who">
-                            {m.role === "user" ? "You" : "Scout"}
-                          </span>
-                          <p className="scout-history__text">{m.content}</p>
-                        </li>
-                      ))}
-                    </ol>
-                  )}
-                </div>
-              )}
-
-              <div className="scout-lede__row">
-                <span className="scout-mark scout-mark--id" aria-hidden="true">
-                  <Sparkles className="size-3" />
-                </span>
-                <div className="scout-lede__body">
-                  <p className="scout-lede__text">{lede.content}</p>
-                  {askOpen && chips.length > 0 && (
-                    <div className="scout-chips">
-                      {chips.map((o, oi) => (
+                      {c.key}
+                      <span className="hire-req__dot" />
+                    </button>
+                  ))}
+                  <p className="hire-req__label hire-req__label--filter">
+                    Employment type
+                  </p>
+                  <div
+                    className="hire-req__filter"
+                    role="radiogroup"
+                    aria-label="Filter by employment type"
+                  >
+                    {EMP_FILTERS.map((f) => {
+                      const checked =
+                        f.value === "All"
+                          ? spec.employmentType == null
+                          : spec.employmentType === f.value;
+                      return (
                         <button
-                          key={`${o.value}-${oi}`}
+                          key={f.value}
                           type="button"
                           className={cn(
-                            "scout-chip",
-                            o.value === "action:search" && "scout-chip--show",
+                            "hire-req__item hire-req__item--radio",
+                            checked && "is-on",
                           )}
-                          disabled={pending}
-                          onClick={() => send(o.value, chipLabel(o))}
+                          role="menuitemradio"
+                          aria-checked={checked}
+                          onClick={() => pickEmployment(f.value)}
                         >
-                          {chipLabel(o)}
+                          {f.label}
+                          <span className="hire-req__dot" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {rows.length > 0 && (
+                    <dl className="hire-req__rows">
+                      {rows.map((r) => (
+                        <div key={r.label}>
+                          <dt>{r.label}</dt>
+                          <dd>{r.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
+                  {recent.length > 0 && (
+                    <div className="hire-req__recent">
+                      <p className="hire-req__label">Pick up where you left off</p>
+                      {recent.map((r) => (
+                        <button
+                          key={r.id}
+                          type="button"
+                          className="hire-req__item"
+                          onClick={() => router.push(`/hire/${r.id}`)}
+                        >
+                          <span className="truncate">{r.title}</span>
+                          <span className="hire-req__meta">
+                            {r.status} · {r.date}
+                          </span>
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
-              </div>
+              )}
             </div>
-          )}
-
-
-          <div
-            ref={bottomRef}
-            className="scout-thread__end"
-            aria-hidden="true"
-          />
-        </div>
-
-      </div>
-
-      <form
-        className="scout-composer"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (text.trim()) send(text);
-          else runSearch();
-        }}
-      >
-        <div className="scout-composer__row">
-          <div className="scout-field">
-            <label className="sr-only" htmlFor="scout-prompt">
-              Describe who you are hiring
-            </label>
-            <div className="scout-field__box">
-            {hint && text === hint.prefix && (
-              /* Mirrors the textarea's own metrics so the hint lands exactly
-                 where the next character will. The typed label is repeated
-                 transparently to push the hint along; only the grey half is
-                 ever seen. */
-              <span className="scout-ghost" aria-hidden="true">
-                <span className="scout-ghost__typed">{text}</span>
-                <span className="scout-ghost__hint">{hint.text}</span>
-              </span>
-            )}
-            <textarea
-              id="scout-prompt"
-              ref={promptRef}
-              rows={1}
-              value={text}
-              onChange={(e) => {
-                setText(e.target.value);
-                if (hint && e.target.value !== hint.prefix) setHint(null);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  if (text.trim()) send(text);
-                  else runSearch();
-                }
-              }}
-              /* No placeholder by request — the field reads empty. The
-                 accessible name comes from aria-label below, so screen readers
-                 still get one. */
-              placeholder=""
-              disabled={pending}
-              maxLength={2000}
-            />
-            </div>
-          </div>
-          <button
-            type="submit"
-            disabled={pending || (persist && !requestId && !text.trim())}
-            className="scout-send"
-          >
-            {pending ? "…" : "Search"}
-          </button>
-        </div>
-          {/* Suggestions sit under the field, not above it: anything above
-              pushes the composer off the optical centre, and an example is
-              only useful once you have seen where it lands. */}
-          {!talked && (
-            <ul className="scout-hero__examples" aria-label="Example searches">
-              {EXAMPLE_QUERIES.map((q) => (
-                <li key={q}>
-                  <button
-                    type="button"
-                    className="scout-example"
-                    onClick={() => applyExample(q)}
-                  >
-                    {q}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-        <div className={cn("scout-criteria-slot", stripOpen && "is-open")}>
-          <div className="scout-criteria-slot__clip">
-            <ul
-              className="scout-criteria"
-              aria-label="Requirements"
-              ref={criteriaRef}
-            >
-              {stripItems.map((c) => (
-                <li
-                  key={c.key}
-                  className={cn(
-                    "scout-criterion",
-                    c.on && "is-on",
-                    justOn.includes(c.key) && "is-fresh",
-                  )}
-                >
-                  {/* The tick is drawn for every item so the row does not
-                      re-measure when one turns on; `.scout-criterion` already
-                      carries the muted colour and `.is-on` the green.
-
-                      An unset one is also a button: it is a refinement the
-                      recruiter may take, not a question they owe an answer
-                      to. It routes through the same `pickRequirement` the
-                      Requirement menu uses, so the agent protocol is
-                      untouched. */}
-                  {c.on ? (
-                    <>
-                      <span
-                        className="scout-criterion__box"
-                        aria-hidden="true"
-                      >
-                        &#10003;
-                      </span>
-                      <span>{c.key}</span>
-                      <span className="sr-only">, captured</span>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      className="scout-criterion__add"
-                      disabled={pending}
-                      onClick={() => pickRequirement(c.key, false)}
-                    >
-                      <span
-                        className="scout-criterion__box"
-                        aria-hidden="true"
-                      >
-                        &#10003;
-                      </span>
-                      <span>{c.key}</span>
-                      <span className="sr-only">
-                        {" "}
-                       , not set. Add it to sharpen the ranking.
-                      </span>
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </form>
-    </section>
-
-      {/* The results are the page, not a panel inside the chat.
-          They live beside the Scout card rather than in it, so the region
-          scrolls through candidates while the card stays put at the top.
-          Nothing about the cards, the ranking or the actions changed; only
-          which element they hang off. */}
-      {(searched || openMatch) && (
-        <div className={cn("scout-results-page", openMatch && "is-open")}>
-          <div className="scout-results-page__list">
-        {searched && (
-          <div className="scout-thread__results">
-            {!persist && searchTabs.length > 1 && (
-              <div className="scout-tabs">
-                <SearchTabs
-                  tabs={searchTabs}
-                  activeId={activeSearchId}
-                  onSelect={(id) => {
-                    setActiveSearchId(id);
-                    setActiveGuestSearch(id);
-                    const tab = searchTabs.find((t) => t.id === id);
-                    setMatchCount(tab?.matches.length ?? 0);
-                    setOpenMatch(null);
-                  }}
-                />
-              </div>
-            )}
-            {deskMatches.length > 0 && (
-              <p className="scout-privacy">
-                Contact stays hidden until you place a request and the
-                candidate agrees.
-              </p>
-            )}
-            {/* The lede already carries this sentence when it is the newest
-                turn; printing it twice reads as the interface stuttering. */}
-            {deskGap && deskGap !== lede?.content && (
-              <p className="scout-gap">{deskGap}</p>
-            )}
-            {pending && phase === "search" ? (
-              <DeskCardSkeleton
-                count={Math.min(2, Math.max(1, matchCount ?? 2))}
-              />
+            {/* The same corner button, reversed once results exist.
+              Full screen is the right offer while Scout is the page; once the
+              candidates are the page it would cover the very list it sits
+              above, so it folds the card down to the query instead, which is
+              the gesture that actually matters there. */}
+            {searched ? (
+              <button
+                type="button"
+                className="scout-tbtn scout-tbtn--icon"
+                aria-label="Collapse Scout to the search bar"
+                title="Collapse"
+                onClick={() => setReopened(false)}
+              >
+                <Minimize2 className="size-3.5" />
+              </button>
             ) : (
-              <MatchResults
-                desk
-                matches={deskMatches}
-                samples={deskSamples}
-                sampleDemand={{
-                  spec,
-                  requestId,
-                  alreadyRecorded: alertWhenAvailable,
-                }}
-                cartCount={persist ? resultsCartCount : readGuestCart().length}
-                onOpen={setOpenMatch}
-                selectedRef={openMatch?.candidateRef}
-              />
+              <button
+                type="button"
+                className={cn("scout-tbtn scout-tbtn--icon", expanded && "is-on")}
+                aria-label={expanded ? "Exit full screen" : "Expand Scout"}
+                onClick={() => setExpanded((e) => !e)}
+              >
+                {expanded ? (
+                  <Minimize2 className="size-3.5" />
+                ) : (
+                  <Maximize2 className="size-3.5" />
+                )}
+              </button>
             )}
-            {persist && requestId && matchCount === 0 && !pending && (
-              <div className="hire-gap">
-                <GapReport
-                  requestId={requestId}
-                  overallGap={
-                    deskGap?.trim() ||
-                    "No verified matches in the published pool for this requirement yet. Your demand is saved."
-                  }
-                  alertWhenAvailable={alertWhenAvailable}
-                />
+          </div>
+        </div>
+
+        <div className={cn("scout__body", openMatch && "is-open")}>
+          <div ref={scrollRef} className="chat-output" id="hire-results">
+            {!talked && (
+              <div className="scout-empty">
+                <button
+                  type="button"
+                  className="scout-pill"
+                  disabled={pending || (persist && !requestId)}
+                  onClick={() => runSearch()}
+                >
+                  <Search className="size-3" />
+                  Search with what I have
+                </button>
+                <p>
+                  Answer the rest for a sharper ranking — I&apos;ll search
+                  when we have enough to go on.
+                </p>
               </div>
             )}
-          </div>
-        )}
 
-        {pending && phase === "search" && rows.length > 0 && (
-          <ScoutUnderstood rows={rows} onEdit={() => setDetailsOpen(true)} />
-        )}
+            <div className="scout-thread">
+              {messages.map((m, i) => {
+                const isLastAsk =
+                  askOpen && i === lastIndex && m.role === "assistant";
+                return (
+                  <Fragment key={`${m.role}-${i}`}>
+                    <div
+                      className={cn(
+                        "scout-turn",
+                        m.role === "user" && "scout-turn--user",
+                      )}
+                    >
+                      {m.role === "assistant" && (
+                        <span className="scout-mark">
+                          <Sparkles className="size-3" />
+                        </span>
+                      )}
+                      <div className="scout-turn__body">
+                        <p
+                          className={
+                            m.role === "assistant"
+                              ? "scout-ask__q"
+                              : "scout-turn__text"
+                          }
+                        >
+                          {m.content}
+                        </p>
+                        {isLastAsk && (chips.length > 0 || talked) && (
+                          <div className="scout-follow">
+                            {chips.length > 0 && (
+                              <div className="scout-chips">
+                                {chips.map((o, oi) => (
+                                  <button
+                                    key={`${o.value}-${oi}`}
+                                    type="button"
+                                    className={cn(
+                                      "scout-chip",
+                                      o.value === "action:search" &&
+                                      "scout-chip--show",
+                                    )}
+                                    disabled={pending}
+                                    onClick={() => send(o.value, chipLabel(o))}
+                                  >
+                                    {chipLabel(o)}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                            {talked && !searched && (
+                              <p className="scout-follow__hint">
+                                Share more details about the candidate
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      {m.role === "user" && (
+                        <span className="scout-mark">You</span>
+                      )}
+                    </div>
+                    {searched && resultsPin === i && (
+                      <div className="scout-thread__results">
+                        {!persist && searchTabs.length > 1 && (
+                          <div className="scout-tabs">
+                            <SearchTabs
+                              tabs={searchTabs}
+                              activeId={activeSearchId}
+                              onSelect={(id) => {
+                                setActiveSearchId(id);
+                                setActiveGuestSearch(id);
+                                const tab = searchTabs.find((t) => t.id === id);
+                                setMatchCount(tab?.matches.length ?? 0);
+                                setOpenMatch(null);
+                              }}
+                            />
+                          </div>
+                        )}
+                        {deskMatches.length > 0 && (
+                          <p className="scout-privacy">
+                            Contact stays hidden until you place a request and
+                            the candidate agrees.
+                          </p>
+                        )}
+                        {deskGap && (
+                          <p className="scout-gap">{deskGap}</p>
+                        )}
+                        <MatchResults
+                          desk
+                          matches={deskMatches}
+                          samples={deskSamples}
+                          sampleDemand={{
+                            spec,
+                            requestId,
+                            alreadyRecorded: alertWhenAvailable,
+                          }}
+                          cartCount={
+                            persist ? resultsCartCount : readGuestCart().length
+                          }
+                          onOpen={setOpenMatch}
+                          selectedRef={openMatch?.candidateRef}
+                        />
+                        {persist && requestId && matchCount === 0 && (
+                          <div className="hire-gap">
+                            <GapReport
+                              requestId={requestId}
+                              overallGap={
+                                deskGap?.trim() ||
+                                "No verified matches in the published pool for this requirement yet. Your demand is saved."
+                              }
+                              alertWhenAvailable={alertWhenAvailable}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </Fragment>
+                );
+              })}
 
-        {pending && (
-          <div className="scout-turn">
-            <ScoutLoader />
-            <p
-              key={loadingLabel}
-              className="scout-turn__text scout-loader__label"
-            >
-              {loadingLabel}
-            </p>
+              {pending && (
+                <div className="scout-turn">
+                  <ScoutLoader />
+                  <p
+                    key={loadingLabel}
+                    className="scout-turn__text scout-loader__label"
+                  >
+                    {loadingLabel}
+                  </p>
+                </div>
+              )}
+            </div>
+            {openMatch && (
+              <CandidateInspector
+                match={openMatch}
+                onClose={() => setOpenMatch(null)}
+                onCartToggle={(inCart) =>
+                  setOpenMatch((m) => (m ? { ...m, shortlisted: inCart } : m))
+                }
+              />
+            )}
           </div>
-        )}
-          </div>
-        {openMatch && (
-          <CandidateInspector
-            match={openMatch}
-            onClose={() => setOpenMatch(null)}
-            onCartToggle={(inCart) =>
-              setOpenMatch((m) => (m ? { ...m, shortlisted: inCart } : m))
-            }
-          />
-        )}
-        </div>
-      )}
-    </>
-  );
+
+          <form
+            className="scout-composer"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (text.trim()) send(text);
+              else runSearch();
+            }}
+          >
+            <div className="scout-composer__row">
+              <div className="scout-field">
+                <label className="sr-only" htmlFor="scout-prompt">
+                  Your answer to Scout
+                </label>
+                <textarea
+                  id="scout-prompt"
+                  ref={promptRef}
+                  rows={1}
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      if (text.trim()) send(text);
+                      else runSearch();
+                    }
+                  }}
+                  placeholder="Type your answer, or ask me anything..."
+                  disabled={pending}
+                  maxLength={2000}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={pending || (persist && !requestId && !text.trim())}
+                className="scout-send"
+              >
+                {pending ? "…" : "Search"}
+              </button>
+            </div>
+            <div className={cn("scout-criteria-slot", stripOpen && "is-open")}>
+              <div className="scout-criteria-slot__clip">
+                {stripItems.length > 0 && (
+                  <ul
+                    className="scout-criteria"
+                    aria-label="Requirements captured"
+                    aria-hidden={!stripOpen}
+                    ref={criteriaRef}
+                  >
+                    {stripItems.map((c) => (
+                      <li key={c.key} className="scout-criterion is-on">
+                        <span className="scout-criterion__box" aria-hidden="true">
+                          ✓
+                        </span>
+                        <span>{c.key}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </form>
+      </section>
+      );
 }
 
-function ScoutLoader() {
+      function ScoutLoader() {
   return (
-    <span className="scout-loader" aria-label="Scout is thinking">
-      <span className="scout-loader__burst" aria-hidden="true">
-        <i />
-        <i />
-        <i />
-        <i />
-        <i />
-        <i />
+      <span className="scout-loader" aria-label="Scout is thinking">
+        <span className="scout-loader__burst" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+          <i />
+          <i />
+          <i />
+        </span>
+        <span className="scout-mark scout-loader__core">
+          <Sparkles className="size-3" />
+        </span>
       </span>
-      <span className="scout-mark scout-loader__core">
-        <Sparkles className="size-3" />
-      </span>
-    </span>
-  );
+      );
 }

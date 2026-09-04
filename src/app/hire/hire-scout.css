@@ -580,15 +580,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
   gap: 12px;
   min-height: 48px;
   padding: 8px 20px;
-  /* Every control in the bar is centred on one line and shares a height, so the
-     identity block, the two buttons and the expand action sit on a common
-     baseline instead of each finding its own. */
-  /* Copilot identity, not a banner. This was a 53px full-width orange
-     gradient, the largest coloured surface on the page, which is how a
-     recruiting workspace ended up reading as a chat window. Orange is now
-     spent on the avatar mark and the Search button. */
-  background: var(--h-surface);
-  border-bottom: 1px solid var(--h-border);
+  background: linear-gradient(to bottom, var(--h-toolbar-2) 0%, var(--h-toolbar) 100%);
   border-radius: 19px 19px 0 0;
 }
 
@@ -759,41 +751,6 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
   justify-content: center;
   background: var(--h-avatar);
   color: var(--h-primary);
-}
-
-/* Scout's own mark beside its messages.
-
-   `.scout-mark` alone put the icon on --h-avatar (#eef0fe, a pale lavender)
-   with an orange glyph, while the header's `.scout__avatar` is the reverse:
-   a solid --h-primary plate with a white glyph. Same icon, opposite treatment,
-   so the two did not read as the same Scout. This matches the header and keeps
-   the smaller 28px geometry from `.scout-mark`.
-
-   The idle animation is the loader's language at a fraction of its amplitude.
-   `scout-crack` swings scale 0.86-1.22 and rotates 12deg on a 1.7s loop, which
-   is right for "thinking" and would be a distraction on every message in the
-   transcript. This breathes instead: a 4.5% scale, no rotation, and the same
-   orange drop-shadow rising and falling over 4.2s. Nothing about it reads as a
-   spinner, and it animates transform and filter only, so the row never
-   re-measures. */
-.scout-mark--id {
-  background: var(--h-primary);
-  color: #fff;
-  animation: scout-idle 4.2s ease-in-out infinite;
-}
-
-@keyframes scout-idle {
-
-  0%,
-  100% {
-    transform: scale(1);
-    filter: drop-shadow(0 0 0 rgba(224, 82, 38, 0));
-  }
-
-  50% {
-    transform: scale(1.045);
-    filter: drop-shadow(0 0 6px rgba(224, 82, 38, 0.45));
-  }
 }
 
 .scout-turn--user .scout-mark {
@@ -1098,9 +1055,6 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .scout-mark--id {
-    animation: none;
-  }
 
   .scout-loader__core,
   .scout-loader__burst i {
@@ -1164,11 +1118,8 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
   min-width: 0;
   display: flex;
   align-items: flex-end;
-  /* 44px to match .scout-send exactly. It was 48 against the button's 42, so
-     the field always sat 6px taller. Padding drops to keep the single-line text
-     centred inside the shorter box; the textarea still grows to max-height. */
-  padding: 10px 18px;
-  min-height: 44px;
+  padding: 12px 18px;
+  min-height: 48px;
   background: var(--h-gray-100);
   border: 1px solid var(--h-border);
   border-radius: 24px;
@@ -1204,7 +1155,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 .scout-send {
   flex: none;
   width: 118px;
-  height: 44px;
+  height: 42px;
   border: 0;
   border-radius: 100px;
   background: var(--h-primary);
@@ -1294,55 +1245,15 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
   transform: scale(1.1);
 }
 
-/* Candidate name: given name in the clear, family name behind a blur.
-
-   The blurred span holds decoy letters of the right length, not the real
-   surname — see `splitName` in desk-match-card. So this is a visual treatment
-   over text that already carries nothing, rather than a blur laid over a real
-   value that the page source would give up.
-
-   Blur strength is the same reading as the reference: light enough that the
-   word shape still says "a surname is here", heavy enough that no letter can be
-   picked out. Inline-block with baseline alignment so the blur, which bleeds
-   past the glyphs, cannot nudge the line box. */
-.desk-name {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 7px;
-  flex-wrap: wrap;
-}
-
-.desk-name__gate {
-  display: inline-block;
-  vertical-align: baseline;
-  color: var(--h-gray-600);
-  filter: blur(2.9px);
-  opacity: 0.72;
-  user-select: none;
-  /* The blur spreads roughly its own radius; the padding keeps it off the
-     neighbouring text instead of letting it smear into the Top match chip. */
-  padding: 0 3px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .desk-name__gate {
-    transition: none;
-  }
-}
-
 /* Candidate card */
 .hire-app .desk-card {
   position: relative;
   overflow: hidden;
   padding: 20px 22px;
-  /* --h-card-line is #ffd2ba, a peach. Every card was outlined in it, which is
-     what read as "a prominent orange border" — the top-match rule only made the
-     strongest case of a treatment the whole list already had. The token has 17
-     other users and is left alone; the card takes the neutral --h-border. */
-  border: 1px solid var(--h-border);
+  border: 1px solid var(--h-card-line);
   border-radius: 16px;
   background: var(--h-surface);
-  box-shadow: 0 2px 8px rgba(17, 17, 17, 0.04);
+  box-shadow: 0 4px 16px rgba(224, 82, 38, 0.06);
   transition:
     border-color 200ms var(--ease),
     box-shadow 200ms var(--ease);
@@ -1353,21 +1264,9 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
   box-shadow: 0 8px 22px rgba(224, 82, 38, 0.12);
 }
 
-/* Top match.
-
-   This used to take the full-strength --h-primary at 1px all the way round,
-   which is the same weight the card carries on :hover — so the top card looked
-   permanently hovered, and the heavy stroke competed with the "Top match" chip
-   that already names it. The chip is the distinction; the border only has to
-   agree with it.
-
-   A tint of the same orange rather than a different colour, and a shadow a
-   shade softer than the hover state so hovering the top card still reads as a
-   change. --h-primary itself is untouched, as are :hover and .is-selected. */
-/* Top match keeps its chip and a slightly deeper lift; no orange stroke. */
 .hire-app .desk-card.desk-card--top {
-  border-color: var(--h-border-strong);
-  box-shadow: 0 6px 20px rgba(17, 17, 17, 0.07);
+  border-color: var(--h-primary);
+  box-shadow: 0 8px 24px rgba(224, 82, 38, 0.14);
 }
 
 .hire-app .desk-card.desk-card--sample {
@@ -1684,25 +1583,12 @@ html.dark:not(:has(.theme-abtalks-light)) .desk-card__partial {
   font-weight: 450;
 }
 
-/* The two card actions share a row.
-
-   They wrapped on a phone because the pair needed roughly 320px inside a ~314px
-   card. `nowrap` plus `min-width: 0` lets each button give up a few pixels of
-   its own padding instead of the row breaking; the narrow-width rule below
-   trims the padding rather than the type, so the labels stay full size and
-   readable. */
 .desk-card__cta {
   display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 18px;
-}
-
-.desk-card__cta>* {
-  min-width: 0;
-  flex: 0 1 auto;
 }
 
 .desk-ghost {
@@ -2398,34 +2284,21 @@ body:has(.hire-app--desk) button.fixed.bottom-4.right-4 {
     border-radius: 0;
   }
 
-  /* One row on the phone too.
-
-     This used to be `flex-direction: column` with the tools pushed to
-     `flex-end`: the identity block sat alone on the first line, the three
-     buttons on a second line hard against the right edge, and nothing lined up
-     with anything. Measured, the pair needs about 340px inside the 366px the
-     bar actually has at 390px — it fits, so it should not have been stacked.
-
-     Padding and gaps come down instead, and everything stays on the shared
-     centreline. Below 360px the row is allowed to wrap; see the rule further
-     down, where the tools then align left with the identity block rather than
-     drifting to the opposite edge. */
   .hire-app .scout__bar {
     display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
     min-height: 0;
-    padding: 8px 8px;
-    gap: 6px;
+    padding: 8px 12px;
+    gap: 8px;
     border-radius: 16px 16px 0 0;
   }
 
   .hire-app .scout__tools {
-    width: auto;
+    width: 100%;
     justify-content: flex-end;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 6px;
   }
 
@@ -2442,15 +2315,9 @@ body:has(.hire-app--desk) button.fixed.bottom-4.right-4 {
     font-size: 15px;
   }
 
-  /* Measured at 390px: the bar has 334px inside its padding and the identity
-     block plus the three tools wanted 346 — twelve short, which is why the row
-     wrapped. The shortfall comes out of horizontal padding and the label gap,
-     not the type: 12px stays legible, and each button still has a comfortable
-     target height. */
   .scout-tbtn {
     height: 30px;
-    padding: 0 8px;
-    gap: 4px;
+    padding: 0 10px;
     font-size: 12px;
   }
 
@@ -2989,20 +2856,24 @@ html.dark:not(:has(.theme-abtalks-light)) .pe__paper rect {
   display: flex;
   flex-direction: column;
   padding: 22px 22px 18px;
-  /* Neutral, per the reference: the card was a peach wash with a #ffd2ba border
-     and an orange-tinted shadow, which made the request panel read as an alert.
-     It is a form; grey is the right register. The orange stays on the submit
-     button, where the action is. */
-  background: #f7f7f8;
-  border: 1px solid var(--h-border);
+  background: #fff8f4;
+  border: 1px solid #ffd2ba;
   border-radius: 16px;
   min-height: 0;
-  box-shadow: 0 6px 18px rgba(17, 17, 17, 0.05);
+  box-shadow: 0 10px 28px rgba(224, 82, 38, 0.08);
 }
 
-/* The orange radial wash that used to sit over this card is gone with it. */
 .hire-pod__request::before {
-  content: none;
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(90% 70% at 100% 0%,
+      rgba(224, 82, 38, 0.16) 0%,
+      transparent 55%),
+    linear-gradient(180deg, rgba(255, 176, 140, 0.18) 0%, transparent 42%);
 }
 
 .hire-pod__request>* {
@@ -3030,7 +2901,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-pod__request::before {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--h-gray-600);
+  color: var(--h-primary);
 }
 
 .hire-pod__request h2 {
@@ -3056,7 +2927,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-pod__request::before {
   margin-top: 16px;
   min-height: 180px;
   padding: 14px 16px;
-  border: 1px solid var(--h-border);
+  border: 1px solid #e8d4c8;
   border-radius: 12px;
   background: #fff;
   color: var(--h-ink);
@@ -3168,41 +3039,24 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app .hire-podbar button:not(.hir
   color: #fff;
 }
 
-/* A utility control, not a link and not a primary action: a hairline box in
-   the neutral border colour, the same 8px radius the desk uses elsewhere, and
-   a quiet hover. Deliberately not the orange CTA treatment — going back is the
-   least important thing on the panel. */
 .hire-back {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   margin: 0 0 18px;
-  height: 32px;
-  padding: 0 12px 0 10px;
-  border: 1px solid var(--h-border);
-  border-radius: 8px;
-  background: var(--h-surface);
+  padding: 0;
+  border: 0;
+  background: transparent;
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
   color: var(--h-gray-700);
   text-decoration: none;
   cursor: pointer;
-  transition:
-    background-color 160ms var(--ease),
-    border-color 160ms var(--ease),
-    color 160ms var(--ease);
 }
 
 .hire-back:hover {
-  background: var(--h-gray-100);
-  border-color: var(--h-border-strong);
-  color: var(--h-ink);
-}
-
-.hire-back:focus-visible {
-  outline: 2px solid var(--h-primary);
-  outline-offset: 2px;
+  color: var(--h-primary);
 }
 
 .hire-back svg {
@@ -3517,8 +3371,6 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-auth [data-slot="input"
 .hire-detail__topcta {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
   gap: 8px;
   margin-top: 16px;
 }
@@ -3556,30 +3408,17 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-auth [data-slot="input"
   line-height: 17px;
 }
 
-/* Chart left, legend right.
-
-   This was already a flex row — what put the legend underneath was
-   `flex-wrap: wrap` meeting the legend's 162px minimum: 184 (chart) + 18 (gap)
-   + 162 does not fit the inspector column, so it wrapped every time and the
-   intended side-by-side layout was never actually seen.
-
-   The row no longer wraps, the chart is allowed to shrink a little instead of
-   forcing the break, and the legend keeps its own minimum. Below 520px the row
-   becomes a column deliberately, which is the one place stacking is right. */
 .hire-pie {
   display: flex;
   align-items: center;
-  gap: 16px;
-  flex-wrap: nowrap;
+  gap: 18px;
+  flex-wrap: wrap;
 }
 
 .hire-pie__svg {
   width: 184px;
   height: 184px;
-  /* Shrinkable down to 132px so a narrow inspector trims the chart rather than
-     dropping the legend below it. */
-  flex: 0 1 auto;
-  min-width: 132px;
+  flex: none;
   overflow: visible;
 }
 
@@ -3665,8 +3504,8 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-auth [data-slot="input"
 }
 
 .hire-pie__legend {
-  flex: 1 1 auto;
-  min-width: 148px;
+  flex: 1;
+  min-width: 162px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -3675,12 +3514,9 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-auth [data-slot="input"
   list-style: none;
 }
 
-/* Label left, score hard right, so the numbers form a column the eye can run
-   down instead of sitting wherever the label happens to end. */
 .hire-pie__row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 9px;
   font-size: 12px;
   line-height: 17px;
@@ -3987,7 +3823,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
   }
 
   .scout__bar {
-    padding: 8px 8px;
+    padding: 8px 10px;
     border-radius: 14px 14px 0 0;
   }
 
@@ -4375,25 +4211,15 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
   }
 
 
-  /* The card's actions share one row.
+  /* The card's actions: one centred above, two sharing the row below.
 
-     This was a two-column grid whose FIRST child spanned both columns and
-     centred itself, with the rest below — the right shape when the card carried
-     three buttons (View details, Shortlist, Request an intro). Request an intro
-     is gone, so with two children the rule put the first across the full width
-     and dropped the second underneath it: the stacked pair on the phone.
-
-     Two equal columns now, both on the same line. Heights match, the labels
-     stay on one line, and nothing spans.
-
-     `.hire-pod__actions` keeps the old shape — it still has three. */
-  .desk-card__cta {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    justify-content: stretch;
-  }
-
+     They were a wrap row of three buttons that agree on nothing — 38px, 40px
+     and 38px tall, each only as wide as its own label — so they broke into a
+     ragged left-aligned staircase. A two-column grid fixes the shape without
+     inflating them: the first action spans both columns and centres itself at
+     its own width, and the two that follow take one column each. Their own
+     heights are left alone. */
+  .desk-card__cta,
   .hire-pod__actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -4416,6 +4242,8 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
     text-overflow: ellipsis;
   }
 
+  .desk-card__cta>*:first-child,
+  .hire-app .desk-card__cta>*:first-child,
   .hire-pod__actions>*:first-child {
     grid-column: 1 / -1;
     justify-self: center;
@@ -4531,37 +4359,6 @@ html.dark .vc-card {
   color: var(--h-primary);
 }
 
-/* Genuinely tiny screens: the three Scout tools stop fitting beside the
-   identity block, so the bar is allowed to wrap. They wrap to the LEFT edge and
-   line up under "Scout" — the old stacked version pushed them to the opposite
-   side, which is what made the header read as misaligned rather than merely
-   wrapped. Placed after the 900px block so it wins where both apply. */
-@media (max-width: 360px) {
-  .hire-app .scout__tools {
-    width: 100%;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-  }
-}
-
-/* Narrow cards: buy the row back from padding and gap, never from type size.
-   Both labels stay at 13px so the pair is still readable at 390px. */
-@media (max-width: 640px) {
-  .desk-card__cta {
-    gap: 8px;
-  }
-
-  .desk-card__cta .desk-ghost,
-  .desk-card__cta .desk-pod {
-    padding-left: 10px;
-    padding-right: 10px;
-  }
-
-  .desk-card__cta .desk-ghost {
-    gap: 5px;
-  }
-}
-
 .vc-card__cta {
   display: inline-flex;
   align-items: center;
@@ -4669,1437 +4466,5 @@ html.dark .vc-card {
   .vc-card__cta,
   .vc-card__ghost {
     flex: 1;
-  }
-}
-
-/* ==========================================================================
-   Micro-interactions (plan 110)
-
-   One block so the whole interaction layer is reviewable together. Rules:
-   only opacity and transform are animated, enter uses --ease-out and leave
-   uses --ease-in, and every @keyframes named here is switched off in the
-   reduced-motion guard at the bottom of this section.
-   ========================================================================== */
-
-/* --- Pattern 7: hover / press / focus -------------------------------------
-   Before this, nothing in the desk had a press state at all — the whole file
-   contained zero :active rules, so every control looked inert until its
-   result arrived. */
-
-.hire-app .scout-chip,
-.hire-app .scout-tbtn,
-.hire-app .scout-send,
-.hire-app .scout-pill,
-.hire-app .hire-req__item,
-.hire-app .hire-upgrade__cta,
-.hire-app .hire-upgrade__close {
-  transition:
-    background-color var(--dur-fast) var(--ease-out),
-    border-color var(--dur-fast) var(--ease-out),
-    color var(--dur-fast) var(--ease-out),
-    box-shadow var(--dur-fast) var(--ease-out),
-    transform var(--dur-fast) var(--ease-out);
-}
-
-/* Hover changes colour, never position. A control that rises under the cursor
-   is decoration; the colour shift already says "this is the thing you are
-   pointing at", and the press below says the click registered. */
-.hire-app .scout-chip:hover:not(:disabled) {
-  background: var(--h-peach);
-  border-color: var(--h-primary);
-}
-
-.hire-app .scout-chip--show:hover:not(:disabled) {
-  background: var(--h-primary-hover);
-}
-
-.hire-app .scout-tbtn:hover:not(:disabled),
-.hire-app .scout-pill:hover:not(:disabled) {
-  border-color: var(--h-primary);
-  background: var(--h-peach-wash);
-}
-
-.hire-app .scout-tbtn--icon.is-on:hover:not(:disabled) {
-  background: var(--h-primary-hover);
-  border-color: var(--h-primary-hover);
-}
-
-.hire-app .hire-upgrade__close:hover {
-  border-color: var(--h-primary);
-  background: var(--h-peach-wash);
-}
-
-.hire-app .scout-chip:active:not(:disabled),
-.hire-app .scout-tbtn:active:not(:disabled),
-.hire-app .scout-send:active:not(:disabled),
-.hire-app .scout-pill:active:not(:disabled),
-.hire-app .hire-req__item:active,
-.hire-app .hire-upgrade__cta:active,
-.hire-app .hire-upgrade__close:active {
-  transform: scale(0.97);
-}
-
-/* A card is large enough that 0.97 reads as a jump rather than a press. */
-.hire-app .desk-card--clickable {
-  transition:
-    border-color var(--dur-fast) var(--ease-out),
-    box-shadow var(--dur-fast) var(--ease-out),
-    transform var(--dur-fast) var(--ease-out);
-}
-
-.hire-app .desk-card--clickable:active {
-  transform: scale(0.985);
-}
-
-/* Disabled controls stay inert on purpose — a press response on a button that
-   cannot act is a lie about what the click did. */
-.hire-app .scout-chip:disabled:hover,
-.hire-app .scout-chip:disabled:active,
-.hire-app .scout-tbtn:disabled:hover,
-.hire-app .scout-tbtn:disabled:active,
-.hire-app .scout-send:disabled:hover,
-.hire-app .scout-send:disabled:active,
-.hire-app .scout-pill:disabled:hover,
-.hire-app .scout-pill:disabled:active {
-  transform: none;
-}
-
-.hire-app .scout-chip:focus-visible,
-.hire-app .scout-tbtn:focus-visible,
-.hire-app .scout-send:focus-visible,
-.hire-app .scout-pill:focus-visible,
-.hire-app .hire-req__item:focus-visible,
-.hire-app .hire-upgrade__cta:focus-visible,
-.hire-app .hire-upgrade__close:focus-visible,
-.hire-app .desk-card--clickable:focus-visible {
-  outline: 2px solid var(--h-primary);
-  outline-offset: 2px;
-}
-
-/* ==========================================================================
-   Search workspace (plan 110, pass 2 — A/B/C)
-
-   The desk stopped rendering as a conversation. The recruiter types a query,
-   the strip under the composer interprets it live, and Scout's newest line is
-   guidance above the workspace instead of a message in a thread. Nothing about
-   the agent protocol, the spec, or search eligibility changed.
-   ========================================================================== */
-
-/* --- Landing layout → working layout --------------------------------------
-   Before the first query the journey is a 300px column beside the desk. After
-   it, that column collapses and the journey reappears as the compact rail
-   above the desk — the layout the phone has always used — so the workspace
-   takes the full width once there is something in it.
-
-   `.hire-workspace__main` also carries the height chain the desk depends on:
-   `.hire-workspace` is a flex row with `min-height: 0`, and everything below
-   grows through `flex: 1`. Without a flex column here the desk sizes to its
-   content and leaves the rest of the viewport blank.
-
-   The collapse transitions `grid-template-columns` on the slot rather than
-   toggling `display`, because the point is that the desk is *seen* widening.
-   Same layout-reveal trick `.scout-criteria-slot` uses, turned on its side —
-   the one place a layout property is animated, and deliberate. */
-
-.hire-journey-slot {
-  flex: none;
-  /* 300px column + the gutter the aside used to carry as its own margin. The
-     `0fr` grid trick does not work here: this is a flex item whose base size is
-     auto, so it keeps its max-content width no matter how the track is sized.
-     A definite width is the thing that actually collapses. */
-  width: 316px;
-  padding-left: 16px;
-  min-height: 0;
-  overflow: hidden;
-  transition:
-    width var(--dur-slide) var(--ease-slide),
-    padding-left var(--dur-slide) var(--ease-slide);
-}
-
-/* Two movements on one clock, which is what makes it read as sliding rather
-   than resizing: the slot narrows while the panel inside travels left at the
-   same rate. Fading alone looks like a dissolve; travelling alone looks like a
-   jump once the width lands. */
-.hire-journey-slot > .hire-journey {
-  width: 100%;
-  margin-left: 0;
-  min-width: 0;
-}
-
-/* Carries the height chain the desk depends on. `.hire-workspace` is a flex
-   row locked to the viewport, and everything below grows through `flex: 1`;
-   without a flex column here the region sizes to its content and the results
-   list runs off the bottom of the page instead of scrolling. */
-.hire-workspace__main {
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Narrows rather than disappears. Losing the column entirely traded one
-   problem for another: the workflow context went with it and the results had
-   no left edge to sit against. It keeps the three nodes, drops the prose, and
-   costs 108px instead of 316. Desktop only; the phone keeps its top rail. */
-.hire-workspace.is-started .hire-journey-slot {
-  width: 108px;
-}
-
-.hire-workspace.is-started .hire-journey {
-  padding: 26px 0;
-  align-items: center;
-  overflow: hidden;
-}
-
-.hire-workspace.is-started .hire-journey__stage {
-  grid-template-columns: minmax(0, 1fr);
-  justify-items: center;
-  gap: 8px;
-  text-align: center;
-}
-
-/* The titles and the copy are what made it a 300px column. A number on its
-   own says nothing, so a short label takes their place. */
-.hire-workspace.is-started .hire-journey__stage > div {
-  display: none;
-}
-
-.hire-journey__short {
-  display: none;
-}
-
-.hire-workspace.is-started .hire-journey__short {
-  display: block;
-  max-width: 76px;
-  font-size: 11px;
-  line-height: 14px;
-  font-weight: 500;
-  color: var(--h-gray-500);
-}
-
-.hire-workspace.is-started
-  .hire-journey__stage.is-active
-  .hire-journey__short {
-  color: var(--h-ink);
-  font-weight: 600;
-}
-
-.hire-workspace.is-started .hire-journey__track {
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-@media (max-width: 900px) {
-  /* The phone never had the column, so there is nothing to collapse. */
-  .hire-journey-slot {
-    display: none;
-  }
-
-}
-
-/* --- Tapping a criterion writes into the composer -------------------------
-   The field gets "Role: " and the examples sit behind the cursor in grey, so
-   the recruiter answers in their own words instead of being asked. A native
-   placeholder cannot do this: it only shows while the value is empty, and the
-   value here is the label. */
-
-.scout-field__box {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-}
-
-.scout-ghost {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  font-size: 15px;
-  line-height: 22px;
-  white-space: pre-wrap;
-  overflow: hidden;
-}
-
-.scout-ghost__typed {
-  color: transparent;
-}
-
-.scout-ghost__hint {
-  color: var(--h-gray-400);
-}
-
-/* ==========================================================================
-   Landing state: the query is the page
-
-   The desk was laid out as a chat client, and every complaint about it
-   followed from that one decision: a coloured title bar on top, a scroll
-   region in the middle, an input pinned to the bottom. At 1440x900 that put
-   the composer 611px below its own heading with 426px of white under it.
-
-   In `is-landing` the composer leaves the bottom and centres with the
-   heading, Scout's identity drops to a line of text, and orange is spent on
-   one control instead of a full-width banner. Only the initial state is
-   touched: once `talked` is true the desk returns to the working layout.
-   ========================================================================== */
-
-/* Free space splits above the heading and below the composer, so the pair
-   sits on the optical centre instead of at the two ends of the card. */
-.scout.is-landing .scout__body {
-  flex: 0 0 auto;
-  margin-top: auto;
-  overflow: visible;
-}
-
-.scout.is-landing .chat-output {
-  overflow: visible;
-}
-
-.scout.is-landing .scout-composer {
-  margin-bottom: auto;
-  padding: 0 20px 8px;
-}
-
-/* One measure for the heading, the field and everything under it. */
-.scout.is-landing .scout-hero,
-.scout.is-landing .scout-composer__row,
-.scout.is-landing .scout-criteria-slot,
-.scout.is-landing .scout-hero__examples {
-  max-width: 720px;
-  margin-inline: auto;
-}
-
-.scout.is-landing .scout-hero {
-  padding: 0 24px 22px;
-  gap: 8px;
-}
-
-.scout.is-landing .scout-hero__h {
-  font-size: var(--fs-hero);
-  font-weight: 650;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-}
-
-/* PRIMARY. A search surface, not a chat input: white rather than filled grey,
-   a rounded rect rather than a pill, and tall enough to be the thing you look
-   at first. */
-.scout.is-landing .scout-composer__row {
-  gap: 10px;
-}
-
-.scout.is-landing .scout-field {
-  min-height: var(--ctl-lg);
-  padding: 14px 20px;
-  background: var(--h-surface);
-  border: 1.5px solid var(--h-border-strong);
-  border-radius: var(--r-lg);
-  box-shadow: 0 1px 2px rgba(24, 24, 27, 0.04);
-}
-
-.scout.is-landing .scout-field:focus-within {
-  border-color: var(--h-primary);
-  box-shadow: 0 0 0 4px rgba(224, 82, 38, 0.1);
-}
-
-.scout.is-landing .scout-field textarea,
-.scout.is-landing .scout-ghost {
-  font-size: var(--fs-input);
-  line-height: 24px;
-}
-
-.scout.is-landing .scout-send {
-  height: var(--ctl-lg);
-  width: auto;
-  padding: 0 26px;
-  border-radius: var(--r-lg);
-  font-size: var(--fs-body);
-}
-
-/* SECONDARY. Suggestions teach the field; they must not compete with it. */
-.scout.is-landing .scout-hero__examples {
-  justify-content: flex-start;
-  gap: 6px;
-  margin-top: 12px;
-  padding: 0;
-}
-
-.scout.is-landing .scout-example {
-  height: var(--ctl-sm);
-  padding: 0 12px;
-  border: 0;
-  border-radius: var(--r-sm);
-  background: var(--h-gray-100);
-  color: var(--h-gray-600);
-  font-size: var(--fs-caption);
-}
-
-.scout.is-landing .scout-example:hover {
-  background: var(--h-peach);
-  color: var(--h-ink);
-}
-
-/* TERTIARY. Nothing has been detected yet, so the strip is a preview of what
-   Scout listens for, not a result. It reads at caption weight. */
-.scout.is-landing .scout-criteria {
-  /* Wraps at every width here. The phone rule turns the strip into a
-     horizontal scroller to save height above the keyboard, but on the landing
-     screen there is no keyboard and no height pressure, and a clipped list
-     cannot show what a complete brief contains. */
-  flex-wrap: wrap;
-  overflow: visible;
-  gap: 6px 14px;
-  margin-top: 18px;
-}
-
-.scout.is-landing .scout-criterion {
-  font-size: var(--fs-caption);
-  color: var(--h-gray-400);
-}
-
-/* ==========================================================================
-   Results state: Scout becomes the bar, candidates become the page
-
-   Before a search the card is the interaction and fills the region. After
-   one, the candidates are what the recruiter came for, so the card shrinks to
-   its own content and sticks to the top while the region scrolls past it.
-
-   Scrolling moves one level up, from `.chat-output` to `.hire-scout-region`.
-   That is the same move `.hire-pod-region` already makes on a phone, and for
-   the same reason: the desk shell is locked to the viewport, so the only way
-   a long list can be reached is for a region to own the overflow and for
-   everything inside it to size to content.
-   ========================================================================== */
-
-.hire-scout-region:has(.scout-results-page) {
-  overflow-y: auto;
-  /* Vertical only. Setting overflow-y promotes overflow-x to auto, which
-     exposed the phone breakpoint's horizontal criteria strip as a scrollbar
-     across the whole region. The strip keeps its own scroller. */
-  overflow-x: hidden;
-  /* Scroll anchoring off. Folding the card removes ~236px from above the
-     viewport, and the browser compensates by subtracting the same amount from
-     scrollTop. That silently dragged the reader back up and, because the new
-     position fell under the fold threshold, reopened the card and undid the
-     scroll entirely. Without it the position is left alone and the list simply
-     closes the gap. */
-  overflow-anchor: none;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* `.hire-scout-region > *` stretches its children to fill the column. Once
-   there is a page of results below, both children size to content instead and
-   hand their overflow to the region. */
-.hire-scout-region:has(.scout-results-page) > * {
-  flex: none;
-}
-
-.scout.is-compact {
-  flex: none;
-  position: sticky;
-  top: 0;
-  z-index: 6;
-  overflow: visible;
-}
-
-/* The card no longer owns a scroller: it holds one line of guidance, the
-   composer and the strip. Anything longer than that is the page's job. */
-.scout.is-compact .scout__body {
-  display: block;
-  overflow: visible;
-}
-
-.scout.is-compact .chat-output {
-  overflow: visible;
-}
-
-/* Folded state: the query, not the conversation.
-
-   Scrolling into the results folds the card down to a single line naming the
-   search that produced them, so the candidates own the screen. Tapping it
-   restores the full copilot in place, without moving the list underneath, and
-   scrolling back to the top restores it on its own. Scout keeps every ability
-   it had; this is only how much room it takes while you are reading. */
-.scout__folded {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 10px 14px;
-  border: 0;
-  background: none;
-  text-align: left;
-  cursor: pointer;
-  color: inherit;
-}
-
-.scout__folded[hidden] {
-  display: none;
-}
-
-.scout__folded-q {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--fs-body);
-  font-weight: 500;
-  color: var(--h-ink);
-}
-
-.scout__folded-meta {
-  flex: none;
-  font-size: var(--fs-caption);
-  color: var(--h-gray-500);
-}
-
-.scout__folded-caret {
-  flex: none;
-  color: var(--h-gray-400);
-}
-
-.scout__folded:hover .scout__folded-caret {
-  color: var(--h-primary);
-}
-
-.scout.is-condensed .scout__bar,
-.scout.is-condensed .scout__body,
-.scout.is-condensed .scout-composer {
-  display: none;
-}
-
-.scout.is-condensed {
-  border-radius: var(--r-lg);
-  box-shadow: 0 6px 18px rgba(24, 24, 27, 0.07);
-}
-
-/* The card's height is driven for one transition from scout-chat; everything
-   inside it clips while that runs, so the parts leaving read as being covered
-   rather than as vanishing. */
-.scout.is-compact .scout__folded,
-.scout.is-compact .scout__bar,
-.scout.is-compact .scout__body,
-.scout.is-compact .scout-composer {
-  animation: scout-fold-in var(--dur-state) var(--ease-slide) both;
-}
-
-@keyframes scout-fold-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* Once results exist the header line already reads back the whole
-   requirement, so the nine-item checklist under the composer is saying it
-   twice and costing the results a row of screen. */
-.scout.is-compact .scout-criteria-slot {
-  display: none;
-}
-
-/* Not the hero any more. The composer keeps every ability it had, at the size
-   a bar deserves rather than the size a landing page does. */
-.scout.is-compact .scout-lede {
-  padding: 12px 20px 2px;
-}
-
-.scout.is-compact .scout-lede__text {
-  font-size: var(--fs-small);
-  line-height: 1.45;
-}
-
-.scout.is-compact .scout-composer {
-  padding: 6px 20px 12px;
-}
-
-.scout.is-compact .scout-field {
-  min-height: var(--ctl-md);
-  padding: 9px 16px;
-}
-
-.scout.is-compact .scout-send {
-  height: var(--ctl-md);
-}
-
-.scout.is-compact .scout__bar {
-  min-height: 44px;
-}
-
-.scout-results-page {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 0fr;
-  align-items: start;
-  gap: 0;
-  padding: 16px 0 28px;
-  transition: grid-template-columns var(--dur-state) var(--ease-out);
-}
-
-.scout-results-page.is-open {
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
-}
-
-.scout-results-page__list {
-  min-width: 0;
-}
-
-/* The inspector was the second column of `.scout__body`; it is the second
-   column here now, and sticks so it stays beside the list while it scrolls. */
-.scout-results-page .hire-detail {
-  position: sticky;
-  top: 8px;
-  max-height: calc(100dvh - 160px);
-  border-radius: var(--r-lg);
-  border: 1px solid var(--h-border);
-  margin-left: 16px;
-}
-
-/* --- A: the empty desk is a search workspace, not an opening question ------ */
-
-.scout-hero {
-  display: grid;
-  justify-items: center;
-  gap: 10px;
-  padding: 48px 24px 8px;
-  text-align: center;
-}
-
-.scout-hero__h {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--h-ink);
-}
-
-.scout-hero__examples {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  margin: 10px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.scout-example {
-  height: 30px;
-  padding: 0 14px;
-  border: 1px solid var(--h-border);
-  border-radius: 100px;
-  background: var(--h-surface);
-  color: var(--h-gray-700);
-  font-size: 12.5px;
-  cursor: pointer;
-  transition:
-    background-color var(--dur-fast) var(--ease-out),
-    border-color var(--dur-fast) var(--ease-out),
-    color var(--dur-fast) var(--ease-out),
-    transform var(--dur-fast) var(--ease-out);
-}
-
-.scout-example:hover {
-  border-color: var(--h-primary);
-  background: var(--h-peach-wash);
-  color: var(--h-ink);
-}
-
-.scout-example:active {
-  transform: scale(0.97);
-}
-
-.scout-example:focus-visible {
-  outline: 2px solid var(--h-primary);
-  outline-offset: 2px;
-}
-
-/* --- C: Scout's live line, as interpretation rather than a chat turn ------- */
-
-.scout-lede {
-  display: grid;
-  gap: 10px;
-  padding: 18px 24px 4px;
-}
-
-/* The disclosure sits above the message it precedes, so what is folded away
-   reads as earlier rather than as a footnote to the current line. */
-.scout-lede__prior {
-  display: grid;
-  gap: 8px;
-  justify-items: start;
-  padding-left: 40px;
-}
-
-.scout-lede__row {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: 12px;
-}
-
-.scout-lede__body {
-  display: grid;
-  gap: 10px;
-  justify-items: start;
-}
-
-.scout-lede__text {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--h-ink);
-  white-space: pre-wrap;
-}
-
-.scout-history__toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  border: 0;
-  padding: 0;
-  background: none;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--h-gray-500);
-  cursor: pointer;
-  transition:
-    color var(--dur-fast) var(--ease-out),
-    transform var(--dur-fast) var(--ease-out);
-}
-
-.scout-history__toggle:hover {
-  color: var(--h-primary);
-}
-
-.scout-history__toggle:active {
-  transform: scale(0.97);
-}
-
-.scout-history__toggle:focus-visible {
-  outline: 2px solid var(--h-primary);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-.scout-history {
-  display: grid;
-  gap: 10px;
-  width: 100%;
-  margin: 0;
-  padding: 4px 0 6px 14px;
-  border-left: 2px solid var(--h-border);
-  list-style: none;
-}
-
-.scout-history__row {
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
-  gap: 10px;
-  align-items: baseline;
-}
-
-.scout-history__who {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--h-gray-400);
-}
-
-.scout-history__text {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--h-gray-600);
-  white-space: pre-wrap;
-}
-
-.scout-history__row.is-user .scout-history__text {
-  color: var(--h-ink);
-}
-
-/* --- B: the strip is the interpretation surface --------------------------- */
-
-.hire-app .scout-criteria {
-  gap: 4px 14px;
-  margin-top: 14px;
-}
-
-/* An unset criterion is an offer, not an unanswered question. */
-.scout-criterion__add {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 0;
-  padding: 0;
-  background: none;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: color var(--dur-fast) var(--ease-out);
-}
-
-.scout-criterion__add:hover:not(:disabled) {
-  color: var(--h-primary);
-}
-
-.scout-criterion__add:disabled {
-  cursor: default;
-  opacity: 0.6;
-}
-
-.scout-criterion__add:focus-visible {
-  outline: 2px solid var(--h-primary);
-  outline-offset: 3px;
-  border-radius: 4px;
-}
-
-/* --- Pattern 1: the system noticed something ------------------------------
-   All nine criteria are on screen from the start in grey, so nothing here is
-   an entrance — the label is already there. The only thing being animated is
-   the moment it goes green, which is the acknowledgement itself. No slide, no
-   fade: the item did not arrive, it was recognised. */
-
-.scout-criterion.is-fresh {
-  animation: scout-tick-in 260ms var(--ease-out) both;
-}
-
-.scout-criterion.is-fresh .scout-criterion__box {
-  animation: scout-tick-box 260ms var(--ease-out) both;
-}
-
-@keyframes scout-tick-in {
-  from {
-    color: var(--h-gray-500);
-  }
-
-  to {
-    color: var(--h-success);
-  }
-}
-
-@keyframes scout-tick-box {
-  0% {
-    color: var(--h-gray-500);
-    transform: scale(1);
-  }
-
-  55% {
-    color: var(--h-success);
-    transform: scale(1.3);
-  }
-
-  100% {
-    color: var(--h-success);
-    transform: scale(1.1);
-  }
-}
-
-/* --- Pattern 3: the staged status label ----------------------------------- */
-
-.scout-loader__label {
-  animation: scout-label-swap 260ms var(--ease-out) both;
-}
-
-@keyframes scout-label-swap {
-  from {
-    opacity: 0;
-    transform: translateY(3px);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* --- Pattern 2: what Scout understood, restated while the search runs ------ */
-
-.scout-understood {
-  display: grid;
-  gap: 10px;
-  padding: 14px 16px;
-  border: 1px solid var(--h-card-line);
-  border-radius: 16px;
-  background: var(--h-card);
-  animation: scout-understood-in var(--dur-state) var(--ease-out) both;
-}
-
-.scout-understood__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.scout-understood__title {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--h-gray-700);
-}
-
-.scout-understood__edit {
-  border: 0;
-  background: none;
-  padding: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--h-primary);
-  cursor: pointer;
-  transition:
-    opacity var(--dur-fast) var(--ease-out),
-    transform var(--dur-fast) var(--ease-out);
-}
-
-.scout-understood__edit:hover {
-  opacity: 0.75;
-}
-
-.scout-understood__edit:active {
-  transform: scale(0.97);
-}
-
-.scout-understood__edit:focus-visible {
-  outline: 2px solid var(--h-primary);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-.scout-understood__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.scout-understood__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 12px;
-  border: 1px solid var(--h-card-line);
-  border-radius: 100px;
-  background: var(--h-surface);
-  font-size: 12px;
-  color: var(--h-ink);
-  /* No per-chip stagger. The panel arriving already says "understood";
-     dealing the chips out one by one says nothing on top of that. */
-}
-
-.scout-understood__chip b {
-  font-weight: 600;
-  color: var(--h-gray-500);
-}
-
-@keyframes scout-understood-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* --- Pattern 4: skeletons shaped like the real card ------------------------
-   Box metrics copied from `.hire-app .desk-card` so the swap to real results
-   does not move anything. The shimmer is a transform sweep, never a
-   background-position animation. */
-
-.desk-skel {
-  position: relative;
-  overflow: hidden;
-  padding: 20px 22px;
-  border: 1px solid var(--h-card-line);
-  border-radius: 16px;
-  background: var(--h-surface);
-  box-shadow: 0 4px 16px rgba(224, 82, 38, 0.06);
-}
-
-.desk-skel::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg,
-      transparent 0%,
-      rgba(224, 82, 38, 0.06) 50%,
-      transparent 100%);
-  transform: translateX(-100%);
-  animation: scout-shimmer 1400ms var(--ease-out) infinite;
-}
-
-.desk-skel__head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.desk-skel__lines {
-  display: grid;
-  gap: 8px;
-  flex: 1;
-}
-
-.desk-skel__pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 16px;
-}
-
-.desk-skel__foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 18px;
-}
-
-.desk-skel__bar,
-.desk-skel__dot,
-.desk-skel__pill {
-  background: var(--h-gray-100);
-  border-radius: 8px;
-}
-
-.desk-skel__dot {
-  width: 44px;
-  height: 44px;
-  border-radius: 100px;
-  flex: none;
-}
-
-.desk-skel__pill {
-  height: 24px;
-  border-radius: 100px;
-}
-
-@keyframes scout-shimmer {
-  from {
-    transform: translateX(-100%);
-  }
-
-  to {
-    transform: translateX(100%);
-  }
-}
-
-/* --- Pattern 5: the system completed something ----------------------------
-   Only Scout's turns animate in. The recruiter's own message needs no
-   announcement — they just typed it, and animating it back at them is the
-   interface talking about itself. */
-
-.scout-turn:not(.scout-turn--user),
-.scout-lede {
-  animation: scout-turn-in 380ms var(--ease-out) both;
-}
-
-@keyframes scout-turn-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* --i is set per list item in MatchResults and capped there, so a long result
-   list still finishes arriving inside ~360ms. */
-.hire-app .desk-card--in {
-  animation: scout-card-in 440ms var(--ease-out) both;
-  animation-delay: calc(var(--i, 0) * 70ms);
-}
-
-@keyframes scout-card-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* --- Pattern 6: the inline notices slide in instead of blinking on ---------
-   Both are already in-flow and dismissible, so they stay where they are —
-   sonner remains reserved for errors. */
-
-.hire-upgrade,
-.hire-flash {
-  animation: scout-understood-in var(--dur-state) var(--ease-out) both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-
-  .scout-criterion.is-fresh,
-  .scout-criterion.is-fresh .scout-criterion__box,
-  .scout-loader__label,
-  .scout-understood,
-  .scout.is-compact .scout__folded,
-  .scout.is-compact .scout__bar,
-  .scout.is-compact .scout__body,
-  .scout.is-compact .scout-composer,
-  .desk-skel::after,
-  .scout-turn:not(.scout-turn--user),
-  .scout-lede,
-  .hire-app .desk-card--in,
-  .hire-upgrade,
-  .hire-flash {
-    animation: none !important;
-    opacity: 1;
-    transform: none;
-  }
-
-  .hire-app .scout-chip,
-  .hire-app .scout-tbtn,
-  .hire-app .scout-send,
-  .hire-app .scout-pill,
-  .hire-app .desk-card--clickable {
-    transition-duration: 1ms;
-  }
-
-  .hire-app .scout-chip:active,
-  .hire-app .scout-tbtn:active,
-  .hire-app .scout-send:active,
-  .hire-app .scout-pill:active,
-  .hire-app .desk-card--clickable:active {
-    transform: none;
-  }
-}
-
-/* ==========================================================================
-   Subscription gate — the plan table behind "Resume".
-
-   Geometry, type scale and colour follow the reference design directly: the
-   off-white card, the pill toggle with a white active segment, three columns
-   with the middle one lifted and washed peach, a green notched ribbon, and a
-   dark CTA on every card except the promoted one.
-   ========================================================================== */
-.hire-gate {
-  position: fixed;
-  inset: 0;
-  z-index: 120;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  overflow-y: auto;
-  background: rgba(17, 17, 17, 0.42);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-
-.hire-gate__card {
-  position: relative;
-  width: min(1080px, calc(100vw - 40px));
-  margin: auto;
-  padding: 26px 32px 30px;
-  background: #fbfafa;
-  border: 1px solid var(--h-border);
-  border-radius: 20px;
-  box-shadow: 0 30px 70px -24px rgba(17, 17, 17, 0.3);
-}
-
-.hire-gate__x {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border: 0;
-  border-radius: 50%;
-  background: none;
-  color: var(--h-gray-500);
-  cursor: pointer;
-  transition: background-color 200ms var(--ease), color 200ms var(--ease);
-}
-
-.hire-gate__x:hover {
-  background: var(--h-gray-100);
-  color: var(--h-ink);
-}
-
-.hire-gate__head {
-  text-align: center;
-}
-
-.hire-gate__title {
-  margin: 0;
-  font-size: 20px;
-  line-height: 26px;
-  font-weight: 800;
-  color: var(--h-ink);
-}
-
-.hire-gate__body {
-  margin: 6px auto 0;
-  font-size: 13px;
-  line-height: 20px;
-  color: var(--h-gray-600);
-}
-
-.hire-gate__toggle {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  width: max-content;
-  margin: 18px auto 0;
-  padding: 5px;
-  background: #f1f1f2;
-  border-radius: 999px;
-}
-
-.hire-gate__seg {
-  height: 38px;
-  padding: 0 24px;
-  border: 0;
-  border-radius: 999px;
-  background: none;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--h-gray-600);
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background-color 200ms var(--ease), color 200ms var(--ease),
-    box-shadow 200ms var(--ease);
-}
-
-.hire-gate__seg.is-active {
-  background: #fff;
-  color: var(--h-ink);
-  box-shadow: 0 1px 3px rgba(17, 17, 17, 0.1);
-}
-
-/* Green, like the "billed annually" line it promises. */
-.hire-gate__save {
-  color: #16a34a;
-  font-weight: 700;
-}
-
-.hire-gate__grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
-  margin-top: 20px;
-  align-items: stretch;
-}
-
-.hire-plan {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  padding: 24px 22px 22px;
-  background: #fff;
-  border: 1px solid var(--h-border);
-  border-radius: 16px;
-}
-
-/* The promoted column stands a little proud of the other two. */
-.hire-plan--prime {
-  margin-block: -9px;
-  padding-block: 31px 28px;
-  background: linear-gradient(180deg, #ffffff 0%, #fff0e7 100%);
-  border-color: #f6c7ae;
-  box-shadow: 0 10px 26px rgba(224, 82, 38, 0.1);
-}
-
-/* A flag notched on its left edge, hung off the card's right side. */
-.hire-plan__ribbon {
-  position: absolute;
-  top: 26px;
-  right: -1px;
-  display: inline-flex;
-  align-items: center;
-  height: 20px;
-  padding: 0 10px 0 16px;
-  background: #bbf7d0;
-  color: #15803d;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  white-space: nowrap;
-  clip-path: polygon(10px 0, 100% 0, 100% 100%, 10px 100%, 0 50%);
-}
-
-.hire-plan__name {
-  margin: 0;
-  font-size: 19px;
-  line-height: 25px;
-  font-weight: 700;
-  color: var(--h-ink);
-}
-
-.hire-plan__tagline {
-  margin: 5px 0 0;
-  font-size: 13px;
-  line-height: 19px;
-  color: var(--h-gray-500);
-}
-
-.hire-plan__price {
-  display: flex;
-  align-items: baseline;
-  gap: 9px;
-  margin: 18px 0 0;
-}
-
-.hire-plan__price b {
-  font-size: 42px;
-  line-height: 46px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  color: var(--h-ink);
-  font-variant-numeric: tabular-nums;
-}
-
-.hire-plan__price span {
-  font-size: 17px;
-  font-weight: 400;
-  color: var(--h-gray-600);
-}
-
-.hire-plan__billed {
-  margin: 4px 0 0;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: #16a34a;
-}
-
-.hire-plan__seat {
-  margin: 14px 0 0;
-  padding-left: 16px;
-  font-size: 13px;
-  line-height: 19px;
-  color: var(--h-gray-500);
-}
-
-.hire-plan__packed {
-  margin: 18px 0 0;
-  font-size: 13px;
-  line-height: 19px;
-  font-weight: 500;
-  color: var(--h-ink);
-}
-
-/* Indented, not bulleted — the reference sets these as plain lines. */
-.hire-plan__list {
-  margin: 8px 0 22px;
-  padding-left: 16px;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.hire-plan__list li {
-  font-size: 13px;
-  line-height: 19px;
-  color: var(--h-gray-500);
-}
-
-/* On the floor of every card, so all three line up despite the taller middle. */
-.hire-plan__cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  margin-top: auto;
-  height: 46px;
-  border: 0;
-  border-radius: 9px;
-  background: var(--h-ink);
-  color: #fff;
-  font: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 200ms var(--ease);
-}
-
-.hire-plan__cta:hover {
-  background: #000;
-}
-
-.hire-plan__cta--prime {
-  background: var(--h-primary);
-}
-
-.hire-plan__cta--prime:hover {
-  background: var(--h-primary-hover);
-}
-
-.hire-gate__note {
-  margin: 18px 0 0;
-  text-align: center;
-  font-size: 12px;
-  line-height: 19px;
-  color: var(--h-gray-600);
-}
-
-@media (max-width: 900px) {
-  .hire-gate__grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .hire-gate__card {
-    padding: 24px 18px 22px;
-  }
-
-  .hire-plan--prime {
-    margin-block: 0;
-    padding-block: 24px 22px;
-  }
-}
-
-/* Scout header: one row, one height, everything centred on it. */
-.scout__id,
-.scout__tools {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.scout__tools>* {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 34px;
-}
-
-.scout__meta {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-width: 0;
-}
-
-/* Candidate parameters: only stack when the column genuinely cannot hold the
-   chart and the legend side by side. */
-@media (max-width: 520px) {
-  .hire-pie {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  .hire-pie__legend {
-    flex-basis: 100%;
   }
 }
