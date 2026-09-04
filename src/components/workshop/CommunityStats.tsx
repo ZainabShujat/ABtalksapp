@@ -24,10 +24,23 @@ const FRAME_W = 1920;
 const FRAME_H = 781;
 
 /** How often the counters replay while the section is on screen. */
-const COUNT_REPEAT_MS = 3000;
-/** One count-up, and the delay between the collage tiles fading in. */
+const COUNT_REPEAT_MS = 5000;
+/** One count-up, and the delay between the collage tiles fading in. 0.18 read
+ *  as one movement rather than three; at 0.32 each tile lands on its own. */
 const COUNT_MS = 1800;
-const TILE_STAGGER = 0.18;
+const TILE_STAGGER = 0.32;
+
+/**
+ * When this section counts as being looked at.
+ *
+ * 0.15 with a -10% margin fired while the section was barely peeking over the
+ * fold: a seventh of a 586px canvas is 88px, so the collage had begun fading in
+ * — and the counters had begun counting — before any of it was really on
+ * screen. 0.4 into the top 80% of the window means roughly the lower half of
+ * the viewport is this section before anything starts.
+ */
+const ON_SCREEN_AMOUNT = 0.4;
+const ON_SCREEN_MARGIN = "0px 0px -20% 0px";
 
 /** Nodes 1:319-1:324. `x` is the number's left edge, `cx` the label's centre. */
 const STATS = [
@@ -64,7 +77,7 @@ const NUM_FONT = "inherit";
  */
 function useOnScreen(
   ref: React.RefObject<HTMLElement | null>,
-  threshold = 0.15,
+  threshold = ON_SCREEN_AMOUNT,
 ): boolean {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -72,7 +85,7 @@ function useOnScreen(
     if (!el) return;
     const obs = new IntersectionObserver(
       ([entry]) => setVisible(Boolean(entry?.isIntersecting)),
-      { threshold, rootMargin: "0px 0px -10% 0px" },
+      { threshold, rootMargin: ON_SCREEN_MARGIN },
     );
     obs.observe(el);
     return () => obs.disconnect();
@@ -175,6 +188,11 @@ export default function CommunityStats() {
   // Latched during render, not in an effect: `onScreen` is already state, so the
   // render that flips it is the render that can latch this, with no second pass.
   // The guard makes the set fire exactly once.
+  //
+  // Sticky on purpose, and only the FIGURES use it. Having the numbers fade out
+  // every time the section left the viewport would be a second animation nobody
+  // asked for. The collage reads `onScreen` directly, because there the reverse
+  // IS the ask.
   const [seen, setSeen] = useState(false);
   if (onScreen && !seen) setSeen(true);
 
@@ -221,23 +239,23 @@ export default function CommunityStats() {
               at ~1/3 opacity — orange is far denser than the pale blue was, and
               at full strength it reads as a solid band rather than a wash.
 
-              Shortened from 746 to 545 and dropped from -289 to -120. Two
+              Shortened from 746 to 470 and dropped from -289 to -150. Two
               things wrong with the original: it reached 457 of an 818 frame, so
               it was still colouring the section past the statistics; and its
               glow peaked at 84, close enough to the top that `overflow: hidden`
               cut it near full strength and drew a hard line along the seam with
-              the section above. Peaking at 152 instead means the clip lands on
-              the dim outer edge of the blur, and the wash is spent by 425 —
-              a little past halfway, where the overlay below takes over. */}
+              the section above. Peaking at 85 with a longer tail above the clip
+              keeps the top edge soft, and the wash is spent by 320 — the top
+              40% — which is where the overlay below takes it to white. */}
           <div
             aria-hidden
             style={{
               position: "absolute",
               left: -296,
-              top: -120,
+              top: -150,
               width: 2519,
-              height: 545,
-              opacity: 0.34,
+              height: 470,
+              opacity: 0.3,
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -256,16 +274,21 @@ export default function CommunityStats() {
               than it. Rather than re-cut that gradient for the whole route, this
               lays white over just this canvas.
 
-              It fades back to nothing at the very bottom on purpose: the events
-              section below is a solid --wk-bg-alt band, and holding the white to
-              the edge would put a hard step against it. */}
+              It now reaches solid white by 46% and HOLDS it to the bottom edge,
+              which it could not do while the events section below was a solid
+              --wk-bg-alt peach — white against that was a step. That section is
+              --wk-bg now, two shades off white, so the seam is invisible and the
+              lower half of this one can be properly clean.
+
+              The ramp is long (10% to 46%) so the wash above dissolves into it
+              rather than meeting it at a line. */}
           <div
             aria-hidden
             style={{
               position: "absolute",
               inset: 0,
               background:
-                "linear-gradient(180deg, rgba(255,255,255,0) 38%, rgba(255,255,255,0.7) 66%, rgba(255,255,255,0.7) 90%, rgba(255,255,255,0) 100%)",
+                "linear-gradient(180deg, rgba(255,255,255,0) 10%, rgba(255,255,255,0.5) 28%, rgba(255,255,255,0.88) 40%, #ffffff 52%, #ffffff 100%)",
             }}
           />
 
@@ -380,10 +403,8 @@ export default function CommunityStats() {
           <motion.div
             style={{ position: "absolute", inset: 0 }}
             initial="hidden"
-            animate={seen ? "shown" : "hidden"}
-            variants={{
-              shown: { transition: { staggerChildren: TILE_STAGGER } },
-            }}
+            animate={reduceMotion || onScreen ? "shown" : "hidden"}
+            variants={COLLAGE_VARIANTS}
           >
             <CanvasImage src="/workshop/community/2.jpg" x={1065} y={74} w={395} h={242} />
             <CanvasImage src="/workshop/community/3.jpg" x={1065} y={330} w={395} h={394} />
@@ -456,8 +477,8 @@ export default function CommunityStats() {
         <motion.div
           className="mt-10 grid grid-cols-2 gap-4"
           initial="hidden"
-          animate={seen ? "shown" : "hidden"}
-          variants={{ shown: { transition: { staggerChildren: TILE_STAGGER } } }}
+          animate={reduceMotion || onScreen ? "shown" : "hidden"}
+          variants={COLLAGE_VARIANTS}
         >
           <motion.div
             variants={TILE_VARIANTS}
@@ -483,11 +504,23 @@ export default function CommunityStats() {
   );
 }
 
+/**
+ * The collage's order, declared once on the parent.
+ *
+ * `staggerDirection: -1` on the way out so the sequence unwinds: the last tile
+ * to arrive is the first to leave. Reversing a stagger by replaying it forwards
+ * looks like a second entrance running backwards, which is not the same thing.
+ */
+const COLLAGE_VARIANTS = {
+  shown: { transition: { staggerChildren: TILE_STAGGER } },
+  hidden: { transition: { staggerChildren: TILE_STAGGER, staggerDirection: -1 } },
+} as const;
+
 /** One collage tile. Fades and lifts a little; the order comes from the
  *  staggerChildren on its parent, so there are no per-tile delays to keep in
  *  sync with the list. */
 const TILE_VARIANTS = {
-  hidden: { opacity: 0, y: 14 },
+  hidden: { opacity: 0, y: 14, transition: { duration: 0.4, ease: "easeIn" } },
   shown: { opacity: 1, y: 0, transition: { duration: 0.55, ease: "easeOut" } },
 } as const;
 

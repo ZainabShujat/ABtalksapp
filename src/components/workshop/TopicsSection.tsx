@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import { motion, useInView, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useCanvasScale } from "@/components/workshop/use-canvas-scale";
 import {
   CANVAS_H,
@@ -22,6 +22,44 @@ const SPRING = (t: number) =>
 
 /** Drop distance, in the design's canvas units. */
 const DROP = -900;
+
+/**
+ * The heading and subtitle's own entrance: a short slide down out of a fade.
+ * A function so each can take its own place in the queue without repeating
+ * the shape.
+ */
+const LEAD_VARIANTS = (delay: number) => ({
+  parkedAbove: {
+    opacity: 0,
+    y: -26,
+    transition: { duration: 0.3, delay: delay * 0.5, ease: "easeIn" as const },
+  },
+  parkedBelow: {
+    opacity: 0,
+    y: 26,
+    transition: { duration: 0.3, delay: delay * 0.5, ease: "easeIn" as const },
+  },
+  shown: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: LEAD_MS, delay, ease: [0.22, 0.9, 0.28, 1] as const },
+  },
+});
+
+/**
+ * The sequence: the heading and subtitle lead, then the capsules cascade.
+ *
+ * Order is by HEIGHT, not by the Figma motion timeline. That timeline filled
+ * the field from the middle outward, which is a fine effect but not one the
+ * eye can read as falling — capsules landed above ones that had already
+ * settled. Sorting by y means the topmost lands first and the rest follow it
+ * down, which is what a cascade looks like.
+ */
+const LEAD_MS = 0.45;
+const HEAD_STEP = 0.09;
+/** The capsules start once the subtitle is on its way, not after it lands. */
+const FIELD_LEAD = 0.26;
+const FIELD_STEP = 0.075;
 
 /**
  * When the drop is allowed to start.
@@ -58,30 +96,70 @@ const REVEAL_IN = 0.35;
  */
 const REVEAL_OUT = 0.12;
 
-/**
- * `on` — whether the capsules should be in place, in BOTH directions.
- *
- * Not `whileInView` with `once`: that is a one-way switch, so scrolling back up
- * left the field frozen in its landed state. Driving `animate` from a boolean
- * means leaving the section replays the entrance backwards — up and out, the
- * same 900 units it dropped through.
- */
-function useRevealState(ref: React.RefObject<Element | null>): boolean {
-  const entered = useInView(ref, { amount: REVEAL_IN, margin: REVEAL_MARGIN });
-  const present = useInView(ref, { amount: REVEAL_OUT, margin: REVEAL_MARGIN });
+/** Which side of the canvas the capsules wait on while hidden. */
+type Park = "above" | "below";
 
-  // Adjusted during render rather than in an effect. Both inputs are state
-  // inside useInView, so the render that changes one of them is the render that
-  // can settle this; an effect would commit, then set state, then render again
-  // just to catch up. React re-runs this component immediately on a set during
-  // its own render, before anything reaches the DOM.
-  //
-  // Inside the hysteresis band `next` evaluates to the current value, so the
-  // set is skipped and there is no loop.
-  const [on, setOn] = useState(false);
-  const next = entered ? true : present ? on : false;
-  if (next !== on) setOn(next);
-  return next;
+interface Reveal {
+  on: boolean;
+  park: Park;
+}
+
+/**
+ * Whether the capsules are in place — and, when they are not, which side they
+ * are parked on.
+ *
+ * The `park` half is what makes the motion follow the reader rather than the
+ * clock. Visibility alone gives one hidden position, 900 units ABOVE the
+ * canvas, so every transition moves on that one axis: fine coming down the page
+ * — the field falls into place, and lifts away when you scroll back up — but
+ * wrong the moment you approach from underneath. Scrolling UP out of the
+ * community section back into this one, the reader is travelling up while ten
+ * capsules drop down past them.
+ *
+ * So the capsules park on the side the reader is coming FROM, read off the
+ * section's own position at the instant the state flips:
+ *
+ *   section below the fold  → park above → it falls DOWN in, lifts UP out
+ *   section above the fold  → park below → it rises UP in, sinks DOWN out
+ *
+ * Both cases move with the scroll rather than against it, and neither needs a
+ * scroll listener or a remembered direction — the rect says which it is.
+ *
+ * `park` is only rewritten when `on` changes. Updating it while hidden would
+ * teleport a parked field 1800 units across to the other side.
+ */
+function useRevealState(ref: React.RefObject<Element | null>): Reveal {
+  const [state, setState] = useState<Reveal>({ on: false, park: "above" });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[entries.length - 1];
+        if (!entry) return;
+        // top >= 0: the section starts at or below the top of the box, so the
+        // reader is above it. Below 0 it has already gone past overhead.
+        const park: Park = entry.boundingClientRect.top >= 0 ? "above" : "below";
+        const ratio = entry.intersectionRatio;
+        setState((prev) => {
+          if (!prev.on && ratio >= REVEAL_IN) return { on: true, park };
+          if (prev.on && ratio <= REVEAL_OUT) return { on: false, park };
+          return prev;
+        });
+      },
+      {
+        // Both thresholds plus the ends, so the callback fires on each crossing
+        // rather than only when the ratio happens to be sampled in range.
+        threshold: [0, REVEAL_OUT, REVEAL_IN, 1],
+        rootMargin: REVEAL_MARGIN,
+      },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [ref]);
+
+  return state;
 }
 
 /**
@@ -120,23 +198,58 @@ export default function TopicsSection({ topics }: { topics: string[] | null }) {
   const reduceMotion = useReducedMotion();
 
   const stackRef = useRef<HTMLDivElement>(null);
-  const canvasOn = useRevealState(canvasRef);
-  const stackOn = useRevealState(stackRef);
+  const canvas = useRevealState(canvasRef);
+  const stack = useRevealState(stackRef);
   // A hidden breakpoint's element never intersects, so only the rendered one
-  // is ever true; reduced motion pins both on and nothing ever moves.
-  const canvasState = reduceMotion || canvasOn ? "shown" : "hidden";
-  const stackState = reduceMotion || stackOn ? "shown" : "hidden";
+  // is ever on; reduced motion pins both shown and nothing ever moves.
+  const variantFor = (r: Reveal) =>
+    reduceMotion || r.on ? "shown" : r.park === "above" ? "parkedAbove" : "parkedBelow";
+  const canvasState = variantFor(canvas);
+  const stackState = variantFor(stack);
 
   // Was solved once at module load. It now depends on a prop, so it is memoised
   // per topic list instead — layoutTopics is a pure function of its input, and
   // the list only changes when the current workshop does.
   const PLACED = useMemo(() => layoutTopics(topics ?? DEFAULT_TOPICS), [topics]);
 
+  /**
+   * Each capsule's turn, keyed by its text.
+   *
+   * Derived from the settled layout rather than carried on it: `layoutTopics`
+   * is a pure geometry solver and has no opinion about motion, and the y it
+   * produces is exactly what the cascade needs to order by.
+   */
+  const fall = useMemo(() => {
+    const order = new Map<string, number>();
+    [...PLACED]
+      .sort((a, b) => a.y - b.y)
+      .forEach((p, i) => order.set(p.text, FIELD_LEAD + i * FIELD_STEP));
+    return order;
+  }, [PLACED]);
+
   // No section padding: the design stacks sections edge to edge (hero
   // 78→884, this 884→1584, community 1584→2402), with the breathing room
   // built into each canvas rather than added between them.
   return (
-    <section className="w-full">
+    /*
+     * Pure white, not the page wash.
+     *
+     * `.wk-root` paints --wk-page-grad with background-attachment: fixed, so
+     * every section inherits the same cream-to-peach ramp and none of them can
+     * be lighter than it. This one lays white over its own box.
+     *
+     * The top 56px fade is what keeps that from drawing a line across the page:
+     * the hero above sits on the cream, and white starting at full strength on
+     * the section boundary would meet it as a hard edge. The community section
+     * below opens with its own orange wash, which covers the other seam.
+     */
+    <section
+      className="w-full"
+      style={{
+        background:
+          "linear-gradient(180deg, rgba(255,255,255,0) 0px, #ffffff 56px, #ffffff 100%)",
+      }}
+    >
       <style>{`
         .wk-learn-canvas {
           position: absolute;
@@ -172,9 +285,18 @@ export default function TopicsSection({ topics }: { topics: string[] | null }) {
           } as React.CSSProperties
         }
       >
-        <div className="wk-learn-canvas">
+        {/* The heading and subtitle lead the sequence — a short fade and a
+            slide DOWN, the same direction the capsules then fall from, so the
+            whole section reads as arriving rather than as two effects that
+            happen to share a trigger. They reverse with everything else. */}
+        <motion.div
+          className="wk-learn-canvas"
+          initial="parkedAbove"
+          animate={canvasState}
+        >
           {/* heading — node 1:168 */}
-          <h2
+          <motion.h2
+            variants={LEAD_VARIANTS(0)}
             style={{
               position: "absolute",
               // 47 in the design. The hero frame already leaves 29 units below
@@ -193,10 +315,11 @@ export default function TopicsSection({ topics }: { topics: string[] | null }) {
             }}
           >
             What You&apos;ll Learn
-          </h2>
+          </motion.h2>
 
           {/* subtitle — node 1:191 */}
-          <p
+          <motion.p
+            variants={LEAD_VARIANTS(HEAD_STEP)}
             style={{
               position: "absolute",
               top: 84,
@@ -214,8 +337,8 @@ export default function TopicsSection({ topics }: { topics: string[] | null }) {
           >
             Practical AI skills through live, hands-on demonstrations and
             step-by-step builds.
-          </p>
-        </div>
+          </motion.p>
+        </motion.div>
 
         {/* The trigger lives on the canvas, not on each capsule: a capsule
             starts at y:-900, outside this box's `overflow-hidden`, and a
@@ -223,30 +346,53 @@ export default function TopicsSection({ topics }: { topics: string[] | null }) {
             `whileInView` can never fire and they would stay invisible. */}
         <motion.div
           className="wk-learn-canvas"
-          initial="hidden"
+          initial="parkedAbove"
           animate={canvasState}
         >
-          {PLACED.map((p) => (
+          {PLACED.map((p) => {
+            // Its turn in the cascade, and — leaving — the reverse of it, so
+            // the field lifts away from the bottom up.
+            const fallIn = fall.get(p.text) ?? FIELD_LEAD;
+            const fallOut = (PLACED.length - 1) * FIELD_STEP - (fallIn - FIELD_LEAD);
+            return (
             <motion.div
               key={p.text}
               variants={{
-                hidden: {
+                // Two parked states, one above the canvas and one below it.
+                // Which is used is decided by useRevealState, not by this
+                // component — see the note there.
+                //
+                // The exit is eased the other way from the drop, and the fade
+                // now runs nearly the whole length of the move rather than
+                // finishing in a fifth of it: at 0.22s against a 0.4s travel
+                // the capsules were invisible for most of the distance, so the
+                // reverse could not be read as motion at all.
+                parkedAbove: {
                   opacity: 0,
                   y: DROP,
-                  // The way back out. Quicker than the drop and eased the other
-                  // way, so leaving reads as the field lifting away rather than
-                  // as a second, slower entrance played in reverse.
                   transition: {
-                    y: { duration: 0.4, delay: p.delay * 0.35, ease: "easeIn" },
-                    opacity: { duration: 0.22, delay: p.delay * 0.35 },
+                    y: { duration: 0.5, delay: fallOut, ease: "easeIn" },
+                    opacity: { duration: 0.42, delay: fallOut },
+                  },
+                },
+                parkedBelow: {
+                  opacity: 0,
+                  y: -DROP,
+                  transition: {
+                    y: { duration: 0.5, delay: fallOut, ease: "easeIn" },
+                    opacity: { duration: 0.42, delay: fallOut },
                   },
                 },
                 shown: {
                   opacity: 1,
                   y: 0,
                   transition: {
-                    y: { duration: 0.7, delay: p.delay, ease: SPRING },
-                    opacity: { duration: 0.15, delay: p.delay, ease: "easeOut" },
+                    // SPRING is the damped curve Figma authored — it overshoots
+                    // and settles, which is the "landing" this needs. The fade
+                    // is quick and runs at the head of the fall so the capsule
+                    // is solid on the way down rather than materialising.
+                    y: { duration: 0.78, delay: fallIn, ease: SPRING },
+                    opacity: { duration: 0.16, delay: fallIn, ease: "easeOut" },
                   },
                 },
               }}
@@ -267,7 +413,8 @@ export default function TopicsSection({ topics }: { topics: string[] | null }) {
                 </span>
               </div>
             </motion.div>
-          ))}
+            );
+          })}
         </motion.div>
       </div>
 
@@ -289,22 +436,30 @@ export default function TopicsSection({ topics }: { topics: string[] | null }) {
 
         <motion.div
           className="mx-auto flex max-w-2xl flex-wrap justify-center gap-2.5"
-          initial="hidden"
+          initial="parkedAbove"
           animate={stackState}
         >
-        {PLACED.map((p) => (
+        {PLACED.map((p, i) => (
           <motion.span
             key={p.text}
+            // Wrapped flow here, so the cascade follows READING order — the
+            // canvas's y-sort would look arbitrary against a layout the solver
+            // no longer controls.
             variants={{
-              hidden: {
+              parkedAbove: {
                 opacity: 0,
                 y: -24,
-                transition: { duration: 0.3, delay: p.delay * 0.25, ease: "easeIn" },
+                transition: { duration: 0.34, delay: (PLACED.length - 1 - i) * 0.03, ease: "easeIn" },
+              },
+              parkedBelow: {
+                opacity: 0,
+                y: 24,
+                transition: { duration: 0.34, delay: (PLACED.length - 1 - i) * 0.03, ease: "easeIn" },
               },
               shown: {
                 opacity: 1,
                 y: 0,
-                transition: { duration: 0.5, delay: p.delay * 0.5, ease: SPRING },
+                transition: { duration: 0.5, delay: FIELD_LEAD + i * 0.05, ease: SPRING },
               },
             }}
             className="rounded-[50px] px-5 py-2.5 text-[14px] font-medium"

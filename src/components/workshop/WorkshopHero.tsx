@@ -56,6 +56,22 @@ const POSTER_R = POSTER.x + POSTER.w;
  */
 const BITE = 14;
 
+/**
+ * Per-pill overrides, where the artwork behind that pill allows a deeper sit.
+ *
+ * BITE is the safe default — the width of the poster's cream margin, so no pill
+ * can land on anything printed. These three go further because what is behind
+ * them at their own height is not print:
+ *
+ *   100% Free        56  the poster's decorative circuit corner, no text at all
+ *   1 Hour Live      24  the cream band left of the last topic tile, which
+ *                        ends 27 units short of the poster's right edge
+ *   Beginner Friendly 34 the cream band right of the poster's left icon column
+ *
+ * Nothing here changes a pill's size or wording; each one just sits further
+ * over the poster and so further from the card's edge.
+ */
+
 /** Feature pills (nodes 1:128 / 1:132 / 1:136 / 1:157), card-relative.
  *
  *  Anchored by ONE edge and one centre line rather than by a top-left corner
@@ -79,10 +95,10 @@ const BITE = 14;
  *
  *  `delay` is from the motion timeline. */
 const PILLS = [
-  { label: "Beginner Friendly", Icon: Sparkles, ax: POSTER_L + BITE, anchorRight: true, cy: 400, delay: 0.36 },
-  { label: "100% Free", Icon: Gift, ax: POSTER_R - BITE, anchorRight: false, cy: 156, delay: 0.84 },
+  { label: "Beginner Friendly", Icon: Sparkles, ax: POSTER_L + 34, anchorRight: true, cy: 400, delay: 0.36 },
+  { label: "100% Free", Icon: Gift, ax: POSTER_R - 56, anchorRight: false, cy: 156, delay: 0.84 },
   { label: "Live on Youtube", Icon: PlayCircle, ax: POSTER_L + BITE, anchorRight: true, cy: 654, delay: 0 },
-  { label: "1 Hour Live", Icon: Clock, ax: POSTER_R - BITE, anchorRight: false, cy: 656, delay: 0.24 },
+  { label: "1 Hour Live", Icon: Clock, ax: POSTER_R - 24, anchorRight: false, cy: 656, delay: 0.24 },
 ] as const;
 
 /** The overshoot curve Figma authored on the pill scale track. */
@@ -91,21 +107,19 @@ const POP_EASE = [0.45, 1.45, 0.8, 1] as const;
 /**
  * Primary CTA, now under the design's own 238×56 / 16px. It started at
  * 268×64 / 18px and still read as oversized against a 56px title and a 20px
- * subtitle, so it is the smallest of the three passes: 216×48 / 16px. Height
- * still grows and shrinks around the original centre line (654 + 56/2), so the
- * button stays aligned both with the "View Details" link beside it and with the
- * "Live on Youtube" pill on the same line.
+ * subtitle, so it is the smallest of the three passes: 216×48 / 16px.
+ *
+ * No `top` any more: it is the last item in the centred column below, so its
+ * position falls out of the stack rather than out of an offset that had to be
+ * kept in step with everything above it.
  */
 const CTA_W = 216;
 const CTA_H = 48;
-const CTA_TOP = 654 + 56 / 2 - CTA_H / 2;
 
 const ctaStyle: React.CSSProperties = {
-  position: "absolute",
-  left: 137,
-  top: CTA_TOP,
   width: CTA_W,
   height: CTA_H,
+  flexShrink: 0,
   borderRadius: 12,
   display: "flex",
   alignItems: "center",
@@ -115,6 +129,17 @@ const ctaStyle: React.CSSProperties = {
   color: "#ffffff",
   textDecoration: "none",
 };
+
+/**
+ * The gaps in the left column, top to bottom.
+ *
+ * The countdown's own box carries 16 units of leading above its first digit,
+ * so its gap is set 16 short of the one below it — the two then read as equal.
+ */
+const GAP_CHIPS_TITLE = 24;
+const GAP_TITLE_DESC = 30;
+const GAP_DESC_COUNT = 20;
+const GAP_COUNT_CTA = 34;
 
 const DEFAULT_DESC =
   "Turn one idea into a week of content — generate scroll-stopping posts, carousels and short-form videos with AI, then edit and schedule them in minutes.";
@@ -251,68 +276,114 @@ export default function WorkshopHero({
               )}
             </div>
 
-            {/* date + time chips — node 1:121.
-                One flex row rather than two separately-placed pills. Each used
-                to carry a hardcoded width (143 and 117) with an absolutely
-                positioned label inside, so the pill could not size to its own
-                text: measured, "September 05, 2026" needed 114px against 104px
-                of room and spilled 10px past the background, while the time
-                pill left 28px of empty pill trailing its text. The second x
-                (242) was also just 86 + 143 + gap, so it moved whenever the
-                first pill's content changed length. */}
+            {/*
+              The left column — one centred stack, not five absolute offsets.
+
+              Every item here used to carry its own `top` (102, 172, 324, 462,
+              655), so the rhythm was arithmetic that had to be redone by hand
+              whenever any one line changed length, and the block as a whole sat
+              wherever those numbers left it: 102 units of card above it against
+              74 below. It is now a full-height flex column with
+              `justifyContent: center`, so the stack is compact by its gaps and
+              the leftover card is split evenly above and below it — whatever
+              number of lines the title happens to wrap to.
+
+              The title and the CTA moved INSIDE the card to join it. They sat
+              outside so the card could not clip them, but at x 86 and 134 units
+              of a 1844-wide card neither was ever near an edge.
+            */}
             <div
               style={{
                 position: "absolute",
                 left: 86,
-                top: 102,
+                top: 0,
+                height: CARD.h,
                 display: "flex",
-                alignItems: "center",
-                gap: 13,
+                flexDirection: "column",
+                justifyContent: "center",
+                alignItems: "flex-start",
               }}
             >
-              <Chip text={webinarDate} Icon={CalendarDays} />
-              <Chip text={webinarTime} Icon={Clock} />
-            </div>
+              {/* date + time chips — node 1:121.
+                  One flex row rather than two separately-placed pills. Each used
+                  to carry a hardcoded width (143 and 117) with an absolutely
+                  positioned label inside, so the pill could not size to its own
+                  text: measured, "September 05, 2026" needed 114px against 104px
+                  of room and spilled 10px past the background, while the time
+                  pill left 28px of empty pill trailing its text. */}
+              <div style={{ display: "flex", alignItems: "center", gap: 13 }}>
+                <Chip text={webinarDate} Icon={CalendarDays} />
+                <Chip text={webinarTime} Icon={Clock} />
+              </div>
 
-            {/* subtitle — node 1:120.
-                Pulled up from the design's 389 (frame 417). The title sits at
-                frame 172 and OUTSIDE this card, so the gap between them is not
-                a margin anywhere — it is the arithmetic between two fixed
-                canvas offsets, and at 64px/2 lines it came to 91 units of dead
-                space. 324 (frame 352) puts it 46 below the 56px title, so the
-                two read as one block. */}
-            <p
-              style={{
-                position: "absolute",
-                left: 88,
-                top: 324,
-                // 509 in the design, against a title box 639 wide starting at
-                // 86 — so the copy stopped 128 units short of the column it
-                // belongs to and left the card black from there to the poster.
-                // 620 ends the two on the same line and costs no extra line of
-                // text: the string needs 2.1 lines at this width, the same 3 it
-                // already wrapped to.
-                width: 620,
-                margin: 0,
-                fontSize: 20,
-                fontWeight: 600,
-                lineHeight: 1.2,
-                color: "#d2d2d2",
-              }}
-            >
-              {desc}
-            </p>
+              <h1
+                style={{
+                  marginTop: GAP_CHIPS_TITLE,
+                  width: 639,
+                  marginBottom: 0,
+                  // 64 in the design. Trimmed one step: the 639px box still
+                  // breaks it at the same word, so the wrap stays intentional
+                  // and the title stays the largest thing on the page.
+                  fontSize: 56,
+                  fontWeight: 700,
+                  lineHeight: 1.2,
+                  letterSpacing: "-0.01em",
+                  color: "#ffffff",
+                }}
+              >
+                {title}
+              </h1>
 
-            {/* countdown — node 1:140. Moved up with the subtitle so the slack
-                it left behind does not simply reappear below it. The CTA cannot
-                follow: it is centred on the "Live on Youtube" pill and stays at
-                655. Measured between visible ink — this box carries 16 units of
-                leading above the first digit — that leaves title → 46 →
-                subtitle → 82 → countdown → 83 → CTA: one tight pair at the top,
-                then two even breaks. At the design's 492 the subtitle break was
-                84 and the whole column sat low. */}
-            <div style={{ position: "absolute", left: 88, top: 462 }}>
-              <CountdownExact targetUtc={webinarTargetUtc} />
+              {/* subtitle — node 1:120. 509 in the design, against a title box
+                  639 wide: the copy stopped 128 units short of the column it
+                  belongs to and left the card black from there to the poster.
+                  620 ends the two on the same line and costs no extra line of
+                  text — the string needs 2.1 lines at this width, the same 3 it
+                  already wrapped to. */}
+              <p
+                style={{
+                  marginTop: GAP_TITLE_DESC,
+                  marginBottom: 0,
+                  width: 620,
+                  fontSize: 20,
+                  fontWeight: 600,
+                  lineHeight: 1.2,
+                  color: "#d2d2d2",
+                }}
+              >
+                {desc}
+              </p>
+
+              {/* countdown — node 1:140 */}
+              <div style={{ marginTop: GAP_DESC_COUNT }}>
+                <CountdownExact targetUtc={webinarTargetUtc} />
+              </div>
+
+              {/* Background, shadow and hover live in `.wk-cta` — a :hover rule
+                  cannot be expressed inline. */}
+              <div
+                style={{
+                  marginTop: GAP_COUNT_CTA,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 26,
+                }}
+              >
+                <a href="#register" className="wk-cta" style={ctaStyle}>
+                  Reserve your free seat
+                </a>
+                <a
+                  href="#curriculum"
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 700,
+                    color: "#ffffff",
+                    textDecoration: "none",
+                  }}
+                >
+                  View Details
+                </a>
+              </div>
             </div>
 
             {/* feature pills — cropped by the card, as designed */}
@@ -321,54 +392,6 @@ export default function WorkshopHero({
             ))}
           </div>
 
-          {/* ---- title and actions sit OUTSIDE the card in the layer tree,
-                  so they are never clipped by it ---- */}
-          <h1
-            style={{
-              position: "absolute",
-              left: 134,
-              top: 172,
-              width: 639,
-              margin: 0,
-              // 64 in the design. Trimmed one step: the 639px box still breaks
-              // it at the same word, so the wrap stays intentional and the
-              // title stays the largest thing on the page.
-              fontSize: 56,
-              fontWeight: 700,
-              lineHeight: 1.2,
-              letterSpacing: "-0.01em",
-              color: "#ffffff",
-            }}
-          >
-            {title}
-          </h1>
-
-          {/* Nudged up from the design's 238×56 / 16px and centred on the
-              same axis, so the taller button still lines up with "View
-              Details" beside it. Background, shadow and hover live in
-              `.wk-cta` — a :hover rule cannot be expressed inline. */}
-          <a href="#register" className="wk-cta" style={ctaStyle}>
-            Reserve your free seat
-          </a>
-          <a
-            href="#curriculum"
-            style={{
-              position: "absolute",
-              left: 400,
-              top: CTA_TOP,
-              width: 146,
-              height: CTA_H,
-              display: "flex",
-              alignItems: "center",
-              paddingLeft: 22,
-              fontSize: 15,
-              fontWeight: 700,
-              color: "#ffffff",
-              textDecoration: "none",
-            }}
-          >
-            View Details
-          </a>
         </div>
       </div>
 
