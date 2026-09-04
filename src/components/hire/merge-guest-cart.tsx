@@ -57,7 +57,7 @@ export function MergeGuestCart() {
           });
           if (recorded.ok) {
             clearPendingDemand();
-            toast.success("Noted — we'll be in touch when someone matches.");
+            toast.success("Noted. We'll be in touch when someone matches.");
           } else {
             toast.error(recorded.message);
           }
@@ -83,7 +83,7 @@ export function MergeGuestCart() {
 
           if (merged.data.failedIds.length > 0) {
             toast.error(
-              `${merged.data.failedIds.length} of ${programIds.length} candidate(s) could not be added yet — they are still saved here.`,
+              `${merged.data.failedIds.length} of ${programIds.length} candidate(s) could not be added yet. They are still saved here.`,
             );
             return;
           }

@@ -125,7 +125,7 @@ export function HireSavedLater() {
   function moveOne(item: DeskShortlistItem) {
     const added = promote(item);
     toast.success(
-      added ? "Moved to Shortlist" : "Already on your Shortlist — removed here",
+      added ? "Moved to Shortlist" : "Already on your Shortlist. Removed here",
     );
   }
 
@@ -139,7 +139,7 @@ export function HireSavedLater() {
     toast.success(
       added === all.length
         ? `Moved ${added} to your Shortlist`
-        : `Moved ${added} — the rest were already on your Shortlist`,
+        : `Moved ${added}. The rest were already on your Shortlist`,
     );
     openPod();
   }
@@ -154,7 +154,7 @@ export function HireSavedLater() {
         <h1 className="hire-pod__title">Saved for Later</h1>
         <p className="hire-pod__sub">
           A private holding list on this device. Nothing is sent to our team from
-          here — move a candidate to your Shortlist when you are ready to request
+          here. Move a candidate to your Shortlist when you are ready to request
           them.
         </p>
       </header>

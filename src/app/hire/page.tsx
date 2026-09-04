@@ -8,7 +8,7 @@ import { ScoutChat } from "@/components/hire/scout-chat";
 export const metadata: Metadata = {
   title: "Scout | Hire with ABTalks",
   description:
-    "Describe the role. Scout matches candidates by verified platform evidence — not resumes.",
+    "Describe the role. Scout matches candidates by verified platform evidence, not resumes.",
 };
 
 export default async function HirePage() {

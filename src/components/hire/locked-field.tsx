@@ -32,7 +32,7 @@ export function LockedField({
       type="button"
       onClick={onReveal}
       className={`hire-locked ${className ?? ""}`}
-      aria-label={`${label} — locked. Upgrade to Pro to view.`}
+      aria-label={`${label}, locked. Upgrade to Pro to view.`}
       title="Upgrade to Pro to view"
     >
       <span className="hire-locked__value" aria-hidden="true">
@@ -65,7 +65,7 @@ export function UpgradeNotice({
           </p>
           <p className="hire-upgrade__text">
             Pro unlocks names, location, education and the compensation band on
-            every match. Contact details stay separate — those are shared when
+            every match. Contact details stay separate. Those are shared when
             an introduction request is approved.
           </p>
         </div>

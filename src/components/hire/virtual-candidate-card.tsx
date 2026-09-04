@@ -56,7 +56,7 @@ export function VirtualCandidateCard({
       setOpen(false);
       toast.success(
         res.data.duplicate
-          ? "You have already asked for this one — our team is on it."
+          ? "You have already asked for this one, our team is on it."
           : "Request sent. Our team will start sourcing.",
       );
     });
@@ -76,7 +76,7 @@ export function VirtualCandidateCard({
 
       <p className="vc-card__explain">
         Nobody in our active candidate database matches this yet. This card is
-        your requirement, not a person — we can source someone to it.
+        your requirement, not a person, we can source someone to it.
       </p>
 
       <dl className="vc-card__facts">
@@ -120,8 +120,8 @@ export function VirtualCandidateCard({
 
       <p className="vc-card__status">
         {requested
-          ? "Requested — our team is sourcing this candidate"
-          : "Available on Request — candidate will be sourced after you ask"}
+          ? "Requested, our team is sourcing this candidate"
+          : "Available on Request, candidate will be sourced after you ask"}
       </p>
 
       {!requested && !open && (

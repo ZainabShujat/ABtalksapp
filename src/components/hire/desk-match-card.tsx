@@ -146,7 +146,12 @@ export function DeskMatchCard({
     const p = preview;
     return (
       <article
-        className={cn("desk-card", "desk-card--locked", onOpen && "desk-card--clickable")}
+        className={cn(
+          "desk-card",
+          "desk-card--in",
+          "desk-card--locked",
+          onOpen && "desk-card--clickable",
+        )}
         onClick={openFromCard}
       >
         {sampleDemand && <SampleCardNotice {...sampleDemand} />}
@@ -208,7 +213,7 @@ export function DeskMatchCard({
         {upgradeOpen && <UpgradeNotice onDismiss={dismissUpgrade} />}
 
         <p className="desk-card__why">
-          An example of what a full profile looks like — not a person in the
+          An example of what a full profile looks like. Not a person in the
           pool. Blurred fields are what Pro fills in.
         </p>
 
@@ -227,7 +232,12 @@ export function DeskMatchCard({
   if (sample) {
     return (
       <article
-        className={cn("desk-card", "desk-card--sample", onOpen && "desk-card--clickable")}
+        className={cn(
+          "desk-card",
+          "desk-card--in",
+          "desk-card--sample",
+          onOpen && "desk-card--clickable",
+        )}
         onClick={openFromCard}
       >
         {sampleDemand && <SampleCardNotice {...sampleDemand} />}
@@ -265,6 +275,7 @@ export function DeskMatchCard({
     <article
       className={cn(
         "desk-card",
+        "desk-card--in",
         rank === 1 && "desk-card--top",
         selected && "is-selected",
         onOpen && "desk-card--clickable",

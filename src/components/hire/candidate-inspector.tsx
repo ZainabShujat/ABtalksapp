@@ -71,7 +71,7 @@ function coverageLede(match: MatchCardData): string {
   const verb = missing.length === 1 ? "has" : "have";
   const they = missing.length === 1 ? "it is" : "they are";
   return (
-    `Ranked on ${have.length} of 7 evidence dimensions — ${joinList(missing)} ` +
+    `Ranked on ${have.length} of 7 evidence dimensions. Missing: ${joinList(missing)} ` +
     `${verb} not been recorded for this candidate yet, so ${they} excluded rather than counted as zero.`
   );
 }
@@ -165,7 +165,7 @@ export function CandidateInspector({
                   />
                 </>
               ) : sample ? (
-                "Sample profile — not a person in the pool"
+                "Sample profile, not a person in the pool"
               ) : (
                 [match.jobRole, e.workMode, match.locationLabel, publicId]
                   .filter(Boolean)
@@ -200,7 +200,7 @@ export function CandidateInspector({
                 </p>
                 {upgradeOpen && <UpgradeNotice onDismiss={dismissUpgrade} />}
                 <p className="hire-detail__ref" style={{ marginTop: 10 }}>
-                  This is an example of the full profile format — the details
+                  This is an example of the full profile format. The details
                   behind the blur are generated, not a candidate.
                 </p>
               </div>
@@ -265,7 +265,7 @@ export function CandidateInspector({
 
         <p className="hire-detail__lede">
           {sample
-            ? "This is an illustration of the requirement — nobody in the pool matches it yet. Figures below are taken from what you asked for, not from a candidate."
+            ? "This is an illustration of the requirement. Nobody in the pool matches it yet. Figures below are taken from what you asked for, not from a candidate."
             : coverageLede(match)}
         </p>
 
@@ -369,7 +369,7 @@ export function CandidateInspector({
             <p className="hire-detail__note hire-detail__note--tight">
               Slice size is each parameter&apos;s share of this candidate&apos;s
               combined score; the exact value out of 100 is listed beside it.
-              Scores are derived from the evidence on record — indicative, not a
+              Scores are derived from the evidence on record. Indicative, not a
               validated psychometric measure.
             </p>
           </section>
@@ -377,7 +377,7 @@ export function CandidateInspector({
 
         {skills.length > 0 && (
           <section className="hire-detail__section">
-            <h3 className="hire-detail__h">Skills — declared by the candidate</h3>
+            <h3 className="hire-detail__h">Skills, declared by the candidate</h3>
             <div className="desk-card__facts" style={{ marginTop: 0 }}>
               {skills.map((s) => (
                 <span key={s} className={`desk-pill ${skillTint(s)}`}>

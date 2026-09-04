@@ -74,7 +74,7 @@ export function GuestMatchesPage() {
         </h1>
         <p className="max-w-xl text-sm text-muted-foreground">
           Ranked for {active?.title || "your requirement"} on verified platform
-          evidence — missions, commits, projects and interviews.
+          evidence: missions, commits, projects and interviews.
         </p>
       </div>
 

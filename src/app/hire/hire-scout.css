@@ -31,6 +31,37 @@
   --h-pill-ink: #3f3f46;
   --h-on-orange: #18181b;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  /* Micro-interaction motion. Enter uses ease-out, leave uses ease-in — the
+     shared --ease is ease-in-out and reads as hesitant on small feedback. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --dur-fast: 180ms;
+  /* hover, press, chip toggle */
+  --dur-state: 320ms;
+  /* The one long move on the page: the journey column sliding out of the way
+     when the desk goes full width. Long enough to be followed, eased so it
+     leaves quickly and settles rather than stopping. */
+  --dur-slide: 520ms;
+  --ease-slide: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* One scale, so sizes are chosen from a set rather than invented per
+     component. The desk had seven font sizes, five control heights and seven
+     radii before this; anything new picks from here. */
+  --fs-caption: 12px;
+  --fs-small: 13px;
+  --fs-body: 15px;
+  --fs-input: 17px;
+  --fs-title: 20px;
+  --fs-hero: 28px;
+  --ctl-sm: 32px;
+  --ctl-md: 40px;
+  --ctl-lg: 52px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 20px;
+  --r-pill: 100px;
+  /* panel / state transitions */
   /* Hire desk uses the shared ABTalks orange primary actions. */
   --primary: 14 76% 51%;
   --color-primary: #e05226;
@@ -401,7 +432,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
 
 .hire-journey__title {
   margin: 6px 0 0;
-  font-size: 16px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--h-gray-600);
 }
@@ -413,22 +444,25 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
   color: var(--h-gray-400);
 }
 
+/* The rail is context, not the headline. At 20px/700 its three titles were
+   the loudest type on the page, competing with the search they sit beside. */
 .hire-journey__stage.is-active .hire-journey__title {
-  font-size: 20px;
-  line-height: 26px;
-  font-weight: 700;
+  font-size: var(--fs-body);
+  line-height: 22px;
+  font-weight: 600;
   color: var(--h-ink);
   animation: hire-stage-in 420ms var(--ease) both;
 }
 
 .hire-journey__stage.is-active .hire-journey__desc {
-  font-size: 14px;
-  line-height: 21px;
+  font-size: var(--fs-small);
+  line-height: 19px;
   color: var(--h-gray-700);
   animation: hire-stage-in 420ms 80ms var(--ease) both;
 }
 
 @keyframes hire-node-pulse {
+
   0%,
   100% {
     transform: scale(1);
@@ -439,6 +473,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
       inset 0 -3px 6px rgba(169, 54, 23, 0.45),
       inset 0 3px 6px rgba(255, 255, 255, 0.34);
   }
+
   50% {
     transform: scale(1.08);
     box-shadow:
@@ -455,10 +490,12 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
     transform: scale(0.72);
     opacity: 0.5;
   }
+
   60% {
     transform: scale(1.12);
     opacity: 1;
   }
+
   to {
     transform: none;
     opacity: 1;
@@ -470,6 +507,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
     opacity: 0.35;
     transform: translateY(6px);
   }
+
   to {
     opacity: 1;
     transform: none;
@@ -489,7 +527,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
   flex-direction: column;
 }
 
-.hire-scout-region > * {
+.hire-scout-region>* {
   flex: 1;
   min-height: 0;
   display: flex;
@@ -533,12 +571,17 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 53px;
+  min-height: 48px;
   padding: 8px 20px;
   /* Every control in the bar is centred on one line and shares a height, so the
      identity block, the two buttons and the expand action sit on a common
      baseline instead of each finding its own. */
-  background: linear-gradient(to bottom, var(--h-toolbar-2) 0%, var(--h-toolbar) 100%);
+  /* Copilot identity, not a banner. This was a 53px full-width orange
+     gradient, the largest coloured surface on the page, which is how a
+     recruiting workspace ended up reading as a chat window. Orange is now
+     spent on the avatar mark and the Search button. */
+  background: var(--h-surface);
+  border-bottom: 1px solid var(--h-border);
   border-radius: 19px 19px 0 0;
 }
 
@@ -550,8 +593,8 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
 }
 
 .scout__avatar {
-  width: 36px;
-  height: 36px;
+  width: 26px;
+  height: 26px;
   border-radius: 100px;
   background: var(--h-primary);
   color: #fff;
@@ -569,16 +612,16 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
 }
 
 .scout__name {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--fs-small);
+  font-weight: 600;
   line-height: 1.15;
   white-space: nowrap;
-  color: var(--h-on-orange);
+  color: var(--h-ink);
 }
 
 .scout__status {
-  font-size: 12px;
-  color: rgba(24, 24, 27, 0.62);
+  font-size: var(--fs-caption);
+  color: var(--h-gray-500);
   white-space: nowrap;
 }
 
@@ -592,18 +635,20 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 34px;
-  padding: 0 14px;
-  border: 1px solid rgba(24, 24, 27, 0.08);
-  border-radius: 8px;
-  background: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  color: #18181b;
+  height: var(--ctl-sm);
+  padding: 0 12px;
+  /* On the old orange bar these read as white pills. On white they need an
+     edge of their own, and less weight than the search they sit above. */
+  border: 1px solid var(--h-border);
+  border-radius: var(--r-sm);
+  background: var(--h-surface);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--h-gray-700);
 }
 
 .scout-tbtn--icon {
-  width: 34px;
+  width: var(--ctl-sm);
   padding: 0;
   justify-content: center;
 }
@@ -731,11 +776,13 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 }
 
 @keyframes scout-idle {
+
   0%,
   100% {
     transform: scale(1);
     filter: drop-shadow(0 0 0 rgba(224, 82, 38, 0));
   }
+
   50% {
     transform: scale(1.045);
     filter: drop-shadow(0 0 6px rgba(224, 82, 38, 0.45));
@@ -877,42 +924,51 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 }
 
 @keyframes scout-crack {
+
   0%,
   100% {
     transform: translate(-50%, -50%) scale(1) rotate(0deg);
     filter: drop-shadow(0 0 0 transparent);
     opacity: 0.9;
   }
+
   18% {
     transform: translate(-50%, -50%) scale(1.22) rotate(-12deg);
     filter: drop-shadow(0 0 10px rgba(224, 82, 38, 0.95));
     opacity: 1;
   }
+
   36% {
     transform: translate(-50%, -50%) scale(0.86) rotate(8deg);
   }
+
   58% {
     transform: translate(-50%, -50%) scale(1.12) rotate(-6deg);
     filter: drop-shadow(0 0 8px rgba(224, 82, 38, 0.7));
   }
+
   78% {
     transform: translate(-50%, -50%) scale(0.96) rotate(3deg);
   }
 }
 
 @keyframes scout-shard-a {
+
   0%,
   100% {
     transform: translate(0, 0) rotate(0deg) scale(0.3);
     opacity: 0;
   }
+
   16% {
     opacity: 1;
   }
+
   44% {
     transform: translate(13px, -15px) rotate(42deg) scale(1);
     opacity: 1;
   }
+
   78% {
     transform: translate(5px, -6px) rotate(-18deg) scale(0.55);
     opacity: 0.25;
@@ -920,18 +976,22 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 }
 
 @keyframes scout-shard-b {
+
   0%,
   100% {
     transform: translate(0, 0) rotate(0deg) scale(0.3);
     opacity: 0;
   }
+
   14% {
     opacity: 1;
   }
+
   46% {
     transform: translate(-14px, -11px) rotate(-50deg) scale(1);
     opacity: 1;
   }
+
   80% {
     transform: translate(-6px, -4px) rotate(16deg) scale(0.5);
     opacity: 0.2;
@@ -939,18 +999,22 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 }
 
 @keyframes scout-shard-c {
+
   0%,
   100% {
     transform: translate(0, 0) rotate(20deg) scale(0.25);
     opacity: 0;
   }
+
   18% {
     opacity: 1;
   }
+
   48% {
     transform: translate(9px, 14px) rotate(70deg) scale(1.1);
     opacity: 1;
   }
+
   82% {
     transform: translate(3px, 6px) rotate(-8deg) scale(0.45);
     opacity: 0.2;
@@ -958,18 +1022,22 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 }
 
 @keyframes scout-shard-d {
+
   0%,
   100% {
     transform: translate(0, 0) rotate(-10deg) scale(0.25);
     opacity: 0;
   }
+
   12% {
     opacity: 1;
   }
+
   42% {
     transform: translate(-12px, 12px) rotate(-64deg) scale(1);
     opacity: 1;
   }
+
   76% {
     transform: translate(-4px, 5px) rotate(22deg) scale(0.5);
     opacity: 0.25;
@@ -977,18 +1045,22 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 }
 
 @keyframes scout-shard-e {
+
   0%,
   100% {
     transform: translate(0, 0) rotate(0deg) scale(0.2);
     opacity: 0;
   }
+
   20% {
     opacity: 1;
   }
+
   50% {
     transform: translate(16px, 2px) rotate(28deg) scale(0.95);
     opacity: 0.9;
   }
+
   84% {
     transform: translate(7px, 1px) rotate(-20deg) scale(0.4);
     opacity: 0.15;
@@ -996,18 +1068,22 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 }
 
 @keyframes scout-shard-f {
+
   0%,
   100% {
     transform: translate(0, 0) rotate(0deg) scale(0.2);
     opacity: 0;
   }
+
   15% {
     opacity: 1;
   }
+
   40% {
     transform: translate(-8px, -16px) rotate(-36deg) scale(1);
     opacity: 1;
   }
+
   74% {
     transform: translate(-3px, -7px) rotate(14deg) scale(0.45);
     opacity: 0.2;
@@ -1018,12 +1094,14 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
   .scout-mark--id {
     animation: none;
   }
+
   .scout-loader__core,
   .scout-loader__burst i {
     animation: none;
     opacity: 1;
     transform: translate(-50%, -50%);
   }
+
   .scout-loader__burst i {
     transform: none;
     opacity: 0;
@@ -1153,15 +1231,21 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
   min-height: 0;
 }
 
+/* Wraps, never scrolls.
+   As a horizontal strip the checklist hid whichever criteria ran past the right
+   edge — usually including Role, the first one — so it could not do the one job
+   it has: show what a complete brief contains. Two short rows cost less than a
+   hidden list. (The phone breakpoint keeps the scrolling strip: there the row
+   sits directly above the keyboard, where height is the scarce thing.) */
 .scout-criteria {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 4px 18px;
+  gap: 6px 16px;
   margin: 12px 4px 0;
   padding: 0;
   list-style: none;
-  overflow-x: auto;
+  overflow: visible;
 }
 
 .scout-criterion {
@@ -1230,7 +1314,9 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .desk-name__gate { transition: none; }
+  .desk-name__gate {
+    transition: none;
+  }
 }
 
 /* Candidate card */
@@ -1484,21 +1570,67 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 /* Skill chips take a stable tint from the skill's own name, so "React" is the
    same hue on every card and in the inspector. Six soft tints; the index comes
    from `skillTint()` in desk-match-card.tsx, never from the render order. */
-.desk-pill--c0 { background: #ffede4; color: #b8431e; }
-.desk-pill--c1 { background: #e8f1fe; color: #2b6cb0; }
-.desk-pill--c2 { background: #e6f7f3; color: #1c8375; }
-.desk-pill--c3 { background: #f0edfe; color: #5b4bc4; }
-.desk-pill--c4 { background: #fff3dc; color: #96631a; }
-.desk-pill--c5 { background: #fde9f1; color: #a63b67; }
+.desk-pill--c0 {
+  background: #ffede4;
+  color: #b8431e;
+}
+
+.desk-pill--c1 {
+  background: #e8f1fe;
+  color: #2b6cb0;
+}
+
+.desk-pill--c2 {
+  background: #e6f7f3;
+  color: #1c8375;
+}
+
+.desk-pill--c3 {
+  background: #f0edfe;
+  color: #5b4bc4;
+}
+
+.desk-pill--c4 {
+  background: #fff3dc;
+  color: #96631a;
+}
+
+.desk-pill--c5 {
+  background: #fde9f1;
+  color: #a63b67;
+}
 
 /* The tints are light-mode inks on light-mode grounds; on dark they would sit
    at roughly 2:1. Same hue family, inverted, so a skill keeps its identity. */
-html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c0 { background: #4a2418; color: #ffd2bf; }
-html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c1 { background: #1b3757; color: #cfe2ff; }
-html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c2 { background: #16413b; color: #c3f0e6; }
-html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c3 { background: #2e2860; color: #ddd6ff; }
-html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c4 { background: #4a3612; color: #ffe6b8; }
-html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c5 { background: #4d1f33; color: #ffd0e2; }
+html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c0 {
+  background: #4a2418;
+  color: #ffd2bf;
+}
+
+html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c1 {
+  background: #1b3757;
+  color: #cfe2ff;
+}
+
+html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c2 {
+  background: #16413b;
+  color: #c3f0e6;
+}
+
+html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c3 {
+  background: #2e2860;
+  color: #ddd6ff;
+}
+
+html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c4 {
+  background: #4a3612;
+  color: #ffe6b8;
+}
+
+html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c5 {
+  background: #4d1f33;
+  color: #ffd0e2;
+}
 
 html.dark:not(:has(.theme-abtalks-light)) .desk-pill--warn {
   background: #4a3612;
@@ -1557,7 +1689,7 @@ html.dark:not(:has(.theme-abtalks-light)) .desk-card__partial {
   margin-top: 18px;
 }
 
-.desk-card__cta > * {
+.desk-card__cta>* {
   min-width: 0;
   flex: 0 1 auto;
 }
@@ -1724,6 +1856,7 @@ html.dark:not(:has(.theme-abtalks-light)) .desk-shortlist.is-on {
     opacity: 0;
     transform: translateX(10px);
   }
+
   to {
     opacity: 1;
     transform: none;
@@ -2164,7 +2297,7 @@ body:has(.hire-app--desk) {
   overflow: hidden;
 }
 
-body:has(.hire-app--desk) > footer {
+body:has(.hire-app--desk)>footer {
   display: none;
 }
 
@@ -2203,7 +2336,7 @@ body:has(.hire-app--desk) button.fixed.bottom-4.right-4 {
     min-width: 0;
   }
 
-  .hire-hbtn > span:not(.hire-hbtn__count):not(.hire-hbtn__icon) {
+  .hire-hbtn>span:not(.hire-hbtn__count):not(.hire-hbtn__icon) {
     display: none;
   }
 
@@ -2667,71 +2800,90 @@ html.dark:not(:has(.theme-abtalks-light)) .pe__paper rect {
 .pe__paper--a {
   animation-name: pe-riffle-a;
 }
+
 .pe__paper--b {
   animation-name: pe-riffle-b;
   animation-delay: 260ms;
 }
+
 .pe__paper--c {
   animation-name: pe-riffle-c;
   animation-delay: 520ms;
 }
 
 @keyframes pe-riffle-a {
+
   0%,
   100% {
     transform: rotate(-13deg) translate(-6px, 2px);
   }
+
   22% {
     transform: rotate(-21deg) translate(-13px, -5px);
   }
+
   46% {
     transform: rotate(-10deg) translate(-3px, 3px);
   }
+
   70% {
     transform: rotate(-15deg) translate(-7px, 1px);
   }
 }
+
 @keyframes pe-riffle-b {
+
   0%,
   100% {
     transform: rotate(8deg) translate(4px, 0);
   }
+
   24% {
     transform: rotate(15deg) translate(11px, -6px);
   }
+
   50% {
     transform: rotate(5deg) translate(2px, 2px);
   }
+
   74% {
     transform: rotate(9deg) translate(5px, 0);
   }
 }
+
 @keyframes pe-riffle-c {
+
   0%,
   100% {
     transform: rotate(-3deg) translate(0, 0);
   }
+
   26% {
     transform: rotate(1deg) translate(2px, -7px);
   }
+
   52% {
     transform: rotate(-5deg) translate(-2px, 1px);
   }
+
   76% {
     transform: rotate(-3deg) translate(0, -1px);
   }
 }
 
 @keyframes pe-ground {
+
   0%,
   100% {
     transform: scaleX(1);
     opacity: 0.9;
   }
+
   30% {
     transform: scaleX(0.86);
     opacity: 0.65;
   }
+
   60% {
     transform: scaleX(1.04);
     opacity: 1;
@@ -2759,9 +2911,8 @@ html.dark:not(:has(.theme-abtalks-light)) .pe__paper rect {
 }
 
 .pe__glass {
-  offset-path: path(
-    "M 82,96 C 96,78 124,80 122,98 C 120,116 94,118 82,96 C 70,74 44,76 42,94 C 40,112 68,114 82,96"
-  );
+  offset-path: path("M 82,96 C 96,78 124,80 122,98 C 120,116 94,118 82,96 C 70,74 44,76 42,94 C 40,112 68,114 82,96"
+    );
   offset-rotate: 0deg;
   animation:
     pe-orbit 5200ms cubic-bezier(0.5, 0, 0.5, 1) infinite,
@@ -2774,22 +2925,27 @@ html.dark:not(:has(.theme-abtalks-light)) .pe__paper rect {
   from {
     offset-distance: 0%;
   }
+
   to {
     offset-distance: 100%;
   }
 }
 
 @keyframes pe-hunt {
+
   0%,
   100% {
     transform: rotate(-6deg) scale(1);
   }
+
   25% {
     transform: rotate(7deg) scale(1.06);
   }
+
   50% {
     transform: rotate(-4deg) scale(0.97);
   }
+
   75% {
     transform: rotate(8deg) scale(1.05);
   }
@@ -2803,10 +2959,12 @@ html.dark:not(:has(.theme-abtalks-light)) .pe__paper rect {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .pe__paper,
   .pe__ground {
     animation: none;
   }
+
   .pe__glass {
     offset-distance: 38%;
     animation: none;
@@ -2836,7 +2994,7 @@ html.dark:not(:has(.theme-abtalks-light)) .pe__paper rect {
   content: none;
 }
 
-.hire-pod__request > * {
+.hire-pod__request>* {
   position: relative;
   z-index: 1;
 }
@@ -2849,11 +3007,9 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-pod__request {
 
 html.dark:not(:has(.theme-abtalks-light)) .hire-pod__request::before {
   background:
-    radial-gradient(
-      90% 70% at 100% -10%,
+    radial-gradient(90% 70% at 100% -10%,
       rgba(255, 138, 84, 0.28) 0%,
-      transparent 52%
-    ),
+      transparent 52%),
     linear-gradient(180deg, rgba(224, 82, 38, 0.12) 0%, transparent 40%);
 }
 
@@ -2972,9 +3128,11 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-pod__note {
     box-shadow: 0 0 0 0 rgba(224, 82, 38, 0.45);
     border-color: var(--h-primary);
   }
+
   70% {
     box-shadow: 0 0 0 10px rgba(224, 82, 38, 0);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(224, 82, 38, 0);
   }
@@ -3171,7 +3329,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app .hire-podbar button:not(.hir
   color: var(--h-gray-700);
 }
 
-.hire-sheet__li + .hire-sheet__li {
+.hire-sheet__li+.hire-sheet__li {
   margin-top: 8px;
 }
 
@@ -3209,6 +3367,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-sheet {
   .hire-sheet {
     padding: 24px 20px 32px;
   }
+
   .hire-sheet__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3415,8 +3574,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-auth [data-slot="input"
 
 .hire-pie__wedge {
   filter:
-    drop-shadow(0 2px 3px rgba(24, 24, 27, 0.16))
-    drop-shadow(0 6px 10px rgba(24, 24, 27, 0.08));
+    drop-shadow(0 2px 3px rgba(24, 24, 27, 0.16)) drop-shadow(0 6px 10px rgba(24, 24, 27, 0.08));
 }
 
 .hire-pie__gloss {
@@ -3462,6 +3620,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-auth [data-slot="input"
     opacity: 0;
     transform: scale(0.86);
   }
+
   to {
     opacity: 1;
     transform: none;
@@ -3483,9 +3642,11 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-auth [data-slot="input"
     transform: translate(var(--tx), var(--ty));
     opacity: 0;
   }
+
   35% {
     opacity: 1;
   }
+
   100% {
     transform: translate(0, 0);
     opacity: 1;
@@ -3525,6 +3686,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-auth [data-slot="input"
     opacity: 0;
     transform: translateX(6px);
   }
+
   to {
     opacity: 1;
     transform: none;
@@ -3773,6 +3935,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .hire-pie__slice,
   .hire-pie__row,
   .hire-pie__hub,
@@ -4110,7 +4273,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
     gap: 8px;
   }
 
-  .scout__body.is-open .hire-detail__actions > * {
+  .scout__body.is-open .hire-detail__actions>* {
     flex: 1 1 100%;
     justify-content: center;
     min-height: 44px;
@@ -4134,7 +4297,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
     gap: 10px;
   }
 
-  .hire-podbar > span:not(.hire-podbar__icon) {
+  .hire-podbar>span:not(.hire-podbar__icon) {
     flex: 1 1 auto;
     min-width: 0;
     white-space: nowrap;
@@ -4223,9 +4386,9 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
     justify-content: stretch;
   }
 
-  .desk-card__cta > *,
-  .hire-app .desk-card__cta > *,
-  .hire-pod__actions > * {
+  .desk-card__cta>*,
+  .hire-app .desk-card__cta>*,
+  .hire-pod__actions>* {
     width: 100%;
     height: 38px;
     justify-content: center;
@@ -4238,7 +4401,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
     text-overflow: ellipsis;
   }
 
-  .hire-pod__actions > *:first-child {
+  .hire-pod__actions>*:first-child {
     grid-column: 1 / -1;
     justify-self: center;
     width: auto;
@@ -4264,13 +4427,11 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
   padding: 18px 20px;
   border: 1px dashed var(--h-border-strong);
   border-radius: 16px;
-  background: repeating-linear-gradient(
-    135deg,
-    var(--h-peach-wash),
-    var(--h-peach-wash) 10px,
-    transparent 10px,
-    transparent 20px
-  );
+  background: repeating-linear-gradient(135deg,
+      var(--h-peach-wash),
+      var(--h-peach-wash) 10px,
+      transparent 10px,
+      transparent 20px);
 }
 
 html.dark .vc-card {
@@ -4374,11 +4535,13 @@ html.dark .vc-card {
   .desk-card__cta {
     gap: 8px;
   }
+
   .desk-card__cta .desk-ghost,
   .desk-card__cta .desk-pod {
     padding-left: 10px;
     padding-right: 10px;
   }
+
   .desk-card__cta .desk-ghost {
     gap: 5px;
   }
@@ -4495,6 +4658,940 @@ html.dark .vc-card {
 }
 
 /* ==========================================================================
+   Micro-interactions (plan 110)
+
+   One block so the whole interaction layer is reviewable together. Rules:
+   only opacity and transform are animated, enter uses --ease-out and leave
+   uses --ease-in, and every @keyframes named here is switched off in the
+   reduced-motion guard at the bottom of this section.
+   ========================================================================== */
+
+/* --- Pattern 7: hover / press / focus -------------------------------------
+   Before this, nothing in the desk had a press state at all — the whole file
+   contained zero :active rules, so every control looked inert until its
+   result arrived. */
+
+.hire-app .scout-chip,
+.hire-app .scout-tbtn,
+.hire-app .scout-send,
+.hire-app .scout-pill,
+.hire-app .hire-req__item,
+.hire-app .hire-upgrade__cta,
+.hire-app .hire-upgrade__close {
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+/* Hover changes colour, never position. A control that rises under the cursor
+   is decoration; the colour shift already says "this is the thing you are
+   pointing at", and the press below says the click registered. */
+.hire-app .scout-chip:hover:not(:disabled) {
+  background: var(--h-peach);
+  border-color: var(--h-primary);
+}
+
+.hire-app .scout-chip--show:hover:not(:disabled) {
+  background: var(--h-primary-hover);
+}
+
+.hire-app .scout-tbtn:hover:not(:disabled),
+.hire-app .scout-pill:hover:not(:disabled) {
+  border-color: var(--h-primary);
+  background: var(--h-peach-wash);
+}
+
+.hire-app .scout-tbtn--icon.is-on:hover:not(:disabled) {
+  background: var(--h-primary-hover);
+  border-color: var(--h-primary-hover);
+}
+
+.hire-app .hire-upgrade__close:hover {
+  border-color: var(--h-primary);
+  background: var(--h-peach-wash);
+}
+
+.hire-app .scout-chip:active:not(:disabled),
+.hire-app .scout-tbtn:active:not(:disabled),
+.hire-app .scout-send:active:not(:disabled),
+.hire-app .scout-pill:active:not(:disabled),
+.hire-app .hire-req__item:active,
+.hire-app .hire-upgrade__cta:active,
+.hire-app .hire-upgrade__close:active {
+  transform: scale(0.97);
+}
+
+/* A card is large enough that 0.97 reads as a jump rather than a press. */
+.hire-app .desk-card--clickable {
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.hire-app .desk-card--clickable:active {
+  transform: scale(0.985);
+}
+
+/* Disabled controls stay inert on purpose — a press response on a button that
+   cannot act is a lie about what the click did. */
+.hire-app .scout-chip:disabled:hover,
+.hire-app .scout-chip:disabled:active,
+.hire-app .scout-tbtn:disabled:hover,
+.hire-app .scout-tbtn:disabled:active,
+.hire-app .scout-send:disabled:hover,
+.hire-app .scout-send:disabled:active,
+.hire-app .scout-pill:disabled:hover,
+.hire-app .scout-pill:disabled:active {
+  transform: none;
+}
+
+.hire-app .scout-chip:focus-visible,
+.hire-app .scout-tbtn:focus-visible,
+.hire-app .scout-send:focus-visible,
+.hire-app .scout-pill:focus-visible,
+.hire-app .hire-req__item:focus-visible,
+.hire-app .hire-upgrade__cta:focus-visible,
+.hire-app .hire-upgrade__close:focus-visible,
+.hire-app .desk-card--clickable:focus-visible {
+  outline: 2px solid var(--h-primary);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Search workspace (plan 110, pass 2 — A/B/C)
+
+   The desk stopped rendering as a conversation. The recruiter types a query,
+   the strip under the composer interprets it live, and Scout's newest line is
+   guidance above the workspace instead of a message in a thread. Nothing about
+   the agent protocol, the spec, or search eligibility changed.
+   ========================================================================== */
+
+/* --- Landing layout → working layout --------------------------------------
+   Before the first query the journey is a 300px column beside the desk. After
+   it, that column collapses and the journey reappears as the compact rail
+   above the desk — the layout the phone has always used — so the workspace
+   takes the full width once there is something in it.
+
+   `.hire-workspace__main` also carries the height chain the desk depends on:
+   `.hire-workspace` is a flex row with `min-height: 0`, and everything below
+   grows through `flex: 1`. Without a flex column here the desk sizes to its
+   content and leaves the rest of the viewport blank.
+
+   The collapse transitions `grid-template-columns` on the slot rather than
+   toggling `display`, because the point is that the desk is *seen* widening.
+   Same layout-reveal trick `.scout-criteria-slot` uses, turned on its side —
+   the one place a layout property is animated, and deliberate. */
+
+.hire-journey-slot {
+  flex: none;
+  /* 300px column + the gutter the aside used to carry as its own margin. The
+     `0fr` grid trick does not work here: this is a flex item whose base size is
+     auto, so it keeps its max-content width no matter how the track is sized.
+     A definite width is the thing that actually collapses. */
+  width: 316px;
+  padding-left: 16px;
+  min-height: 0;
+  overflow: hidden;
+  transition:
+    width var(--dur-slide) var(--ease-slide),
+    padding-left var(--dur-slide) var(--ease-slide);
+}
+
+/* Two movements on one clock, which is what makes it read as sliding rather
+   than resizing: the slot narrows while the panel inside travels left at the
+   same rate. Fading alone looks like a dissolve; travelling alone looks like a
+   jump once the width lands. */
+.hire-journey-slot > .hire-journey {
+  width: 300px;
+  margin-left: 0;
+  min-width: 300px;
+  transition:
+    transform var(--dur-slide) var(--ease-slide),
+    opacity var(--dur-slide) var(--ease-slide);
+}
+
+.hire-workspace.is-started .hire-journey-slot {
+  width: 0;
+  padding-left: 0;
+}
+
+.hire-workspace.is-started .hire-journey-slot > .hire-journey {
+  transform: translateX(-40px);
+  opacity: 0;
+}
+
+.hire-workspace__main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The phone stacks the rail (nodes over text) because it has no width to
+   spare. The desk does, so it reads as one line: progress on the left, what is
+   happening beside it. The `<i/>` connectors are `flex: 1` for the phone, which
+   across 1200px would draw two very long rules — capped here instead. */
+.hire-workspace.is-started .hire-rail {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: none;
+  margin: 8px 24px 0 10px;
+  padding: 10px 16px;
+  border: 1px solid var(--h-border);
+  border-radius: 12px;
+  background: linear-gradient(
+    to bottom,
+    var(--h-peach) 0%,
+    var(--h-surface) 100%
+  );
+  animation: scout-rail-in var(--dur-slide) var(--ease-slide) both;
+}
+
+.hire-workspace.is-started .hire-rail__nodes {
+  flex: none;
+  margin-bottom: 0;
+}
+
+.hire-workspace.is-started .hire-rail__nodes i {
+  flex: none;
+  width: 28px;
+}
+
+.hire-workspace.is-started .hire-rail p {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.hire-workspace.is-started .hire-rail p strong {
+  flex: none;
+  color: var(--h-ink);
+}
+
+@keyframes scout-rail-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 900px) {
+  /* The phone never had the column, so there is nothing to collapse. */
+  .hire-journey-slot {
+    display: none;
+  }
+
+  .hire-workspace.is-started .hire-rail {
+    margin: 8px 12px 0;
+    animation: none;
+  }
+}
+
+/* --- Tapping a criterion writes into the composer -------------------------
+   The field gets "Role: " and the examples sit behind the cursor in grey, so
+   the recruiter answers in their own words instead of being asked. A native
+   placeholder cannot do this: it only shows while the value is empty, and the
+   value here is the label. */
+
+.scout-field__box {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.scout-ghost {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-size: 15px;
+  line-height: 22px;
+  white-space: pre-wrap;
+  overflow: hidden;
+}
+
+.scout-ghost__typed {
+  color: transparent;
+}
+
+.scout-ghost__hint {
+  color: var(--h-gray-400);
+}
+
+/* ==========================================================================
+   Landing state: the query is the page
+
+   The desk was laid out as a chat client, and every complaint about it
+   followed from that one decision: a coloured title bar on top, a scroll
+   region in the middle, an input pinned to the bottom. At 1440x900 that put
+   the composer 611px below its own heading with 426px of white under it.
+
+   In `is-landing` the composer leaves the bottom and centres with the
+   heading, Scout's identity drops to a line of text, and orange is spent on
+   one control instead of a full-width banner. Only the initial state is
+   touched: once `talked` is true the desk returns to the working layout.
+   ========================================================================== */
+
+/* Free space splits above the heading and below the composer, so the pair
+   sits on the optical centre instead of at the two ends of the card. */
+.scout.is-landing .scout__body {
+  flex: 0 0 auto;
+  margin-top: auto;
+  overflow: visible;
+}
+
+.scout.is-landing .chat-output {
+  overflow: visible;
+}
+
+.scout.is-landing .scout-composer {
+  margin-bottom: auto;
+  padding: 0 20px 8px;
+}
+
+/* One measure for the heading, the field and everything under it. */
+.scout.is-landing .scout-hero,
+.scout.is-landing .scout-composer__row,
+.scout.is-landing .scout-criteria-slot,
+.scout.is-landing .scout-hero__examples {
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+.scout.is-landing .scout-hero {
+  padding: 0 24px 22px;
+  gap: 8px;
+}
+
+.scout.is-landing .scout-hero__h {
+  font-size: var(--fs-hero);
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.scout.is-landing .scout-hero__p {
+  font-size: var(--fs-small);
+  color: var(--h-gray-500);
+  max-width: 46ch;
+}
+
+/* PRIMARY. A search surface, not a chat input: white rather than filled grey,
+   a rounded rect rather than a pill, and tall enough to be the thing you look
+   at first. */
+.scout.is-landing .scout-composer__row {
+  gap: 10px;
+}
+
+.scout.is-landing .scout-field {
+  min-height: var(--ctl-lg);
+  padding: 14px 20px;
+  background: var(--h-surface);
+  border: 1.5px solid var(--h-border-strong);
+  border-radius: var(--r-lg);
+  box-shadow: 0 1px 2px rgba(24, 24, 27, 0.04);
+}
+
+.scout.is-landing .scout-field:focus-within {
+  border-color: var(--h-primary);
+  box-shadow: 0 0 0 4px rgba(224, 82, 38, 0.1);
+}
+
+.scout.is-landing .scout-field textarea,
+.scout.is-landing .scout-ghost {
+  font-size: var(--fs-input);
+  line-height: 24px;
+}
+
+.scout.is-landing .scout-send {
+  height: var(--ctl-lg);
+  width: auto;
+  padding: 0 26px;
+  border-radius: var(--r-lg);
+  font-size: var(--fs-body);
+}
+
+/* SECONDARY. Suggestions teach the field; they must not compete with it. */
+.scout.is-landing .scout-hero__examples {
+  justify-content: flex-start;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 0;
+}
+
+.scout.is-landing .scout-example {
+  height: var(--ctl-sm);
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--h-gray-100);
+  color: var(--h-gray-600);
+  font-size: var(--fs-caption);
+}
+
+.scout.is-landing .scout-example:hover {
+  background: var(--h-peach);
+  color: var(--h-ink);
+}
+
+/* TERTIARY. Nothing has been detected yet, so the strip is a preview of what
+   Scout listens for, not a result. It reads at caption weight. */
+.scout.is-landing .scout-criteria {
+  /* Wraps at every width here. The phone rule turns the strip into a
+     horizontal scroller to save height above the keyboard, but on the landing
+     screen there is no keyboard and no height pressure, and a clipped list
+     cannot show what a complete brief contains. */
+  flex-wrap: wrap;
+  overflow: visible;
+  gap: 6px 14px;
+  margin-top: 18px;
+}
+
+.scout.is-landing .scout-criterion {
+  font-size: var(--fs-caption);
+  color: var(--h-gray-400);
+}
+
+/* --- A: the empty desk is a search workspace, not an opening question ------ */
+
+.scout-hero {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 48px 24px 8px;
+  text-align: center;
+}
+
+.scout-hero__h {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--h-ink);
+}
+
+.scout-hero__p {
+  margin: 0;
+  max-width: 44ch;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--h-gray-600);
+}
+
+.scout-hero__examples {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.scout-example {
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid var(--h-border);
+  border-radius: 100px;
+  background: var(--h-surface);
+  color: var(--h-gray-700);
+  font-size: 12.5px;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.scout-example:hover {
+  border-color: var(--h-primary);
+  background: var(--h-peach-wash);
+  color: var(--h-ink);
+}
+
+.scout-example:active {
+  transform: scale(0.97);
+}
+
+.scout-example:focus-visible {
+  outline: 2px solid var(--h-primary);
+  outline-offset: 2px;
+}
+
+/* --- C: Scout's live line, as interpretation rather than a chat turn ------- */
+
+.scout-lede {
+  display: grid;
+  gap: 10px;
+  padding: 18px 24px 4px;
+}
+
+/* The disclosure sits above the message it precedes, so what is folded away
+   reads as earlier rather than as a footnote to the current line. */
+.scout-lede__prior {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding-left: 40px;
+}
+
+.scout-lede__row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.scout-lede__body {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+
+.scout-lede__text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--h-ink);
+  white-space: pre-wrap;
+}
+
+.scout-history__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  padding: 0;
+  background: none;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--h-gray-500);
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.scout-history__toggle:hover {
+  color: var(--h-primary);
+}
+
+.scout-history__toggle:active {
+  transform: scale(0.97);
+}
+
+.scout-history__toggle:focus-visible {
+  outline: 2px solid var(--h-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.scout-history {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 4px 0 6px 14px;
+  border-left: 2px solid var(--h-border);
+  list-style: none;
+}
+
+.scout-history__row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+}
+
+.scout-history__who {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--h-gray-400);
+}
+
+.scout-history__text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--h-gray-600);
+  white-space: pre-wrap;
+}
+
+.scout-history__row.is-user .scout-history__text {
+  color: var(--h-ink);
+}
+
+/* --- B: the strip is the interpretation surface --------------------------- */
+
+.hire-app .scout-criteria {
+  gap: 4px 14px;
+  margin-top: 14px;
+}
+
+/* An unset criterion is an offer, not an unanswered question. */
+.scout-criterion__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.scout-criterion__add:hover:not(:disabled) {
+  color: var(--h-primary);
+}
+
+.scout-criterion__add:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.scout-criterion__add:focus-visible {
+  outline: 2px solid var(--h-primary);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* --- Pattern 1: the system noticed something ------------------------------
+   All nine criteria are on screen from the start in grey, so nothing here is
+   an entrance — the label is already there. The only thing being animated is
+   the moment it goes green, which is the acknowledgement itself. No slide, no
+   fade: the item did not arrive, it was recognised. */
+
+.scout-criterion.is-fresh {
+  animation: scout-tick-in 260ms var(--ease-out) both;
+}
+
+.scout-criterion.is-fresh .scout-criterion__box {
+  animation: scout-tick-box 260ms var(--ease-out) both;
+}
+
+@keyframes scout-tick-in {
+  from {
+    color: var(--h-gray-500);
+  }
+
+  to {
+    color: var(--h-success);
+  }
+}
+
+@keyframes scout-tick-box {
+  0% {
+    color: var(--h-gray-500);
+    transform: scale(1);
+  }
+
+  55% {
+    color: var(--h-success);
+    transform: scale(1.3);
+  }
+
+  100% {
+    color: var(--h-success);
+    transform: scale(1.1);
+  }
+}
+
+/* --- Pattern 3: the staged status label ----------------------------------- */
+
+.scout-loader__label {
+  animation: scout-label-swap 260ms var(--ease-out) both;
+}
+
+@keyframes scout-label-swap {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --- Pattern 2: what Scout understood, restated while the search runs ------ */
+
+.scout-understood {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--h-card-line);
+  border-radius: 16px;
+  background: var(--h-card);
+  animation: scout-understood-in var(--dur-state) var(--ease-out) both;
+}
+
+.scout-understood__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.scout-understood__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--h-gray-700);
+}
+
+.scout-understood__edit {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--h-primary);
+  cursor: pointer;
+  transition:
+    opacity var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.scout-understood__edit:hover {
+  opacity: 0.75;
+}
+
+.scout-understood__edit:active {
+  transform: scale(0.97);
+}
+
+.scout-understood__edit:focus-visible {
+  outline: 2px solid var(--h-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.scout-understood__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.scout-understood__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--h-card-line);
+  border-radius: 100px;
+  background: var(--h-surface);
+  font-size: 12px;
+  color: var(--h-ink);
+  /* No per-chip stagger. The panel arriving already says "understood";
+     dealing the chips out one by one says nothing on top of that. */
+}
+
+.scout-understood__chip b {
+  font-weight: 600;
+  color: var(--h-gray-500);
+}
+
+@keyframes scout-understood-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --- Pattern 4: skeletons shaped like the real card ------------------------
+   Box metrics copied from `.hire-app .desk-card` so the swap to real results
+   does not move anything. The shimmer is a transform sweep, never a
+   background-position animation. */
+
+.desk-skel {
+  position: relative;
+  overflow: hidden;
+  padding: 20px 22px;
+  border: 1px solid var(--h-card-line);
+  border-radius: 16px;
+  background: var(--h-surface);
+  box-shadow: 0 4px 16px rgba(224, 82, 38, 0.06);
+}
+
+.desk-skel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(224, 82, 38, 0.06) 50%,
+      transparent 100%);
+  transform: translateX(-100%);
+  animation: scout-shimmer 1400ms var(--ease-out) infinite;
+}
+
+.desk-skel__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.desk-skel__lines {
+  display: grid;
+  gap: 8px;
+  flex: 1;
+}
+
+.desk-skel__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.desk-skel__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.desk-skel__bar,
+.desk-skel__dot,
+.desk-skel__pill {
+  background: var(--h-gray-100);
+  border-radius: 8px;
+}
+
+.desk-skel__dot {
+  width: 44px;
+  height: 44px;
+  border-radius: 100px;
+  flex: none;
+}
+
+.desk-skel__pill {
+  height: 24px;
+  border-radius: 100px;
+}
+
+@keyframes scout-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* --- Pattern 5: the system completed something ----------------------------
+   Only Scout's turns animate in. The recruiter's own message needs no
+   announcement — they just typed it, and animating it back at them is the
+   interface talking about itself. */
+
+.scout-turn:not(.scout-turn--user),
+.scout-lede {
+  animation: scout-turn-in 240ms var(--ease-out) both;
+}
+
+@keyframes scout-turn-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --i is set per list item in MatchResults and capped there, so a long result
+   list still finishes arriving inside ~360ms. */
+.hire-app .desk-card--in {
+  animation: scout-card-in 280ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+@keyframes scout-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --- Pattern 6: the inline notices slide in instead of blinking on ---------
+   Both are already in-flow and dismissible, so they stay where they are —
+   sonner remains reserved for errors. */
+
+.hire-upgrade,
+.hire-flash {
+  animation: scout-understood-in var(--dur-state) var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .scout-criterion.is-fresh,
+  .scout-criterion.is-fresh .scout-criterion__box,
+  .scout-loader__label,
+  .scout-understood,
+  .hire-workspace.is-started .hire-rail,
+  .desk-skel::after,
+  .scout-turn:not(.scout-turn--user),
+  .scout-lede,
+  .hire-app .desk-card--in,
+  .hire-upgrade,
+  .hire-flash {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+
+  .hire-app .scout-chip,
+  .hire-app .scout-tbtn,
+  .hire-app .scout-send,
+  .hire-app .scout-pill,
+  .hire-app .desk-card--clickable {
+    transition-duration: 1ms;
+  }
+
+  .hire-app .scout-chip:active,
+  .hire-app .scout-tbtn:active,
+  .hire-app .scout-send:active,
+  .hire-app .scout-pill:active,
+  .hire-app .desk-card--clickable:active {
+    transform: none;
+  }
+}
+
+/* ==========================================================================
    Subscription gate — the plan table behind "Resume".
 
    Geometry, type scale and colour follow the reference design directly: the
@@ -4543,9 +5640,16 @@ html.dark .vc-card {
   cursor: pointer;
   transition: background-color 200ms var(--ease), color 200ms var(--ease);
 }
-.hire-gate__x:hover { background: var(--h-gray-100); color: var(--h-ink); }
 
-.hire-gate__head { text-align: center; }
+.hire-gate__x:hover {
+  background: var(--h-gray-100);
+  color: var(--h-ink);
+}
+
+.hire-gate__head {
+  text-align: center;
+}
+
 .hire-gate__title {
   margin: 0;
   font-size: 20px;
@@ -4553,6 +5657,7 @@ html.dark .vc-card {
   font-weight: 800;
   color: var(--h-ink);
 }
+
 .hire-gate__body {
   margin: 6px auto 0;
   font-size: 13px;
@@ -4570,6 +5675,7 @@ html.dark .vc-card {
   background: #f1f1f2;
   border-radius: 999px;
 }
+
 .hire-gate__seg {
   height: 38px;
   padding: 0 24px;
@@ -4585,13 +5691,18 @@ html.dark .vc-card {
   transition: background-color 200ms var(--ease), color 200ms var(--ease),
     box-shadow 200ms var(--ease);
 }
+
 .hire-gate__seg.is-active {
   background: #fff;
   color: var(--h-ink);
   box-shadow: 0 1px 3px rgba(17, 17, 17, 0.1);
 }
+
 /* Green, like the "billed annually" line it promises. */
-.hire-gate__save { color: #16a34a; font-weight: 700; }
+.hire-gate__save {
+  color: #16a34a;
+  font-weight: 700;
+}
 
 .hire-gate__grid {
   display: grid;
@@ -4645,6 +5756,7 @@ html.dark .vc-card {
   font-weight: 700;
   color: var(--h-ink);
 }
+
 .hire-plan__tagline {
   margin: 5px 0 0;
   font-size: 13px;
@@ -4658,6 +5770,7 @@ html.dark .vc-card {
   gap: 9px;
   margin: 18px 0 0;
 }
+
 .hire-plan__price b {
   font-size: 42px;
   line-height: 46px;
@@ -4666,6 +5779,7 @@ html.dark .vc-card {
   color: var(--h-ink);
   font-variant-numeric: tabular-nums;
 }
+
 .hire-plan__price span {
   font-size: 17px;
   font-weight: 400;
@@ -4705,6 +5819,7 @@ html.dark .vc-card {
   flex-direction: column;
   gap: 7px;
 }
+
 .hire-plan__list li {
   font-size: 13px;
   line-height: 19px;
@@ -4729,9 +5844,18 @@ html.dark .vc-card {
   cursor: pointer;
   transition: background-color 200ms var(--ease);
 }
-.hire-plan__cta:hover { background: #000; }
-.hire-plan__cta--prime { background: var(--h-primary); }
-.hire-plan__cta--prime:hover { background: var(--h-primary-hover); }
+
+.hire-plan__cta:hover {
+  background: #000;
+}
+
+.hire-plan__cta--prime {
+  background: var(--h-primary);
+}
+
+.hire-plan__cta--prime:hover {
+  background: var(--h-primary-hover);
+}
 
 .hire-gate__note {
   margin: 18px 0 0;
@@ -4742,9 +5866,18 @@ html.dark .vc-card {
 }
 
 @media (max-width: 900px) {
-  .hire-gate__grid { grid-template-columns: minmax(0, 1fr); }
-  .hire-gate__card { padding: 24px 18px 22px; }
-  .hire-plan--prime { margin-block: 0; padding-block: 24px 22px; }
+  .hire-gate__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hire-gate__card {
+    padding: 24px 18px 22px;
+  }
+
+  .hire-plan--prime {
+    margin-block: 0;
+    padding-block: 24px 22px;
+  }
 }
 
 /* Scout header: one row, one height, everything centred on it. */
@@ -4755,12 +5888,14 @@ html.dark .vc-card {
   gap: 10px;
   min-width: 0;
 }
-.scout__tools > * {
+
+.scout__tools>* {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   height: 34px;
 }
+
 .scout__meta {
   display: flex;
   flex-direction: column;
@@ -4775,5 +5910,8 @@ html.dark .vc-card {
     flex-wrap: wrap;
     justify-content: center;
   }
-  .hire-pie__legend { flex-basis: 100%; }
+
+  .hire-pie__legend {
+    flex-basis: 100%;
+  }
 }

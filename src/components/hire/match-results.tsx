@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { rememberEvidence } from "@/components/hire/evidence-cache";
 import Link from "next/link";
 import { ArrowRight, ShoppingCart } from "lucide-react";
@@ -104,7 +104,11 @@ export function MatchResults({
       {visible.length > 0 && (
         <ul className={desk ? "scout-results" : "space-y-4"}>
           {visible.map((m, i) => (
-            <li key={m.candidateRef}>
+            // Capped so a long result list still finishes arriving in ~360ms.
+            <li
+              key={m.candidateRef}
+              style={{ "--i": Math.min(i, 8) } as CSSProperties}
+            >
               {desk ? (
                 <DeskMatchCard
                   match={m}
@@ -148,7 +152,7 @@ export function MatchResults({
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/40 px-4 py-3">
           <p className="text-sm">
             <span className="font-semibold">{count}</span>{" "}
-            {count === 1 ? "candidate" : "candidates"} in your cart — send
+            {count === 1 ? "candidate" : "candidates"} in your cart. Send
             one request for all of them.
           </p>
           <Link

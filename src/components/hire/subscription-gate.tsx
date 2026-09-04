@@ -239,7 +239,7 @@ export function SubscriptionGate({
             happens next instead of pretending to take a payment. */}
         <p className="hire-gate__note" role="status">
           {chosen
-            ? `Thanks — we'll be in touch about the ${chosen} plan. Nothing has been charged.`
+            ? `Thanks, we'll be in touch about the ${chosen} plan. Nothing has been charged.`
             : "Plans are shown for reference. Billing is not enabled yet."}
         </p>
       </div>

@@ -153,7 +153,7 @@ export function EvidenceResume({ lookup }: { lookup: string }) {
           <h1 className="hire-sheet__name">{match.jobRole}</h1>
           <p className="hire-sheet__sub">
             {sample
-              ? "Sample profile — not a person in the pool"
+              ? "Sample profile, not a person in the pool"
               : [match.locationLabel, publicId, track]
                   .filter(Boolean)
                   .join(" · ")}
@@ -247,7 +247,7 @@ export function EvidenceResume({ lookup }: { lookup: string }) {
 
       {(e.skills?.length ?? 0) > 0 && (
         <section className="hire-sheet__section">
-          <h2 className="hire-sheet__h">Skills — declared by the candidate</h2>
+          <h2 className="hire-sheet__h">Skills, declared by the candidate</h2>
           <div className="hire-sheet__tags" style={{ marginTop: 0 }}>
             {e.skills!.map((s) => (
               <span key={s} className="desk-pill">

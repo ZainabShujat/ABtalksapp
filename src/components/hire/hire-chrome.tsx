@@ -8,7 +8,7 @@ import { X } from "lucide-react";
 import { RecruiterAccountMenu } from "@/components/hire/recruiter-account-menu";
 import { useHireAuth } from "@/components/hire/hire-auth-provider";
 import { useHireDesk } from "@/components/hire/hire-desk-context";
-import { HireJourney } from "@/components/hire/hire-journey";
+import { HireJourney, HireRail } from "@/components/hire/hire-journey";
 import { HireTalentPod } from "@/components/hire/hire-talent-pod";
 import { HireSavedLater } from "@/components/hire/hire-saved-later";
 import type { CartRow } from "@/components/hire/shortlist-cart";
@@ -38,7 +38,7 @@ export function HireChrome({
   children: React.ReactNode;
 }) {
   const { approved, openAuth, authEnabled } = useHireAuth();
-  const { view, openPod, closePod, openSaved } = useHireDesk();
+  const { view, started, openPod, closePod, openSaved } = useHireDesk();
   const [guestCount, setGuestCount] = useState(0);
   const [overlayCount, setOverlayCount] = useState(0);
   const [starCount, setStarCount] = useState(0);
@@ -103,7 +103,7 @@ export function HireChrome({
               view === "saved" && "is-current",
             )}
             aria-current={view === "saved" ? "page" : undefined}
-            title="Kept on this device — nothing is sent to our team from here"
+            title="Kept on this device. Nothing is sent to our team from here"
             onClick={() => (view === "saved" ? closePod() : openSaved())}
           >
             <span className="hire-hbtn__icon hire-hbtn__icon--list" aria-hidden="true">
@@ -160,26 +160,38 @@ export function HireChrome({
       </header>
 
       {desk ? (
-        <main className="hire-workspace">
-          <HireJourney />
-          <div
-            className={cn(
-              "hire-scout-region",
-              view !== "scout" && "is-parked",
-            )}
-          >
-            {children}
+        /* Two layouts, one tree.
+           Landing: the journey sits beside the desk as a 300px column.
+           Working: that column collapses and the same journey reappears as the
+           compact rail above the desk — the layout the phone has always used —
+           so the workspace takes the full width once there is something in it.
+           `is-started` drives both, and the collapse is a width transition on
+           the slot rather than a display swap, so it is one movement. */
+        <main className={cn("hire-workspace", started && "is-started")}>
+          <div className="hire-journey-slot">
+            <HireJourney />
           </div>
-          {view === "pod" && (
-            <div className="hire-pod-region">
-              <HireTalentPod serverRows={podRows} />
+          <div className="hire-workspace__main">
+            <HireRail />
+            <div
+              className={cn(
+                "hire-scout-region",
+                view !== "scout" && "is-parked",
+              )}
+            >
+              {children}
             </div>
-          )}
-          {view === "saved" && (
-            <div className="hire-pod-region">
-              <HireSavedLater />
-            </div>
-          )}
+            {view === "pod" && (
+              <div className="hire-pod-region">
+                <HireTalentPod serverRows={podRows} />
+              </div>
+            )}
+            {view === "saved" && (
+              <div className="hire-pod-region">
+                <HireSavedLater />
+              </div>
+            )}
+          </div>
         </main>
       ) : (
         <div className="hire-plain">{children}</div>

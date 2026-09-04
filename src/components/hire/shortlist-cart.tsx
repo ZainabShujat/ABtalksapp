@@ -225,7 +225,7 @@ export function ShortlistCart({ rows }: { rows: CartRow[] }) {
             {selected.size === 1 ? "candidate" : "candidates"}
           </button>
           <p className="text-xs text-muted-foreground">
-            Each one is reviewed separately — we confirm with the candidate
+            Each one is reviewed separately, we confirm with the candidate
             before sharing any details.
           </p>
         </div>

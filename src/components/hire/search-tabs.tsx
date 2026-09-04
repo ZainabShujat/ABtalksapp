@@ -31,7 +31,9 @@ export function SearchTabs({
             onClick={() => onSelect(tab.id)}
             className={cn(
               "shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium",
-              "transition-colors focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none",
+              "transition-[color,background-color,border-color,transform] duration-150 ease-out",
+              "active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100",
+              "focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none",
               selected
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground",

@@ -21,6 +21,12 @@ export type HireDeskView = "scout" | "pod" | "saved";
 
 export type HireDeskState = {
   step: 1 | 2 | 3;
+  /**
+   * The recruiter has said something. Not the same as `step`, which only moves
+   * once a search has run — this flips on the first query, and is what turns
+   * the desk from a landing surface into a working one.
+   */
+  started: boolean;
   matchCount: number | null;
   gap: string | null;
   view: HireDeskView;
@@ -41,6 +47,7 @@ const HireDeskContext = createContext<HireDeskValue | null>(null);
 export function HireDeskProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<HireDeskState>({
     step: 1,
+    started: false,
     matchCount: null,
     gap: null,
     view: "scout",
@@ -98,6 +105,7 @@ export function useHireDesk(): HireDeskValue {
   if (!ctx) {
     return {
       step: 1,
+      started: false,
       matchCount: null,
       gap: null,
       view: "scout",

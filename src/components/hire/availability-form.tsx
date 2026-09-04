@@ -87,7 +87,7 @@ export function AvailabilityForm({
         <p className="mt-1 text-xs text-muted-foreground">
           Optional. Visible to approved recruiters only if you also opted into
           recruiter visibility in the program. Salary and notice are never shown
-          on public pages. Defaults to off — nothing is shared until you turn
+          on public pages. Defaults to off. Nothing is shared until you turn
           this on.
         </p>
       </div>

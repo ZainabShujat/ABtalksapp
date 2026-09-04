@@ -332,7 +332,7 @@ function RealMatchCard({
         {typeof e.quizAverage === "number" && (
           <li
             className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-900 dark:text-emerald-100"
-            title="Mean score across the weekly assessments they sat. Shown for context — it is not part of the ranking, because most of the pool was never offered one."
+            title="Mean score across the weekly assessments they sat. Shown for context. It is not part of the ranking, because most of the pool was never offered one."
           >
             quiz {e.quizAverage}
           </li>
@@ -456,7 +456,7 @@ function RealMatchCard({
               value={
                 typeof e.yearsExperience === "number"
                   ? `${e.yearsExperience} yrs`
-                  : "—"
+                  : "Not shared"
               }
             />
             <Stat
@@ -476,7 +476,7 @@ function RealMatchCard({
                       : typeof e.missionsAttempted === "number"
                         ? `${e.missionsPassed} of ${e.missionsAttempted} tried`
                         : String(e.missionsPassed)
-                    : "—"
+                    : "Not shared"
               }
             />
             {!isHackathon && (
@@ -489,7 +489,7 @@ function RealMatchCard({
                       : "Not sat"
                     : typeof e.cleanPassCount === "number"
                       ? `${e.cleanPassCount} passes`
-                      : "—"
+                      : "Not shared"
                 }
               />
             )}
@@ -501,7 +501,7 @@ function RealMatchCard({
                     ? isChallenge
                       ? `${e.commitDayCount} days`
                       : String(e.commitDayCount)
-                    : "—"
+                    : "Not shared"
                 }
               />
             )}
@@ -521,16 +521,16 @@ function RealMatchCard({
             )}
             <Stat
               label="Est. compensation"
-              value={match.compensationBand ?? "—"}
+              value={match.compensationBand ?? "Not shared"}
             />
             <Stat label="Reference" value={publicId} />
           </dl>
 
           <p className="text-sm leading-relaxed text-muted-foreground">
             {isHackathon
-              ? "Shipped a hackathon project the platform recorded. Skills and role are self-declared — there is no daily track behind this card."
+              ? "Shipped a hackathon project the platform recorded. Skills and role are self-declared. There is no daily track behind this card."
               : isChallenge
-                ? "Days shipped, streak, assessment scores and the certificate are verified by ABTalks — every day was submitted against a GitHub URL recorded at the time. Experience and skills are self-declared."
+                ? "Days shipped, streak, assessment scores and the certificate are verified by ABTalks. Every day was submitted against a GitHub URL recorded at the time. Experience and skills are self-declared."
                 : "Mission, first-attempt, commit and project figures are verified by ABTalks. Experience, skills and role are self-declared."}
             {match.compensationBand ? ` ${COMPENSATION_DISCLAIMER}` : ""}
           </p>
@@ -538,15 +538,15 @@ function RealMatchCard({
           {(isChallenge || isHackathon) && (
             <p className="text-sm leading-relaxed text-muted-foreground">
               {isHackathon
-                ? "This candidate came through the hackathon rather than the cohort, so there is no evidence profile page and no shortlist — request an introduction and our team will take it from there."
-                : "This candidate came through the 60-day challenge rather than the cohort, so there is no evidence profile page and no shortlist — request an introduction and our team will take it from there."}
+                ? "This candidate came through the hackathon rather than the cohort, so there is no evidence profile page and no shortlist. Request an introduction and our team will take it from there."
+                : "This candidate came through the 60-day challenge rather than the cohort, so there is no evidence profile page and no shortlist. Request an introduction and our team will take it from there."}
             </p>
           )}
 
           {skills.length > 0 && (
             <div>
               <p className="text-sm tracking-wide text-muted-foreground uppercase">
-                Skills — declared by the candidate
+                Skills, declared by the candidate
               </p>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {skills.map((s) => {
