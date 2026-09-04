@@ -112,10 +112,7 @@ const OPENING: Msg = {
  */
 const EXAMPLE_QUERIES = [
   "Backend engineer, Python, 2+ years",
-  "Full-stack engineer, React, remote",
-  "ML engineer, PyTorch, Bangalore",
   "AI engineer in Delhi, 3+ years",
-  "Frontend engineer, React, junior",
 ];
 
 const SENIORITY_LABEL: Record<string, string> = {
@@ -1514,6 +1511,17 @@ export function ScoutChat({
                 selectedRef={openMatch?.candidateRef}
               />
             )}
+            {/* A search that returns nobody and cannot describe a sample
+                either, because the brief has no role and no stack, would
+                otherwise leave the results area completely blank. */}
+            {!pending &&
+              deskMatches.length === 0 &&
+              deskSamples.length === 0 && (
+                <p className="scout-noresults">
+                  Nothing to rank yet. Add a role or a skill above and search
+                  again.
+                </p>
+              )}
             {persist && requestId && matchCount === 0 && !pending && (
               <div className="hire-gap">
                 <GapReport

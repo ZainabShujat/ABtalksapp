@@ -2207,6 +2207,13 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-podbar {
   color: var(--h-gray-700);
 }
 
+.scout-noresults {
+  margin: 0;
+  padding: 4px 0 8px;
+  font-size: var(--fs-small);
+  color: var(--h-gray-500);
+}
+
 .scout-results__h {
   margin: 0 0 10px;
   font-size: var(--fs-small);
@@ -5037,8 +5044,14 @@ html.dark .vc-card {
   margin-top: 18px;
 }
 
+/* `:not(.is-on)` matters. Without it this rule outranks `.scout-criterion.is-on`
+   on specificity, so on the landing screen a captured item kept a grey label
+   next to its green tick, which is where the word and the check disagreed. */
 .scout.is-landing .scout-criterion {
   font-size: var(--fs-caption);
+}
+
+.scout.is-landing .scout-criterion:not(.is-on) {
   color: var(--h-gray-400);
 }
 
