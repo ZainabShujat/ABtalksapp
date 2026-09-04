@@ -127,7 +127,7 @@ export function DashboardFooter() {
             ))}
           </nav>
           <p className="mt-2 text-xs text-neutral-400">
-            © {new Date().getFullYear()} ABTalks
+            © {new Date().getFullYear()} ABTalksOnAI
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
