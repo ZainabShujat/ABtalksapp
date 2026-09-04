@@ -33,6 +33,15 @@ export function isDsArchitectEnabled(): boolean {
 }
 
 /**
+ * Power BI & Analytics cohort at /program/powerbi.
+ * Unset/false 404s the route and hides the Prep Kit card.
+ * Set to true in Vercel to launch.
+ */
+export function isPowerBiEnabled(): boolean {
+  return process.env.ENABLE_POWERBI === "true";
+}
+
+/**
  * Entry assessment quiz is removed from the program cohort product surface.
  * Apply enrolls/waitlists directly. Kept as a always-on flag for call sites.
  */
