@@ -536,9 +536,22 @@ export function ScoutChat({
       el.style.transition = "";
       el.style.overflow = "";
     };
-    el.addEventListener("transitionend", done, { once: true });
+    // transitionend bubbles. A chip or button inside the card finishing its own
+    // 180ms hover would otherwise end the card's transition a third of the way
+    // through, drop the inline height and snap the rest of the way. Only this
+    // element's own height counts.
+    const onEnd = (e: TransitionEvent) => {
+      if (e.target !== el || e.propertyName !== "height") return;
+      el.removeEventListener("transitionend", onEnd);
+      done();
+    };
+    el.addEventListener("transitionend", onEnd);
+    // A transition that never fires (interrupted by a tab switch, or a height
+    // that resolves to the same value) must not leave the card pinned.
+    const failsafe = window.setTimeout(done, 1200);
     return () => {
-      el.removeEventListener("transitionend", done);
+      window.clearTimeout(failsafe);
+      el.removeEventListener("transitionend", onEnd);
       if (el.style.height) interruptedRef.current = el.offsetHeight;
       done();
     };
@@ -1218,10 +1231,6 @@ export function ScoutChat({
           {!talked && (
             <div className="scout-hero">
               <h2 className="scout-hero__h">Who are you hiring?</h2>
-              <p className="scout-hero__p">
-                Describe the role in your own words. Scout reads it as you type
-                and turns it into filters.
-              </p>
             </div>
           )}
 

@@ -37,12 +37,19 @@
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --dur-fast: 180ms;
   /* hover, press, chip toggle */
-  --dur-state: 320ms;
+  /* Doubled deliberately. Every size change on this page is a layout move,
+     and at half these durations they registered as a snap rather than as
+     something travelling. Feedback timings (--dur-fast) are untouched: a press
+     that answers slowly reads as lag, not as calm. */
+  --dur-state: 640ms;
   /* The one long move on the page: the journey column sliding out of the way
      when the desk goes full width. Long enough to be followed, eased so it
      leaves quickly and settles rather than stopping. */
-  --dur-slide: 520ms;
-  --ease-slide: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-slide: 1040ms;
+  /* Gentler than the old curve. That one left almost instantly and coasted,
+     which at these lengths read as a lurch followed by a wait; this one eases
+     in as well as out, so the whole move is even. */
+  --ease-slide: cubic-bezier(0.4, 0.02, 0.2, 1);
 
   /* One scale, so sizes are chosen from a set rather than invented per
      component. The desk had seven font sizes, five control heights and seven
@@ -670,7 +677,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
   display: grid;
   grid-template-columns: 1fr 0fr;
   overflow: hidden;
-  transition: grid-template-columns 280ms var(--ease);
+  transition: grid-template-columns var(--dur-state) var(--ease-slide);
 }
 
 .scout__body.is-open {
@@ -1219,7 +1226,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 .scout-criteria-slot {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows var(--dur-3) var(--ease-spark);
+  transition: grid-template-rows var(--dur-state) var(--ease-slide);
 }
 
 .scout-criteria-slot.is-open {
@@ -4973,12 +4980,6 @@ html.dark .vc-card {
   letter-spacing: -0.02em;
 }
 
-.scout.is-landing .scout-hero__p {
-  font-size: var(--fs-small);
-  color: var(--h-gray-500);
-  max-width: 46ch;
-}
-
 /* PRIMARY. A search surface, not a chat input: white rather than filled grey,
    a rounded rect rather than a pill, and tall enough to be the thing you look
    at first. */
@@ -5270,14 +5271,6 @@ html.dark .vc-card {
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--h-ink);
-}
-
-.scout-hero__p {
-  margin: 0;
-  max-width: 44ch;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--h-gray-600);
 }
 
 .scout-hero__examples {
@@ -5705,7 +5698,7 @@ html.dark .vc-card {
 
 .scout-turn:not(.scout-turn--user),
 .scout-lede {
-  animation: scout-turn-in 240ms var(--ease-out) both;
+  animation: scout-turn-in 380ms var(--ease-out) both;
 }
 
 @keyframes scout-turn-in {
@@ -5723,8 +5716,8 @@ html.dark .vc-card {
 /* --i is set per list item in MatchResults and capped there, so a long result
    list still finishes arriving inside ~360ms. */
 .hire-app .desk-card--in {
-  animation: scout-card-in 280ms var(--ease-out) both;
-  animation-delay: calc(var(--i, 0) * 45ms);
+  animation: scout-card-in 440ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
 }
 
 @keyframes scout-card-in {
