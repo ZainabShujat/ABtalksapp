@@ -535,6 +535,9 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
   gap: 12px;
   min-height: 53px;
   padding: 8px 20px;
+  /* Every control in the bar is centred on one line and shares a height, so the
+     identity block, the two buttons and the expand action sit on a common
+     baseline instead of each finding its own. */
   background: linear-gradient(to bottom, var(--h-toolbar-2) 0%, var(--h-toolbar) 100%);
   border-radius: 19px 19px 0 0;
 }
@@ -704,6 +707,39 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
   justify-content: center;
   background: var(--h-avatar);
   color: var(--h-primary);
+}
+
+/* Scout's own mark beside its messages.
+
+   `.scout-mark` alone put the icon on --h-avatar (#eef0fe, a pale lavender)
+   with an orange glyph, while the header's `.scout__avatar` is the reverse:
+   a solid --h-primary plate with a white glyph. Same icon, opposite treatment,
+   so the two did not read as the same Scout. This matches the header and keeps
+   the smaller 28px geometry from `.scout-mark`.
+
+   The idle animation is the loader's language at a fraction of its amplitude.
+   `scout-crack` swings scale 0.86-1.22 and rotates 12deg on a 1.7s loop, which
+   is right for "thinking" and would be a distraction on every message in the
+   transcript. This breathes instead: a 4.5% scale, no rotation, and the same
+   orange drop-shadow rising and falling over 4.2s. Nothing about it reads as a
+   spinner, and it animates transform and filter only, so the row never
+   re-measures. */
+.scout-mark--id {
+  background: var(--h-primary);
+  color: #fff;
+  animation: scout-idle 4.2s ease-in-out infinite;
+}
+
+@keyframes scout-idle {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 rgba(224, 82, 38, 0));
+  }
+  50% {
+    transform: scale(1.045);
+    filter: drop-shadow(0 0 6px rgba(224, 82, 38, 0.45));
+  }
 }
 
 .scout-turn--user .scout-mark {
@@ -979,6 +1015,9 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .scout-mark--id {
+    animation: none;
+  }
   .scout-loader__core,
   .scout-loader__burst i {
     animation: none;
@@ -1040,8 +1079,11 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
   min-width: 0;
   display: flex;
   align-items: flex-end;
-  padding: 12px 18px;
-  min-height: 48px;
+  /* 44px to match .scout-send exactly. It was 48 against the button's 42, so
+     the field always sat 6px taller. Padding drops to keep the single-line text
+     centred inside the shorter box; the textarea still grows to max-height. */
+  padding: 10px 18px;
+  min-height: 44px;
   background: var(--h-gray-100);
   border: 1px solid var(--h-border);
   border-radius: 24px;
@@ -1077,7 +1119,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 .scout-send {
   flex: none;
   width: 118px;
-  height: 42px;
+  height: 44px;
   border: 0;
   border-radius: 100px;
   background: var(--h-primary);
@@ -1157,15 +1199,53 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
   transform: scale(1.1);
 }
 
+/* Candidate name: given name in the clear, family name behind a blur.
+
+   The blurred span holds decoy letters of the right length, not the real
+   surname — see `splitName` in desk-match-card. So this is a visual treatment
+   over text that already carries nothing, rather than a blur laid over a real
+   value that the page source would give up.
+
+   Blur strength is the same reading as the reference: light enough that the
+   word shape still says "a surname is here", heavy enough that no letter can be
+   picked out. Inline-block with baseline alignment so the blur, which bleeds
+   past the glyphs, cannot nudge the line box. */
+.desk-name {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.desk-name__gate {
+  display: inline-block;
+  vertical-align: baseline;
+  color: var(--h-gray-600);
+  filter: blur(2.9px);
+  opacity: 0.72;
+  user-select: none;
+  /* The blur spreads roughly its own radius; the padding keeps it off the
+     neighbouring text instead of letting it smear into the Top match chip. */
+  padding: 0 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .desk-name__gate { transition: none; }
+}
+
 /* Candidate card */
 .hire-app .desk-card {
   position: relative;
   overflow: hidden;
   padding: 20px 22px;
-  border: 1px solid var(--h-card-line);
+  /* --h-card-line is #ffd2ba, a peach. Every card was outlined in it, which is
+     what read as "a prominent orange border" — the top-match rule only made the
+     strongest case of a treatment the whole list already had. The token has 17
+     other users and is left alone; the card takes the neutral --h-border. */
+  border: 1px solid var(--h-border);
   border-radius: 16px;
   background: var(--h-surface);
-  box-shadow: 0 4px 16px rgba(224, 82, 38, 0.06);
+  box-shadow: 0 2px 8px rgba(17, 17, 17, 0.04);
   transition:
     border-color 200ms var(--ease),
     box-shadow 200ms var(--ease);
@@ -1176,9 +1256,21 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
   box-shadow: 0 8px 22px rgba(224, 82, 38, 0.12);
 }
 
+/* Top match.
+
+   This used to take the full-strength --h-primary at 1px all the way round,
+   which is the same weight the card carries on :hover — so the top card looked
+   permanently hovered, and the heavy stroke competed with the "Top match" chip
+   that already names it. The chip is the distinction; the border only has to
+   agree with it.
+
+   A tint of the same orange rather than a different colour, and a shadow a
+   shade softer than the hover state so hovering the top card still reads as a
+   change. --h-primary itself is untouched, as are :hover and .is-selected. */
+/* Top match keeps its chip and a slightly deeper lift; no orange stroke. */
 .hire-app .desk-card.desk-card--top {
-  border-color: var(--h-primary);
-  box-shadow: 0 8px 24px rgba(224, 82, 38, 0.14);
+  border-color: var(--h-border-strong);
+  box-shadow: 0 6px 20px rgba(17, 17, 17, 0.07);
 }
 
 .hire-app .desk-card.desk-card--sample {
@@ -1449,12 +1541,25 @@ html.dark:not(:has(.theme-abtalks-light)) .desk-card__partial {
   font-weight: 450;
 }
 
+/* The two card actions share a row.
+
+   They wrapped on a phone because the pair needed roughly 320px inside a ~314px
+   card. `nowrap` plus `min-width: 0` lets each button give up a few pixels of
+   its own padding instead of the row breaking; the narrow-width rule below
+   trims the padding rather than the type, so the labels stay full size and
+   readable. */
 .desk-card__cta {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 18px;
+}
+
+.desk-card__cta > * {
+  min-width: 0;
+  flex: 0 1 auto;
 }
 
 .desk-ghost {
@@ -2149,21 +2254,34 @@ body:has(.hire-app--desk) button.fixed.bottom-4.right-4 {
     border-radius: 0;
   }
 
+  /* One row on the phone too.
+
+     This used to be `flex-direction: column` with the tools pushed to
+     `flex-end`: the identity block sat alone on the first line, the three
+     buttons on a second line hard against the right edge, and nothing lined up
+     with anything. Measured, the pair needs about 340px inside the 366px the
+     bar actually has at 390px — it fits, so it should not have been stacked.
+
+     Padding and gaps come down instead, and everything stays on the shared
+     centreline. Below 360px the row is allowed to wrap; see the rule further
+     down, where the tools then align left with the identity block rather than
+     drifting to the opposite edge. */
   .hire-app .scout__bar {
     display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
     min-height: 0;
-    padding: 8px 12px;
-    gap: 8px;
+    padding: 8px 8px;
+    gap: 6px;
     border-radius: 16px 16px 0 0;
   }
 
   .hire-app .scout__tools {
-    width: 100%;
+    width: auto;
     justify-content: flex-end;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 6px;
   }
 
@@ -2180,9 +2298,15 @@ body:has(.hire-app--desk) button.fixed.bottom-4.right-4 {
     font-size: 15px;
   }
 
+  /* Measured at 390px: the bar has 334px inside its padding and the identity
+     block plus the three tools wanted 346 — twelve short, which is why the row
+     wrapped. The shortfall comes out of horizontal padding and the label gap,
+     not the type: 12px stays legible, and each button still has a comfortable
+     target height. */
   .scout-tbtn {
     height: 30px;
-    padding: 0 10px;
+    padding: 0 8px;
+    gap: 4px;
     font-size: 12px;
   }
 
@@ -2696,26 +2820,20 @@ html.dark:not(:has(.theme-abtalks-light)) .pe__paper rect {
   display: flex;
   flex-direction: column;
   padding: 22px 22px 18px;
-  background: #fff8f4;
-  border: 1px solid #ffd2ba;
+  /* Neutral, per the reference: the card was a peach wash with a #ffd2ba border
+     and an orange-tinted shadow, which made the request panel read as an alert.
+     It is a form; grey is the right register. The orange stays on the submit
+     button, where the action is. */
+  background: #f7f7f8;
+  border: 1px solid var(--h-border);
   border-radius: 16px;
   min-height: 0;
-  box-shadow: 0 10px 28px rgba(224, 82, 38, 0.08);
+  box-shadow: 0 6px 18px rgba(17, 17, 17, 0.05);
 }
 
+/* The orange radial wash that used to sit over this card is gone with it. */
 .hire-pod__request::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(
-      90% 70% at 100% 0%,
-      rgba(224, 82, 38, 0.16) 0%,
-      transparent 55%
-    ),
-    linear-gradient(180deg, rgba(255, 176, 140, 0.18) 0%, transparent 42%);
+  content: none;
 }
 
 .hire-pod__request > * {
@@ -2745,7 +2863,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-pod__request::before {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--h-primary);
+  color: var(--h-gray-600);
 }
 
 .hire-pod__request h2 {
@@ -2771,7 +2889,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-pod__request::before {
   margin-top: 16px;
   min-height: 180px;
   padding: 14px 16px;
-  border: 1px solid #e8d4c8;
+  border: 1px solid var(--h-border);
   border-radius: 12px;
   background: #fff;
   color: var(--h-ink);
@@ -2881,24 +2999,41 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app .hire-podbar button:not(.hir
   color: #fff;
 }
 
+/* A utility control, not a link and not a primary action: a hairline box in
+   the neutral border colour, the same 8px radius the desk uses elsewhere, and
+   a quiet hover. Deliberately not the orange CTA treatment — going back is the
+   least important thing on the panel. */
 .hire-back {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin: 0 0 18px;
-  padding: 0;
-  border: 0;
-  background: transparent;
+  height: 32px;
+  padding: 0 12px 0 10px;
+  border: 1px solid var(--h-border);
+  border-radius: 8px;
+  background: var(--h-surface);
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
   color: var(--h-gray-700);
   text-decoration: none;
   cursor: pointer;
+  transition:
+    background-color 160ms var(--ease),
+    border-color 160ms var(--ease),
+    color 160ms var(--ease);
 }
 
 .hire-back:hover {
-  color: var(--h-primary);
+  background: var(--h-gray-100);
+  border-color: var(--h-border-strong);
+  color: var(--h-ink);
+}
+
+.hire-back:focus-visible {
+  outline: 2px solid var(--h-primary);
+  outline-offset: 2px;
 }
 
 .hire-back svg {
@@ -3212,6 +3347,8 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-auth [data-slot="input"
 .hire-detail__topcta {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
   margin-top: 16px;
 }
@@ -3249,17 +3386,30 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-auth [data-slot="input"
   line-height: 17px;
 }
 
+/* Chart left, legend right.
+
+   This was already a flex row — what put the legend underneath was
+   `flex-wrap: wrap` meeting the legend's 162px minimum: 184 (chart) + 18 (gap)
+   + 162 does not fit the inspector column, so it wrapped every time and the
+   intended side-by-side layout was never actually seen.
+
+   The row no longer wraps, the chart is allowed to shrink a little instead of
+   forcing the break, and the legend keeps its own minimum. Below 520px the row
+   becomes a column deliberately, which is the one place stacking is right. */
 .hire-pie {
   display: flex;
   align-items: center;
-  gap: 18px;
-  flex-wrap: wrap;
+  gap: 16px;
+  flex-wrap: nowrap;
 }
 
 .hire-pie__svg {
   width: 184px;
   height: 184px;
-  flex: none;
+  /* Shrinkable down to 132px so a narrow inspector trims the chart rather than
+     dropping the legend below it. */
+  flex: 0 1 auto;
+  min-width: 132px;
   overflow: visible;
 }
 
@@ -3343,8 +3493,8 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-auth [data-slot="input"
 }
 
 .hire-pie__legend {
-  flex: 1;
-  min-width: 162px;
+  flex: 1 1 auto;
+  min-width: 148px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -3353,9 +3503,12 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-auth [data-slot="input"
   list-style: none;
 }
 
+/* Label left, score hard right, so the numbers form a column the eye can run
+   down instead of sitting wherever the label happens to end. */
 .hire-pie__row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 9px;
   font-size: 12px;
   line-height: 17px;
@@ -3660,7 +3813,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
   }
 
   .scout__bar {
-    padding: 8px 10px;
+    padding: 8px 8px;
     border-radius: 14px 14px 0 0;
   }
 
@@ -4044,15 +4197,25 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
   }
 
 
-  /* The card's actions: one centred above, two sharing the row below.
+  /* The card's actions share one row.
 
-     They were a wrap row of three buttons that agree on nothing — 38px, 40px
-     and 38px tall, each only as wide as its own label — so they broke into a
-     ragged left-aligned staircase. A two-column grid fixes the shape without
-     inflating them: the first action spans both columns and centres itself at
-     its own width, and the two that follow take one column each. Their own
-     heights are left alone. */
-  .desk-card__cta,
+     This was a two-column grid whose FIRST child spanned both columns and
+     centred itself, with the rest below — the right shape when the card carried
+     three buttons (View details, Shortlist, Request an intro). Request an intro
+     is gone, so with two children the rule put the first across the full width
+     and dropped the second underneath it: the stacked pair on the phone.
+
+     Two equal columns now, both on the same line. Heights match, the labels
+     stay on one line, and nothing spans.
+
+     `.hire-pod__actions` keeps the old shape — it still has three. */
+  .desk-card__cta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    justify-content: stretch;
+  }
+
   .hire-pod__actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -4075,8 +4238,6 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
     text-overflow: ellipsis;
   }
 
-  .desk-card__cta > *:first-child,
-  .hire-app .desk-card__cta > *:first-child,
   .hire-pod__actions > *:first-child {
     grid-column: 1 / -1;
     justify-self: center;
@@ -4194,6 +4355,35 @@ html.dark .vc-card {
   color: var(--h-primary);
 }
 
+/* Genuinely tiny screens: the three Scout tools stop fitting beside the
+   identity block, so the bar is allowed to wrap. They wrap to the LEFT edge and
+   line up under "Scout" — the old stacked version pushed them to the opposite
+   side, which is what made the header read as misaligned rather than merely
+   wrapped. Placed after the 900px block so it wins where both apply. */
+@media (max-width: 360px) {
+  .hire-app .scout__tools {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
+/* Narrow cards: buy the row back from padding and gap, never from type size.
+   Both labels stay at 13px so the pair is still readable at 390px. */
+@media (max-width: 640px) {
+  .desk-card__cta {
+    gap: 8px;
+  }
+  .desk-card__cta .desk-ghost,
+  .desk-card__cta .desk-pod {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .desk-card__cta .desk-ghost {
+    gap: 5px;
+  }
+}
+
 .vc-card__cta {
   display: inline-flex;
   align-items: center;
@@ -4302,4 +4492,288 @@ html.dark .vc-card {
   .vc-card__ghost {
     flex: 1;
   }
+}
+
+/* ==========================================================================
+   Subscription gate — the plan table behind "Resume".
+
+   Geometry, type scale and colour follow the reference design directly: the
+   off-white card, the pill toggle with a white active segment, three columns
+   with the middle one lifted and washed peach, a green notched ribbon, and a
+   dark CTA on every card except the promoted one.
+   ========================================================================== */
+.hire-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+  background: rgba(17, 17, 17, 0.42);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.hire-gate__card {
+  position: relative;
+  width: min(1080px, calc(100vw - 40px));
+  margin: auto;
+  padding: 26px 32px 30px;
+  background: #fbfafa;
+  border: 1px solid var(--h-border);
+  border-radius: 20px;
+  box-shadow: 0 30px 70px -24px rgba(17, 17, 17, 0.3);
+}
+
+.hire-gate__x {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--h-gray-500);
+  cursor: pointer;
+  transition: background-color 200ms var(--ease), color 200ms var(--ease);
+}
+.hire-gate__x:hover { background: var(--h-gray-100); color: var(--h-ink); }
+
+.hire-gate__head { text-align: center; }
+.hire-gate__title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 26px;
+  font-weight: 800;
+  color: var(--h-ink);
+}
+.hire-gate__body {
+  margin: 6px auto 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--h-gray-600);
+}
+
+.hire-gate__toggle {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: max-content;
+  margin: 18px auto 0;
+  padding: 5px;
+  background: #f1f1f2;
+  border-radius: 999px;
+}
+.hire-gate__seg {
+  height: 38px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--h-gray-600);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 200ms var(--ease), color 200ms var(--ease),
+    box-shadow 200ms var(--ease);
+}
+.hire-gate__seg.is-active {
+  background: #fff;
+  color: var(--h-ink);
+  box-shadow: 0 1px 3px rgba(17, 17, 17, 0.1);
+}
+/* Green, like the "billed annually" line it promises. */
+.hire-gate__save { color: #16a34a; font-weight: 700; }
+
+.hire-gate__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 20px;
+  align-items: stretch;
+}
+
+.hire-plan {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 22px 22px;
+  background: #fff;
+  border: 1px solid var(--h-border);
+  border-radius: 16px;
+}
+
+/* The promoted column stands a little proud of the other two. */
+.hire-plan--prime {
+  margin-block: -9px;
+  padding-block: 31px 28px;
+  background: linear-gradient(180deg, #ffffff 0%, #fff0e7 100%);
+  border-color: #f6c7ae;
+  box-shadow: 0 10px 26px rgba(224, 82, 38, 0.1);
+}
+
+/* A flag notched on its left edge, hung off the card's right side. */
+.hire-plan__ribbon {
+  position: absolute;
+  top: 26px;
+  right: -1px;
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 10px 0 16px;
+  background: #bbf7d0;
+  color: #15803d;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  clip-path: polygon(10px 0, 100% 0, 100% 100%, 10px 100%, 0 50%);
+}
+
+.hire-plan__name {
+  margin: 0;
+  font-size: 19px;
+  line-height: 25px;
+  font-weight: 700;
+  color: var(--h-ink);
+}
+.hire-plan__tagline {
+  margin: 5px 0 0;
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--h-gray-500);
+}
+
+.hire-plan__price {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin: 18px 0 0;
+}
+.hire-plan__price b {
+  font-size: 42px;
+  line-height: 46px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--h-ink);
+  font-variant-numeric: tabular-nums;
+}
+.hire-plan__price span {
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--h-gray-600);
+}
+
+.hire-plan__billed {
+  margin: 4px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #16a34a;
+}
+
+.hire-plan__seat {
+  margin: 14px 0 0;
+  padding-left: 16px;
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--h-gray-500);
+}
+
+.hire-plan__packed {
+  margin: 18px 0 0;
+  font-size: 13px;
+  line-height: 19px;
+  font-weight: 500;
+  color: var(--h-ink);
+}
+
+/* Indented, not bulleted — the reference sets these as plain lines. */
+.hire-plan__list {
+  margin: 8px 0 22px;
+  padding-left: 16px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.hire-plan__list li {
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--h-gray-500);
+}
+
+/* On the floor of every card, so all three line up despite the taller middle. */
+.hire-plan__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin-top: auto;
+  height: 46px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--h-ink);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 200ms var(--ease);
+}
+.hire-plan__cta:hover { background: #000; }
+.hire-plan__cta--prime { background: var(--h-primary); }
+.hire-plan__cta--prime:hover { background: var(--h-primary-hover); }
+
+.hire-gate__note {
+  margin: 18px 0 0;
+  text-align: center;
+  font-size: 12px;
+  line-height: 19px;
+  color: var(--h-gray-600);
+}
+
+@media (max-width: 900px) {
+  .hire-gate__grid { grid-template-columns: minmax(0, 1fr); }
+  .hire-gate__card { padding: 24px 18px 22px; }
+  .hire-plan--prime { margin-block: 0; padding-block: 24px 22px; }
+}
+
+/* Scout header: one row, one height, everything centred on it. */
+.scout__id,
+.scout__tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.scout__tools > * {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+}
+.scout__meta {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+/* Candidate parameters: only stack when the column genuinely cannot hold the
+   chart and the legend side by side. */
+@media (max-width: 520px) {
+  .hire-pie {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .hire-pie__legend { flex-basis: 100%; }
 }
