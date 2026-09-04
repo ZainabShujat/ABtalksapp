@@ -24,6 +24,15 @@ export function isDatabricksEnabled(): boolean {
 }
 
 /**
+ * Data Solutions Architect cohort at /program/ds-architect.
+ * Unset/false 404s the route and hides the Prep Kit card.
+ * Set to true in Vercel to launch.
+ */
+export function isDsArchitectEnabled(): boolean {
+  return process.env.ENABLE_DS_ARCHITECT === "true";
+}
+
+/**
  * Entry assessment quiz is removed from the program cohort product surface.
  * Apply enrolls/waitlists directly. Kept as a always-on flag for call sites.
  */

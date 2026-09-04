@@ -65,6 +65,7 @@ export type HubSearchIndexInput = {
   abandonedDomains: Domain[];
   hasProgramMembership: boolean;
   hasDatabricksAccess: boolean;
+  hasDsArchitectAccess: boolean;
   isAdmin: boolean;
   claudeEnabled: boolean;
   programEnabled: boolean;
@@ -274,6 +275,17 @@ export function buildHubSearchIndex(input: HubSearchIndexInput): HubSearchItem[]
         "Build a healthcare-claims Lakehouse on Databricks in 31 days.",
       href: "/program/databricks",
       keywords: "prep kit databricks lakehouse 31 days",
+    });
+  }
+
+  if (input.hasDsArchitectAccess) {
+    items.push({
+      id: "prep:ds-architect",
+      group: "Prep Kit",
+      title: "10 Days Data Solutions Architect",
+      subtitle: "Design AWS-first data and AI platforms in 10 days.",
+      href: "/program/ds-architect",
+      keywords: "prep kit ds architect data solutions aws 10 days",
     });
   }
 

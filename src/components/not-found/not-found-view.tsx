@@ -41,6 +41,14 @@ const KEYCAPS: KeycapConfig[] = [
     heightClassName: "h-[88px] md:h-[110px]",
   },
   {
+    href: "/program/ds-architect",
+    label: "DS ARCHITECT",
+    stem: "bg-[#C9411C]",
+    faceClassName:
+      "bg-gradient-to-b from-[#FFECE3] to-[#E05226] text-[#C9411C]",
+    heightClassName: "h-[88px] md:h-[110px]",
+  },
+  {
     href: PROGRAM_AI_COHORT_BASE,
     label: "AI COHORT",
     stem: "bg-[#2b7851]",
