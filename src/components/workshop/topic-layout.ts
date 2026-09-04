@@ -20,25 +20,51 @@ export const CAP_H = 62;
 const CAP_R = CAP_H / 2;
 /** Horizontal padding inside a capsule (Tailwind `px-8`, both sides). */
 const PAD_X = 64;
-/** Minimum clear space required between any two capsules. */
-const GAP = 14;
-/** Clear space kept between a capsule and the canvas edge. */
+/**
+ * Minimum clear space required between any two capsules — the real control
+ * over how close together the field reads. 14 in the first pass, then 9.
+ */
+const GAP = 6;
+/** Clear space kept between a capsule and the canvas's left and right edges. */
 const MARGIN = 12;
 /**
- * Capsules stay below this line. The heading (top 47) and subtitle (top 117)
- * share the canvas, and the design's own capsules start at y=217.
+ * …and a larger one at the bottom, because that edge is not an edge: the
+ * community section starts immediately below it. At MARGIN the lowest capsules
+ * sat 9 units off the seam and read as though they were falling into the next
+ * section.
  */
-const TOP_BOUND = 200;
+const BOTTOM_BOUND = 44;
+/**
+ * Capsules stay below this line. The heading and subtitle share the canvas, so
+ * this tracks their offsets in TopicsSection — the subtitle's last line ends
+ * at 113, and the field is held clear of it.
+ */
+const TOP_BOUND = 176;
 
 /**
- * The eleven slots from Figma node 1:167 — rotation, skew, colours, and the
- * drop delay lifted from the motion timeline (nodes 1:169…1:189), where each
- * capsule lands 60ms after the previous one in an order authored to fill the
- * field from the middle outward.
+ * How far the field is drawn in towards its own middle before it is relaxed.
  *
- * `x`/`y` are the design's own positions, used only as the solver's starting
- * point, and `w` only as a ranking hint for how much room a slot has.
+ * This is what brings the capsules closer TO EACH OTHER. The relaxation below
+ * only ever pushes pairs apart, so on its own it can loosen a field but never
+ * tighten one — the spread is whatever the Figma slots were drawn at, spanning
+ * 1510 × 360 units.
+ *
+ * Contracting about the centroid first, then relaxing at the smaller GAP,
+ * closes the space between neighbours while leaving every capsule its own size,
+ * rotation and rough place in the scatter. It is deliberately NOT a change to
+ * CANVAS_H: shrinking the canvas moves the section's own edges and squeezes the
+ * heading against the field, which is a different thing entirely and was the
+ * wrong answer the first time this was asked.
  */
+const FIELD_CONTRACT = 0.8;
+
+/**
+ * Where the contracted field sits in the band between TOP_BOUND and the
+ * bottom: 0.5 centres it, so the room the contraction frees is split evenly
+ * above and below rather than all collecting under the last row.
+ */
+const FIELD_ANCHOR = 0.5;
+
 export const SLOTS = [
   { x: 355.79, y: 338.69, rot: 12.55, skew: -1.56, bg: "#c9411c", fg: "#ffffff", w: 678.737, delay: 0.08 },
   { x: 948.63, y: 334.55, rot: -28.6, skew: 3.01, bg: "#ffece3", fg: "#111111", w: 520.963, delay: 0.62 },
@@ -153,7 +179,48 @@ const extents = (p: Pill) => {
 function clampToCanvas(p: Pill) {
   const { hx, hy } = extents(p);
   p.cx = Math.min(CANVAS_W - hx - MARGIN, Math.max(hx + MARGIN, p.cx));
-  p.cy = Math.min(CANVAS_H - hy - MARGIN, Math.max(hy + TOP_BOUND, p.cy));
+  p.cy = Math.min(CANVAS_H - hy - BOTTOM_BOUND, Math.max(hy + TOP_BOUND, p.cy));
+}
+
+/** Scale every centre towards the field's centroid by `k`. */
+function contract(pills: Pill[], k: number) {
+  const n = pills.length;
+  if (n === 0) return;
+  let mx = 0;
+  let my = 0;
+  for (const p of pills) {
+    mx += p.cx;
+    my += p.cy;
+  }
+  mx /= n;
+  my /= n;
+  for (const p of pills) {
+    p.cx = mx + (p.cx - mx) * k;
+    p.cy = my + (p.cy - my) * k;
+  }
+}
+
+/**
+ * Slide the settled field so it sits at FIELD_ANCHOR of the band between
+ * TOP_BOUND and CANVAS_H - BOTTOM_BOUND. Translation only — nothing moves
+ * relative to anything else, so the clearances the relaxation just established
+ * are all preserved.
+ */
+function recentre(pills: Pill[]) {
+  if (pills.length === 0) return;
+  let top = Infinity;
+  let bottom = -Infinity;
+  for (const p of pills) {
+    const { hy } = extents(p);
+    top = Math.min(top, p.cy - hy);
+    bottom = Math.max(bottom, p.cy + hy);
+  }
+  const bandTop = TOP_BOUND;
+  const bandBottom = CANVAS_H - BOTTOM_BOUND;
+  const slack = bandBottom - bandTop - (bottom - top);
+  if (slack <= 0) return;
+  const shift = bandTop + slack * FIELD_ANCHOR - top;
+  for (const p of pills) p.cy += shift;
 }
 
 /**
@@ -190,6 +257,8 @@ export function layoutTopics(topics: string[]): Placed[] {
     return { cx: slot.x + w / 2, cy: slot.y + CAP_H / 2, w, rot: slot.rot };
   });
 
+  // Draw the field in towards its own centre before anything is pushed apart.
+  contract(pills, FIELD_CONTRACT);
   pills.forEach(clampToCanvas);
 
   const need = CAP_R * 2 + GAP;
@@ -238,6 +307,11 @@ export function layoutTopics(topics: string[]): Placed[] {
     pills.forEach(clampToCanvas);
     if (worst < 0.5) break;
   }
+
+  // The contraction leaves the field wherever the design's own centre of mass
+  // happened to be; this puts it back in the middle of the band it is allowed,
+  // so the breathing room reads as margin rather than as a gap at one end.
+  recentre(pills);
 
   return assigned.map(({ text, slot }, i) => {
     const p = pills[i]!;
