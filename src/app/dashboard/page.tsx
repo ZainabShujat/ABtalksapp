@@ -208,6 +208,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     hasProgramMembership: data.hasProgramMembership,
     hasDatabricksAccess: data.hasDatabricksAccess,
     hasDsArchitectAccess: data.hasDsArchitectAccess,
+    hasPowerBiAccess: data.hasPowerBiAccess,
     isAdmin,
     claudeEnabled: isClaudeEnabled(),
     programEnabled: isProgramEnabled(),
@@ -265,6 +266,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         hasProgramMembership={data.hasProgramMembership}
         showDatabricks={data.hasDatabricksAccess}
         showDsArchitect={data.hasDsArchitectAccess}
+        showPowerBi={data.hasPowerBiAccess}
       />
       <EventsSection />
       

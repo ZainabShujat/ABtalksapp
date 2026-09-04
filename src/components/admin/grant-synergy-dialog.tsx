@@ -37,8 +37,8 @@ export function GrantSynergyDialog({
     event.preventDefault();
 
     const parsedPoints = Number.parseInt(points, 10);
-    if (!Number.isFinite(parsedPoints) || parsedPoints < 1 || parsedPoints > 3000) {
-      toast.error("Enter points between 1 and 3000");
+    if (!Number.isFinite(parsedPoints) || parsedPoints < 1 || parsedPoints > 4000) {
+      toast.error("Enter points between 1 and 4000");
       return;
     }
 
@@ -84,12 +84,12 @@ export function GrantSynergyDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor={`grant-points-${studentId}`}>Points (1–3000)</Label>
+            <Label htmlFor={`grant-points-${studentId}`}>Points (1–4000)</Label>
             <Input
               id={`grant-points-${studentId}`}
               type="number"
               min={1}
-              max={3000}
+              max={4000}
               value={points}
               onChange={(event) => setPoints(event.target.value)}
               disabled={pending}

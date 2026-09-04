@@ -1,0 +1,111 @@
+[
+  {
+    "moduleNumber": 2,
+    "title": "Milestone 1 — Data Modeling for BI",
+    "criteria": [
+      {
+        "name": "Star-schema design & fit-for-purpose",
+        "weight": 35,
+        "description": "Star schema built from flat files with the grain declared; relationships have deliberate cardinality and cross-filter direction; role-playing dimensions handled; a dedicated Date table, not Auto date/time."
+      },
+      {
+        "name": "DAX foundations",
+        "weight": 30,
+        "description": "Ten core measures correct; measures (not calculated columns) used for aggregations; command of filter vs row context and context transition evident in the code."
+      },
+      {
+        "name": "Storage-mode reasoning",
+        "weight": 20,
+        "description": "Import vs DirectQuery vs Composite chosen from workload (size, freshness, source load) — the decision memo ends with an explicit, defended decision line, not a survey."
+      },
+      {
+        "name": "Documentation & clarity",
+        "weight": 15,
+        "description": "Model doc and measure list read like a BI developer wrote them — concise, labeled, reproducible."
+      }
+    ]
+  },
+  {
+    "moduleNumber": 3,
+    "title": "Milestone 2 — Dashboard Design & Visualization",
+    "criteria": [
+      {
+        "name": "Design quality & UX",
+        "weight": 35,
+        "description": "Clean layouts, correct chart types, no anti-patterns; conditional formatting and color carry meaning; interactivity serves the user, not the developer."
+      },
+      {
+        "name": "Anti-pattern diagnosis",
+        "weight": 25,
+        "description": "The critique names ≥10 concrete anti-patterns with why-it-misleads and a specific fix — before/after, not a checklist."
+      },
+      {
+        "name": "Chart selection reasoning",
+        "weight": 25,
+        "description": "Each visual is chosen for the decision the page supports; part-to-whole, trend, comparison and distribution handled with the right encodings."
+      },
+      {
+        "name": "Interactivity & polish",
+        "weight": 15,
+        "description": "Custom theme, bookmarks and drill-through wired correctly; pages navigate cleanly and progressively disclose detail."
+      }
+    ]
+  },
+  {
+    "moduleNumber": 4,
+    "title": "Milestone 3 — Advanced DAX, KPIs & Security",
+    "criteria": [
+      {
+        "name": "Time intelligence",
+        "weight": 30,
+        "description": "YTD/QTD/MTD, YoY and rolling measures correct over a custom fiscal calendar, written without copying templates."
+      },
+      {
+        "name": "KPI & analytics thinking",
+        "weight": 25,
+        "description": "KPIs have meaningful targets and RAG thresholds; variance is explained in business terms, not just numbers; KPIs drive an action."
+      },
+      {
+        "name": "Advanced patterns",
+        "weight": 25,
+        "description": "What-if slicers, RANKX, dynamic measure selection and/or calculation groups applied correctly and documented in the pattern library with gotchas."
+      },
+      {
+        "name": "Row-level security",
+        "weight": 20,
+        "description": "Dynamic RLS configured with USERPRINCIPALNAME(), tested with View as Role, and the security-performance trade-off acknowledged."
+      }
+    ]
+  },
+  {
+    "moduleNumber": 6,
+    "title": "Milestone 4 — Enterprise BI & Capstone Defense",
+    "criteria": [
+      {
+        "name": "Enterprise BI operations",
+        "weight": 20,
+        "description": "Deployment plan sizes workspace/app topology, RLS matrix, refresh strategy per dataset, and gateway HA for 500 users; cross-platform note is credible."
+      },
+      {
+        "name": "Performance optimization",
+        "weight": 15,
+        "description": "Three real optimizations with before/after timings and an SE-vs-FE diagnosis — not generic advice."
+      },
+      {
+        "name": "Capstone build under pressure",
+        "weight": 25,
+        "description": "New-domain dashboard is correct, published, and coherent; model, KPIs and pages hold together; scope decisions were sound."
+      },
+      {
+        "name": "Live defense (hostile Q&A + stakeholder scenario)",
+        "weight": 25,
+        "description": "Explains filter context under pressure; defends design with UX reasoning; handles pushback without ego; stakeholder scenario answered with concrete moves."
+      },
+      {
+        "name": "Communication & storytelling",
+        "weight": 15,
+        "description": "Leads with the insight; flexes register from VP pitch to engineer deep-dive; the context deck and pitch stay on time and on point."
+      }
+    ]
+  }
+]

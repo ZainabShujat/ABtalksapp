@@ -66,6 +66,7 @@ export type HubSearchIndexInput = {
   hasProgramMembership: boolean;
   hasDatabricksAccess: boolean;
   hasDsArchitectAccess: boolean;
+  hasPowerBiAccess: boolean;
   isAdmin: boolean;
   claudeEnabled: boolean;
   programEnabled: boolean;
@@ -286,6 +287,17 @@ export function buildHubSearchIndex(input: HubSearchIndexInput): HubSearchItem[]
       subtitle: "Design AWS-first data and AI platforms in 10 days.",
       href: "/program/ds-architect",
       keywords: "prep kit ds architect data solutions aws 10 days",
+    });
+  }
+
+  if (input.hasPowerBiAccess) {
+    items.push({
+      id: "prep:powerbi",
+      group: "Prep Kit",
+      title: "7 Days Power BI & Analytics",
+      subtitle: "Ship recruiter-grade Power BI dashboards in 7 days.",
+      href: "/program/powerbi",
+      keywords: "prep kit power bi powerbi analytics dax dashboard 7 days",
     });
   }
 
