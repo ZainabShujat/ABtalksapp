@@ -1,19 +1,12 @@
-import {
-  CheckCircle2,
-  GitBranch,
-  Share2,
-  Users,
-} from "lucide-react";
+import { CheckCircle2, Users } from "lucide-react";
 import {
   SYNERGY_BASE_SUBMISSION,
-  SYNERGY_PROOF_GITHUB,
-  SYNERGY_PROOF_LINKEDIN,
   SYNERGY_REFERRAL,
 } from "@/features/synergy/scoring";
 
 const pills = [
   {
-    label: "Complete Task",
+    label: "Complete a Daily Task",
     Icon: CheckCircle2,
     points: SYNERGY_BASE_SUBMISSION,
   },
@@ -21,16 +14,6 @@ const pills = [
     label: "Refer a Friend",
     Icon: Users,
     points: SYNERGY_REFERRAL,
-  },
-  {
-    label: "Share on LinkedIn",
-    Icon: Share2,
-    points: SYNERGY_PROOF_LINKEDIN,
-  },
-  {
-    label: "Contribute on GitHub",
-    Icon: GitBranch,
-    points: SYNERGY_PROOF_GITHUB,
   },
 ] as const;
 

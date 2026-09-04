@@ -1,15 +1,9 @@
+/** Flat synergy for one paid submission. Also the per-IST-day ceiling. */
 export const SYNERGY_BASE_SUBMISSION = 10;
-export const SYNERGY_PROOF_GITHUB = 5;
-export const SYNERGY_PROOF_LINKEDIN = 8;
 export const SYNERGY_REFERRAL = 3;
 
-export function computeSubmissionSynergy(input: {
-  hasGithub: boolean;
-  hasLinkedin: boolean;
-}): { points: number } {
-  const points =
-    SYNERGY_BASE_SUBMISSION +
-    (input.hasGithub ? SYNERGY_PROOF_GITHUB : 0) +
-    (input.hasLinkedin ? SYNERGY_PROOF_LINKEDIN : 0);
-  return { points };
-}
+/**
+ * A user earns submission synergy at most once per IST calendar day, across
+ * every challenge they are enrolled in. See plan 111.
+ */
+export const SYNERGY_DAILY_SUBMISSION_CAP = SYNERGY_BASE_SUBMISSION;

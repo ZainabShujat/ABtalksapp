@@ -193,7 +193,7 @@ export function AppFooter() {
             ))}
           </nav>
           <p className="text-center text-xs text-[#8F8F8F]">
-            © {year} ABTalks. All rights reserved.
+            © {year} ABTalksOnAI. All rights reserved.
           </p>
           <div className="flex items-center justify-start gap-1 md:justify-end">
             {SOCIAL_LINKS.map(({ label, href, icon: Icon }) => (
@@ -234,7 +234,7 @@ export function AppFooter() {
               </Link>
             ))}
           </nav>
-          <span>© {new Date().getFullYear()} ABTalks</span>
+          <span>© {new Date().getFullYear()} ABTalksOnAI</span>
         </div>
       </footer>
     );

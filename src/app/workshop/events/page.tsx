@@ -102,7 +102,7 @@ export default function WorkshopEventsPage() {
             </Link>
           </nav>
           <p className="text-[13px]" style={{ color: "var(--wk-bar-muted)" }}>
-            © {new Date().getFullYear()} ABTalks · Workshop
+            © {new Date().getFullYear()} ABTalksOnAI · Workshop
           </p>
         </footer>
       </div>

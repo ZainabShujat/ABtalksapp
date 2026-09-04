@@ -36,7 +36,7 @@ export function SiteFooter({
       </div>
 
       <div className="container footer__legal">
-        <span>© ABTalks {year} All rights reserved.</span>
+        <span>© ABTalksOnAI {year} All rights reserved.</span>
        
       </div>
     </footer>
