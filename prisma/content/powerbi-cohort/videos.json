@@ -1,0 +1,121 @@
+[
+  {
+    "dayNumber": 1,
+    "videos": [
+      {
+        "order": 1,
+        "title": "What is Power BI? — Role & Overview (Guy in a Cube)",
+        "youtubeId": null,
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Audience-First Dashboard Design — Storytelling with Data",
+        "youtubeId": null,
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 2,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Star Schema & Data Modeling for Power BI (SQLBI)",
+        "youtubeId": null,
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "DAX Filter Context vs Row Context — Explained (SQLBI)",
+        "youtubeId": null,
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 3,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Dashboard Design Best Practices in Power BI (Curbal)",
+        "youtubeId": null,
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Choosing the Right Chart — Data Visualization Guide",
+        "youtubeId": null,
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 4,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Time Intelligence in DAX — YTD/YoY/Rolling (SQLBI)",
+        "youtubeId": null,
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Row-Level Security (RLS) in Power BI — Dynamic RLS (Guy in a Cube)",
+        "youtubeId": null,
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 5,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Power BI Service, Workspaces & Deployment Pipelines (Microsoft)",
+        "youtubeId": null,
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Optimizing Power BI Performance — DAX Studio & VertiPaq (SQLBI)",
+        "youtubeId": null,
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 6,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Building a Dashboard End-to-End Under Time Pressure (Enterprise DNA)",
+        "youtubeId": null,
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Publishing & Sharing in the Power BI Service (Microsoft)",
+        "youtubeId": null,
+        "durationMin": null
+      }
+    ]
+  },
+  {
+    "dayNumber": 7,
+    "videos": [
+      {
+        "order": 1,
+        "title": "Presenting Data to Executives — Storytelling with Data",
+        "youtubeId": null,
+        "durationMin": null
+      },
+      {
+        "order": 2,
+        "title": "Defending Your Dashboard — BI Interview Playbook",
+        "youtubeId": null,
+        "durationMin": null
+      }
+    ]
+  }
+]
