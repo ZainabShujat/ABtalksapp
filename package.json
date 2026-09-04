@@ -94,7 +94,8 @@
     "test:virtual": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/virtual-candidate.test.ts",
     "test:interview:barge-in": "tsx scripts/verify-interview-barge-in.ts",
     "test:interview:phrasing": "tsx --conditions=react-server scripts/verify-interview-phrasing.ts",
-    "test:interview:interruption": "tsx scripts/verify-interview-interruption-state.ts"
+    "test:interview:interruption": "tsx scripts/verify-interview-interruption-state.ts",
+    "test:interview:turn": "tsx scripts/verify-interview-conversational-turn.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

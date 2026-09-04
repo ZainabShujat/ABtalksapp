@@ -35,6 +35,28 @@ export type TurnState =
   | "WAITING_FOR_SPEECH"
   /** Speech confirmed. From here the no-answer path is permanently closed. */
   | "CANDIDATE_SPEAKING"
+  /**
+   * The candidate took the floor by CUTTING THE INTERVIEWER OFF.
+   *
+   * Behaviourally the same as `CANDIDATE_SPEAKING` — the candidate is talking,
+   * and quiet ends their utterance — but it is a distinct state because the
+   * invariant it carries is distinct and was being violated.
+   *
+   * THE BUG THIS STATE EXISTS TO MAKE IMPOSSIBLE. A barge-in used to hand the
+   * floor over by calling `openTurn`, which yields `WAITING_FOR_SPEECH` with
+   * `hasSpoken: false` — "nobody has said anything on this turn". That is the
+   * exact opposite of what just happened: barge-in only fires after the
+   * candidate has sustained real speech over the top of the interviewer. The
+   * turn then sat in the no-answer path, so `NO_ANSWER_MS` later the interviewer
+   * asked a candidate who was mid-sentence whether they were still there, and
+   * the time after that it recorded the question as unanswered and moved on.
+   *
+   * An interruption is not silence. Entering here with `hasSpoken` already true
+   * closes the `nudge` / `moveOn` branch structurally rather than by a guard
+   * that a later edit could forget: those effects are reachable only from
+   * `WAITING_FOR_SPEECH`, and nothing transitions back into it within a turn.
+   */
+  | "CANDIDATE_INTERRUPTING"
   /** They stopped, but may resume. The silence window is running. */
   | "CANDIDATE_PAUSED"
   /** The window elapsed. The recorder is stopping and the answer is committed. */
@@ -99,6 +121,32 @@ export function openTurn(now: number): TurnContext {
     quietSince: null,
     soundSince: null,
     hasSpoken: false,
+    mutedSince: null,
+    nudges: 0,
+    mutedWarned: false,
+  };
+}
+
+/**
+ * Opens a turn the candidate took by interrupting.
+ *
+ * `hasSpoken: true` is the whole point and is a statement of fact rather than an
+ * optimisation: `duplex.ts` emits `bargeIn` only after the microphone has held
+ * candidate-side energy continuously for `BARGE_IN_SUSTAIN_MS`, so by the time
+ * this is called the candidate is demonstrably talking. Opening the turn as
+ * though they had not is what let an interruption decay into an unanswered
+ * question.
+ *
+ * `quietSince` starts null so the silence window is armed by the candidate
+ * actually stopping, not by the moment the floor changed hands.
+ */
+export function openInterruptedTurn(now: number): TurnContext {
+  return {
+    state: "CANDIDATE_INTERRUPTING",
+    openedAt: now,
+    quietSince: null,
+    soundSince: null,
+    hasSpoken: true,
     mutedSince: null,
     nudges: 0,
     mutedWarned: false,
@@ -254,6 +302,26 @@ function stepUnmuted(
       };
     }
     return { context: { ...cleared, openedAt }, effect: "none" };
+  }
+
+  if (ctx.state === "CANDIDATE_INTERRUPTING") {
+    if (rms >= thresholds.off) {
+      // Still talking. It becomes an ordinary speaking turn: interrupting is how
+      // the floor changed hands, not a different way of holding it.
+      return {
+        context: {
+          ...ctx,
+          state: "CANDIDATE_SPEAKING",
+          quietSince: null,
+          soundSince: null,
+        },
+        effect: "none",
+      };
+    }
+    // They stopped. The silence window decides when the utterance is complete,
+    // exactly as for any other answer — and `hasSpoken` is already true, so this
+    // can only ever reach `finalize`, never `nudge` or `moveOn`.
+    return { context: { ...ctx, state: "CANDIDATE_PAUSED", quietSince: now }, effect: "none" };
   }
 
   if (ctx.state === "CANDIDATE_SPEAKING") {

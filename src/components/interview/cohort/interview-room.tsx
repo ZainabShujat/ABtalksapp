@@ -12,15 +12,29 @@ import { cn } from "@/lib/utils";
 import { LANGUAGE_RETRY_LINE } from "@/features/interview/language-gate";
 import {
   initialTurnContext,
+  openInterruptedTurn,
   openTurn,
   stepTurn,
   type TurnContext,
   type TurnEffect,
   type TurnState,
 } from "@/features/interview/turn-state";
+import {
+  AudioTrace,
+  type AudioTraceSummary,
+} from "@/features/interview/audio-trace";
+import {
+  classifyPlayback,
+  isPlaybackGraphUsable,
+  shouldUseBrowserFallback,
+  type AudioContextState,
+  type SpeechOutcome,
+} from "@/features/interview/playback";
 import { MIN_AUDIO_BYTES } from "@/features/interview/voice-contract";
 import {
+  BARGE_IN_FLOOR_RMS,
   closeSpeaking,
+  ECHO_MARGIN,
   initialDuplexContext,
   openSpeaking,
   stepDuplex,
@@ -234,7 +248,7 @@ const WORD_RECENCY_MS = 1_500;
  * Bump this whenever the audio path changes; if the screen does not show it,
  * the fix under discussion is not the code being run.
  */
-const AUDIO_BUILD = "vad-7-per-recorder-chunks";
+const AUDIO_BUILD = "vad-8-graph-lifetime-interrupted-turn";
 
 /**
  * Whether to show the audio diagnostics strip.
@@ -295,14 +309,26 @@ function decodeSpokenLine(header: string | null): string | null {
 const NO_ANSWER_MS = 10_000;
 
 /**
- * How long an audio element may claim to be playing without the clock moving
- * before the room stops believing it.
+ * How often the room re-samples a playing element.
  *
- * Deliberately short. This only fires when `currentTime` is still exactly 0,
- * which after a second of real playback it never is, so a slow start cannot
- * trip it — only a dead one.
+ * The verdict itself lives in `features/interview/playback.ts`; this is only
+ * how frequently it is asked. Cancellation no longer waits for a tick — see
+ * `cancelSpeech` — so this interval only has to be fine enough to notice a
+ * genuinely dead element promptly.
  */
-const PLAYBACK_STALL_MS = 1_200;
+const PLAYBACK_PROBE_MS = 250;
+
+/**
+ * Why the wait for an interviewer line ended.
+ *
+ * Deliberately not a boolean. "The audio stopped" is three different events with
+ * three different correct responses: a line that finished needs nothing, a line
+ * the candidate cut off must NOT be re-read by the browser voice, and a line
+ * that never made a sound must be. Collapsing them is what made a barge-in
+ * produce a browser-voice recital of the sentence the candidate had just
+ * interrupted.
+ */
+type PlaybackSettle = "ended" | "cancelled" | "stalled" | "error";
 
 /** One-line room diagnostic, development only. */
 function logRoom(message: string, data?: Record<string, unknown>) {
@@ -560,10 +586,43 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
     spoke: boolean;
     ctx: string;
     word: boolean;
+    trace: AudioTraceSummary | null;
   } | null>(null);
+
+  /**
+   * Rolling microphone/output measurements. Diagnostic only — nothing reads it
+   * to make a decision. See `features/interview/audio-trace.ts` for why the
+   * measurement exists instead of another threshold guess.
+   */
+  const traceRef = useRef<AudioTrace>(new AudioTrace());
 
   useEffect(() => {
     if (!audioDebugEnabled()) return;
+    const summarize = () =>
+      traceRef.current.summarize({
+        onThreshold: SPEECH_ON_RMS,
+        echoMargin: ECHO_MARGIN,
+        floorRms: BARGE_IN_FLOOR_RMS,
+      });
+
+    // Reachable from the console during a real interview, which is the only
+    // place these numbers can be gathered: they describe this microphone in
+    // this room with this machine's echo cancellation, and no fixture can
+    // stand in for that.
+    const w = window as unknown as {
+      __interviewAudioTrace?: () => unknown;
+    };
+    w.__interviewAudioTrace = () => ({
+      summary: summarize(),
+      thresholds: {
+        speechOn: SPEECH_ON_RMS,
+        speechOff: SPEECH_OFF_RMS,
+        bargeInFloor: BARGE_IN_FLOOR_RMS,
+        echoMargin: ECHO_MARGIN,
+      },
+      frames: traceRef.current.snapshot(),
+    });
+
     const id = setInterval(() => {
       setAudioDebug({
         rms: rawLevelRef.current,
@@ -574,9 +633,13 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
         off: SPEECH_OFF_RMS,
         spoke: hasSpokenRef.current,
         ctx: audioCtxRef.current?.state ?? "none",
+        trace: summarize(),
       });
     }, 200);
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      delete w.__interviewAudioTrace;
+    };
   }, []);
 
   /**
@@ -686,6 +749,18 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
    */
   const speakGenRef = useRef(0);
 
+  /**
+   * Settles the playback promise the current `speak()` is awaiting.
+   *
+   * Held in a ref so `cancelSpeech` — which is called from the audio frame loop
+   * on barge-in, far outside `speak`'s closure — can end that wait immediately
+   * instead of leaving it to a poll. Null whenever no line is awaiting playback,
+   * which is also the guard that stops a stale settler resolving a newer line.
+   */
+  const speakSettleRef = useRef<((verdict: PlaybackSettle) => void) | null>(
+    null,
+  );
+
   /* ------------------------------------------------------------- duplex */
 
   /**
@@ -766,17 +841,35 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
    */
   const cancelSpeech = useCallback(() => {
     const audio = audioRef.current;
+    logRoom("cancelSpeech", {
+      hadAudio: audio !== null,
+      speaking: speakingRef.current !== null,
+      awaitingSettle: speakSettleRef.current !== null,
+    });
     if (audio) {
       audio.pause();
       audio.onended = null;
       audio.onerror = null;
       audioRef.current = null;
     }
-    logRoom("cancelSpeech", {
-      hadAudio: audioRef.current !== null,
-      speaking: speakingRef.current !== null,
-    });
     if (typeof window !== "undefined") window.speechSynthesis?.cancel();
+
+    // RESOLVE THE WAITING `speak()` NOW, not on the next watchdog tick.
+    //
+    // `speak` awaits a promise that used to settle only from `onended`,
+    // `onerror`, or a polling interval — and `cancelSpeech` nulls the first two
+    // and pauses the element, so the only thing left to notice a barge-in was a
+    // 250ms poll. Barge-in has a latency budget and up to a quarter of a second
+    // of it was being spent watching an element that had already been told to
+    // stop. Worse, an earlier version cleared that interval WITHOUT resolving,
+    // which left the promise pending forever: `finally` never ran, the phase
+    // stayed "speaking" and the room stopped taking turns entirely.
+    //
+    // Settling it here makes cancellation synchronous and makes an unresolved
+    // `speak()` unreachable from this path rather than merely unlikely.
+    const settle = speakSettleRef.current;
+    speakSettleRef.current = null;
+    settle?.("cancelled");
     // QUEUED AUDIO TOO, not just what is sounding. A line whose synthesis
     // request is still in flight would otherwise arrive after the interruption
     // and start playing over the candidate — the interviewer resuming a
@@ -803,9 +896,91 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
    * created and closed around each recording, and an output graph torn down
    * mid-sentence would silence the interviewer.
    */
-  const buildPlaybackGraph = useCallback(async (): Promise<HTMLAudioElement | null> => {
+  /**
+   * The state of the graph the prepared element is routed through.
+   *
+   * `"none"` means the element was never attached and plays straight to the
+   * speakers, which is always fine. Any other value is the context's own state.
+   */
+  const playbackGraphState = useCallback((): AudioContextState => {
+    const ctx = playbackCtxRef.current;
+    if (!ctx) return "none";
+    return ctx.state as AudioContextState;
+  }, []);
+
+  /**
+   * Discards the playback graph AND the element attached to it, together.
+   *
+   * THE ELEMENT AND THE CONTEXT SHARE ONE LIFETIME, and this function is where
+   * that is enforced. `createMediaElementSource` permanently reroutes an
+   * element's output into the graph; there is no detach. So a context that has
+   * been closed does not merely lose the analyser — it leaves the element
+   * connected to nothing, silent forever, with every observable property
+   * (`play()` resolving, `duration`, `currentTime`) still reporting success.
+   *
+   * THIS IS THE BUG THAT SHIPPED. Teardown closed the context and nulled
+   * nothing, while `buildPlaybackGraph` short-circuited on
+   * `if (playbackElRef.current) return`. React runs mount effects, cleans them
+   * up, and runs them again — so the second run handed back the element from the
+   * first, now welded to a closed context. Every interviewer line after that
+   * played into a dead graph: Deepgram answered 200, `audio/mpeg` arrived,
+   * nothing was audible, the stall watchdog fired and the browser voice read the
+   * line. Which is exactly what the console showed:
+   * `usingPreparedElement: true, graphAttached: true, ctx: "closed"`.
+   *
+   * Nulling all four refs is what makes a rebuild possible, and rebuilding with
+   * a FRESH element is what makes it correct — the old one can never be
+   * un-attached.
+   */
+  const disposePlaybackGraph = useCallback(() => {
+    try {
+      ttsSourceRef.current?.disconnect();
+      ttsAnalyserRef.current?.disconnect();
+      const ctx = playbackCtxRef.current;
+      if (ctx && ctx.state !== "closed") void ctx.close().catch(() => {});
+    } catch {
+      // Already gone.
+    }
+    const el = playbackElRef.current;
+    if (el) {
+      try {
+        el.pause();
+      } catch {
+        // Already stopped.
+      }
+      el.removeAttribute("src");
+    }
+    playbackElRef.current = null;
+    playbackCtxRef.current = null;
+    ttsSourceRef.current = null;
+    ttsAnalyserRef.current = null;
+    ttsLevelRef.current = 0;
+  }, []);
+
+  const buildPlaybackGraph = useCallback(async (
+    /**
+     * Rebuild even when the cached element is fine, IF it was never attached to
+     * a graph. Passed by the gesture listener: the mount-time attempt runs
+     * before any user gesture and can legitimately fail to reach "running", and
+     * an unattached element costs barge-in its echo reference for the whole
+     * interview.
+     */
+    retryAttach = false,
+  ): Promise<HTMLAudioElement | null> => {
     if (typeof window === "undefined") return null;
-    if (playbackElRef.current) return playbackElRef.current;
+
+    // A CACHED ELEMENT IS ONLY REUSABLE IF ITS GRAPH STILL WORKS. Checking the
+    // element alone is what welded every subsequent line to a closed context.
+    if (playbackElRef.current) {
+      const state = playbackGraphState();
+      // "none" is a working element with no analyser — audible, but echo-blind.
+      const worthRetrying = retryAttach && state === "none";
+      if (isPlaybackGraphUsable(state) && !worthRetrying) {
+        return playbackElRef.current;
+      }
+      logRoom("rebuilding playback graph", { ctx: state, worthRetrying });
+      disposePlaybackGraph();
+    }
 
     const el = new Audio();
     el.preload = "auto";
@@ -867,12 +1042,13 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
       playbackCtxRef.current = ctx;
       ttsSourceRef.current = source;
       ttsAnalyserRef.current = analyser;
+      logRoom("playback graph attached", { ctx: ctx.state });
     } catch {
       // No output analysis. Playback is unaffected.
     }
 
     return el;
-  }, []);
+  }, [disposePlaybackGraph, playbackGraphState]);
   /**
    * How many room-composed lines have been spoken this interview.
    *
@@ -960,18 +1136,15 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
       // The playback graph is long-lived and separate from the microphone's, so
       // it is torn down here rather than by `detachAnalyser`, which runs after
       // every recording and would otherwise silence the interviewer.
-      try {
-        ttsSourceRef.current?.disconnect();
-        ttsAnalyserRef.current?.disconnect();
-        if (playbackCtxRef.current && playbackCtxRef.current.state !== "closed") {
-          void playbackCtxRef.current.close();
-        }
-      } catch {
-        // Already gone.
-      }
+      //
+      // It discards the ELEMENT as well as the context, which is what lets the
+      // graph be rebuilt if this effect runs again. Closing the context while
+      // keeping the element it is welded to is what made the interviewer
+      // inaudible for the rest of the interview.
+      disposePlaybackGraph();
       if (typeof window !== "undefined") window.speechSynthesis?.cancel();
     };
-  }, []);
+  }, [disposePlaybackGraph]);
 
 
 
@@ -1081,6 +1254,14 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
       // transcript must never show something other than what was said.
       let spoken = text;
 
+      /**
+       * How this line ended, as one value the fallback decision reads.
+       *
+       * Starts as a provider failure with no status, which is the honest
+       * default: if nothing below manages to set it, no audio was obtained.
+       */
+      let outcome: SpeechOutcome = { kind: "providerFailed", status: null };
+
       const viaBrowser = () =>
         new Promise<void>((resolve) => {
           if (typeof window === "undefined" || !window.speechSynthesis) {
@@ -1090,6 +1271,21 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
           window.speechSynthesis.cancel();
           const utterance = new SpeechSynthesisUtterance(text);
           utterance.rate = 0.98;
+          // THE INTERVIEWER IS SPEAKING, whichever voice is doing it.
+          //
+          // `openSpeaking` used to be called only on the server-audio path, so
+          // during a browser-voice line the analyser loop ran the ORDINARY turn
+          // machine against a microphone that was listening to the interviewer.
+          // Its own words crossed the speech threshold, `hasSpoken` went true,
+          // and the silence window closed on a turn the candidate had not
+          // started — the interview effectively answering itself.
+          //
+          // There is no output analyser for `speechSynthesis`, so
+          // `ttsLevelRef` stays 0 and `duplex.ts` falls back to its absolute
+          // floor. Barge-in is therefore less discriminating here, which is the
+          // right trade: this path is an emergency, and a twitchy interruption
+          // is recoverable where a self-answering interview is not.
+          duplexRef.current = openSpeaking(performance.now());
           // The browser voice exposes real character boundaries, which is more
           // accurate than the proportional estimate used for server audio.
           utterance.onboundary = (ev) => {
@@ -1097,14 +1293,13 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
               setReveal({ text, chars: ev.charIndex + (ev.charLength ?? 0) });
             }
           };
-          utterance.onend = () => {
+          const done = () => {
+            duplexRef.current = closeSpeaking();
             setReveal({ text, chars: text.length });
             resolve();
           };
-          utterance.onerror = () => {
-            setReveal({ text, chars: text.length });
-            resolve();
-          };
+          utterance.onend = done;
+          utterance.onerror = done;
           logRoom("speak: browser voice fallback", {
             voices: window.speechSynthesis.getVoices().length,
             speaking: window.speechSynthesis.speaking,
@@ -1180,92 +1375,159 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
           // room, so autoplay policy can block it. Falling back to a plain
           // element guarantees a route to the speakers even if the prepared one
           // is missing entirely.
+          // A POISONED ELEMENT IS NEVER PLAYED THROUGH. Checked synchronously,
+          // right here, because this is the last moment before `play()` and
+          // because the consequence is total silence that reports itself as
+          // success. `buildPlaybackGraph` already rebuilds a dead graph, but it
+          // is async and runs from an effect; this is the guarantee that does
+          // not depend on that having happened yet.
+          //
+          // Discarding gives up the output analyser for this line — barge-in
+          // falls back to its absolute floor — and keeps the interviewer
+          // audible. That is the correct direction: a twitchier interruption is
+          // recoverable, an interview nobody can hear is not.
+          const graphState = playbackGraphState();
+          if (!isPlaybackGraphUsable(graphState)) {
+            logRoom("speak: discarding unusable playback element", {
+              ctx: graphState,
+            });
+            disposePlaybackGraph();
+            // Rebuilt out of band for the NEXT line. Not awaited: an await here
+            // yields the task, and a `play()` from a later task is outside the
+            // gesture that authorised it, so autoplay policy can refuse.
+            void buildPlaybackGraph();
+          }
+
+          const audio = playbackElRef.current ?? new Audio();
           logRoom("speak: play()", {
-            usingPreparedElement: playbackElRef.current !== null,
+            usingPreparedElement: audio === playbackElRef.current,
             graphAttached: ttsAnalyserRef.current !== null,
-            ctx: playbackCtxRef.current?.state ?? "none",
+            ctx: playbackGraphState(),
             bytes: url.length,
           });
-          const audio = playbackElRef.current ?? new Audio();
           audio.src = url;
           audioRef.current = audio;
-          await audio.play();
+
+          try {
+            await audio.play();
+          } catch {
+            // Autoplay refused, or no output device. A real provider success
+            // that the browser will not play: the fallback is warranted, and
+            // saying which of the two failed is the point of `outcome`.
+            URL.revokeObjectURL(url);
+            outcome = { kind: "playbackFailed", reason: "play-rejected" };
+            if (!stale()) await viaBrowser();
+            return;
+          }
+
           // Barge-in is armed from the moment sound starts, not from when the
           // request was made: the arming delay in `duplex.ts` is measured
           // against real playback.
           duplexRef.current = openSpeaking(performance.now());
           startReveal(spoken, audio);
-          await new Promise<void>((resolve) => {
-            audio.onended = () => resolve();
-            audio.onerror = () => resolve();
 
-            // A PLAYBACK WATCHDOG, because "the audio element is lying" is a
-            // real state and it stranded a whole interview.
-            //
-            // `play()` can resolve on an element that will never make a sound
-            // and will never fire `ended` — a dead output graph, a decode that
-            // stalls, a device that disappears. Without this the promise above
-            // never settles, `finally` never runs, the phase stays "speaking"
-            // forever and, with barge-in armed, the analyser loop keeps
-            // skipping the turn machine because `speakingSince` is still set.
-            // The room simply stops, which is exactly what was reported.
-            //
-            // So: if the clock has not moved shortly after play(), stop waiting
-            // and read the line with the browser voice instead.
-            const startedAt = performance.now();
-            const settle = (why: string) => {
+          // A PLAYBACK WATCHDOG, because "the audio element is lying" is a real
+          // state and it stranded a whole interview. `play()` can resolve on an
+          // element that will never make a sound and will never fire `ended` —
+          // a dead output graph, a decode that stalls, a device that
+          // disappears. Without it this promise never settles, `finally` never
+          // runs, the phase stays "speaking" forever and the analyser loop
+          // keeps skipping the turn machine because `speakingSince` is set.
+          //
+          // The VERDICT is not decided here. `classifyPlayback` owns it, so the
+          // rule that a closed context can never read as successful playback,
+          // and the rule that a buffering element is not a failed one, are
+          // testable without a browser. This block only samples and reacts.
+          const startedAt = performance.now();
+          const settled = await new Promise<PlaybackSettle>((resolve) => {
+            const finish = (verdict: PlaybackSettle) => {
               clearInterval(watchdog);
+              speakSettleRef.current = null;
               logRoom("speak: playback settled", {
-                why,
+                verdict,
                 currentTime: Number(audio.currentTime.toFixed(2)),
                 paused: audio.paused,
                 ended: audio.ended,
-                ctx: playbackCtxRef.current?.state ?? "none",
+                readyState: audio.readyState,
+                ctx: playbackGraphState(),
               });
-              resolve();
+              resolve(verdict);
             };
+            // Published so `cancelSpeech` can end this wait synchronously on
+            // barge-in rather than costing a poll interval of latency.
+            speakSettleRef.current = finish;
+            audio.onended = () => finish("ended");
+            audio.onerror = () => finish("error");
+
             const watchdog = setInterval(() => {
-              // PAUSED COUNTS AS SETTLED, and this is the bug it fixes.
-              //
-              // The previous version cleared the interval on `paused` WITHOUT
-              // resolving. `cancelSpeech` pauses the element and nulls
-              // `onended`, so a line that was interrupted or superseded left
-              // this promise pending forever: `finally` never ran,
-              // `speakingRef` and `duplexRef.speakingSince` stayed set, the
-              // phase stayed "speaking", and the analyser loop kept skipping
-              // the turn machine. The room simply stopped taking turns.
-              if (audio.ended) return settle("ended");
-              if (audio.paused) return settle("paused (cancelled or superseded)");
-              if (
-                audio.currentTime === 0 &&
-                performance.now() - startedAt > PLAYBACK_STALL_MS
-              ) {
-                logRoom("playback produced no audio; falling back to browser voice", {
+              const verdict = classifyPlayback({
+                currentTime: audio.currentTime,
+                paused: audio.paused,
+                ended: audio.ended,
+                readyState: audio.readyState,
+                elapsedMs: performance.now() - startedAt,
+                contextState: playbackGraphState(),
+              });
+              if (verdict === "playing" || verdict === "waiting") return;
+              if (verdict === "stalled") {
+                logRoom("playback produced no audio", {
                   readyState: audio.readyState,
                   networkState: audio.networkState,
                   muted: audio.muted,
                   volume: audio.volume,
-                  ctx: playbackCtxRef.current?.state ?? "none",
+                  ctx: playbackGraphState(),
                   graphAttached: ttsAnalyserRef.current !== null,
                 });
-                return settle("stalled at currentTime 0");
               }
-            }, 250);
+              finish(verdict === "ended" ? "ended" : verdict);
+            }, PLAYBACK_PROBE_MS);
           });
           URL.revokeObjectURL(url);
 
-          // Nothing was heard. Say the line rather than leaving the candidate
-          // looking at a question nobody asked.
-          if (audio.currentTime === 0 && !stale()) {
-            await viaBrowser();
+          if (settled === "cancelled") {
+            // Interrupted or superseded. THE SILENCE IS THE FEATURE — reading
+            // the line back through the browser voice here is the interviewer
+            // resuming a sentence it was told to abandon, which is the single
+            // worst thing a barge-in implementation can do.
+            outcome = { kind: "cancelled" };
+          } else if (settled === "stalled" || settled === "error") {
+            outcome = {
+              kind: "playbackFailed",
+              reason:
+                playbackGraphState() === "closed" ? "closed-context" : "stalled",
+            };
+          } else {
+            outcome = { kind: "spoke" };
           }
         } else {
-          /* browser voice fallback */
+          outcome = { kind: "providerFailed", status: res.status };
+        }
+
+        // ONE decision point for the emergency voice, from a typed outcome.
+        //
+        // It used to be `if (audio.currentTime === 0)` plus two catch-all
+        // `await viaBrowser()` branches, which meant a Deepgram 200 whose audio
+        // played into a closed context, a Deepgram 500, and a candidate
+        // interrupting all took the same path. A successful synthesis must not
+        // routinely end up as the browser voice, and an interrupted one must
+        // never.
+        if (!stale() && shouldUseBrowserFallback(outcome)) {
+          logRoom("speak: engaging browser voice fallback", { outcome });
           await viaBrowser();
         }
-      } catch {
-        /* browser voice fallback */
-        await viaBrowser();
+      } catch (err) {
+        // The request itself failed: aborted, timed out, offline. An abort from
+        // `cancelSpeech` is a cancellation, not a provider failure, and must not
+        // summon the browser voice over the top of the candidate.
+        const aborted = err instanceof Error && err.name === "AbortError";
+        outcome = aborted
+          ? { kind: "cancelled" }
+          : { kind: "providerFailed", status: null };
+        logRoom("speak: TTS request failed", {
+          aborted,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        if (!stale() && shouldUseBrowserFallback(outcome)) await viaBrowser();
       } finally {
         // Only the generation that still owns the floor may finish the turn. A
         // superseded call falling through here would stamp "idle" underneath a
@@ -1274,7 +1536,40 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
 
         ttsAbortRef.current = null;
         ttsLevelRef.current = 0;
+        speakSettleRef.current = null;
         duplexRef.current = closeSpeaking();
+
+        // AN INTERRUPTED LINE IS HANDLED FIRST, AND THAT ORDER IS THE FIX.
+        //
+        // This block used to sit BELOW the clock re-base, which destroyed every
+        // barge-in the room ever detected. `handleBargeIn` hands the floor to a
+        // candidate who is demonstrably mid-sentence; the re-base then
+        // immediately overwrote that with `openTurn`, i.e.
+        // `WAITING_FOR_SPEECH` / `hasSpoken: false` — "nobody has said anything
+        // on this turn". `NO_ANSWER_MS` later the nudge asked a talking
+        // candidate whether they were still there, and the time after that
+        // `moveOn` recorded the question as unanswered and advanced the
+        // interview. The interruption became a silence.
+        //
+        // Nothing about the turn is touched here: `handleBargeIn` already put it
+        // in `CANDIDATE_INTERRUPTING` with `hasSpoken` true, the recorder has
+        // been running since before the first word, and the silence window will
+        // end the utterance normally.
+        //
+        // The reveal is also left exactly where the voice stopped. Completing
+        // the line — right when audio fails midway, because a reader must not be
+        // left with half a sentence — is wrong here: the half sentence is the
+        // truth, and filling it in would make the transcript claim the candidate
+        // was asked something they never heard.
+        if (interruptedRef.current) {
+          stopReveal();
+          speakingRef.current = null;
+          // NOT "idle": the candidate has the floor and is using it. Stamping
+          // idle here read as "your turn has not started" to every consumer of
+          // `phase`, including the recorder-restart effect.
+          setPhase("listening");
+          return;
+        }
 
         // RE-BASE THE TURN CLOCKS as the floor changes hands.
         //
@@ -1285,25 +1580,12 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
         // nudge would fire the instant the interviewer stopped talking and tell
         // a candidate who has not had a chance to speak that it could not hear
         // them. Their turn starts now, so the clock starts now.
+        //
+        // Reached only when the line was NOT interrupted, per the branch above.
         if (bargeInEnabled && turnCtxRef.current.state !== "idle") {
           turnCtxRef.current = openTurn(performance.now());
           turnStateRef.current = "WAITING_FOR_SPEECH";
           setTurnState("WAITING_FOR_SPEECH");
-        }
-
-        // INTERRUPTED LINES ARE NOT COMPLETED ON SCREEN.
-        //
-        // The rule below — always reveal the whole line — is right when audio
-        // fails midway, because a reader must not be left with half a sentence.
-        // It is wrong after a barge-in, where the half sentence is the truth:
-        // the candidate cut in at that word and never heard the rest. Filling
-        // it in would make the transcript, and the report built on it, claim
-        // they were asked something they were not.
-        if (interruptedRef.current) {
-          stopReveal();
-          setPhase("idle");
-          speakingRef.current = null;
-          return;
         }
 
         // Whatever happened, the full line ends up visible: a reader must never
@@ -1333,6 +1615,9 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
       stopReveal,
       cancelSpeech,
       bargeInEnabled,
+      playbackGraphState,
+      disposePlaybackGraph,
+      buildPlaybackGraph,
     ],
   );
 
@@ -1380,7 +1665,22 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
 
     const unlock = () => {
       const ctx = playbackCtxRef.current;
-      if (ctx && ctx.state === "suspended") void ctx.resume().catch(() => {});
+      if (ctx) {
+        if (ctx.state === "suspended") void ctx.resume().catch(() => {});
+        return;
+      }
+      // NO CONTEXT AT ALL means the graph was never attached: the first attempt
+      // ran on mount, before any gesture, so `resume()` could not bring it to
+      // "running" and attaching would have silenced the element. Without this
+      // the room stayed permanently without an output analyser, so
+      // `ttsLevelRef` never left 0 and `duplex.ts` had only its absolute floor
+      // to work with — barge-in echo-blind for the whole interview.
+      //
+      // A gesture is exactly what was missing, so retry on one. Never while a
+      // line is playing: rebuilding replaces the element and would cut the
+      // interviewer off mid-sentence.
+      if (speakingRef.current !== null) return;
+      void buildPlaybackGraph(true);
     };
     window.addEventListener("pointerdown", unlock);
     window.addEventListener("keydown", unlock);
@@ -2022,7 +2322,9 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
           if (phaseRef.current !== "listening") return;
           const turn = turnCtxRef.current;
           const machineRunning =
-            turn.state === "CANDIDATE_SPEAKING" || turn.state === "CANDIDATE_PAUSED";
+            turn.state === "CANDIDATE_INTERRUPTING" ||
+            turn.state === "CANDIDATE_SPEAKING" ||
+            turn.state === "CANDIDATE_PAUSED";
           if (machineRunning) {
             // A healthy turn re-arms forever: only silence ends an answer, so a
             // three-minute one is never truncated.
@@ -2150,6 +2452,17 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
             }
             ttsLevelRef.current = Math.sqrt(ttsSum / ttsSamples.length);
           }
+
+          // Recorded BEFORE the branch below, so the interviewer-speaking and
+          // interviewer-silent populations are both captured. Splitting them is
+          // the whole value of the trace: a single mixed distribution cannot
+          // tell a noise floor from residual echo.
+          traceRef.current.push({
+            rms,
+            ttsLevel: ttsLevelRef.current,
+            speaking: duplexRef.current.speakingSince !== null,
+            now,
+          });
 
           if (duplexRef.current.speakingSince !== null) {
             const duplexStep = stepDuplex(duplexRef.current, {
@@ -2462,11 +2775,24 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
     setReveal({ text: heard.text, chars: heard.chars });
 
     // The turn machine has been sitting in whatever state it was in while the
-    // interviewer talked. Opening a turn now is what starts the silence window
-    // that will end the candidate's utterance.
-    turnCtxRef.current = openTurn(performance.now());
-    turnStateRef.current = "CANDIDATE_SPEAKING";
-    setTurnState("CANDIDATE_SPEAKING");
+    // interviewer talked. Opening an INTERRUPTED turn is what starts the silence
+    // window that will end the candidate's utterance.
+    //
+    // `openInterruptedTurn`, NOT `openTurn`. This is the fix for the symptom
+    // that looked like "the microphone decided I never spoke": `openTurn`
+    // returns `WAITING_FOR_SPEECH` with `hasSpoken: false`, and the display
+    // state was then overwritten to CANDIDATE_SPEAKING by the two lines below
+    // — so the console said the candidate was speaking while the machine
+    // believed nobody had. It sat in the no-answer path, nudged a talking
+    // candidate after `NO_ANSWER_MS`, and then advanced the interview with the
+    // question recorded as unanswered.
+    //
+    // Barge-in fires only after sustained candidate energy, so `hasSpoken: true`
+    // is a fact, and it is what makes `nudge` and `moveOn` unreachable from
+    // here structurally rather than by a guard.
+    turnCtxRef.current = openInterruptedTurn(performance.now());
+    turnStateRef.current = turnCtxRef.current.state;
+    setTurnState(turnCtxRef.current.state);
     setPhase("listening");
 
     if (process.env.NODE_ENV !== "production") {
@@ -2559,6 +2885,7 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
   // knows whose floor it is.
   const orbVisible =
     turnState === "WAITING_FOR_SPEECH" ||
+    turnState === "CANDIDATE_INTERRUPTING" ||
     turnState === "CANDIDATE_SPEAKING" ||
     turnState === "CANDIDATE_PAUSED" ||
     phase === "listening";
@@ -2985,13 +3312,36 @@ export function InterviewRoom<TFinish = FinishInterviewData>({
             </div>
 
             {audioDebug ? (
-              <div className="pointer-events-none absolute inset-x-0 -top-6 text-center font-mono text-[10px] text-[var(--iv-text-faint)]">
-                rms {audioDebug.rms.toFixed(4)} · on {audioDebug.on.toFixed(3)} ·
-                off {audioDebug.off.toFixed(3)} ·{" "}
-                {audioDebug.spoke ? "SPOKE" : "waiting"} ·{" "}
-                {audioDebug.word ? "WORD" : "no-word"} · {turnState} · ctx{" "}
-                {audioDebug.ctx} · build {AUDIO_BUILD}
-                {sttDebug ? <> · {sttDebug}</> : null}
+              <div className="pointer-events-none absolute inset-x-0 -top-11 text-center font-mono text-[10px] leading-[1.5] text-[var(--iv-text-faint)]">
+                <div>
+                  rms {audioDebug.rms.toFixed(4)} · on{" "}
+                  {audioDebug.on.toFixed(3)} · off {audioDebug.off.toFixed(3)} ·{" "}
+                  {audioDebug.spoke ? "SPOKE" : "waiting"} ·{" "}
+                  {audioDebug.word ? "WORD" : "no-word"} · {turnState} · ctx{" "}
+                  {audioDebug.ctx} · tts {playbackGraphState()} · build{" "}
+                  {AUDIO_BUILD}
+                  {sttDebug ? <> · {sttDebug}</> : null}
+                </div>
+                {/*
+                  MEASURED, not assumed. These are the numbers any threshold
+                  change has to be argued from: the noise floor the room
+                  actually produces, where speech actually sits, and whether
+                  echo could have taken the floor during playback. `headroom`
+                  negative means barge-in could not have fired on echo alone.
+                  Full frames via `__interviewAudioTrace()` in the console.
+                */}
+                {audioDebug.trace && audioDebug.trace.frames > 0 ? (
+                  <div>
+                    floor {audioDebug.trace.noiseFloor.toFixed(4)} · speech{" "}
+                    {audioDebug.trace.speechLevel.toFixed(4)} · peak{" "}
+                    {audioDebug.trace.speechPeak.toFixed(4)} · ttsOut{" "}
+                    {audioDebug.trace.ttsLevel.toFixed(4)} · micOnTts{" "}
+                    {audioDebug.trace.micDuringSpeech.toFixed(4)} · headroom{" "}
+                    {audioDebug.trace.echoHeadroom.toFixed(4)} · run{" "}
+                    {Math.round(audioDebug.trace.longestRunMs)}ms ·{" "}
+                    {audioDebug.trace.frames}f
+                  </div>
+                ) : null}
               </div>
             ) : null}
 

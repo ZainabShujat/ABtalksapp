@@ -364,6 +364,65 @@ async function main() {
     );
   }
 
+  /* 4b. the DEPTH RUNG survives a non-answer, and REPEAT re-puts that rung */
+  for (const kind of ["REPEAT", "CLARIFY", "OTHER"] as InterruptionKind[]) {
+    await check(
+      `4b. ${kind} preserves the depth rung and re-puts the current question`,
+      async () => {
+        // Deliberately on a RAISED rung. `currentQuestionIndex` staying put is
+        // only half the invariant: the interview escalates within a question,
+        // so "the question on the floor" is a specific rung of it. An
+        // interruption that silently dropped back to the base phrasing would
+        // re-ask something easier than the thing being assessed, and the score
+        // would then describe a question the candidate was never asked.
+        resetStore({ ...freshState(), depthLevel: 2 });
+        nextClassification = {
+          kind,
+          reason: "test",
+          subject: "retrieval quality",
+          reply: "I mean whether the right passage came back.",
+          confidence: 1,
+        };
+        const before = store.state;
+        const openQuestion = plan.questions[before.currentQuestionIndex]!;
+
+        const res = await service.recordInterruption(
+          USER, ATTEMPT, "hang on, what do you mean?", "", 0, 2,
+        );
+
+        assert.equal(res.ok, true);
+        assert.equal(
+          store.state.depthLevel ?? 1,
+          before.depthLevel ?? 1,
+          `${kind} must not move the depth rung`,
+        );
+        assert.equal(
+          store.state.currentQuestionIndex,
+          before.currentQuestionIndex,
+          `${kind} must leave the question on the floor`,
+        );
+        assert.ok(res.ok && res.data, "a turn must come back");
+        if (!res.ok) return;
+        assert.equal(
+          res.data.question.id,
+          openQuestion.id,
+          `${kind} must hand back the SAME question, not the next one`,
+        );
+        assert.equal(
+          res.data.finished,
+          false,
+          `${kind} must not end the interview`,
+        );
+        // The question is actually re-put rather than merely referenced: the
+        // candidate has just been cut off mid-sentence and needs to hear it.
+        assert.ok(
+          (res.data.prompt ?? "").trim().length > 0,
+          `${kind} must speak something back`,
+        );
+      },
+    );
+  }
+
   /* 5. ANSWER advances exactly once, and its replay does not advance again */
   await check(
     "5. ANSWER advances the interview exactly once",
