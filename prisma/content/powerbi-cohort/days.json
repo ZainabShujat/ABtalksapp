@@ -1,0 +1,524 @@
+[
+  {
+    "dayNumber": 1,
+    "moduleNumber": 1,
+    "title": "Kickoff, Calibration & BI Developer Mindset",
+    "missionType": "DATA_ROOM",
+    "briefMd": "## Mission: Kickoff, Calibration & BI Developer Mindset\n\n**Set the frame for the next 7 days and produce a baseline snapshot of where you stand today**\n\nThis is a recruitment-oriented cohort for BI developers / analytics engineers with 3–8+ years of experience — not a Zero-to-Hero learning track. Today you meet the evaluation rubric, learn the shared vocabulary (audience-first design, the analytics maturity model), and produce the two artifacts that become the 'before' snapshot in your recruitment file. Everything you write goes into a GitHub repo the panel will look at.\n\n**Concepts to learn**\n\n- **The BI Developer / Analytics Engineer role** — what you own (the semantic layer, model, calculations, dashboards, last-mile quality) vs a Data Engineer / Data Analyst / Data Scientist / Solution Architect\n- **The analytics maturity model** — descriptive → diagnostic → predictive → prescriptive; where BI sits and what it enables\n- **Audience first, tool second** — decision and action before chart type; the five-second test\n- **The evaluation rubric** — 6 weighted dimensions used on Day 1 (baseline) and Day 7 (defense) to calibrate your seniority\n\n### Build steps\n\n1. **Create the starter repo:** Create a new GitHub repo (e.g. `pbi-cohort-<yourname>`) and push an empty README. Every day's deliverables commit here.\n2. **Capture a baseline dashboard:** Pick one dashboard you built in the last 2 years. Export a full-page screenshot (or the `.pbix` if shareable). Commit as `dashboards/day01_baseline.png`.\n3. **Fill the self-assessed skills matrix:** Copy the template in the seed docs into `docs/day01_skills_matrix.md`. For each of the 6 rubric dimensions, rate yourself 1–5 with one honest sentence of evidence.\n4. **Write a top-of-README block:** In your repo's `README.md`, add an 'About me' section with role, years of experience, primary BI tool, and one line on the largest reporting solution you have shipped.\n5. **Install & configure Power BI Desktop:** Latest version, Performance Analyzer enabled, Auto date/time turned OFF. Note the version in the skills matrix under 'Environment'.\n6. **Peer + facilitator feedback:** Present the baseline dashboard in the kickoff session (~10 min). Note the top-3 pieces of feedback in the skills matrix file under 'Baseline feedback'.\n7. **Ship to your repo:** Commit and push. Then Verify.\n\n### Submit your answers\n\nAnswer these below in order (they prove you actually did the build):\n\n1. How many weighted dimensions are in the recruitment rubric? (number)\n2. In \"audience first, tool ___\", what is the second word? (one word)\n3. What is today's baseline dashboard filename? (one token)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "rubric dimension count",
+          "value": "6",
+          "caseInsensitive": true
+        },
+        {
+          "check": "audience-first phrase",
+          "value": "second",
+          "caseInsensitive": true
+        },
+        {
+          "check": "day 1 baseline filename",
+          "value": "day01_baseline.png",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "README.md exists",
+          "kind": "fileExists",
+          "path": "README.md"
+        },
+        {
+          "check": "README.md contains an 'About me' section",
+          "kind": "contentMatches",
+          "path": "README.md",
+          "regex": "(?i)about me"
+        },
+        {
+          "check": "dashboards/day01_baseline.png exists",
+          "kind": "fileExists",
+          "path": "dashboards/day01_baseline.png"
+        },
+        {
+          "check": "docs/day01_skills_matrix.md exists",
+          "kind": "fileExists",
+          "path": "docs/day01_skills_matrix.md"
+        },
+        {
+          "check": "docs/day01_skills_matrix.md references the rubric dimensions",
+          "kind": "contentMatches",
+          "path": "docs/day01_skills_matrix.md",
+          "regex": "(?i)design|dax|modeling|kpi"
+        }
+      ]
+    },
+    "objectives": [
+      "Understand the BI Developer / Analytics Engineer role vs adjacent roles and the analytics maturity model",
+      "Internalize 'audience first, tool second' and the five-second test",
+      "Read the 6-dimension recruitment scoring rubric and self-assess against it",
+      "Stand up the GitHub repo that will hold every deliverable this week"
+    ],
+    "tools": [
+      "Power BI Desktop",
+      "Excalidraw / draw.io",
+      "GitHub"
+    ],
+    "estimatedMin": 180,
+    "missionPoints": 10,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 2,
+    "moduleNumber": 2,
+    "title": "Data Modeling for BI — Star Schema & DAX Foundations",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Data Modeling for BI — Star Schema & DAX Foundations\n\n**Turn five flat retail files into a governed star-schema model with ten core measures**\n\n**Scenario — RetailCo:** a chain of 120 stores across 4 regions. You receive `Transactions`, `Stores`, `Products`, `Customers`, and `Returns` as flat CSVs. Build the model a senior BI developer would defend.\n\n**Concepts to learn**\n\n- **Dimensional modeling for BI** — star vs snowflake vs flat; fact vs dimension; declaring the grain; conformed and role-playing dimensions; the dedicated Date table\n- **Power BI relationships** — cardinality (1:many, many:many via bridge), cross-filter direction (single vs both), active vs inactive (`USERELATIONSHIP`)\n- **Storage modes** — Import vs DirectQuery vs Dual vs Live vs Composite, and how you pick from workload\n- **DAX foundations** — measures vs calculated columns; row vs filter context; context transition; `CALCULATE`, `FILTER`, `ALL`, `ALLEXCEPT`, iterators (`SUMX`)\n\n### Build steps\n\n1. **Build the star schema:** Import the five CSVs. Create a Date table (`CALENDARAUTO`, mark as date table). Establish 1:many relationships from each dimension to the fact; wire `Returns` to `Transactions`. Export a model-view screenshot to `dashboards/day02_model.png`.\n2. **Write the model doc:** Create `models/day02_retail_starschema.md` — list fact, dimensions, the declared grain of the fact table, and each relationship's cardinality + cross-filter direction.\n3. **Write 10 core measures:** Total Sales, Total Cost, Profit Margin %, Return Rate, Avg Transaction Value, Units Sold, YoY Sales Growth, Store Count, Product Count, Avg Basket Size. Save the DAX to `models/day02_measures.md` (one code block per measure).\n4. **Validate:** Build a matrix (Rows: Region; Columns: Year; Values: the measures). Cross-check totals against source. Screenshot to `dashboards/day02_validation.png`.\n5. **Write the decision memo:** `docs/day02_decision_memo.md` — \"For RetailCo's 50M-row production fact table: Import, DirectQuery, or Composite?\" End with an explicit decision line.\n6. **Ship to your repo:** Commit and push. Then Verify.\n\n### Submit your answers\n\n1. What is the term for the level of detail one fact-table row represents? (one word)\n2. Which storage mode mixes Import and DirectQuery in one model? (one word)\n3. Which DAX function performs context transition? (one word)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "fact detail level",
+          "value": "grain",
+          "caseInsensitive": true
+        },
+        {
+          "check": "mixed storage mode",
+          "value": "composite",
+          "caseInsensitive": true
+        },
+        {
+          "check": "context transition function",
+          "value": "calculate",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "models/day02_retail_starschema.md exists",
+          "kind": "fileExists",
+          "path": "models/day02_retail_starschema.md"
+        },
+        {
+          "check": "model doc declares grain",
+          "kind": "contentMatches",
+          "path": "models/day02_retail_starschema.md",
+          "regex": "(?i)grain"
+        },
+        {
+          "check": "models/day02_measures.md exists",
+          "kind": "fileExists",
+          "path": "models/day02_measures.md"
+        },
+        {
+          "check": "measures reference CALCULATE or SUMX",
+          "kind": "contentMatches",
+          "path": "models/day02_measures.md",
+          "regex": "(?i)calculate|sumx"
+        },
+        {
+          "check": "docs/day02_decision_memo.md exists",
+          "kind": "fileExists",
+          "path": "docs/day02_decision_memo.md"
+        },
+        {
+          "check": "decision memo ends with an explicit decision",
+          "kind": "contentMatches",
+          "path": "docs/day02_decision_memo.md",
+          "regex": "(?i)decision|choose|recommend|we would"
+        }
+      ]
+    },
+    "objectives": [
+      "Build a defensible star schema from flat files with a declared grain",
+      "Choose relationship cardinality and cross-filter direction deliberately",
+      "Write ten core measures that show command of filter vs row context",
+      "Defend Import vs DirectQuery vs Composite from workload characteristics"
+    ],
+    "tools": [
+      "Power BI Desktop",
+      "DAX",
+      "GitHub"
+    ],
+    "estimatedMin": 240,
+    "missionPoints": 15,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 3,
+    "moduleNumber": 3,
+    "title": "Dashboard Design & Visualization Best Practices",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Dashboard Design & Visualization Best Practices\n\n**Critique a deliberately bad dashboard, then build a clean 4-page healthcare claims dashboard**\n\n**Scenario — HealthFirst:** a healthcare payer processing 2M claims/year. You get a synthetic claims dataset (`Claims`, `Patients`, `Providers`, `Diagnoses`) and one deliberately awful dashboard to fix.\n\n**Concepts to learn**\n\n- **Design theory** — IBCS, Gestalt principles, pre-attentive attributes, cognitive load (Miller's 7±2), the data-ink ratio\n- **Chart selection** — bar vs line vs scatter vs table vs KPI card vs treemap vs waterfall vs map, and when each is wrong\n- **Anti-patterns** — 3D charts, pie with 12+ slices, dual-axis abuse, rainbow palettes, truncated bar axes, chartjunk\n- **Power BI design features** — conditional formatting, custom JSON themes, bookmarks, drill-through pages, tooltip pages\n\n### Build steps\n\n1. **Design critique:** Open the provided `bad_dashboard.pbix`. Write `docs/day03_design_critique.md` listing at least 10 anti-patterns — for each: the flaw, why it misleads or adds load, and the fix (before/after).\n2. **Build a 4-page dashboard:** (1) Executive Summary — KPI cards + monthly trend; (2) Claims Analysis — status by month, denial reasons, billed→allowed→paid waterfall, diagnosis treemap; (3) Provider Performance — scoreboard with conditional formatting, volume-vs-denial scatter, network split; (4) Drill-Through Detail — pre-filtered claim records + claim lifecycle.\n3. **Apply a theme + interactivity:** Custom JSON theme, bookmarks for navigation, drill-through from Page 3 → Page 4. Export a screenshot of each page to `dashboards/day03_page1.png` … `day03_page4.png`.\n4. **Write the design rationale:** `docs/day03_design_rationale.md` — for each page, one line on the main decision the page supports and why the chart types fit.\n5. **Ship to your repo:** Commit and push. Then Verify.\n\n### Submit your answers\n\n1. What is the strongest pre-attentive attribute for encoding value? (one word)\n2. For a bar chart, what value must the y-axis start at? (number)\n3. What Power BI feature lets a right-click jump to a detail page filtered to that context? (one word, hyphen ok)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "strongest pre-attentive attribute",
+          "value": "position",
+          "caseInsensitive": true
+        },
+        {
+          "check": "bar chart axis baseline",
+          "value": "0",
+          "caseInsensitive": true
+        },
+        {
+          "check": "context detail navigation feature",
+          "value": "drill-through",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "docs/day03_design_critique.md exists",
+          "kind": "fileExists",
+          "path": "docs/day03_design_critique.md"
+        },
+        {
+          "check": "critique names anti-patterns",
+          "kind": "contentMatches",
+          "path": "docs/day03_design_critique.md",
+          "regex": "(?i)anti-pattern|3d|pie|rainbow|truncat|chartjunk"
+        },
+        {
+          "check": "dashboards/day03_page1.png exists",
+          "kind": "fileExists",
+          "path": "dashboards/day03_page1.png"
+        },
+        {
+          "check": "docs/day03_design_rationale.md exists",
+          "kind": "fileExists",
+          "path": "docs/day03_design_rationale.md"
+        },
+        {
+          "check": "rationale references chart choices",
+          "kind": "contentMatches",
+          "path": "docs/day03_design_rationale.md",
+          "regex": "(?i)bar|line|waterfall|treemap|kpi"
+        }
+      ]
+    },
+    "objectives": [
+      "Diagnose dashboard anti-patterns and prescribe concrete fixes",
+      "Select chart types from the decision each page must support",
+      "Build a clean, themed, interactive multi-page dashboard",
+      "Use drill-through and bookmarks for progressive disclosure"
+    ],
+    "tools": [
+      "Power BI Desktop",
+      "JSON themes",
+      "GitHub"
+    ],
+    "estimatedMin": 240,
+    "missionPoints": 15,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 4,
+    "moduleNumber": 4,
+    "title": "Advanced DAX, Time Intelligence & KPI Development",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Advanced DAX, Time Intelligence & KPI Development\n\n**Build a fintech portfolio dashboard with real time intelligence, KPIs with targets, a what-if scenario, and dynamic RLS**\n\n**Scenario — VentureTrack:** a fintech firm managing 500 client portfolios. You get `Holdings`, `Securities`, `Portfolios`, `DailyPrices` (2 years daily), `Targets`, and `Managers`.\n\n**Concepts to learn**\n\n- **Time intelligence** — `DATEADD`, `SAMEPERIODLASTYEAR`, `DATESYTD/QTD/MTD`, `TOTALYTD` with fiscal year-end, `PARALLELPERIOD`, rolling windows; a fiscal calendar (April start)\n- **KPI framework** — KPI vs metric vs measure; static / dynamic / relative targets; RAG threshold logic with `SWITCH(TRUE(),…)`; variance analysis\n- **Advanced patterns** — many-to-many via bridge, `TREATAS`, disconnected slicer / what-if parameters, dynamic measure selection, `RANKX`, calculation groups\n- **Row-level security** — static vs dynamic RLS with `USERPRINCIPALNAME()`, testing with \"View as Role\", the security-performance trade-off\n\n### Build steps\n\n1. **Model with a fiscal Date table** (April start). Wire the `DailyPrices` time series.\n2. **Write 15+ measures** including time intelligence (YTD/QTD/MTD, YoY, rolling 12M), Target Variance, Target Status (RAG via SWITCH), Asset Allocation %, Top Performer Rank (`RANKX`), and a what-if interest-rate sensitivity from a disconnected slicer. Save DAX to `models/day04_measures.md`.\n3. **Build a 3-page dashboard:** Overview (KPI cards + return-vs-benchmark line + allocation donut), Portfolio Detail (matrix with conditional formatting + return-vs-risk scatter), What-If Analysis (rate slider + projected value). Screenshot pages to `dashboards/day04_*.png`.\n4. **Configure dynamic RLS:** each Manager sees only their portfolios; test with \"View as Role\" and note the result in the pattern library.\n5. **Write the DAX pattern library:** `docs/day04_dax_patterns.md` — for each pattern: name, business context, DAX, when to use, gotchas.\n6. **Ship to your repo:** Commit and push. Then Verify.\n\n### Submit your answers\n\n1. Which time-intelligence function shifts a date range back exactly one year for a YoY compare? (one word/token)\n2. In RAG threshold logic, `SWITCH(____(), …)` — what goes in the blank for the readable pattern? (one token)\n3. Which function matches the signed-in user for dynamic RLS? (one token)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "YoY time-intelligence function",
+          "value": "sameperiodlastyear",
+          "caseInsensitive": true
+        },
+        {
+          "check": "readable switch pattern",
+          "value": "true",
+          "caseInsensitive": true
+        },
+        {
+          "check": "dynamic RLS user function",
+          "value": "userprincipalname",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "models/day04_measures.md exists",
+          "kind": "fileExists",
+          "path": "models/day04_measures.md"
+        },
+        {
+          "check": "measures include time intelligence",
+          "kind": "contentMatches",
+          "path": "models/day04_measures.md",
+          "regex": "(?i)datesytd|sameperiodlastyear|totalytd|dateadd"
+        },
+        {
+          "check": "measures include a RAG/threshold SWITCH",
+          "kind": "contentMatches",
+          "path": "models/day04_measures.md",
+          "regex": "(?i)switch"
+        },
+        {
+          "check": "docs/day04_dax_patterns.md exists",
+          "kind": "fileExists",
+          "path": "docs/day04_dax_patterns.md"
+        },
+        {
+          "check": "pattern library references RLS",
+          "kind": "contentMatches",
+          "path": "docs/day04_dax_patterns.md",
+          "regex": "(?i)rls|row-level|userprincipalname"
+        },
+        {
+          "check": "dashboards/day04_overview.png exists",
+          "kind": "fileExists",
+          "path": "dashboards/day04_overview.png"
+        }
+      ]
+    },
+    "objectives": [
+      "Write time intelligence over a custom fiscal calendar without templates",
+      "Turn measures into KPIs with targets and RAG thresholds",
+      "Apply advanced patterns: what-if slicers, RANKX, dynamic measures",
+      "Configure and test dynamic row-level security"
+    ],
+    "tools": [
+      "Power BI Desktop",
+      "DAX",
+      "Tabular Editor",
+      "GitHub"
+    ],
+    "estimatedMin": 240,
+    "missionPoints": 15,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 5,
+    "moduleNumber": 5,
+    "title": "Enterprise BI — Service, Governance & Performance",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Enterprise BI — Service, Governance & Performance\n\n**Design the enterprise rollout for 500 users and prove you can make a slow report fast**\n\n**Scenario — TelecoMax:** 8M subscribers, 500 BI users across 4 business units. You are the BI lead designing the deployment and optimizing performance.\n\n**Concepts to learn**\n\n- **Power BI Service** — workspaces vs apps, shared/certified datasets, dataflows (Gen2), datamarts\n- **Refresh** — scheduled vs incremental (RangeStart/RangeEnd, query folding) vs DirectQuery vs hybrid tables\n- **Deployment & gateway** — Dev→Test→Prod pipelines, REST API + service principal, on-prem gateway clusters (HA)\n- **Performance** — Performance Analyzer, DAX Studio (SE vs FE), query folding, aggregations, VertiPaq Analyzer\n- **Governance & cross-platform** — sensitivity labels, endorsement, lineage, audit; Tableau and AWS QuickSight — when each wins; connecting Power BI to Redshift / Athena / Snowflake / Databricks SQL\n\n### Build steps\n\n1. **Deployment plan:** `docs/day05_deployment_plan.md` — workspace structure, RLS role matrix, refresh strategy table (per dataset: type, frequency, source, gateway?), gateway plan (count + HA), naming conventions, governance checklist.\n2. **Publish & configure:** Publish the Day 3 and Day 4 dashboards to the Service; set up a workspace with RLS; configure scheduled + incremental refresh (simulated source); walk Dev→Test→Prod. Screenshot the pipeline to `dashboards/day05_pipeline.png`.\n3. **Performance optimization report:** `docs/day05_performance_report.md` — run Performance Analyzer on the Day 4 dashboard, pick the 3 slowest visuals, and for each record: before time (ms), diagnosis (DAX Studio SE vs FE), fix applied, after time. Include before/after screenshots.\n4. **Cross-platform note:** in the deployment plan, add a short section — for this telco, when would you reach for QuickSight or Tableau instead, and how would you connect Power BI to a cloud warehouse.\n5. **Ship to your repo:** Commit and push. Then Verify.\n\n### Submit your answers\n\n1. What refresh type only reloads new/changed partitions? (one word)\n2. In DAX Studio, which engine handles data scanning — SE or FE? (two letters)\n3. What is the single highest-leverage way to shrink a model's size? (one phrase: remove unused ______)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "partition refresh type",
+          "value": "incremental",
+          "caseInsensitive": true
+        },
+        {
+          "check": "data scanning engine",
+          "value": "se",
+          "caseInsensitive": true
+        },
+        {
+          "check": "top model-size optimization",
+          "value": "columns",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "docs/day05_deployment_plan.md exists",
+          "kind": "fileExists",
+          "path": "docs/day05_deployment_plan.md"
+        },
+        {
+          "check": "plan covers refresh strategy",
+          "kind": "contentMatches",
+          "path": "docs/day05_deployment_plan.md",
+          "regex": "(?i)incremental|scheduled|refresh"
+        },
+        {
+          "check": "plan covers RLS at scale",
+          "kind": "contentMatches",
+          "path": "docs/day05_deployment_plan.md",
+          "regex": "(?i)rls|row-level|role matrix"
+        },
+        {
+          "check": "plan has a cross-platform note",
+          "kind": "contentMatches",
+          "path": "docs/day05_deployment_plan.md",
+          "regex": "(?i)quicksight|tableau|redshift|athena|snowflake|databricks"
+        },
+        {
+          "check": "docs/day05_performance_report.md exists",
+          "kind": "fileExists",
+          "path": "docs/day05_performance_report.md"
+        },
+        {
+          "check": "performance report shows before/after",
+          "kind": "contentMatches",
+          "path": "docs/day05_performance_report.md",
+          "regex": "(?i)before|after|ms|storage engine|se|fe"
+        }
+      ]
+    },
+    "objectives": [
+      "Design a workspace/app topology and RLS matrix for 500 users",
+      "Choose a refresh strategy per dataset from data characteristics",
+      "Diagnose and fix slow visuals with Performance Analyzer + DAX Studio",
+      "Place Power BI against Tableau/QuickSight and cloud warehouses"
+    ],
+    "tools": [
+      "Power BI Service",
+      "DAX Studio",
+      "Gateway",
+      "GitHub"
+    ],
+    "estimatedMin": 240,
+    "missionPoints": 15,
+    "isProjectDay": false
+  },
+  {
+    "dayNumber": 6,
+    "moduleNumber": 6,
+    "title": "Capstone Build — New Industry, End-to-End in One Day",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Capstone Build — New Industry, End-to-End in One Day\n\n**Absorb a new domain at 09:00 and ship a published, production-quality dashboard by end of day**\n\nYour scenario is revealed this morning from a sealed pool: **Logistics** (shipment & delivery), **Banking** (branch & customer), **Education** (student engagement), or **Manufacturing** (production quality & supply chain). This tests rapid domain adaptation under time pressure — the skill that separates a report-builder from a BI professional.\n\n**Concepts to apply (everything from Days 2–5)**\n\n- The domain immersion protocol — read context, inventory data, top 5 questions, sketch the model first\n- Time-boxing — the 80/20 dashboard; ship then polish\n- Full stack — star schema → 15+ measures with time intelligence + KPIs → 3-page dashboard → RLS → publish\n\n### Build steps\n\n1. **Domain immersion (30 min):** Write `docs/day06_domain_map.md` — audience, top 5 business questions, data inventory (tables, grain, dirtiness).\n2. **Model (90 min):** Star schema + Date table + relationships. Screenshot to `dashboards/day06_model.png`.\n3. **Measures (60 min):** 15+ measures incl. time intelligence + at least 3 KPIs with targets. Save to `models/day06_measures.md`.\n4. **Dashboard (120 min):** 3 pages — executive summary, operational detail, drill-through. Theme + conditional formatting + bookmarks. Screenshot to `dashboards/day06_exec.png`.\n5. **RLS (30 min):** one dynamic role.\n6. **Publish (15 min):** to the Service; verify it renders in the browser. Put the published URL in `docs/day06_context_deck.md`.\n7. **Context deck + docs (55 min):** `docs/day06_context_deck.md` (3 slides: problem → approach → 3 insights) and `docs/day06_model_doc.md` (ER sketch, measure glossary, RLS rules).\n8. **Ship to your repo:** Commit and push. Then Verify.\n\n### Submit your answers\n\n1. In the domain immersion protocol, how many core business questions do you identify first? (number)\n2. Which dashboard heuristic says 3 KPI cards + 2 trends answer most exec questions? (number/number, e.g. 80/20)\n3. What is the first artifact you produce before building — the domain ___? (one word)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "core questions count",
+          "value": "5",
+          "caseInsensitive": true
+        },
+        {
+          "check": "dashboard heuristic",
+          "value": "80/20",
+          "caseInsensitive": true
+        },
+        {
+          "check": "first artifact",
+          "value": "map",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "docs/day06_domain_map.md exists",
+          "kind": "fileExists",
+          "path": "docs/day06_domain_map.md"
+        },
+        {
+          "check": "domain map lists business questions",
+          "kind": "contentMatches",
+          "path": "docs/day06_domain_map.md",
+          "regex": "(?i)question|audience|grain"
+        },
+        {
+          "check": "models/day06_measures.md exists",
+          "kind": "fileExists",
+          "path": "models/day06_measures.md"
+        },
+        {
+          "check": "measures include time intelligence",
+          "kind": "contentMatches",
+          "path": "models/day06_measures.md",
+          "regex": "(?i)datesytd|sameperiodlastyear|totalytd|dateadd"
+        },
+        {
+          "check": "docs/day06_context_deck.md exists",
+          "kind": "fileExists",
+          "path": "docs/day06_context_deck.md"
+        },
+        {
+          "check": "context deck has a published URL",
+          "kind": "contentMatches",
+          "path": "docs/day06_context_deck.md",
+          "regex": "(?i)https?://|app\\.powerbi\\.com"
+        }
+      ]
+    },
+    "objectives": [
+      "Absorb an unfamiliar domain and frame its top business questions fast",
+      "Deliver a full model → measures → dashboard → publish under time pressure",
+      "Make time-boxed scope decisions without sacrificing correctness",
+      "Package a context deck and model docs for the defense"
+    ],
+    "tools": [
+      "Power BI Desktop",
+      "Power BI Service",
+      "GitHub"
+    ],
+    "estimatedMin": 480,
+    "missionPoints": 25,
+    "isProjectDay": true
+  },
+  {
+    "dayNumber": 7,
+    "moduleNumber": 6,
+    "title": "Live Dashboard Defense & Retrospective",
+    "missionType": "SHIP_IT",
+    "briefMd": "## Mission: Live Dashboard Defense & Retrospective\n\n**Defend the capstone to a mock VP Analytics / CDO panel — the recruitment output**\n\nToday you present the Day 6 capstone and defend every modeling choice, DAX measure, and design decision under hostile questioning. The panel scores against the rubric and produces your seniority calibration note.\n\n**Defense structure (30 min per candidate)**\n\n- **5 min — Business-context pitch:** the \"so what\" — impact and the decision enabled, before any technology\n- **10 min — Live walkthrough:** model view tour, deep-dive on 3 key measures (explain the filter context), UX + interactivity + RLS in action\n- **10 min — Hostile Q&A:** \"why not DirectQuery?\", \"this KPI is misleading — defend it\", \"how does this scale to 500 users?\", \"the number is wrong — debug it live\", \"why Power BI and not Tableau?\"\n- **5 min — Stakeholder scenario:** e.g. \"the CFO needs this number Monday but the source schema changes this weekend — what do you do?\"\n\n### Build steps\n\n1. **Final polish (30 min max):** last-minute fixes only — no redesigns.\n2. **Record the defense:** Present live; record the session. Upload and put the link in `docs/day07_defense.md`.\n3. **Self-retrospective:** In `docs/day07_defense.md` also answer — what surprised you this week, which rubric dimension you improved most, your top growth priority for the next 6 months.\n4. **Panel scoring:** The panel completes the rubric and writes the seniority calibration note into `docs/day07_calibration.md` (BI Developer / Senior BI Developer / Lead / Analytics Manager / Not-Yet-Ready + the one thing that moves you up a level).\n5. **Ship to your repo:** Commit and push. Then Verify.\n\n### Submit your answers\n\n1. How many minutes is the full defense per candidate? (number)\n2. When you don't know an answer in Q&A, you say \"I don't know — here's how I'd ___\". (one word)\n3. What is the name of the final panel artifact that places you on the seniority ladder? (one word)\n",
+    "missionSpec": {
+      "answers": [
+        {
+          "check": "defense length minutes",
+          "value": "30",
+          "caseInsensitive": true
+        },
+        {
+          "check": "dont-know follow-up",
+          "value": "find",
+          "caseInsensitive": true
+        },
+        {
+          "check": "final panel artifact",
+          "value": "calibration",
+          "caseInsensitive": true
+        }
+      ],
+      "repoChecks": [
+        {
+          "check": "docs/day07_defense.md exists",
+          "kind": "fileExists",
+          "path": "docs/day07_defense.md"
+        },
+        {
+          "check": "defense doc has a recording link",
+          "kind": "contentMatches",
+          "path": "docs/day07_defense.md",
+          "regex": "(?i)https?://"
+        },
+        {
+          "check": "defense doc has a retrospective",
+          "kind": "contentMatches",
+          "path": "docs/day07_defense.md",
+          "regex": "(?i)surprised|improved|growth|retro"
+        },
+        {
+          "check": "docs/day07_calibration.md exists",
+          "kind": "fileExists",
+          "path": "docs/day07_calibration.md"
+        },
+        {
+          "check": "calibration note names a seniority level",
+          "kind": "contentMatches",
+          "path": "docs/day07_calibration.md",
+          "regex": "(?i)bi developer|senior|lead|analytics manager|not-yet-ready"
+        },
+        {
+          "check": "calibration note gives a next-level action",
+          "kind": "contentMatches",
+          "path": "docs/day07_calibration.md",
+          "regex": "(?i)to move up|next level|gap|close"
+        },
+        {
+          "check": "dashboards/day06_exec.png exists (capstone carried forward)",
+          "kind": "fileExists",
+          "path": "dashboards/day06_exec.png"
+        }
+      ]
+    },
+    "objectives": [
+      "Pitch business impact before technology in five minutes",
+      "Explain filter context and design choices under hostile Q&A",
+      "Handle a stakeholder pressure scenario with concrete moves",
+      "Receive a rubric-based seniority calibration note"
+    ],
+    "tools": [
+      "Power BI",
+      "Recording tool",
+      "GitHub"
+    ],
+    "estimatedMin": 240,
+    "missionPoints": 30,
+    "isProjectDay": true
+  }
+]

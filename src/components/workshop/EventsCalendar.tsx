@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   type WorkshopEvent,
   eventsForMonth,
@@ -41,32 +42,89 @@ const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
  * 852 a 35px-tall row could not hold a day number and an event bar at once.
  */
 const CARD_W = 900;
+/**
+ * …and how far the card is allowed to be scaled UP past it.
+ *
+ * `maxWidth: CARD_W` alone stopped the card at its design width, so on a wide
+ * screen it stopped short of its own column and left a strip of page beside it:
+ * measured, 34px each side at 1600 and 47px at 1920. The cap is still here —
+ * a fixed canvas blown up without limit is not a design — but it now sits far
+ * enough out that the card fills the column at every width this layout is
+ * likely to meet, and only a very wide monitor sees a margin again.
+ */
+const CARD_MAX_W = 1120;
 const PAD = 24;
 const GRID_W = CARD_W - PAD * 2; // 852
-const COL_W = GRID_W / 7; // 121.714
+/** The grid divides GRID_W into seven fr tracks, so a column is ~121.7 wide. */
 /**
- * Row height, raised from 86 so the card carries the column rather than
- * stopping 180px short of the sidebar beside it.
+ * Row height.
  *
- * The height is not empty space: at 86 the event bar was a single truncated
- * line, and the extra room goes into a two-line bar that shows the time as
- * well as the name. A taller row with more in it reads as a calendar; a taller
- * row with the same 36px bar floating in it reads as a stretched box.
+ * It went 86 -> 113 to carry the column beside it, and 113 was 21 units more
+ * than the cell has anything to put in: 7 padding + a 22 day number + a 6 gap
+ * + a 50 event bar + 7 padding is 92. The rest was air, and it read as a
+ * stretched box rather than a calendar.
  *
- * 113 against a 121.7 column is a near-square cell — ordinary calendar
- * proportions, and the height the sidebar beside it actually needs.
+ * 90 keeps the whole stack with 3 to spare once the cell's own padding, gap
+ * and day number are trimmed a notch each (7/6/22 -> 6/5/20). The card is no
+ * longer sized to
+ * match the sidebar by inflating its rows — it is centred in whatever height
+ * the row gives it (see the `flex-1` + minHeight note below), which is what
+ * that slack was really for.
  */
-const ROW_H = 113;
-/** Vertical rhythm, scaled from the original card's own offsets. */
-const NAV_TOP = 70;
+const ROW_H = 90;
+/**
+ * Vertical rhythm. NAV_TOP was 70 units of nothing above the month name —
+ * scaled from a card that had a title in that space and no longer does.
+ */
+const NAV_TOP = 34;
 const NAV_SIZE = 34;
-const WEEK_TOP = 120;
+const WEEK_TOP = 80;
 const WEEK_H = 26;
-const GRID_TOP = 158;
+const GRID_TOP = 112;
 /** Space below the grid. */
-const BOTTOM_PAD = 30;
+const BOTTOM_PAD = 24;
 /** Card height follows the row count; no trailing all-empty row. */
 const cardHeight = (rows: number) => GRID_TOP + rows * ROW_H + BOTTOM_PAD;
+
+/**
+ * The event tiles fly in one after another when the calendar is reached.
+ *
+ * Order is chronological within the month on screen, so the sequence reads
+ * left-to-right and down the grid the way the month does. It replays when the
+ * month changes — a new month is a new set of tiles, and having them appear
+ * fully formed after the first one animated would be the odd case, not this.
+ *
+ * Transform and opacity only. The tile keeps its place in the cell's flex
+ * column the whole way, so nothing in the grid reflows while it travels and
+ * the resting position is exactly the one it would have had with no animation
+ * at all.
+ */
+const BAR_FLY_STEP = 0.2;
+const BAR_FLY_MS = 0.85;
+/**
+ * How far above its cell a tile starts, in the canvas's own units.
+ *
+ * 110 units is ~106px on a 1440 window (the canvas runs at 0.961 there), which
+ * is a real distance rather than a nudge — the first pass used 130 units over
+ * 0.46s and it read as a fade, because the travel was over before the eye had
+ * followed it.
+ *
+ * It is also as far as the FIRST ROW can go and stay visible. Measured, the
+ * Sep 5 tile rests 24px below the grid's top edge with 108px of card above
+ * that, so 106px of travel starts it 30px inside the card. Any further and the
+ * top of the flight happens off the card.
+ *
+ * The compact grid is not a scaled canvas — its numbers are real pixels, and
+ * its rows are a third the height, so it takes its own shorter drop.
+ */
+const BAR_FLY_FROM = 110;
+const BAR_FLY_FROM_COMPACT = 52;
+/**
+ * Ease-out, hard. Quick to leave, long and slowing into the cell — the shape
+ * that reads as something arriving under its own momentum. No overshoot: the
+ * tile settles onto the date rather than bouncing on it.
+ */
+const BAR_FLY_EASE = [0.16, 1, 0.3, 1] as const;
 
 /** A month needs 5 or 6 rows depending on where it starts. */
 const rowsFor = (lead: number, days: number) => Math.ceil((lead + days) / 7);
@@ -316,6 +374,30 @@ export default function EventsCalendar() {
 
   const { ref: canvasRef, scale, height: canvasBoxH } = useCanvasScale(CARD_W);
 
+  // Reduced motion gets the tiles where they belong, immediately — see FlyIn.
+  const reduceMotion = useReducedMotion() ?? false;
+
+  /**
+   * Whether the calendar is being looked at, so the tiles pop when the reader
+   * arrives rather than while the page is still on the hero.
+   *
+   * One observer for both breakpoints: the compact grid is a sibling of the
+   * canvas inside the same section, and a single flag keeps the two from
+   * disagreeing about when the month has been reached.
+   */
+  const sectionRef = useRef<HTMLElement>(null);
+  const [barsOn, setBarsOn] = useState(false);
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setBarsOn(Boolean(entry?.isIntersecting)),
+      { threshold: 0.15, rootMargin: "0px 0px -15% 0px" },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   // Focus goes back to the tile that opened the modal, not to <body>.
   const triggerRef = useRef<HTMLElement | null>(null);
 
@@ -377,6 +459,30 @@ export default function EventsCalendar() {
 
   const CARD_H = cardHeight(rows);
 
+  /**
+   * Chronological position of each tile in the month on screen.
+   *
+   * Built by walking the rendered cells, so it is the grid's own order — a
+   * separate sort over the events would be a second source of truth for
+   * something the layout already decides.
+   */
+  const barOrder = useMemo(() => {
+    const order = new Map<string, number>();
+    if (!cursor) return order;
+    let n = 0;
+    for (const day of cells) {
+      if (!day) continue;
+      for (const ev of byDate.get(keyFor(cursor.y, cursor.m, day)) ?? []) {
+        order.set(ev.id, n);
+        n += 1;
+      }
+    }
+    return order;
+  }, [cells, cursor, byDate]);
+
+  /** The month on screen — the key that makes the pop replay on navigation. */
+  const monthKey = cursor ? `${cursor.y}-${cursor.m}` : "none";
+
   const eventsOn = (day: number | null) => {
     if (!cursor || !day) return [];
     return byDate.get(keyFor(cursor.y, cursor.m, day)) ?? [];
@@ -399,8 +505,14 @@ export default function EventsCalendar() {
   // ~1920px wide and let the card run edge to edge on every laptop.
   return (
     <section
+      ref={sectionRef}
       className="w-full px-4 pb-14 pt-10 lg:px-8 lg:pb-[63px] lg:pt-[50px] xl:px-10"
-      style={{ background: "var(--wk-bg-alt)" }}
+      // --wk-bg, not --wk-bg-alt. The alt token is #fff1e9, the deepest peach
+      // in the ramp, and a whole section of it sat heavier than the calendar
+      // card it was meant to frame. --wk-bg (#fbf9f7) is the same warm
+      // neutral one step lighter — still a shade off the page wash behind it,
+      // so the section still reads as its own surface.
+      style={{ background: "var(--wk-bg)" }}
     >
       {/* A section heading, not a second hero. At 64px it out-weighed the
           calendar underneath it, which is the element this section is about. */}
@@ -446,7 +558,7 @@ export default function EventsCalendar() {
         className="relative mx-auto hidden w-full flex-1 overflow-hidden rounded-[32px] lg:block"
         style={
           {
-            maxWidth: CARD_W,
+            maxWidth: CARD_MAX_W,
             minHeight: Math.round(CARD_H * scale),
             background: "var(--wk-card-bg)",
             boxShadow: "var(--wk-shadow)",
@@ -547,7 +659,11 @@ export default function EventsCalendar() {
               width: GRID_W,
               height: WEEK_H,
               display: "grid",
-              gridTemplateColumns: `repeat(7, ${COL_W}px)`,
+              // `1fr`, and inset by the grid's own left border, so a weekday
+              // label sits over the column it names at every width. Fixed-width
+              // tracks here and fr tracks below would drift apart.
+              paddingLeft: 1,
+              gridTemplateColumns: "repeat(7, 1fr)",
             }}
           >
             {WEEKDAYS.map((d) => (
@@ -575,9 +691,39 @@ export default function EventsCalendar() {
               top: GRID_TOP,
               width: GRID_W,
               display: "grid",
-              gridTemplateColumns: `repeat(7, ${COL_W}px)`,
+              /*
+               * `1fr`, not seven fixed-width columns.
+               *
+               * This box is border-box with a 1px left border, so its content
+               * width is 851 — but seven fixed tracks of GRID_W / 7 came to
+               * 852. The
+               * grid overflowed itself by exactly one pixel, `overflow: hidden`
+               * clipped it, and what got clipped was the right-hand column's
+               * own border. Measured: the last cell ended at 882.45 against a
+               * container edge of 881.57, so the grid was closed on three sides
+               * and open on the fourth.
+               *
+               * Fractions divide whatever the content box actually is, so the
+               * seventh column's border lands inside the clip and the frame
+               * closes. Nothing is drawn on top to fake it.
+               */
+              gridTemplateColumns: "repeat(7, 1fr)",
               borderRadius: 16,
-              overflow: "hidden",
+              /*
+               * `overflow: hidden` here rounded the corners AND cut the top
+               * edge dead, which is what made the entrance read as a fade: a
+               * first-row tile flying in from above was invisible until the
+               * last 24px of its travel.
+               *
+               * The clip does the same job with the top opened out 150 units,
+               * so the flight is seen and the sides and bottom still trim to
+               * the radius. The card around this is itself `overflow-hidden`,
+               * so nothing escapes the calendar and the page cannot overflow.
+               *
+               * The two top corner cells take their own radius below, since
+               * the clip no longer trims them.
+               */
+              clipPath: "inset(-150px 0px 0px 0px round 16px)",
               borderTop: "1px solid var(--wk-grid-line)",
               borderLeft: "1px solid var(--wk-grid-line)",
             }}
@@ -587,13 +733,17 @@ export default function EventsCalendar() {
                 key={i}
                 style={{
                   height: ROW_H,
-                  padding: 7,
+                  padding: 6,
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "flex-start",
-                  gap: 6,
+                  gap: 5,
                   borderRight: "1px solid var(--wk-grid-line)",
                   borderBottom: "1px solid var(--wk-grid-line)",
+                  // The clip above no longer trims the top corners, so the two
+                  // cells that sit in them round themselves.
+                  borderTopLeftRadius: i === 0 ? 16 : undefined,
+                  borderTopRightRadius: i === 6 ? 16 : undefined,
                   background: isToday(day) ? "rgba(var(--wk-a1-rgb),0.06)" : undefined,
                 }}
               >
@@ -601,12 +751,20 @@ export default function EventsCalendar() {
                   day={day}
                   today={isToday(day)}
                   birthday={isBirthdayFor(cursor, day)}
-                  size={22}
-                  fontSize={13}
+                  size={20}
+                  fontSize={12.5}
                 />
 
                 {eventsOn(day).map((ev) => (
-                  <EventBar key={ev.id} event={ev} todayKey={todayKey} onOpen={openModal} />
+                  <FlyIn
+                    key={`${monthKey}-${ev.id}`}
+                    index={barOrder.get(ev.id) ?? 0}
+                    on={barsOn}
+                    compact={false}
+                    animate={!reduceMotion && !ev.placeholder}
+                  >
+                    <EventBar event={ev} todayKey={todayKey} onOpen={openModal} />
+                  </FlyIn>
                 ))}
               </div>
             ))}
@@ -656,9 +814,14 @@ export default function EventsCalendar() {
           ))}
         </div>
 
+        {/* Same reason as the canvas grid above: `overflow-hidden` would cut a
+            first-row tile's flight dead. The clip opens the top by 70px — more
+            than the 52px the compact drop travels — and still trims the sides
+            and bottom to the radius. */}
         <div
-          className="mt-1 grid grid-cols-7 overflow-hidden rounded-[12px]"
+          className="mt-1 grid grid-cols-7 rounded-[12px]"
           style={{
+            clipPath: "inset(-70px 0px 0px 0px round 12px)",
             borderTop: "1px solid var(--wk-grid-line)",
             borderLeft: "1px solid var(--wk-grid-line)",
           }}
@@ -682,13 +845,20 @@ export default function EventsCalendar() {
                 fontSize={10}
               />
               {eventsOn(day).map((ev) => (
-                <EventBar
-                  key={ev.id}
-                  event={ev}
-                  todayKey={todayKey}
-                  onOpen={openModal}
+                <FlyIn
+                  key={`${monthKey}-${ev.id}`}
+                  index={barOrder.get(ev.id) ?? 0}
+                  on={barsOn}
                   compact
-                />
+                  animate={!reduceMotion && !ev.placeholder}
+                >
+                  <EventBar
+                    event={ev}
+                    todayKey={todayKey}
+                    onOpen={openModal}
+                    compact
+                  />
+                </FlyIn>
               ))}
             </div>
           ))}
@@ -705,7 +875,24 @@ export default function EventsCalendar() {
             />
           </div>
 
-          <UpcomingWorkshops nowMs={nowMs} />
+          {/*
+            The sidebar's own grid cell, and the positioned ancestor it pins to
+            at xl.
+
+            A grid row is as tall as its tallest item, so while the aside was a
+            direct child of the row it could not be capped by the calendar — add
+            a fifth workshop and the aside grew, the row grew with it, and the
+            calendar column stretched to match. Measured: eight cards took the
+            row from 773 to 1520 and nothing scrolled.
+
+            Taking the aside out of flow at xl (see its own `xl:absolute`) leaves
+            the calendar as the only item sizing the row, and `inset-0` then
+            hands the aside exactly that height to scroll inside. Below xl this
+            cell is just a wrapper and the aside flows normally.
+          */}
+          <div className="relative min-w-0">
+            <UpcomingWorkshops nowMs={nowMs} />
+          </div>
         </div>
       </div>
     </section>
@@ -718,6 +905,62 @@ export default function EventsCalendar() {
  * replay modal, an <a> when it navigates, and an inert <span> otherwise —
  * never a div with a click handler.
  */
+/**
+ * One tile's arrival — it flies in from above its own cell and settles.
+ *
+ * A wrapper rather than motion on EventBar itself: that component returns a
+ * button, an anchor or an inert span depending on whether the workshop is
+ * finished, has a recording or is still to come, and three motion variants of
+ * the same element would be three places to keep a transition in step.
+ *
+ * `width: 100%` because the bar inside sizes to its cell, and a plain div
+ * between the two would otherwise shrink to its content.
+ *
+ * Placeholders do not take this. A "Workshop — TBA" is a generated filler, not
+ * a session anyone scheduled, and flying it in with the same weight as a real
+ * workshop would say the opposite. They are simply there.
+ */
+function FlyIn({
+  index,
+  on,
+  compact,
+  animate: shouldAnimate,
+  children,
+}: {
+  index: number;
+  on: boolean;
+  compact: boolean;
+  animate: boolean;
+  children: React.ReactNode;
+}) {
+  if (!shouldAnimate) return <div style={{ width: "100%" }}>{children}</div>;
+
+  const from = compact ? BAR_FLY_FROM_COMPACT : BAR_FLY_FROM;
+  // Straight down, and only just off its own size. The travel is the effect;
+  // a lateral drift or a bigger scale would make it a pop-in with a detour.
+  const away = { opacity: 0, y: -from, scale: 0.96 };
+  const delay = index * BAR_FLY_STEP;
+
+  return (
+    <motion.div
+      style={{ width: "100%" }}
+      initial={away}
+      animate={on ? { opacity: 1, y: 0, scale: 1 } : away}
+      transition={{
+        duration: BAR_FLY_MS,
+        delay,
+        ease: BAR_FLY_EASE,
+        // Solid early and for the whole descent. At a fifth of the duration
+        // the fade is over well before the landing, so what the eye follows is
+        // the movement, not the appearing.
+        opacity: { duration: BAR_FLY_MS * 0.32, delay },
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 function EventBar({
   event,
   todayKey,

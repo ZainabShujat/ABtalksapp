@@ -1,0 +1,50 @@
+[
+  {
+    "number": 1,
+    "title": "Kickoff & Calibration",
+    "subtitle": "BI developer mindset · Audience-first · Analytics maturity · Rubric intro",
+    "color": "#6366f1",
+    "startDay": 1,
+    "endDay": 1
+  },
+  {
+    "number": 2,
+    "title": "Data Modeling for BI",
+    "subtitle": "Star schema · Relationships · Import vs DirectQuery · DAX foundations",
+    "color": "#0ea5e9",
+    "startDay": 2,
+    "endDay": 2
+  },
+  {
+    "number": 3,
+    "title": "Dashboard Design & Visualization",
+    "subtitle": "IBCS · Gestalt · Chart selection · Anti-patterns · Drill-through",
+    "color": "#14b8a6",
+    "startDay": 3,
+    "endDay": 3
+  },
+  {
+    "number": 4,
+    "title": "Advanced DAX, Time Intelligence & KPIs",
+    "subtitle": "Time intelligence · Targets & thresholds · Calculation groups · RLS",
+    "color": "#f59e0b",
+    "startDay": 4,
+    "endDay": 4
+  },
+  {
+    "number": 5,
+    "title": "Enterprise BI",
+    "subtitle": "Service · Refresh · Gateway · Performance · Governance · Tableau/QuickSight",
+    "color": "#ec4899",
+    "startDay": 5,
+    "endDay": 5
+  },
+  {
+    "number": 6,
+    "title": "Capstone — Build & Defense",
+    "subtitle": "Rapid domain adaptation · Published dashboard · Context deck · Panel defense",
+    "color": "#22c55e",
+    "startDay": 6,
+    "endDay": 7
+  }
+]

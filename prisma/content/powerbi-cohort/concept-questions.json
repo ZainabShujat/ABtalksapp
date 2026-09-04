@@ -1,0 +1,457 @@
+[
+  {
+    "dayNumber": 1,
+    "questions": [
+      {
+        "order": 1,
+        "question": "What does a BI Developer / Analytics Engineer primarily own?",
+        "options": [
+          "The data pipelines and warehouse infrastructure",
+          "The semantic layer between raw data and business decisions — model, calculations, dashboards, last-mile quality",
+          "The machine-learning models and feature engineering",
+          "The cloud networking and IAM policies"
+        ],
+        "correctIndex": 1,
+        "explanation": "The BI developer owns the semantic layer; pipelines are the Data Engineer's, ML is the Data Scientist's."
+      },
+      {
+        "order": 2,
+        "question": "In the analytics maturity model, where does most BI work sit?",
+        "options": [
+          "Predictive and prescriptive",
+          "Descriptive and diagnostic",
+          "Only prescriptive",
+          "Outside the model entirely"
+        ],
+        "correctIndex": 1,
+        "explanation": "BI lives mainly in descriptive (what happened) and diagnostic (why); a good model enables the rest downstream."
+      },
+      {
+        "order": 3,
+        "question": "What does 'audience first, tool second' mean?",
+        "options": [
+          "Pick the newest visual, then find an audience for it",
+          "Decide who the audience is and what decision/action follows before choosing a chart type",
+          "Always use Power BI regardless of the audience",
+          "Let the data source dictate the design"
+        ],
+        "correctIndex": 1,
+        "explanation": "Design starts from the audience and the decision to be enabled — the tool and chart type come after."
+      },
+      {
+        "order": 4,
+        "question": "What is the 'five-second test'?",
+        "options": [
+          "A dashboard must load in five seconds",
+          "A new user should grasp a page's main insight within five seconds",
+          "You have five seconds to pitch to a VP",
+          "Refresh must complete in five seconds"
+        ],
+        "correctIndex": 1,
+        "explanation": "If a viewer can't get the main insight in ~5 seconds, the page needs redesigning."
+      },
+      {
+        "order": 5,
+        "question": "How many weighted dimensions does the recruitment rubric use?",
+        "options": [
+          "4",
+          "5",
+          "6",
+          "8"
+        ],
+        "correctIndex": 2,
+        "explanation": "Six: Design & UX (25), DAX (20), Modeling (20), KPI (15), Enterprise BI (10), Communication (10)."
+      }
+    ]
+  },
+  {
+    "dayNumber": 2,
+    "questions": [
+      {
+        "order": 1,
+        "question": "Why is a star schema preferred over a fully normalized model for BI?",
+        "options": [
+          "It enforces third normal form",
+          "Fewer joins, better compression, faster and simpler queries for the calc engine",
+          "It is required by DirectQuery",
+          "It removes the need for a Date table"
+        ],
+        "correctIndex": 1,
+        "explanation": "Star schemas are optimized for analytics; normalization suits OLTP, not BI."
+      },
+      {
+        "order": 2,
+        "question": "What does the 'grain' of a fact table define?",
+        "options": [
+          "The number of columns",
+          "The level of detail one row represents",
+          "The refresh frequency",
+          "The storage mode"
+        ],
+        "correctIndex": 1,
+        "explanation": "Grain is what one fact row means (one transaction, one daily snapshot). Every measure depends on it."
+      },
+      {
+        "order": 3,
+        "question": "A fact has OrderDate and ShipDate against one Date table. How do you report on both?",
+        "options": [
+          "Duplicate the Date table twice and hide one",
+          "Use a role-playing dimension: one active relationship + USERELATIONSHIP for the inactive one",
+          "Set both relationships active",
+          "Use a many-to-many bridge"
+        ],
+        "correctIndex": 1,
+        "explanation": "Only one relationship can be active; activate the other inside CALCULATE with USERELATIONSHIP."
+      },
+      {
+        "order": 4,
+        "question": "When is bidirectional cross-filtering justified?",
+        "options": [
+          "Always — it is the safe default",
+          "When you must filter a dimension by the fact (e.g., a slicer showing only used values), accepting ambiguity risk",
+          "Never — it is deprecated",
+          "Only in DirectQuery models"
+        ],
+        "correctIndex": 1,
+        "explanation": "Single direction is the safe default; 'both' is for specific reverse-filter needs and adds ambiguity risk."
+      },
+      {
+        "order": 5,
+        "question": "Which DAX function performs context transition (row → filter context)?",
+        "options": [
+          "FILTER",
+          "SUMX",
+          "CALCULATE",
+          "VALUES"
+        ],
+        "correctIndex": 2,
+        "explanation": "CALCULATE transitions the current row context into an equivalent filter context."
+      }
+    ]
+  },
+  {
+    "dayNumber": 3,
+    "questions": [
+      {
+        "order": 1,
+        "question": "Which pre-attentive attribute encodes value most accurately?",
+        "options": [
+          "Color hue",
+          "Position",
+          "Area",
+          "Texture"
+        ],
+        "correctIndex": 1,
+        "explanation": "Position is the strongest pre-attentive channel; area and hue are far weaker for precise comparison."
+      },
+      {
+        "order": 2,
+        "question": "Why avoid a pie chart with 12 slices?",
+        "options": [
+          "Pie charts can't use color",
+          "Humans can't accurately compare many angular areas — use a sorted bar chart",
+          "Power BI can't render more than 8 slices",
+          "Pies are only for time series"
+        ],
+        "correctIndex": 1,
+        "explanation": "Many-slice pies are unreadable; a sorted horizontal bar chart compares far better."
+      },
+      {
+        "order": 3,
+        "question": "For a bar chart, where must the value axis start?",
+        "options": [
+          "At the data minimum",
+          "At zero",
+          "Anywhere, if labeled",
+          "At the mean"
+        ],
+        "correctIndex": 1,
+        "explanation": "Bars encode magnitude by length from zero; truncating the axis exaggerates differences."
+      },
+      {
+        "order": 4,
+        "question": "What is progressive disclosure in a dashboard?",
+        "options": [
+          "Showing every metric on one page",
+          "Overview first, then detail on demand via drill-through, tooltips, and bookmarks",
+          "Auto-refreshing every minute",
+          "Hiding all filters"
+        ],
+        "correctIndex": 1,
+        "explanation": "Progressive disclosure manages cognitive load: reveal detail only when the user asks for it."
+      },
+      {
+        "order": 5,
+        "question": "Which Power BI feature jumps from a data point to a detail page pre-filtered to that context?",
+        "options": [
+          "Bookmark",
+          "Drill-through",
+          "Slicer",
+          "Smart Narrative"
+        ],
+        "correctIndex": 1,
+        "explanation": "Drill-through pages open a detail page filtered to the right-clicked context."
+      }
+    ]
+  },
+  {
+    "dayNumber": 4,
+    "questions": [
+      {
+        "order": 1,
+        "question": "Which function gives a clean YoY comparison by shifting the date range back one year?",
+        "options": [
+          "PARALLELPERIOD",
+          "SAMEPERIODLASTYEAR",
+          "DATESMTD",
+          "ENDOFYEAR"
+        ],
+        "correctIndex": 1,
+        "explanation": "SAMEPERIODLASTYEAR (a DATEADD shortcut) shifts the current range back exactly one year."
+      },
+      {
+        "order": 2,
+        "question": "What distinguishes a KPI from a plain metric?",
+        "options": [
+          "A KPI must be a percentage",
+          "A KPI has a target and a threshold that drives a decision",
+          "A KPI is always shown as a card",
+          "A KPI cannot use time intelligence"
+        ],
+        "correctIndex": 1,
+        "explanation": "A KPI = metric + target + threshold that prompts an action; 'Revenue' alone is just a metric."
+      },
+      {
+        "order": 3,
+        "question": "Which pattern gives readable multi-condition RAG status logic?",
+        "options": [
+          "Nested IF only",
+          "SWITCH(TRUE(), condition, result, …)",
+          "CALCULATE(ALL())",
+          "RANKX over conditions"
+        ],
+        "correctIndex": 1,
+        "explanation": "SWITCH(TRUE(), …) reads as a clean top-to-bottom condition ladder for RAG thresholds."
+      },
+      {
+        "order": 4,
+        "question": "For dynamic RLS, which function identifies the signed-in user?",
+        "options": [
+          "USERNAME() only",
+          "USERPRINCIPALNAME()",
+          "LOOKUPVALUE()",
+          "SELECTEDVALUE()"
+        ],
+        "correctIndex": 1,
+        "explanation": "USERPRINCIPALNAME() returns the UPN to match against a user→scope security table."
+      },
+      {
+        "order": 5,
+        "question": "What problem do calculation groups solve?",
+        "options": [
+          "They replace the data model",
+          "They apply reusable time-intelligence (YTD/PY/YoY) to any measure without duplicating logic",
+          "They enable DirectQuery",
+          "They compress the model"
+        ],
+        "correctIndex": 1,
+        "explanation": "Calculation groups define time-intelligence once and apply it to any measure via a slicer."
+      }
+    ]
+  },
+  {
+    "dayNumber": 5,
+    "questions": [
+      {
+        "order": 1,
+        "question": "What is the right way to distribute a report to 50+ read-only consumers?",
+        "options": [
+          "Share the dev workspace directly",
+          "Publish a Power BI App built from the workspace",
+          "Email the .pbix file",
+          "Give everyone Admin on the workspace"
+        ],
+        "correctIndex": 1,
+        "explanation": "Apps are curated, read-only, versioned distribution; sharing the workspace exposes dev artifacts."
+      },
+      {
+        "order": 2,
+        "question": "What must the source support for incremental refresh to work well?",
+        "options": [
+          "A gateway cluster",
+          "Query folding on the date filter",
+          "DirectQuery only",
+          "Premium capacity"
+        ],
+        "correctIndex": 1,
+        "explanation": "Incremental refresh relies on query folding so the date-range filter is pushed to the source."
+      },
+      {
+        "order": 3,
+        "question": "In DAX Studio, SE time dominates a slow query. What does that indicate?",
+        "options": [
+          "The DAX formula is too complex (Formula Engine bound)",
+          "The query is data-scan bound (Storage Engine) — reduce volume/cardinality or add aggregations",
+          "The gateway is offline",
+          "RLS is misconfigured"
+        ],
+        "correctIndex": 1,
+        "explanation": "SE = Storage Engine (data scanning); FE = Formula Engine (DAX complexity). SE-bound means reduce data work."
+      },
+      {
+        "order": 4,
+        "question": "What is the single highest-leverage way to shrink a model?",
+        "options": [
+          "Add more measures",
+          "Remove unused, high-cardinality columns",
+          "Switch to DirectQuery",
+          "Increase the refresh frequency"
+        ],
+        "correctIndex": 1,
+        "explanation": "Every column costs memory and refresh time; removing unused high-cardinality columns is the top win."
+      },
+      {
+        "order": 5,
+        "question": "When might AWS QuickSight fit better than Power BI?",
+        "options": [
+          "When the team is all-Microsoft",
+          "For an AWS-native serverless stack with per-session pricing at large, occasional-use viewer counts",
+          "When you need DAX calculation groups",
+          "When you need the VertiPaq engine"
+        ],
+        "correctIndex": 1,
+        "explanation": "QuickSight suits AWS-native, serverless, pay-per-session scenarios; Power BI suits the Microsoft + DAX stack."
+      }
+    ]
+  },
+  {
+    "dayNumber": 6,
+    "questions": [
+      {
+        "order": 1,
+        "question": "What are the first two steps of the domain immersion protocol?",
+        "options": [
+          "Write DAX, then build visuals",
+          "Read the business context, then inventory the data (tables, grain, dirtiness)",
+          "Publish, then get feedback",
+          "Pick a theme, then add filters"
+        ],
+        "correctIndex": 1,
+        "explanation": "You orient before you build: understand audience/decisions, then inventory the data."
+      },
+      {
+        "order": 2,
+        "question": "What is the '80/20 dashboard' heuristic?",
+        "options": [
+          "80 visuals on 20 pages",
+          "A few KPI cards plus a couple of trend charts answer most executive questions — build those first",
+          "Spend 80% of time on polish",
+          "Show 80% of columns"
+        ],
+        "correctIndex": 1,
+        "explanation": "The first KPI cards and trends answer the bulk of exec questions; build them before the long tail."
+      },
+      {
+        "order": 3,
+        "question": "You're 3 hours in with no working end-to-end flow. What went wrong?",
+        "options": [
+          "You published too early",
+          "You over-invested in polish before shipping a working model→measures→visuals→publish path",
+          "You used a star schema",
+          "You wrote too few measures"
+        ],
+        "correctIndex": 1,
+        "explanation": "Ship-then-polish: get the whole path working first, then improve design and edge cases."
+      },
+      {
+        "order": 4,
+        "question": "Under time pressure, what do you keep and what do you cut?",
+        "options": [
+          "Keep extra pages; cut the data model",
+          "Keep a correct model + core KPIs + one clean exec page published; cut extra pages and cosmetic polish",
+          "Keep cosmetic polish; cut RLS",
+          "Cut time intelligence to save time"
+        ],
+        "correctIndex": 1,
+        "explanation": "Correctness and the core exec view are non-negotiable; the long tail and polish are the first to go."
+      },
+      {
+        "order": 5,
+        "question": "Why is rapid domain adaptation the skill being tested on capstone day?",
+        "options": [
+          "Because tools change constantly",
+          "Because real BI work means absorbing an unfamiliar domain and delivering under ambiguity and time pressure",
+          "Because it avoids data modeling",
+          "Because it removes the need for stakeholders"
+        ],
+        "correctIndex": 1,
+        "explanation": "The capstone simulates the real job: a new domain, a deadline, and a production-quality deliverable."
+      }
+    ]
+  },
+  {
+    "dayNumber": 7,
+    "questions": [
+      {
+        "order": 1,
+        "question": "How should the 5-minute business-context pitch open?",
+        "options": [
+          "With the data sources and refresh schedule",
+          "With the 'so what' — business impact and the decision the dashboard enables",
+          "With a tour of every DAX measure",
+          "With the tool version and licensing"
+        ],
+        "correctIndex": 1,
+        "explanation": "Lead with impact and the decision enabled; technology comes later in the walkthrough."
+      },
+      {
+        "order": 2,
+        "question": "In hostile Q&A, what is the strongest response when you don't know?",
+        "options": [
+          "Confidently guess",
+          "\"I don't know — here's how I'd find out\", then outline the approach",
+          "Deflect to another topic",
+          "Blame the data"
+        ],
+        "correctIndex": 1,
+        "explanation": "Panels reward honest reasoning and a method over bluffing."
+      },
+      {
+        "order": 3,
+        "question": "A VP says the number is wrong. What's the right first move?",
+        "options": [
+          "Insist the dashboard is correct",
+          "Reproduce it, then check the filter context / slicers before anything else",
+          "Rebuild the model from scratch",
+          "Blame the refresh"
+        ],
+        "correctIndex": 1,
+        "explanation": "Systematic debugging starts by reproducing and inspecting the filter context — the usual culprit."
+      },
+      {
+        "order": 4,
+        "question": "What signals Lead / Analytics Manager level in the defense?",
+        "options": [
+          "Only that the DAX is correct",
+          "Flexing register from exec pitch to technical deep-dive to stakeholder management in one session",
+          "Using the most visuals",
+          "Avoiding all questions"
+        ],
+        "correctIndex": 1,
+        "explanation": "Senior calibration comes from communication range and reasoning, not just correct calculations."
+      },
+      {
+        "order": 5,
+        "question": "What is the final recruitment artifact produced on Day 7?",
+        "options": [
+          "A certificate of completion",
+          "A seniority calibration note (level + the one thing that moves you up)",
+          "A refreshed dataset",
+          "A Tableau workbook"
+        ],
+        "correctIndex": 1,
+        "explanation": "The calibration note (with rubric scores and the recording) is the recruitment output."
+      }
+    ]
+  }
+]

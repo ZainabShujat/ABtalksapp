@@ -115,7 +115,7 @@ export default async function AIWorkshopPage() {
           </Link>
         </nav>
         <p className="text-[13px]" style={{ color: "var(--wk-bar-muted)" }}>
-          © {new Date().getFullYear()} ABTalks · AI Workshop
+          © {new Date().getFullYear()} ABTalksOnAI · AI Workshop
         </p>
       </footer>
 

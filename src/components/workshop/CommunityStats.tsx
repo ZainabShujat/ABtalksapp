@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { motion, useReducedMotion } from "framer-motion";
 import { useCanvasScale } from "@/components/workshop/use-canvas-scale";
 
 /**
@@ -14,7 +15,32 @@ import { useCanvasScale } from "@/components/workshop/use-canvas-scale";
  */
 
 const FRAME_W = 1920;
-const FRAME_H = 818;
+/**
+ * 818 in the design. The whole composition moved up 37 units — the heading sat
+ * at 111, which on top of the topic canvas's own bottom margin left this
+ * section floating away from the content above it. Everything inside kept its
+ * spacing; only the block's top padding and the frame it lives on lost the 37.
+ */
+const FRAME_H = 781;
+
+/** How often the counters replay while the section is on screen. */
+const COUNT_REPEAT_MS = 5000;
+/** One count-up, and the delay between the collage tiles fading in. 0.18 read
+ *  as one movement rather than three; at 0.32 each tile lands on its own. */
+const COUNT_MS = 1800;
+const TILE_STAGGER = 0.32;
+
+/**
+ * When this section counts as being looked at.
+ *
+ * 0.15 with a -10% margin fired while the section was barely peeking over the
+ * fold: a seventh of a 586px canvas is 88px, so the collage had begun fading in
+ * — and the counters had begun counting — before any of it was really on
+ * screen. 0.4 into the top 80% of the window means roughly the lower half of
+ * the viewport is this section before anything starts.
+ */
+const ON_SCREEN_AMOUNT = 0.4;
+const ON_SCREEN_MARGIN = "0px 0px -20% 0px";
 
 /** Nodes 1:319-1:324. `x` is the number's left edge, `cx` the label's centre. */
 const STATS = [
@@ -37,31 +63,72 @@ const STATS = [
  */
 const NUM_FONT = "inherit";
 
-function useInView(threshold = 0.3) {
-  const ref = useRef<HTMLDivElement>(null);
+/**
+ * Whether `ref` is on screen — reported continuously, not latched.
+ *
+ * It used to `disconnect()` on the first intersection, which is why the
+ * counters ran once for the life of the page. The timer below needs to know
+ * when the section LEAVES as well, so nothing keeps ticking behind the
+ * reader's back further down the page.
+ *
+ * The element for each breakpoint is `display: none` at the other one, and a
+ * `display: none` element never intersects, so only the rendered block ever
+ * reports true.
+ */
+function useOnScreen(
+  ref: React.RefObject<HTMLElement | null>,
+  threshold = ON_SCREEN_AMOUNT,
+): boolean {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          obs.disconnect();
-        }
-      },
-      { threshold },
+      ([entry]) => setVisible(Boolean(entry?.isIntersecting)),
+      { threshold, rootMargin: ON_SCREEN_MARGIN },
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [threshold]);
-  return { ref, visible };
+  }, [ref, threshold]);
+  return visible;
 }
 
-function CountUp({ target, run, duration = 1800 }: { target: number; run: boolean; duration?: number }) {
+/**
+ * A counter that advances every `period` ms, but only while `active`.
+ *
+ * One interval, owned by one effect, torn down by that effect's cleanup — so
+ * leaving the section stops it, returning starts a fresh one, and unmounting
+ * cannot leave a timer running. Nothing here schedules a second timer, so the
+ * counts cannot stack however often the reader scrolls past.
+ */
+function useRepeat(active: boolean, period: number): number {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    const id = setInterval(() => setN((prev) => prev + 1), period);
+    return () => clearInterval(id);
+  }, [active, period]);
+  return n;
+}
+
+function CountUp({
+  target,
+  run,
+  runKey = 0,
+  instant = false,
+  duration = COUNT_MS,
+}: {
+  target: number;
+  run: boolean;
+  /** Bump to replay the same count from zero — see useRepeat. */
+  runKey?: number;
+  /** Reduced motion: show the figure, never animate to it. */
+  instant?: boolean;
+  duration?: number;
+}) {
   const [val, setVal] = useState(0);
   useEffect(() => {
-    if (!run) return;
+    if (instant || !run) return;
     let raf = 0;
     const start = performance.now();
     const tick = (now: number) => {
@@ -71,9 +138,13 @@ function CountUp({ target, run, duration = 1800 }: { target: number; run: boolea
       if (p < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
+    // Cancelling on re-run is what keeps two counts from driving the same
+    // figure at once when the interval fires.
     return () => cancelAnimationFrame(raf);
-  }, [run, target, duration]);
-  return <>{val.toLocaleString()}</>;
+  }, [run, runKey, target, duration, instant]);
+  // Reduced motion renders the figure straight out rather than storing it —
+  // there is no animation to hold state for.
+  return <>{(instant ? target : val).toLocaleString()}</>;
 }
 
 function BodyCopy() {
@@ -100,7 +171,40 @@ function BodyCopy() {
 
 export default function CommunityStats() {
   const { ref: canvasRef, scale } = useCanvasScale(FRAME_W);
-  const { ref: countersRef, visible: countersVisible } = useInView(0.35);
+  const stackRef = useRef<HTMLElement>(null);
+  const reduceMotion = useReducedMotion() ?? false;
+
+  const canvasOn = useOnScreen(canvasRef);
+  const stackOn = useOnScreen(stackRef);
+  const onScreen = canvasOn || stackOn;
+
+  // Reduced motion gets the figures, not a counter looping at them.
+  const tick = useRepeat(onScreen && !reduceMotion, COUNT_REPEAT_MS);
+
+  // Sticky: the numbers and the collage fade in once and stay. Only the count
+  // replays — having the whole block fade out every time it left the viewport
+  // would be a second, unasked-for animation.
+  //
+  // Latched during render, not in an effect: `onScreen` is already state, so the
+  // render that flips it is the render that can latch this, with no second pass.
+  // The guard makes the set fire exactly once.
+  //
+  // Sticky on purpose, and only the FIGURES use it. Having the numbers fade out
+  // every time the section left the viewport would be a second animation nobody
+  // asked for. The collage reads `onScreen` directly, because there the reverse
+  // IS the ask.
+  const [seen, setSeen] = useState(false);
+  if (onScreen && !seen) setSeen(true);
+
+  // `run` is the sticky flag, not the live one. Gating the animation itself on
+  // visibility froze the figures wherever the count had got to when the reader
+  // scrolled off — and the observer's -10% margin means the section can still
+  // be a sliver on screen when it reports as gone, so a half-counted "6,273+"
+  // was visible. Started counts now always finish; it is the REPEAT that stops,
+  // because `tick` only advances while the section is on screen.
+  const counter = (value: number) => (
+    <CountUp target={value} run={seen} runKey={tick} instant={reduceMotion} />
+  );
 
   return (
     <>
@@ -133,16 +237,25 @@ export default function CommunityStats() {
               that overhang IS the blur, so it must not be squashed to the box.
               Recoloured from the Figma blue to the palette's #E05226 and held
               at ~1/3 opacity — orange is far denser than the pale blue was, and
-              at full strength it reads as a solid band rather than a wash. */}
+              at full strength it reads as a solid band rather than a wash.
+
+              Shortened from 746 to 470 and dropped from -289 to -150. Two
+              things wrong with the original: it reached 457 of an 818 frame, so
+              it was still colouring the section past the statistics; and its
+              glow peaked at 84, close enough to the top that `overflow: hidden`
+              cut it near full strength and drew a hard line along the seam with
+              the section above. Peaking at 85 with a longer tail above the clip
+              keeps the top edge soft, and the wash is spent by 320 — the top
+              40% — which is where the overlay below takes it to white. */}
           <div
             aria-hidden
             style={{
               position: "absolute",
               left: -296,
-              top: -289,
+              top: -150,
               width: 2519,
-              height: 746,
-              opacity: 0.34,
+              height: 470,
+              opacity: 0.3,
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -153,12 +266,38 @@ export default function CommunityStats() {
             />
           </div>
 
+          {/* …and this takes the rest of the section to clean white.
+
+              The peach under the lower half is the PAGE wash — .wk-root paints
+              --wk-page-grad with background-attachment: fixed, so every screenful
+              carries the same cream-to-peach ramp and no section can be lighter
+              than it. Rather than re-cut that gradient for the whole route, this
+              lays white over just this canvas.
+
+              It now reaches solid white by 46% and HOLDS it to the bottom edge,
+              which it could not do while the events section below was a solid
+              --wk-bg-alt peach — white against that was a step. That section is
+              --wk-bg now, two shades off white, so the seam is invisible and the
+              lower half of this one can be properly clean.
+
+              The ramp is long (10% to 46%) so the wash above dissolves into it
+              rather than meeting it at a line. */}
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(180deg, rgba(255,255,255,0) 10%, rgba(255,255,255,0.5) 28%, rgba(255,255,255,0.88) 40%, #ffffff 52%, #ffffff 100%)",
+            }}
+          />
+
           {/* heading — node 1:317 */}
           <h2
             style={{
               position: "absolute",
               left: 123,
-              top: 111,
+              top: 74,
               width: 682,
               margin: 0,
               fontSize: 64,
@@ -176,10 +315,14 @@ export default function CommunityStats() {
             style={{
               position: "absolute",
               left: 130,
-              top: 276,
+              top: 240,
               width: 681,
               margin: 0,
-              fontSize: 36,
+              // 36 in the design — nine-sixteenths of the 64px heading above it,
+              // which made the two read as a pair of headings. At 28 it sits
+              // between the heading and the 20px body, which is the order the
+              // section is meant to be read in.
+              fontSize: 28,
               fontWeight: 600,
               lineHeight: 1.1,
               color: "var(--wk-text-dim)",
@@ -194,7 +337,7 @@ export default function CommunityStats() {
             style={{
               position: "absolute",
               left: 123,
-              top: 405,
+              top: 352,
               width: 693,
               fontSize: 20,
               fontWeight: 500,
@@ -206,25 +349,25 @@ export default function CommunityStats() {
           </div>
 
           {/* stats — nodes 1:319-1:324 */}
-          <div ref={countersRef} style={{ position: "absolute", inset: 0 }}>
+          <div style={{ position: "absolute", inset: 0 }}>
             {STATS.map((s, i) => (
               <div key={s.label}>
                 <div
                   style={{
                     position: "absolute",
                     left: s.x,
-                    top: 596,
+                    top: 543,
                     fontFamily: NUM_FONT,
                     fontSize: 64,
                     fontWeight: 700,
                     lineHeight: 1.1,
                     whiteSpace: "nowrap",
                     color: "var(--wk-text)",
-                    opacity: countersVisible ? 1 : 0,
+                    opacity: seen ? 1 : 0,
                     transition: `opacity 0.6s ease ${i * 0.12}s`,
                   }}
                 >
-                  <CountUp target={s.value} run={countersVisible} />
+                  {counter(s.value)}
                   {s.suffix}
                 </div>
 
@@ -232,13 +375,13 @@ export default function CommunityStats() {
                   style={{
                     position: "absolute",
                     left: s.cx,
-                    top: 677,
+                    top: 624,
                     transform: "translateX(-50%)",
                     textAlign: "center",
                     whiteSpace: "nowrap",
                     color: "var(--wk-a1-deep)",
                     lineHeight: 1.3,
-                    opacity: countersVisible ? 1 : 0,
+                    opacity: seen ? 1 : 0,
                     transition: `opacity 0.6s ease ${i * 0.12}s`,
                   }}
                 >
@@ -250,16 +393,30 @@ export default function CommunityStats() {
             ))}
           </div>
 
-          {/* images — nodes 1:315 / 1:316 / 1:313 */}
-          <CanvasImage src="/workshop/community/2.jpg" x={1065} y={111} w={395} h={242} />
-          <CanvasImage src="/workshop/community/3.jpg" x={1065} y={367} w={395} h={394} />
-          <CanvasImage src="/workshop/community/1.jpg" x={1479} y={111} w={373} h={650} />
+          {/* images — nodes 1:315 / 1:316 / 1:313. Three tiles, not four: the
+              tall one on the right spans both rows of the left column.
+
+              They arrive one after the other rather than together — the stagger
+              lives on this parent so the order is declared once, and the tiles
+              only carry the two states. `animate` is driven by the observer, so
+              nothing moves until the section is actually on screen. */}
+          <motion.div
+            style={{ position: "absolute", inset: 0 }}
+            initial="hidden"
+            animate={reduceMotion || onScreen ? "shown" : "hidden"}
+            variants={COLLAGE_VARIANTS}
+          >
+            <CanvasImage src="/workshop/community/2.jpg" x={1065} y={74} w={395} h={242} />
+            <CanvasImage src="/workshop/community/3.jpg" x={1065} y={330} w={395} h={394} />
+            <CanvasImage src="/workshop/community/1.jpg" x={1479} y={74} w={373} h={650} />
+          </motion.div>
         </div>
       </div>
 
       {/* ================= stacked fallback (below lg) ================= */}
       <section
-        className="relative w-full overflow-hidden px-4 py-14 lg:hidden"
+        ref={stackRef}
+        className="relative w-full overflow-hidden px-4 pb-14 pt-10 lg:hidden"
       >
         <h2
           className="text-[34px] font-bold leading-[1.1] tracking-tight sm:text-[48px]"
@@ -269,7 +426,7 @@ export default function CommunityStats() {
         </h2>
 
         <p
-          className="mt-6 text-[22px] font-semibold leading-[1.1] sm:text-[30px]"
+          className="mt-5 text-[18px] font-semibold leading-[1.15] sm:text-[24px]"
           style={{ color: "var(--wk-text-dim)" }}
         >
           You&apos;re joining a fast-growing movement of builders learning AI
@@ -297,7 +454,7 @@ export default function CommunityStats() {
                   color: "var(--wk-text)",
                 }}
               >
-                <CountUp target={s.value} run />
+                {counter(s.value)}
                 {s.suffix}
               </div>
               <div
@@ -316,21 +473,56 @@ export default function CommunityStats() {
           ))}
         </div>
 
-        <div className="mt-10 grid grid-cols-2 gap-4">
-          <div className="relative aspect-[395/242] overflow-hidden rounded-[25px]">
+        {/* Same staggered reveal as the canvas collage, same observer. */}
+        <motion.div
+          className="mt-10 grid grid-cols-2 gap-4"
+          initial="hidden"
+          animate={reduceMotion || onScreen ? "shown" : "hidden"}
+          variants={COLLAGE_VARIANTS}
+        >
+          <motion.div
+            variants={TILE_VARIANTS}
+            className="relative aspect-395/242 overflow-hidden rounded-[25px]"
+          >
             <Image src="/workshop/community/2.jpg" alt="" fill sizes="45vw" className="object-cover" />
-          </div>
-          <div className="relative row-span-2 aspect-[373/650] overflow-hidden rounded-[25px]">
+          </motion.div>
+          <motion.div
+            variants={TILE_VARIANTS}
+            className="relative row-span-2 aspect-373/650 overflow-hidden rounded-[25px]"
+          >
             <Image src="/workshop/community/1.jpg" alt="" fill sizes="45vw" className="object-cover" />
-          </div>
-          <div className="relative aspect-[395/394] overflow-hidden rounded-[25px]">
+          </motion.div>
+          <motion.div
+            variants={TILE_VARIANTS}
+            className="relative aspect-395/394 overflow-hidden rounded-[25px]"
+          >
             <Image src="/workshop/community/3.jpg" alt="" fill sizes="45vw" className="object-cover" />
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </section>
     </>
   );
 }
+
+/**
+ * The collage's order, declared once on the parent.
+ *
+ * `staggerDirection: -1` on the way out so the sequence unwinds: the last tile
+ * to arrive is the first to leave. Reversing a stagger by replaying it forwards
+ * looks like a second entrance running backwards, which is not the same thing.
+ */
+const COLLAGE_VARIANTS = {
+  shown: { transition: { staggerChildren: TILE_STAGGER } },
+  hidden: { transition: { staggerChildren: TILE_STAGGER, staggerDirection: -1 } },
+} as const;
+
+/** One collage tile. Fades and lifts a little; the order comes from the
+ *  staggerChildren on its parent, so there are no per-tile delays to keep in
+ *  sync with the list. */
+const TILE_VARIANTS = {
+  hidden: { opacity: 0, y: 14, transition: { duration: 0.4, ease: "easeIn" } },
+  shown: { opacity: 1, y: 0, transition: { duration: 0.55, ease: "easeOut" } },
+} as const;
 
 function CanvasImage({
   src,
@@ -346,7 +538,8 @@ function CanvasImage({
   h: number;
 }) {
   return (
-    <div
+    <motion.div
+      variants={TILE_VARIANTS}
       style={{
         position: "absolute",
         left: x,
@@ -358,6 +551,6 @@ function CanvasImage({
       }}
     >
       <Image src={src} alt="" fill sizes={`${w}px`} className="object-cover" />
-    </div>
+    </motion.div>
   );
 }

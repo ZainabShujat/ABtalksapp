@@ -6,6 +6,7 @@ import {
   BriefcaseBusiness,
   CalendarClock,
   Clapperboard,
+  Code2,
   GitBranch,
   GraduationCap,
   Palette,
@@ -271,9 +272,34 @@ export const EVENTS: WorkshopEvent[] = [
     ],
   },
   {
-    // Dated slug, per the `id` convention above. These two occupy Saturdays
-    // that `placeholderSaturdays` would otherwise fill with "Workshop — TBA";
-    // a real entry on the date simply wins, so no placeholder logic changes.
+    // Dated slug, per the `id` convention above. This and the two below occupy
+    // Saturdays that `placeholderSaturdays` would otherwise fill with
+    // "Workshop — TBA"; a real entry on the date simply wins, because that
+    // generator skips any Saturday already in EVENTS. No placeholder logic
+    // changes, and every other Saturday keeps its TBA.
+    //
+    // 6:00 PM, not the 7:00 PM the other three run at: that is the time the
+    // Sep 12 placeholder already carried, and it was kept rather than silently
+    // moved. Change it here if the session really is at 7.
+    id: "workshop-2026-09-12",
+    date: "2026-09-12",
+    time: "6:00 PM IST",
+    tag: "Build",
+    accent: "#e05226",
+    track: "workshop",
+    Icon: Code2,
+    title: "Vibe Coding Mini Project",
+    desc: "Build a mini project with vibe coding using Cursor, Antigravity, Claude, or the AI coding tool of your choice.",
+    host: "ABTalks",
+    location: "Live · YouTube",
+    // `host` is required by WorkshopEvent, so it carries the same house value
+    // the placeholder generator uses rather than a person's name — no speaker
+    // has been named for this one, and the public surfaces do not render the
+    // field anyway (see the note in UpcomingWorkshops).
+    //
+    // No `register` / `registrationOpen` either — see the note below.
+  },
+  {
     id: "workshop-2026-09-19",
     date: "2026-09-19",
     time: "7:00 PM IST",
