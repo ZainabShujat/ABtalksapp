@@ -426,6 +426,12 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
   color: var(--h-gray-400);
 }
 
+/* A step you are not on is a label, not a heading. */
+.hire-journey__stage:not(.is-active) .hire-journey__title {
+  color: var(--h-gray-400);
+  font-weight: 500;
+}
+
 .hire-journey__title {
   margin: 6px 0 0;
   font-size: var(--fs-body);

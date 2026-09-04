@@ -185,9 +185,6 @@ export function DeskMatchCard({
             ))}
           </div>
         )}
-        <p className="desk-card__why">
-          This is what a match would look like. Nobody in the pool fits it yet.
-        </p>
         {onOpen && (
           <div className="desk-card__cta">
             <button type="button" className="desk-ghost" onClick={onOpen}>

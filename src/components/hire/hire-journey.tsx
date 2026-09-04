@@ -73,9 +73,6 @@ export function HireJourney() {
           <h2 className="hire-journey__title">
             Tell us who you&apos;re looking for
           </h2>
-          <p className="hire-journey__desc">
-            Ranked on work we verified, never resumes.
-          </p>
         </div>
       </div>
       <div className={`hire-journey__stage ${step === 2 ? "is-active" : ""}`}>
@@ -87,9 +84,9 @@ export function HireJourney() {
         <span className="hire-journey__short">Ranked candidates</span>
         <div>
           <h2 className="hire-journey__title">{countLabel}</h2>
-          <p className="hire-journey__desc">
-            {gap?.trim() || "Ranked profiles appear here once you search."}
-          </p>
+          {/* Only the real gap report. The placeholder it used to fall back to
+              just restated the step title above it. */}
+          {gap?.trim() && <p className="hire-journey__desc">{gap.trim()}</p>}
         </div>
       </div>
       <div className={`hire-journey__stage ${step === 3 ? "is-active" : ""}`}>
