@@ -505,6 +505,8 @@ export function ScoutChat({
    * inside the card (a new chip row, a longer line) are not caught up in it.
    */
   const foldHeightRef = useRef<number | null>(null);
+  /** Height mid-flight when a transition is cut short by the next toggle. */
+  const interruptedRef = useRef<number | null>(null);
   const wasCondensedRef = useRef(condensed);
   useLayoutEffect(() => {
     const el = shellRef.current;
@@ -515,7 +517,11 @@ export function ScoutChat({
       return;
     }
     const to = el.offsetHeight;
-    const from = foldHeightRef.current;
+    // Toggling again mid-transition should carry on from where the card
+    // actually is, not from where the last one finished; otherwise it jumps to
+    // the old resting height first and the movement reads as a stutter.
+    const from = interruptedRef.current ?? foldHeightRef.current;
+    interruptedRef.current = null;
     foldHeightRef.current = to;
     if (!changed || from == null || from === to) return;
 
@@ -533,6 +539,7 @@ export function ScoutChat({
     el.addEventListener("transitionend", done, { once: true });
     return () => {
       el.removeEventListener("transitionend", done);
+      if (el.style.height) interruptedRef.current = el.offsetHeight;
       done();
     };
   }, [condensed, searched]);
@@ -1174,18 +1181,35 @@ export function ScoutChat({
               </div>
             )}
           </div>
-          <button
-            type="button"
-            className={cn("scout-tbtn scout-tbtn--icon", expanded && "is-on")}
-            aria-label={expanded ? "Exit full screen" : "Expand Scout"}
-            onClick={() => setExpanded((e) => !e)}
-          >
-            {expanded ? (
+          {/* The same corner button, reversed once results exist.
+              Full screen is the right offer while Scout is the page; once the
+              candidates are the page it would cover the very list it sits
+              above, so it folds the card down to the query instead, which is
+              the gesture that actually matters there. */}
+          {searched ? (
+            <button
+              type="button"
+              className="scout-tbtn scout-tbtn--icon"
+              aria-label="Collapse Scout to the search bar"
+              title="Collapse"
+              onClick={() => setReopened(false)}
+            >
               <Minimize2 className="size-3.5" />
-            ) : (
-              <Maximize2 className="size-3.5" />
-            )}
-          </button>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={cn("scout-tbtn scout-tbtn--icon", expanded && "is-on")}
+              aria-label={expanded ? "Exit full screen" : "Expand Scout"}
+              onClick={() => setExpanded((e) => !e)}
+            >
+              {expanded ? (
+                <Minimize2 className="size-3.5" />
+              ) : (
+                <Maximize2 className="size-3.5" />
+              )}
+            </button>
+          )}
         </div>
       </div>
 
