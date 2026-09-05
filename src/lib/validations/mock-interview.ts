@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ASSESSMENT_REPORT_VERSION } from "@/features/interview/platform/report-assembly";
+import { proctorEventsWireSchema } from "@/features/interview/proctoring/wire";
 
 /**
  * Zod at every interview-platform boundary.
@@ -69,6 +70,19 @@ export const submitMockAnswerSchema = z.object({
    */
   answerText: z.string().max(8000),
   artifacts: z.array(turnArtifactSchema).max(8).optional(),
+  /**
+   * Proctoring observations collected since the previous answer.
+   *
+   * ADVISORY TELEMETRY, and bounded as such. The client sends event KINDS and
+   * timestamps; severity and category are recomputed server-side from the kind
+   * in `normaliseProctorEvents`, and there is no free-text field. Nothing
+   * downstream gates scoring, the interview, or any decision about a person on
+   * these — see the note at the top of `proctoring/wire.ts`.
+   *
+   * Optional, and stays optional: a client that sends none (an older tab, a
+   * blocked camera, proctoring disabled) submits answers exactly as before.
+   */
+  clientEvents: proctorEventsWireSchema.optional(),
 });
 
 /* -------------------------------------------------------- report document */

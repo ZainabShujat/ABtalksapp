@@ -1,6 +1,8 @@
 import { AlertTriangle, CheckCircle2, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AssessmentReportDocument } from "@/features/interview/platform/report-assembly";
+import type { ProctorSummary } from "@/features/interview/proctoring/types";
+import { ProctorReportCard } from "@/components/mock-interview/proctor-report-card";
 
 /**
  * The stored assessment report.
@@ -36,9 +38,19 @@ function Bar({ score }: { score: number }) {
 export function MockInterviewReportView({
   report,
   generatedAt,
+  proctoring = null,
 }: {
   report: AssessmentReportDocument;
   generatedAt: Date;
+  /**
+   * Session observations for this attempt (Proctoring v0.1).
+   *
+   * Optional and defaulted, so every other caller of this component keeps
+   * working unchanged and a report with no proctoring data renders exactly the
+   * report it rendered before. Not part of the stored document: see the note in
+   * `getAttemptProctoringSummary`.
+   */
+  proctoring?: ProctorSummary | null;
 }) {
   const { overall, coverage } = report;
 
@@ -296,6 +308,8 @@ export function MockInterviewReportView({
           </div>
         </section>
       ) : null}
+
+      {proctoring ? <ProctorReportCard summary={proctoring} /> : null}
 
       <p className="text-[12px] text-[#8F8F8F]">
         Report v{report.version} &middot; {coverage.packId} v

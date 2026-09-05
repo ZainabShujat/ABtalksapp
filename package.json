@@ -94,7 +94,8 @@
     "db:repair:078:points-legacy-mirror": "tsx prisma/scripts/repair-078-points-legacy-mirror.ts",
     "db:repair:078:points-legacy-mirror:production": "cross-env PHASE2_ALLOW_PRODUCTION=1 tsx prisma/scripts/repair-078-points-legacy-mirror.ts",
     "verify:hire-pool": "tsx scripts/verify-hire-pool.ts",
-    "test:virtual": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/virtual-candidate.test.ts"
+    "test:virtual": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/virtual-candidate.test.ts",
+    "test:proctoring": "tsx src/features/interview/proctoring/proctoring.test.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

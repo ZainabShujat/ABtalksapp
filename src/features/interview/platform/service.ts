@@ -35,6 +35,12 @@ import {
   resolvePlatformCandidate,
 } from "@/features/interview/platform/provider";
 import * as repo from "@/features/interview/platform/repository";
+import {
+  emptyProctorSummary,
+  summariseProctorEvents,
+} from "@/features/interview/proctoring/summary";
+import type { ProctorSummary } from "@/features/interview/proctoring/types";
+import { parseStoredProctorEvents } from "@/features/interview/proctoring/wire";
 import { selectNextPlatformTarget } from "@/features/interview/platform/target-planner";
 import { buildCandidateContext } from "@/features/interview/candidate-context";
 import { formatProfileContext } from "@/features/interview/platform/profile-context";
@@ -486,9 +492,14 @@ export async function recordAnswer(
           ] ?? null),
     degraded: turn.data.degraded,
     latencyMs: Date.now() - startedMs,
-    // Seams 3 and 6. Undefined in Phase 1: no workspace produces artifacts and
-    // no client events are collected yet.
+    // Seam 3 is still unused: no workspace produces artifacts yet. Seam 6 is
+    // now live — proctoring events, already validated and normalised at the
+    // Server Action boundary. Stored as an audit trail only; nothing above
+    // reads them back into the turn, the plan or the score.
     artifacts: submission.artifacts?.length ? submission.artifacts : undefined,
+    clientEvents: submission.clientEvents?.length
+      ? submission.clientEvents
+      : undefined,
   };
 
   const persistStartedMs = Date.now();
@@ -769,6 +780,41 @@ export async function getAttemptReport(
       narrativeDegraded: row.narrativeDegraded,
     },
   };
+}
+
+/**
+ * The proctoring summary for one attempt (Proctoring v0.1).
+ *
+ * Separate from `getAttemptReport` on purpose. The report is a frozen document
+ * that must say the same thing on every view; proctoring events live in the
+ * turn rows and are rolled up at read time. Folding them into the report
+ * document would have meant a version bump and a migration for every stored
+ * report, to add a section that is additive and optional.
+ *
+ * Returns an EMPTY summary rather than an error when there is nothing recorded:
+ * every attempt taken before this feature existed, and every clean attempt
+ * after it, is a legitimate "no events" case, and the caller should not have to
+ * tell those apart from a failure.
+ */
+export async function getAttemptProctoringSummary(
+  userId: string,
+  attemptId: string,
+): Promise<ProctorSummary> {
+  try {
+    const payloads = await repo.loadTurnClientEvents(attemptId, userId);
+    const events = payloads.flatMap((payload) =>
+      parseStoredProctorEvents(payload),
+    );
+    return summariseProctorEvents(events);
+  } catch (e) {
+    // Proctoring is additive. A failure to read it must never cost a candidate
+    // the report they actually came for.
+    logger.error("[mock-interview] failed to load proctoring events", {
+      attemptId,
+      error: String(e),
+    });
+    return emptyProctorSummary();
+  }
 }
 
 /** The question the SERVER has on the floor. Used to resume a live room. */

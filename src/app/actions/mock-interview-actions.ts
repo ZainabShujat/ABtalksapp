@@ -10,6 +10,7 @@ import type {
   HistoryEntry,
   StartAttemptData,
 } from "@/features/interview/platform/service";
+import { normaliseProctorEvents } from "@/features/interview/proctoring/wire";
 import {
   attemptIdSchema,
   startMockInterviewSchema,
@@ -81,11 +82,24 @@ export async function submitMockAnswerAction(
     return { ok: false, message: "Invalid answer submission." };
   }
 
+  // Proctoring events are normalised HERE, at the boundary, not deeper in.
+  // Severity and category are recomputed from the kind, timestamps are checked
+  // against the server clock, and `detail` is reduced to a technical token, so
+  // nothing past this line handles a client's own account of how serious its
+  // event was. They remain advisory telemetry and gate nothing.
+  const clientEvents = parsed.data.clientEvents?.length
+    ? normaliseProctorEvents(parsed.data.clientEvents)
+    : undefined;
+
   return service.recordAnswer(
     auth.userId,
     parsed.data.attemptId,
     parsed.data.questionId,
-    { text: parsed.data.answerText, artifacts: parsed.data.artifacts },
+    {
+      text: parsed.data.answerText,
+      artifacts: parsed.data.artifacts,
+      clientEvents,
+    },
   );
 }
 

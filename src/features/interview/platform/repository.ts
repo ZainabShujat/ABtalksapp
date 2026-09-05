@@ -332,6 +332,32 @@ export async function loadTurns(
 }
 
 /**
+ * Every proctoring payload recorded for an attempt, oldest turn first.
+ *
+ * Returns the raw column values. Parsing belongs to the proctoring module,
+ * which is forgiving by design — this file's job is the query and its
+ * ownership scope, and `clientEvents` holds whatever shape was current when the
+ * turn was written.
+ *
+ * Scoped through the parent row like every other read here, so another user's
+ * attempt id yields an empty array rather than their events.
+ */
+export async function loadTurnClientEvents(
+  interviewId: string,
+  userId: string,
+): Promise<unknown[]> {
+  const rows = await prisma.mockInterviewTurn.findMany({
+    where: { interviewId, interview: { userId } },
+    select: { clientEvents: true },
+    orderBy: { turnIndex: "asc" },
+  });
+
+  return rows
+    .map((r) => r.clientEvents)
+    .filter((value): value is Prisma.JsonValue => value !== null);
+}
+
+/**
  * Next turn index for an attempt.
  *
  * Scoped by `userId` through the parent row, unlike the cohort equivalent which

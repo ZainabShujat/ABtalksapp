@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { getAttemptReport } from "@/features/interview/platform/service";
+import {
+  getAttemptProctoringSummary,
+  getAttemptReport,
+} from "@/features/interview/platform/service";
 import { resolvePlatformUserId } from "@/features/interview/platform/provider";
 import { MockInterviewReportView } from "@/components/mock-interview/report-view";
 
@@ -41,6 +44,16 @@ export default async function MockInterviewReportPage({
 
   const result = await getAttemptReport(userId, attemptId);
 
+  // Read alongside the report rather than folded into it. The report document
+  // is frozen at completion and versioned; proctoring events live on the turn
+  // rows and are rolled up per view, so adding this section cost no migration
+  // and no report-version bump. `getAttemptProctoringSummary` swallows its own
+  // failures and returns an empty summary, so this cannot cost a candidate the
+  // report itself.
+  const proctoring = result.ok
+    ? await getAttemptProctoringSummary(userId, attemptId)
+    : null;
+
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 md:py-14">
       <Link
@@ -77,6 +90,7 @@ export default async function MockInterviewReportPage({
           <MockInterviewReportView
             report={result.data.report}
             generatedAt={result.data.generatedAt}
+            proctoring={proctoring}
           />
           <div className="mt-8 flex flex-wrap gap-3">
             <Link

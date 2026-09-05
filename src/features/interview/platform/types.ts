@@ -1,4 +1,5 @@
 import type { Competency, PlannedQuestion } from "@/features/interview/types";
+import type { ProctorEvent } from "@/features/interview/proctoring/types";
 import type {
   DeepProbe,
   QuestionMode,
@@ -74,6 +75,15 @@ export type TurnArtifact = {
 export type TurnSubmission = {
   text: string;
   artifacts?: TurnArtifact[];
+  /**
+   * Proctoring observations for this turn (Proctoring v0.1).
+   *
+   * Already validated and normalised by the Server Action before it gets here,
+   * so the service stores them without inspecting them. Nothing in the engine,
+   * the planner or the scorer reads this field — it is an audit trail written
+   * alongside the turn, not an input to it.
+   */
+  clientEvents?: ProctorEvent[];
 };
 
 /* ---------------------------------------------------------------- rubrics */
