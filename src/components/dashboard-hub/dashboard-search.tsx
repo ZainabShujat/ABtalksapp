@@ -91,16 +91,24 @@ export function DashboardSearch({ items }: DashboardSearchProps) {
     (href: string) => {
       setOpen(false);
       setQuery("");
-      if (href.startsWith("#")) {
-        const el = document.getElementById(href.slice(1));
-        el?.scrollIntoView({ behavior: "smooth", block: "start" });
-        window.history.replaceState(null, "", href);
-        return;
-      }
       if (isExternalHref(href)) {
         window.open(href, "_blank", "noopener,noreferrer");
         return;
       }
+
+      const hashIndex = href.indexOf("#");
+      const path = hashIndex >= 0 ? href.slice(0, hashIndex) : href;
+      const hash = hashIndex >= 0 ? href.slice(hashIndex + 1) : "";
+      const currentPath = window.location.pathname;
+      const samePage = !path || path === currentPath;
+
+      if (hash && samePage) {
+        const el = document.getElementById(hash);
+        el?.scrollIntoView({ behavior: "smooth", block: "start" });
+        window.history.replaceState(null, "", `${path || currentPath}#${hash}`);
+        return;
+      }
+
       router.push(href);
     },
     [router],
@@ -145,8 +153,8 @@ export function DashboardSearch({ items }: DashboardSearchProps) {
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          placeholder="Search Dashboard"
-          aria-label="Search Dashboard"
+          placeholder="Search ABTalks"
+          aria-label="Search ABTalks"
           role="combobox"
           aria-autocomplete="list"
           aria-expanded={showPanel}

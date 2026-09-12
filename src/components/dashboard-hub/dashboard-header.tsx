@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { Menu } from "lucide-react";
 import { NotificationBellButton } from "@/components/shared/notification-bell-button";
-import { DashboardSearch } from "@/components/dashboard-hub/dashboard-search";
-import type { HubSearchItem } from "@/features/dashboard/hub-search-index";
+import { SiteSearchSlot } from "@/components/dashboard-hub/site-search-slot";
 
 export type HeaderSectionNavItem = {
   href: string;
@@ -19,8 +18,6 @@ type DashboardHeaderProps = {
   showSectionNav?: boolean;
   /** Custom header links (Claude). Desktop only (`md+`), same as hub section nav. */
   sectionNavItems?: HeaderSectionNavItem[];
-  /** Hub-only search catalog. Omit on other DashboardShell routes. */
-  searchItems?: HubSearchItem[];
 };
 
 const HUB_SECTION_NAV: HeaderSectionNavItem[] = [
@@ -41,7 +38,6 @@ export function DashboardHeader({
   onMenuClick,
   showSectionNav = true,
   sectionNavItems,
-  searchItems,
 }: DashboardHeaderProps) {
   const customNav = sectionNavItems && sectionNavItems.length > 0;
   const hubNav = !customNav && showSectionNav;
@@ -88,9 +84,7 @@ export function DashboardHeader({
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {searchItems && searchItems.length > 0 ? (
-            <DashboardSearch items={searchItems} />
-          ) : null}
+          <SiteSearchSlot />
           <NotificationBellButton className={bellClassName} />
           {isAdmin ? (
             <Link href="/admin" className="abt-header-cta">

@@ -14,6 +14,7 @@ import { ClaudeCtaSlide } from "@/components/claude/slides/claude-cta-slide";
 import { ProgressDots } from "@/components/landing/progress-dots";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { SiteSearchSlot } from "@/components/dashboard-hub/site-search-slot";
 
 const SLIDES = ["welcome", "why", "audience", "roadmap", "cta"] as const;
 
@@ -228,6 +229,7 @@ export function ClaudeOnboardingClient() {
               </div>
               <CountdownDisplay />
             </div>
+            <SiteSearchSlot />
           </div>
         </header>
 

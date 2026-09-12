@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SynergyChip } from "@/components/shared/synergy-chip";
 import { NotificationBellButton } from "@/components/shared/notification-bell-button";
+import { SiteSearchSlot } from "@/components/dashboard-hub/site-search-slot";
 import {
   ChallengeSwitcher,
   type ChallengeSwitcherEnrollment,
@@ -135,6 +136,7 @@ export function AppHeader({
               Admin
             </Link>
           ) : null}
+          <SiteSearchSlot />
           {/* All breakpoints. On mobile this lands between the challenge
               switcher and the hamburger, which are the only other visible items. */}
           <NotificationBellButton className="abt-header-icon" />

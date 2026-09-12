@@ -45,6 +45,7 @@
 - 2026-08-10 — `/` now renders the landing hub for signed-in users too (no more redirect to /dashboard); track cards show "Open dashboard" per-track via `features/landing/get-landing-state.ts`; `/login` bounces signed-in users to `/` instead of `/dashboard`.
 
 ## Pending reconcile
+- 2026-09-12 [convention] Hub search is global except /hire; placeholder Search ABTalks.
 - 2026-09-12 [convention] Scout inspector Experience is CandidateExperience (typed or resume-merged); Claude/Platform track proof moved to ABTalks Evidence.
 - 2026-09-12 [rule] Recruiter can open the Scout inspector on owned-job applicants (PROFILE ref); unlock/message reuse T-229/T-232 with owned-application as a second addressability check — email/phone stay off the list and card payload.
 - 2026-09-12 [rule] Recruiter can list applicants for owned jobs only (T-226 NOT_FOUND on a foreign id); payload is display name + note + status + applied date — email/phone stay off the select.

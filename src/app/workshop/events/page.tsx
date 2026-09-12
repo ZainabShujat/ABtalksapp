@@ -5,6 +5,7 @@ import WorkshopLogo from "@/components/workshop/WorkshopLogo";
 import WorkshopThemeStyles from "@/components/workshop/WorkshopThemeStyles";
 import { WorkshopShell } from "@/components/workshop/WorkshopShell";
 import { DashboardFooter } from "@/components/dashboard-hub/dashboard-footer";
+import { SiteSearchSlot } from "@/components/dashboard-hub/site-search-slot";
 import { auth } from "@/auth";
 
 export const metadata: Metadata = {
@@ -57,9 +58,12 @@ export default async function WorkshopEventsPage() {
               <div className="flex items-center gap-3 md:hidden">
                 <WorkshopLogo />
               </div>
-              <Link href="/workshop" className="abt-header-nav-link">
-                ← Back to Workshop
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link href="/workshop" className="abt-header-nav-link">
+                  ← Back to Workshop
+                </Link>
+                <SiteSearchSlot />
+              </div>
             </div>
           </header>
 

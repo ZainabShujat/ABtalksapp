@@ -1,6 +1,7 @@
 import { CalendarDays } from "lucide-react";
 import WorkshopLogo from "@/components/workshop/WorkshopLogo";
 import { NotificationBellButton } from "@/components/shared/notification-bell-button";
+import { SiteSearchSlot } from "@/components/dashboard-hub/site-search-slot";
 
 /**
  * /workshop header — the shared Design System v2 global header (55px, white
@@ -37,6 +38,8 @@ export default function WorkshopHeader({ isSignedIn }: { isSignedIn: boolean }) 
             <CalendarDays aria-hidden />
             <span className="hidden sm:inline">Discover events</span>
           </a>
+
+          <SiteSearchSlot />
 
           {/* Only for signed-in visitors: skipping it for anonymous traffic
               saves the feed fetch entirely. */}
