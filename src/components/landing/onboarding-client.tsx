@@ -13,6 +13,7 @@ import { CtaSlide } from "./slides/cta-slide";
 import { ProgressDots } from "./progress-dots";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { SiteSearchSlot } from "@/components/dashboard-hub/site-search-slot";
 
 const SLIDES = ["welcome", "about", "rules", "community", "cta"] as const;
 type SlideKey = (typeof SLIDES)[number];
@@ -97,16 +98,19 @@ export function OnboardingClient() {
 
       <div className="relative z-10 flex min-h-svh flex-col">
         <header className="abt-header shrink-0">
-          <Link href="/" aria-label="ABTalks home" className="logo-link">
-            <Image
-              src="/abtalks-logo.png"
-              alt="ABTalks"
-              width={300}
-              height={84}
-              priority
-              className="logo-image"
-            />
-          </Link>
+          <div className="abt-header-inner">
+            <Link href="/" aria-label="ABTalks home" className="logo-link">
+              <Image
+                src="/abtalks-logo.png"
+                alt="ABTalks"
+                width={300}
+                height={84}
+                priority
+                className="logo-image"
+              />
+            </Link>
+            <SiteSearchSlot />
+          </div>
         </header>
 
         <main className="flex min-h-0 flex-1 items-center justify-center overflow-hidden px-6 py-4">

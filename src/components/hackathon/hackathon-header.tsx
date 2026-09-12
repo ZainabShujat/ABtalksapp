@@ -3,6 +3,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { AccountMenu } from "@/components/hackathon/account-menu";
 import { SynergyChip } from "@/components/shared/synergy-chip";
+import { SiteSearchSlot } from "@/components/dashboard-hub/site-search-slot";
 
 /** Hackathon app header — the shared Design System v2 global header. */
 export async function HackathonHeader() {
@@ -25,13 +26,17 @@ export async function HackathonHeader() {
 
         {email ? (
           <div className="flex items-center gap-2 sm:gap-3">
+            <SiteSearchSlot />
             <SynergyChip />
             <AccountMenu email={email} />
           </div>
         ) : (
-          <Link href="/login?from=/hackathon" className="abt-header-cta">
-            Log In / Sign Up
-          </Link>
+          <div className="flex items-center gap-2">
+            <SiteSearchSlot />
+            <Link href="/login?from=/hackathon" className="abt-header-cta">
+              Log In / Sign Up
+            </Link>
+          </div>
         )}
       </div>
     </header>

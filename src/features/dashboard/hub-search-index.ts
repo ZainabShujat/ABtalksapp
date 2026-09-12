@@ -126,35 +126,35 @@ export function buildHubSearchIndex(input: HubSearchIndexInput): HubSearchItem[]
       id: "page:#your-challenge",
       group: "Pages",
       title: "Your Challenges",
-      href: "#your-challenge",
+      href: "/dashboard#your-challenge",
       keywords: "continue journey your challenges streak",
     },
     {
       id: "page:#domains",
       group: "Pages",
       title: "Domains",
-      href: "#domains",
+      href: "/dashboard#domains",
       keywords: "domains tracks challenge tracks roadmaps",
     },
     {
       id: "page:#events",
       group: "Pages",
       title: "Events",
-      href: "#events",
+      href: "/dashboard#events",
       keywords: "events workshops",
     },
     {
       id: "page:#faq",
       group: "Pages",
       title: "FAQ",
-      href: "#faq",
+      href: "/dashboard#faq",
       keywords: "faq questions frequently asked",
     },
     {
       id: "page:#mock-interviews",
       group: "Pages",
       title: "AI agent interviews",
-      href: "#mock-interviews",
+      href: "/dashboard#mock-interviews",
       keywords: "interview mock interviews voice",
     },
   );
@@ -164,7 +164,7 @@ export function buildHubSearchIndex(input: HubSearchIndexInput): HubSearchItem[]
       id: "page:#prep-kit",
       group: "Pages",
       title: "Prep Kit",
-      href: "#prep-kit",
+      href: "/dashboard#prep-kit",
       keywords: "prep kit cohort program",
     });
   }
@@ -195,7 +195,7 @@ export function buildHubSearchIndex(input: HubSearchIndexInput): HubSearchItem[]
     const claudeHref =
       joined.has("CLAUDE") || abandoned.has("CLAUDE")
         ? "/claude"
-        : "#other-challenges";
+        : "/dashboard#other-challenges";
     items.push({
       id: "challenge:CLAUDE",
       group: "Challenges",
@@ -318,7 +318,7 @@ export function buildHubSearchIndex(input: HubSearchIndexInput): HubSearchItem[]
       group: "FAQ",
       title: faq.q,
       subtitle: faq.a,
-      href: "#faq",
+      href: "/dashboard#faq",
       keywords: `faq ${faq.q} ${faq.a} streak synergy certificate`,
     });
   });

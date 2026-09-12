@@ -7,6 +7,7 @@ import { signOutAction } from "@/app/actions/auth-actions";
 import { RecruiterAccountMenu } from "@/components/hire/recruiter-account-menu";
 import { useHireAuth } from "@/components/hire/hire-auth-provider";
 import type { RecruiterAccountSnapshot } from "@/features/hire/recruiter-account-types";
+import { SiteSearchSlot } from "@/components/dashboard-hub/site-search-slot";
 
 const NAV = [
   // The pool browser is not linked anywhere while it has nothing useful to
@@ -53,37 +54,40 @@ export function TalentShell({
               Talent
             </Link>
           </div>
-          {showNav && (
-            <nav className="abt-header-nav">
-              {NAV.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={pathname === item.href ? "page" : undefined}
-                  className="abt-header-nav-link"
-                >
-                  {item.label}
-                </Link>
-              ))}
-              {account ? (
-                <RecruiterAccountMenu account={account} />
-              ) : signedIn ? (
-                <form action={signOutAction}>
-                  <button type="submit" className="abt-header-nav-link">
-                    Sign out
+          <div className="flex items-center gap-2">
+            {showNav ? (
+              <nav className="abt-header-nav">
+                {NAV.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={pathname === item.href ? "page" : undefined}
+                    className="abt-header-nav-link"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+                {account ? (
+                  <RecruiterAccountMenu account={account} />
+                ) : signedIn ? (
+                  <form action={signOutAction}>
+                    <button type="submit" className="abt-header-nav-link">
+                      Sign out
+                    </button>
+                  </form>
+                ) : authEnabled ? (
+                  <button
+                    type="button"
+                    onClick={() => openAuth("nav")}
+                    className="abt-header-cta"
+                  >
+                    Sign in
                   </button>
-                </form>
-              ) : authEnabled ? (
-                <button
-                  type="button"
-                  onClick={() => openAuth("nav")}
-                  className="abt-header-cta"
-                >
-                  Sign in
-                </button>
-              ) : null}
-            </nav>
-          )}
+                ) : null}
+              </nav>
+            ) : null}
+            <SiteSearchSlot />
+          </div>
         </div>
       </header>
       <main className="container mx-auto px-4 py-8">{children}</main>

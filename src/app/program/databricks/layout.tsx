@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { isDatabricksEnabled } from "@/lib/feature-flags";
+import { SiteSearchSlot } from "@/components/dashboard-hub/site-search-slot";
 
 export default function DatabricksLayout({
   children,
@@ -24,6 +25,7 @@ export default function DatabricksLayout({
               priority
             />
           </Link>
+          <SiteSearchSlot />
         </div>
       </header>
       <main className="mx-auto w-full min-w-0 max-w-[1536px] px-4 py-6">

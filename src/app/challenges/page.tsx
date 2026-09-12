@@ -15,6 +15,7 @@ import { StreakGrid } from "@/components/challenges/streak-grid";
 import { FaqAccordion } from "@/components/shared/faq-accordion";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { SiteSearchSlot } from "@/components/dashboard-hub/site-search-slot";
 
 export const metadata: Metadata = {
   title: "60-Day Coding Challenge | ABTalks",
@@ -72,9 +73,12 @@ export default function ChallengesPage() {
               />
             </span>
           </Link>
-          <Link href="/login" className="abt-header-cta">
-            Sign in
-          </Link>
+          <div className="flex items-center gap-2">
+            <SiteSearchSlot />
+            <Link href="/login" className="abt-header-cta">
+              Sign in
+            </Link>
+          </div>
         </div>
       </header>
 

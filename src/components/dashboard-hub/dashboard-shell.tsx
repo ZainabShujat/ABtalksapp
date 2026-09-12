@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { DashboardHeader, type HeaderSectionNavItem } from "./dashboard-header";
 import { DashboardSidebar } from "./dashboard-sidebar";
 import { DashboardFooter } from "./dashboard-footer";
-import type { HubSearchItem } from "@/features/dashboard/hub-search-index";
 import { cn } from "@/lib/utils";
 
 const CLAUDE_SIDEBAR_COLLAPSED_KEY = "abtalks.claudeSidebarCollapsed";
@@ -25,8 +24,6 @@ type DashboardShellProps = {
   showSectionNav?: boolean;
   /** Custom header section links (Claude Days / FAQs / …). */
   sectionNavItems?: HeaderSectionNavItem[];
-  /** Hub-only search catalog. Omit on other DashboardShell routes. */
-  searchItems?: HubSearchItem[];
   /** Extra classes on the header/footer content pane. */
   contentClassName?: string;
 };
@@ -38,7 +35,6 @@ export function DashboardShell({
   collapsible = false,
   showSectionNav = true,
   sectionNavItems,
-  searchItems,
   contentClassName,
 }: DashboardShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -120,7 +116,6 @@ export function DashboardShell({
             onMenuClick={() => setMobileOpen(true)}
             showSectionNav={showSectionNav}
             sectionNavItems={sectionNavItems}
-            searchItems={searchItems}
           />
           <div className="flex min-h-[calc(100%-55px)] flex-col">
             <div className="flex min-h-0 flex-1 flex-col">{children}</div>

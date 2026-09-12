@@ -13,22 +13,7 @@ import { FaqSection } from "@/components/dashboard-hub/faq-section";
 import { HUB_CARD_HOVER_CLASS } from "@/components/dashboard-hub/nav-items";
 import { getHubData } from "@/features/dashboard/get-hub-data";
 import { registrationRedirect } from "@/features/registration/registration-gate";
-import { buildHubSearchIndex } from "@/features/dashboard/hub-search-index";
-import { getHistory } from "@/features/interview/platform/service";
-import {
-  listLiveDomains,
-  toDomainSummary,
-} from "@/features/interview/platform/domains";
-import { getCohortInterviewState } from "@/features/interview/cohort-eligibility";
-import { resolveProgramMemberForUser } from "@/lib/program-auth";
-import { toProgramMemberId } from "@/features/interview/provider";
-import { isClaudeEnabled, isProgramEnabled } from "@/lib/feature-flags";
-import type {
-  AvailableCohortInterview,
-  AvailableMockInterview,
-} from "@/components/dashboard-hub/mock-interviews";
-import { logger } from "@/lib/logger";
-import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
+import { loadAvailableInterviews } from "@/features/dashboard/load-available-interviews";
 import type { Domain } from "@prisma/client";
 
 const TRACK_PATH: Record<Domain, string> = {
@@ -47,123 +32,6 @@ const JOIN_ERROR_MESSAGE: Record<string, string> = {
 type PageProps = {
   searchParams: Promise<{ joinError?: string; joinBlocked?: string }>;
 };
-
-/** Copy for the two cohort milestones, matching the AI Cohort dashboard card. */
-const COHORT_MILESTONES = [
-  {
-    key: "DAY_15",
-    label: "Day 15 Checkpoint Interview",
-    blurb: "Test what you've learned across Days 1–15.",
-  },
-  {
-    key: "DAY_31",
-    label: "Day 31 Final Interview",
-    blurb: "Assess what you've learned across the full cohort.",
-  },
-] as const;
-
-/**
- * Everything this user can open right now, across both interview systems.
- *
- * Kept here rather than in `getHubData` because it spans two subsystems the
- * hub data layer knows nothing about, and it must not be able to take the hub
- * down: the MockInterview tables exist on demo but the migration has not been
- * applied to production, so `getHistory` throws there until it is. Each half
- * degrades independently — a broken platform must not also hide an eligible
- * cohort interview.
- */
-async function loadAvailableInterviews(userId: string): Promise<{
-  mock: AvailableMockInterview[];
-  cohort: AvailableCohortInterview[];
-}> {
-  // LIVE only: the catalogue page lists COMING_SOON domains because the roadmap
-  // is part of what that page is for, but this section is an OFFER and must
-  // contain nothing the candidate cannot open.
-  //
-  // One history read serves all three per-domain facts below, which is why this
-  // does not call `getCatalogue`: that answers only the count, and the report
-  // link would need a second pass over the same rows.
-  const mock = await getHistory(userId)
-    .then((r): AvailableMockInterview[] => {
-      const history = r.ok ? r.data : [];
-      return listLiveDomains().map((domain) => {
-        const mine = history.filter((a) => a.domainSlug === domain.slug);
-        const completedAttempts = mine.filter(
-          (a) => a.status === "COMPLETED",
-        ).length;
-        const summary = toDomainSummary(domain);
-        return {
-          slug: summary.slug,
-          label: summary.label,
-          blurb: summary.blurb,
-          durationSec: summary.durationSec,
-          questionCount: summary.questionCount,
-          completedAttempts,
-          attemptsLeft:
-            domain.maxAttempts === null
-              ? null
-              : Math.max(0, domain.maxAttempts - completedAttempts),
-          // History is newest first, so the first hit is the latest report.
-          latestReportAttemptId: mine.find((a) => a.hasReport)?.id ?? null,
-        };
-      });
-    })
-    .catch((e: unknown) => {
-      logger.warn("[dashboard] mock interview history unavailable", {
-        message: e instanceof Error ? e.message : String(e),
-      });
-      // The domains are static, so the offer survives a database failure --
-      // only the per-candidate facts are lost.
-      return listLiveDomains().map((domain) => {
-        const summary = toDomainSummary(domain);
-        return {
-          slug: summary.slug,
-          label: summary.label,
-          blurb: summary.blurb,
-          durationSec: summary.durationSec,
-          questionCount: summary.questionCount,
-          completedAttempts: 0,
-          attemptsLeft: domain.maxAttempts,
-          latestReportAttemptId: null,
-        };
-      });
-    });
-
-  const cohort = await (async (): Promise<AvailableCohortInterview[]> => {
-    if (!isProgramEnabled()) return [];
-    const membership = await resolveProgramMemberForUser(userId);
-    if (!membership) return [];
-
-    // `toProgramMemberId` strips the 078 `pe_pm_` prefix — the same conversion
-    // the AI Cohort dashboard does. Without it the eligibility query matches
-    // nothing and every milestone silently reads as locked.
-    const state = await getCohortInterviewState(
-      toProgramMemberId(membership.member.id),
-    );
-    return COHORT_MILESTONES.flatMap((m) => {
-      const blueprint = state[m.key === "DAY_15" ? "day15" : "day31"];
-      // A cohort interview is one-shot, so "can take" means unlocked and not
-      // yet taken. A locked or completed milestone is not an offer.
-      if (!blueprint.unlocked || blueprint.taken) return [];
-      return [
-        {
-          key: m.key,
-          label: m.label,
-          blurb: m.blurb,
-          href: `${PROGRAM_AI_COHORT_BASE}/cohort-interview/${m.key}`,
-          inProgress: blueprint.inProgressId !== null,
-        },
-      ];
-    });
-  })().catch((e: unknown) => {
-    logger.warn("[dashboard] cohort interview eligibility unavailable", {
-      message: e instanceof Error ? e.message : String(e),
-    });
-    return [] as AvailableCohortInterview[];
-  });
-
-  return { mock, cohort };
-}
 
 export default async function DashboardPage({ searchParams }: PageProps) {
   const session = await auth();
@@ -211,27 +79,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     image: session.user.image ?? null,
   };
   const isAdmin = session.user.isAdmin ?? false;
-  const searchItems = buildHubSearchIndex({
-    enrollments: data.enrollments,
-    joinedDomains: data.joinedDomains,
-    abandonedDomains: data.abandonedDomains,
-    hasProgramMembership: data.hasProgramMembership,
-    hasDatabricksAccess: data.hasDatabricksAccess,
-    hasDsArchitectAccess: data.hasDsArchitectAccess,
-    hasPowerBiAccess: data.hasPowerBiAccess,
-    isAdmin,
-    claudeEnabled: isClaudeEnabled(),
-    programEnabled: isProgramEnabled(),
-    mock: availableInterviews.mock,
-    cohort: availableInterviews.cohort,
-  });
 
   return (
-    <DashboardShell
-      user={shellUser}
-      isAdmin={isAdmin}
-      searchItems={searchItems}
-    >
+    <DashboardShell user={shellUser} isAdmin={isAdmin}>
       <section className="px-4 py-8 sm:px-6">
         <div className="w-full max-w-[1020px] lg:ml-5 2xl:mx-auto 2xl:max-w-[1600px]">
           <HeroGreeting firstName={firstName} />

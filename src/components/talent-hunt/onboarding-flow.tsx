@@ -10,6 +10,7 @@ import { ProgressDots } from "@/components/landing/progress-dots";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { COHORT_REGISTER_ONBOARDING_KEY } from "@/components/talent-hunt/constants";
 import { cn } from "@/lib/utils";
+import { SiteSearchSlot } from "@/components/dashboard-hub/site-search-slot";
 
 const DEFAULT_BASE_PATH = "/ai-cohort-register";
 
@@ -87,17 +88,22 @@ export function CohortRegisterOnboardingFlow({
       </div>
 
       <header className="abt-header z-10 shrink-0 gap-3">
-        <Link href="/" aria-label="ABTalks home" className="logo-link">
-          <Image
-            src="/abtalks-logo.png"
-            alt="ABTalks"
-            width={300}
-            height={84}
-            priority
-            className="logo-image"
-          />
-        </Link>
-        <p className="text-sm text-muted-foreground">AI Cohort Training Program</p>
+        <div className="abt-header-inner">
+          <div className="flex min-w-0 items-center gap-3">
+            <Link href="/" aria-label="ABTalks home" className="logo-link">
+              <Image
+                src="/abtalks-logo.png"
+                alt="ABTalks"
+                width={300}
+                height={84}
+                priority
+                className="logo-image"
+              />
+            </Link>
+            <p className="text-sm text-muted-foreground">AI Cohort Training Program</p>
+          </div>
+          <SiteSearchSlot />
+        </div>
       </header>
 
       <main className="relative z-10 flex min-h-0 flex-1 flex-col px-4 py-2 sm:px-6">

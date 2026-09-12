@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { LandingUser } from "@/features/landing/get-landing-state";
 import { LandingUserMenu } from "@/components/landing/landing-user-menu";
 import { GET_STARTED_ITEMS, NAV_LINKS } from "./landing-content";
+import { SiteSearchSlot } from "@/components/dashboard-hub/site-search-slot";
 
 type Props = {
   user: LandingUser | null;
@@ -237,6 +238,7 @@ export function LandingNav({ user, showRecruiterCta = false }: Props) {
             ) : null}
           </ul>
 
+          <SiteSearchSlot />
           {user ? (
             <div className="nav__cta">
               <LandingUserMenu user={user} />

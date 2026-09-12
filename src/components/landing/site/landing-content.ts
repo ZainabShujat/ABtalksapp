@@ -25,7 +25,7 @@ export const STATS = [
 export const BRIDGE_SLABS = [
   { key: "top", slab: 3, label: "100+ companies" },
   { key: "middle", slab: 2, label: "ABTalks" },
-  { key: "bottom", slab: 1, label: "12k+ users" },
+  { key: "bottom", slab: 1, label: "13k+ users" },
 ] as const;
 
 export const BRIDGE_PANELS = [

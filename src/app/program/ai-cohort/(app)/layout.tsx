@@ -3,6 +3,7 @@ import Image from "next/image";
 import { requireProgramMember } from "@/lib/program-auth";
 import { ProgramNav } from "@/components/program/program-nav";
 import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
+import { SiteSearchSlot } from "@/components/dashboard-hub/site-search-slot";
 
 const navItems = [
   { href: `${PROGRAM_AI_COHORT_BASE}/dashboard`, label: "Dashboard" },
@@ -32,6 +33,7 @@ export default async function ProgramAppLayout({
             />
           </Link>
           <ProgramNav items={navItems} />
+          <SiteSearchSlot className="ml-auto" />
         </div>
       </header>
       <main className="mx-auto w-full min-w-0 max-w-[1536px] px-4 py-6">
