@@ -514,7 +514,6 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
 }
 
 @keyframes hire-node-pulse {
-
   0%,
   100% {
     transform: scale(1);
@@ -525,7 +524,6 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
       inset 0 -3px 6px rgba(2, 67, 77, 0.45),
       inset 0 3px 6px rgba(255, 255, 255, 0.34);
   }
-
   50% {
     transform: scale(1.08);
     box-shadow:
@@ -542,12 +540,10 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
     transform: scale(0.72);
     opacity: 0.5;
   }
-
   60% {
     transform: scale(1.12);
     opacity: 1;
   }
-
   to {
     transform: none;
     opacity: 1;
@@ -559,7 +555,6 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
     opacity: 0.35;
     transform: translateY(6px);
   }
-
   to {
     opacity: 1;
     transform: none;
@@ -579,7 +574,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app__badge {
   flex-direction: column;
 }
 
-.hire-scout-region>* {
+.hire-scout-region > * {
   flex: 1;
   min-height: 0;
   display: flex;
@@ -821,13 +816,11 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 }
 
 @keyframes scout-idle {
-
   0%,
   100% {
     transform: scale(1);
     filter: drop-shadow(0 0 0 rgba(3, 83, 95, 0));
   }
-
   50% {
     transform: scale(1.045);
     filter: drop-shadow(0 0 6px rgba(3, 83, 95, 0.45));
@@ -969,51 +962,42 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 }
 
 @keyframes scout-crack {
-
   0%,
   100% {
     transform: translate(-50%, -50%) scale(1) rotate(0deg);
     filter: drop-shadow(0 0 0 transparent);
     opacity: 0.9;
   }
-
   18% {
     transform: translate(-50%, -50%) scale(1.22) rotate(-12deg);
     filter: drop-shadow(0 0 10px rgba(3, 83, 95, 0.95));
     opacity: 1;
   }
-
   36% {
     transform: translate(-50%, -50%) scale(0.86) rotate(8deg);
   }
-
   58% {
     transform: translate(-50%, -50%) scale(1.12) rotate(-6deg);
     filter: drop-shadow(0 0 8px rgba(3, 83, 95, 0.7));
   }
-
   78% {
     transform: translate(-50%, -50%) scale(0.96) rotate(3deg);
   }
 }
 
 @keyframes scout-shard-a {
-
   0%,
   100% {
     transform: translate(0, 0) rotate(0deg) scale(0.3);
     opacity: 0;
   }
-
   16% {
     opacity: 1;
   }
-
   44% {
     transform: translate(13px, -15px) rotate(42deg) scale(1);
     opacity: 1;
   }
-
   78% {
     transform: translate(5px, -6px) rotate(-18deg) scale(0.55);
     opacity: 0.25;
@@ -1021,22 +1005,18 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 }
 
 @keyframes scout-shard-b {
-
   0%,
   100% {
     transform: translate(0, 0) rotate(0deg) scale(0.3);
     opacity: 0;
   }
-
   14% {
     opacity: 1;
   }
-
   46% {
     transform: translate(-14px, -11px) rotate(-50deg) scale(1);
     opacity: 1;
   }
-
   80% {
     transform: translate(-6px, -4px) rotate(16deg) scale(0.5);
     opacity: 0.2;
@@ -1044,22 +1024,18 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 }
 
 @keyframes scout-shard-c {
-
   0%,
   100% {
     transform: translate(0, 0) rotate(20deg) scale(0.25);
     opacity: 0;
   }
-
   18% {
     opacity: 1;
   }
-
   48% {
     transform: translate(9px, 14px) rotate(70deg) scale(1.1);
     opacity: 1;
   }
-
   82% {
     transform: translate(3px, 6px) rotate(-8deg) scale(0.45);
     opacity: 0.2;
@@ -1067,22 +1043,18 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 }
 
 @keyframes scout-shard-d {
-
   0%,
   100% {
     transform: translate(0, 0) rotate(-10deg) scale(0.25);
     opacity: 0;
   }
-
   12% {
     opacity: 1;
   }
-
   42% {
     transform: translate(-12px, 12px) rotate(-64deg) scale(1);
     opacity: 1;
   }
-
   76% {
     transform: translate(-4px, 5px) rotate(22deg) scale(0.5);
     opacity: 0.25;
@@ -1090,22 +1062,18 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 }
 
 @keyframes scout-shard-e {
-
   0%,
   100% {
     transform: translate(0, 0) rotate(0deg) scale(0.2);
     opacity: 0;
   }
-
   20% {
     opacity: 1;
   }
-
   50% {
     transform: translate(16px, 2px) rotate(28deg) scale(0.95);
     opacity: 0.9;
   }
-
   84% {
     transform: translate(7px, 1px) rotate(-20deg) scale(0.4);
     opacity: 0.15;
@@ -1113,22 +1081,18 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 }
 
 @keyframes scout-shard-f {
-
   0%,
   100% {
     transform: translate(0, 0) rotate(0deg) scale(0.2);
     opacity: 0;
   }
-
   15% {
     opacity: 1;
   }
-
   40% {
     transform: translate(-8px, -16px) rotate(-36deg) scale(1);
     opacity: 1;
   }
-
   74% {
     transform: translate(-3px, -7px) rotate(14deg) scale(0.45);
     opacity: 0.2;
@@ -1139,14 +1103,12 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
   .scout-mark--id {
     animation: none;
   }
-
   .scout-loader__core,
   .scout-loader__burst i {
     animation: none;
     opacity: 1;
     transform: translate(-50%, -50%);
   }
-
   .scout-loader__burst i {
     transform: none;
     opacity: 0;
@@ -1354,9 +1316,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .desk-name__gate {
-    transition: none;
-  }
+  .desk-name__gate { transition: none; }
 }
 
 /* Candidate card */
@@ -1611,67 +1571,21 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-node--off {
 /* Skill chips take a stable tint from the skill's own name, so "React" is the
    same hue on every card and in the inspector. Six soft tints; the index comes
    from `skillTint()` in desk-match-card.tsx, never from the render order. */
-.desk-pill--c0 {
-  background: #E7F2F3;
-  color: #076573;
-}
-
-.desk-pill--c1 {
-  background: #E7F2F3;
-  color: #03535F;
-}
-
-.desk-pill--c2 {
-  background: #D6F7EC;
-  color: #03535F;
-}
-
-.desk-pill--c3 {
-  background: #EEF6F6;
-  color: #03535F;
-}
-
-.desk-pill--c4 {
-  background: #FFEDB0;
-  color: #AA821D;
-}
-
-.desk-pill--c5 {
-  background: #D92D2014;
-  color: #D92D20;
-}
+.desk-pill--c0 { background: #E7F2F3; color: #076573; }
+.desk-pill--c1 { background: #E7F2F3; color: #03535F; }
+.desk-pill--c2 { background: #D6F7EC; color: #03535F; }
+.desk-pill--c3 { background: #EEF6F6; color: #03535F; }
+.desk-pill--c4 { background: #FFEDB0; color: #AA821D; }
+.desk-pill--c5 { background: #D92D2014; color: #D92D20; }
 
 /* The tints are light-mode inks on light-mode grounds; on dark they would sit
    at roughly 2:1. Same hue family, inverted, so a skill keeps its identity. */
-html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c0 {
-  background: #02434D;
-  color: #D4EBEC;
-}
-
-html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c1 {
-  background: #03535F;
-  color: #D4EBEC;
-}
-
-html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c2 {
-  background: #02434D;
-  color: #D6F7EC;
-}
-
-html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c3 {
-  background: #03535F;
-  color: #E7F2F3;
-}
-
-html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c4 {
-  background: #AA821D;
-  color: #FFEDB0;
-}
-
-html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c5 {
-  background: #D92D20;
-  color: #D92D2014;
-}
+html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c0 { background: #02434D; color: #D4EBEC; }
+html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c1 { background: #03535F; color: #D4EBEC; }
+html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c2 { background: #02434D; color: #D6F7EC; }
+html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c3 { background: #03535F; color: #E7F2F3; }
+html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c4 { background: #AA821D; color: #FFEDB0; }
+html.dark:not(:has(.theme-abtalks-light)) .desk-pill--c5 { background: #D92D20; color: #D92D2014; }
 
 html.dark:not(:has(.theme-abtalks-light)) .desk-pill--warn {
   background: #AA821D;
@@ -1731,7 +1645,7 @@ html.dark:not(:has(.theme-abtalks-light)) .desk-card__partial {
   margin-top: 18px;
 }
 
-.desk-card__cta>* {
+.desk-card__cta > * {
   min-width: 0;
   flex: 0 1 auto;
 }
@@ -1898,7 +1812,6 @@ html.dark:not(:has(.theme-abtalks-light)) .desk-shortlist.is-on {
     opacity: 0;
     transform: translateX(10px);
   }
-
   to {
     opacity: 1;
     transform: none;
@@ -2342,7 +2255,7 @@ body:has(.hire-app--desk) {
   overflow: hidden;
 }
 
-body:has(.hire-app--desk)>footer {
+body:has(.hire-app--desk) > footer {
   display: none;
 }
 
@@ -2381,12 +2294,15 @@ body:has(.hire-app--desk) button.fixed.bottom-4.right-4 {
     min-width: 0;
   }
 
-  .hire-hbtn>span:not(.hire-hbtn__count):not(.hire-hbtn__icon):not(.hire-credits__value) {
+  .hire-hbtn
+    > span:not(.hire-hbtn__count):not(.hire-hbtn__icon):not(
+      .hire-credits__value
+    ) {
     display: none;
   }
 
   /* Assessments has no icon — keep its label so the control is not a blank chip. */
-  .hire-hbtn--label>span:not(.hire-hbtn__count):not(.hire-hbtn__icon) {
+  .hire-hbtn--label > span:not(.hire-hbtn__count):not(.hire-hbtn__icon) {
     display: inline;
   }
 
@@ -2855,90 +2771,71 @@ html.dark:not(:has(.theme-abtalks-light)) .pe__paper rect {
 .pe__paper--a {
   animation-name: pe-riffle-a;
 }
-
 .pe__paper--b {
   animation-name: pe-riffle-b;
   animation-delay: 260ms;
 }
-
 .pe__paper--c {
   animation-name: pe-riffle-c;
   animation-delay: 520ms;
 }
 
 @keyframes pe-riffle-a {
-
   0%,
   100% {
     transform: rotate(-13deg) translate(-6px, 2px);
   }
-
   22% {
     transform: rotate(-21deg) translate(-13px, -5px);
   }
-
   46% {
     transform: rotate(-10deg) translate(-3px, 3px);
   }
-
   70% {
     transform: rotate(-15deg) translate(-7px, 1px);
   }
 }
-
 @keyframes pe-riffle-b {
-
   0%,
   100% {
     transform: rotate(8deg) translate(4px, 0);
   }
-
   24% {
     transform: rotate(15deg) translate(11px, -6px);
   }
-
   50% {
     transform: rotate(5deg) translate(2px, 2px);
   }
-
   74% {
     transform: rotate(9deg) translate(5px, 0);
   }
 }
-
 @keyframes pe-riffle-c {
-
   0%,
   100% {
     transform: rotate(-3deg) translate(0, 0);
   }
-
   26% {
     transform: rotate(1deg) translate(2px, -7px);
   }
-
   52% {
     transform: rotate(-5deg) translate(-2px, 1px);
   }
-
   76% {
     transform: rotate(-3deg) translate(0, -1px);
   }
 }
 
 @keyframes pe-ground {
-
   0%,
   100% {
     transform: scaleX(1);
     opacity: 0.9;
   }
-
   30% {
     transform: scaleX(0.86);
     opacity: 0.65;
   }
-
   60% {
     transform: scaleX(1.04);
     opacity: 1;
@@ -2966,8 +2863,9 @@ html.dark:not(:has(.theme-abtalks-light)) .pe__paper rect {
 }
 
 .pe__glass {
-  offset-path: path("M 82,96 C 96,78 124,80 122,98 C 120,116 94,118 82,96 C 70,74 44,76 42,94 C 40,112 68,114 82,96"
-    );
+  offset-path: path(
+    "M 82,96 C 96,78 124,80 122,98 C 120,116 94,118 82,96 C 70,74 44,76 42,94 C 40,112 68,114 82,96"
+  );
   offset-rotate: 0deg;
   animation:
     pe-orbit 5200ms cubic-bezier(0.5, 0, 0.5, 1) infinite,
@@ -2980,27 +2878,22 @@ html.dark:not(:has(.theme-abtalks-light)) .pe__paper rect {
   from {
     offset-distance: 0%;
   }
-
   to {
     offset-distance: 100%;
   }
 }
 
 @keyframes pe-hunt {
-
   0%,
   100% {
     transform: rotate(-6deg) scale(1);
   }
-
   25% {
     transform: rotate(7deg) scale(1.06);
   }
-
   50% {
     transform: rotate(-4deg) scale(0.97);
   }
-
   75% {
     transform: rotate(8deg) scale(1.05);
   }
@@ -3014,12 +2907,10 @@ html.dark:not(:has(.theme-abtalks-light)) .pe__paper rect {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .pe__paper,
   .pe__ground {
     animation: none;
   }
-
   .pe__glass {
     offset-distance: 38%;
     animation: none;
@@ -3049,7 +2940,7 @@ html.dark:not(:has(.theme-abtalks-light)) .pe__paper rect {
   content: none;
 }
 
-.hire-pod__request>* {
+.hire-pod__request > * {
   position: relative;
   z-index: 1;
 }
@@ -3062,9 +2953,11 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-pod__request {
 
 html.dark:not(:has(.theme-abtalks-light)) .hire-pod__request::before {
   background:
-    radial-gradient(90% 70% at 100% -10%,
+    radial-gradient(
+      90% 70% at 100% -10%,
       rgba(7, 101, 115, 0.28) 0%,
-      transparent 52%),
+      transparent 52%
+    ),
     linear-gradient(180deg, rgba(3, 83, 95, 0.12) 0%, transparent 40%);
 }
 
@@ -3186,11 +3079,9 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-pod__note {
     box-shadow: 0 0 0 0 rgba(3, 83, 95, 0.45);
     border-color: var(--h-primary);
   }
-
   70% {
     box-shadow: 0 0 0 10px rgba(3, 83, 95, 0);
   }
-
   100% {
     box-shadow: 0 0 0 0 rgba(3, 83, 95, 0);
   }
@@ -3388,7 +3279,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app .hire-podbar button:not(.hir
   color: var(--h-gray-700);
 }
 
-.hire-sheet__li+.hire-sheet__li {
+.hire-sheet__li + .hire-sheet__li {
   margin-top: 8px;
 }
 
@@ -3426,7 +3317,6 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-sheet {
   .hire-sheet {
     padding: 24px 20px 32px;
   }
-
   .hire-sheet__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3486,7 +3376,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-detail__contact {
   background: rgba(255, 176, 140, 0.08);
 }
 
-.hire-detail__contact>div {
+.hire-detail__contact > div {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -3539,7 +3429,8 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-detail__contact {
   background: rgba(24, 24, 27, 0.4);
 }
 
-html.dark:not(:has(.theme-abtalks-light)) [data-slot="dialog-overlay"]:has(+ .hire-unlock) {
+html.dark:not(:has(.theme-abtalks-light))
+  [data-slot="dialog-overlay"]:has(+ .hire-unlock) {
   background: rgba(9, 9, 11, 0.62);
 }
 
@@ -3587,7 +3478,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-unlock {
   font-size: 13px;
 }
 
-.hire-unlock__row+.hire-unlock__row {
+.hire-unlock__row + .hire-unlock__row {
   border-top: 1px solid var(--h-border);
 }
 
@@ -3896,7 +3787,8 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-auth [data-slot="input"
 
 .hire-pie__wedge {
   filter:
-    drop-shadow(0 2px 3px rgba(0, 0, 0, 0.16)) drop-shadow(0 6px 10px rgba(0, 0, 0, 0.08));
+    drop-shadow(0 2px 3px rgba(0, 0, 0, 0.16))
+    drop-shadow(0 6px 10px rgba(0, 0, 0, 0.08));
 }
 
 .hire-pie__gloss {
@@ -3942,7 +3834,6 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-auth [data-slot="input"
     opacity: 0;
     transform: scale(0.86);
   }
-
   to {
     opacity: 1;
     transform: none;
@@ -3964,11 +3855,9 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-auth [data-slot="input"
     transform: translate(var(--tx), var(--ty));
     opacity: 0;
   }
-
   35% {
     opacity: 1;
   }
-
   100% {
     transform: translate(0, 0);
     opacity: 1;
@@ -4008,7 +3897,6 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-auth [data-slot="input"
     opacity: 0;
     transform: translateX(6px);
   }
-
   to {
     opacity: 1;
     transform: none;
@@ -4257,7 +4145,6 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .hire-pie__slice,
   .hire-pie__row,
   .hire-pie__hub,
@@ -4595,7 +4482,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
     gap: 8px;
   }
 
-  .scout__body.is-open .hire-detail__actions>* {
+  .scout__body.is-open .hire-detail__actions > * {
     flex: 1 1 100%;
     justify-content: center;
     min-height: 44px;
@@ -4619,7 +4506,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
     gap: 10px;
   }
 
-  .hire-podbar>span:not(.hire-podbar__icon) {
+  .hire-podbar > span:not(.hire-podbar__icon) {
     flex: 1 1 auto;
     min-width: 0;
     white-space: nowrap;
@@ -4708,9 +4595,9 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
     justify-content: stretch;
   }
 
-  .desk-card__cta>*,
-  .hire-app .desk-card__cta>*,
-  .hire-pod__actions>* {
+  .desk-card__cta > *,
+  .hire-app .desk-card__cta > *,
+  .hire-pod__actions > * {
     width: 100%;
     height: 38px;
     justify-content: center;
@@ -4723,7 +4610,7 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
     text-overflow: ellipsis;
   }
 
-  .hire-pod__actions>*:first-child {
+  .hire-pod__actions > *:first-child {
     grid-column: 1 / -1;
     justify-self: center;
     width: auto;
@@ -4749,11 +4636,13 @@ html.dark:not(:has(.theme-abtalks-light)) .hire-app.hire-menu {
   padding: 18px 20px;
   border: 1px dashed var(--h-border-strong);
   border-radius: 16px;
-  background: repeating-linear-gradient(135deg,
-      var(--h-peach-wash),
-      var(--h-peach-wash) 10px,
-      transparent 10px,
-      transparent 20px);
+  background: repeating-linear-gradient(
+    135deg,
+    var(--h-peach-wash),
+    var(--h-peach-wash) 10px,
+    transparent 10px,
+    transparent 20px
+  );
 }
 
 html.dark .vc-card {
@@ -4857,13 +4746,11 @@ html.dark .vc-card {
   .desk-card__cta {
     gap: 8px;
   }
-
   .desk-card__cta .desk-ghost,
   .desk-card__cta .desk-pod {
     padding-left: 10px;
     padding-right: 10px;
   }
-
   .desk-card__cta .desk-ghost {
     gap: 5px;
   }
@@ -4901,17 +4788,14 @@ html.dark .vc-card {
   font-weight: 700;
   letter-spacing: 0.02em;
 }
-
 .desk-badge--new {
   background: color-mix(in srgb, var(--h-primary) 16%, transparent);
   color: var(--h-primary);
 }
-
 .desk-badge--viewed {
   background: var(--h-card-line);
   color: var(--h-ink-soft, #626262);
 }
-
 .desk-card__triage {
   display: flex;
   flex-wrap: wrap;
@@ -4919,28 +4803,23 @@ html.dark .vc-card {
   gap: 8px;
   margin-top: 12px;
 }
-
 .desk-card__triage .desk-ghost.is-on {
   border-color: var(--h-primary);
   color: var(--h-primary);
   background: color-mix(in srgb, var(--h-primary) 10%, transparent);
 }
-
 .desk-card--rejected {
   opacity: 0.62;
 }
-
 .desk-card--rejected .desk-card__facts,
 .desk-card--rejected .desk-card__why {
   display: none;
 }
-
 .hire-req__name {
   display: grid;
   gap: 6px;
   padding: 8px 12px 4px;
 }
-
 .hire-req__name-input {
   width: 100%;
   height: 34px;
@@ -4951,7 +4830,6 @@ html.dark .vc-card {
   color: inherit;
   font-size: 13px;
 }
-
 .hire-hide-rejected {
   display: inline-flex;
   align-items: center;
@@ -5098,16 +4976,9 @@ html.dark .vc-card {
   cursor: pointer;
   transition: background-color 200ms var(--ease), color 200ms var(--ease);
 }
+.hire-gate__x:hover { background: var(--h-gray-100); color: var(--h-ink); }
 
-.hire-gate__x:hover {
-  background: var(--h-gray-100);
-  color: var(--h-ink);
-}
-
-.hire-gate__head {
-  text-align: center;
-}
-
+.hire-gate__head { text-align: center; }
 .hire-gate__title {
   margin: 0;
   font-size: 20px;
@@ -5115,7 +4986,6 @@ html.dark .vc-card {
   font-weight: 700;
   color: var(--h-ink);
 }
-
 .hire-gate__body {
   margin: 6px auto 0;
   font-size: 13px;
@@ -5133,7 +5003,6 @@ html.dark .vc-card {
   background: #F4F4F4;
   border-radius: 999px;
 }
-
 .hire-gate__seg {
   height: 38px;
   padding: 0 24px;
@@ -5149,18 +5018,13 @@ html.dark .vc-card {
   transition: background-color 200ms var(--ease), color 200ms var(--ease),
     box-shadow 200ms var(--ease);
 }
-
 .hire-gate__seg.is-active {
   background: #fff;
   color: var(--h-ink);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
-
 /* Green, like the "billed annually" line it promises. */
-.hire-gate__save {
-  color: #197E23;
-  font-weight: 700;
-}
+.hire-gate__save { color: #197E23; font-weight: 700; }
 
 .hire-gate__grid {
   display: grid;
@@ -5214,7 +5078,6 @@ html.dark .vc-card {
   font-weight: 700;
   color: var(--h-ink);
 }
-
 .hire-plan__tagline {
   margin: 5px 0 0;
   font-size: 13px;
@@ -5228,7 +5091,6 @@ html.dark .vc-card {
   gap: 9px;
   margin: 18px 0 0;
 }
-
 .hire-plan__price b {
   font-family: var(--font-outfit), sans-serif;
   font-size: 40px;
@@ -5238,7 +5100,6 @@ html.dark .vc-card {
   color: var(--h-ink);
   font-variant-numeric: tabular-nums;
 }
-
 .hire-plan__price span {
   font-size: 17px;
   font-weight: 400;
@@ -5278,7 +5139,6 @@ html.dark .vc-card {
   flex-direction: column;
   gap: 7px;
 }
-
 .hire-plan__list li {
   font-size: 13px;
   line-height: 19px;
@@ -5303,18 +5163,9 @@ html.dark .vc-card {
   cursor: pointer;
   transition: background-color 200ms var(--ease);
 }
-
-.hire-plan__cta:hover {
-  background: #000;
-}
-
-.hire-plan__cta--prime {
-  background: var(--h-primary);
-}
-
-.hire-plan__cta--prime:hover {
-  background: var(--h-primary-hover);
-}
+.hire-plan__cta:hover { background: #000; }
+.hire-plan__cta--prime { background: var(--h-primary); }
+.hire-plan__cta--prime:hover { background: var(--h-primary-hover); }
 
 .hire-gate__note {
   margin: 18px 0 0;
@@ -5325,18 +5176,9 @@ html.dark .vc-card {
 }
 
 @media (max-width: 900px) {
-  .hire-gate__grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .hire-gate__card {
-    padding: 24px 18px 22px;
-  }
-
-  .hire-plan--prime {
-    margin-block: 0;
-    padding-block: 24px 22px;
-  }
+  .hire-gate__grid { grid-template-columns: minmax(0, 1fr); }
+  .hire-gate__card { padding: 24px 18px 22px; }
+  .hire-plan--prime { margin-block: 0; padding-block: 24px 22px; }
 }
 
 /* Scout header: one row, one height, everything centred on it. */
@@ -5347,14 +5189,12 @@ html.dark .vc-card {
   gap: 10px;
   min-width: 0;
 }
-
-.scout__tools>* {
+.scout__tools > * {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   height: 34px;
 }
-
 .scout__meta {
   display: flex;
   flex-direction: column;
@@ -5369,10 +5209,7 @@ html.dark .vc-card {
     flex-wrap: wrap;
     justify-content: center;
   }
-
-  .hire-pie__legend {
-    flex-basis: 100%;
-  }
+  .hire-pie__legend { flex-basis: 100%; }
 }
 
 /* ── Plan 121: assessment builder / preview / list ───────────────────────── */
@@ -5449,7 +5286,6 @@ html.dark .vc-card {
 }
 
 @media (max-width: 900px) {
-
   .hire-assess__top h1,
   .hire-assess-list h1 {
     font-size: 32px;
@@ -5522,7 +5358,6 @@ html.dark .vc-card {
 }
 
 @media (max-width: 1099px) {
-
   .hire-assess__form[data-active="false"],
   .hire-assess__preview[data-active="false"] {
     display: none;
@@ -6273,7 +6108,6 @@ html.dark .vc-card {
     white-space: nowrap;
   }
 }
-
 /* ------------------------------------------------------------------
    Recruiter search landing (Figma 1570:437 desktop / 1594:98 mobile)
    Forest-green tokens. Lives only on `/hire` before the first query.
@@ -6297,59 +6131,15 @@ html.dark .vc-card {
 
    Behind everything (z-index -1 inside the isolated .hire-app), so on
    screen 2, where nothing else is positioned, it is simply the page. */
-@property --hf-base {
-  syntax: "<color>";
-  inherits: false;
-  initial-value: #0c6f63;
-}
-
-@property --hf-mint {
-  syntax: "<color>";
-  inherits: false;
-  initial-value: #18d39b;
-}
-
-@property --hf-115 {
-  syntax: "<color>";
-  inherits: false;
-  initial-value: #115b5a;
-}
-
-@property --hf-0a4 {
-  syntax: "<color>";
-  inherits: false;
-  initial-value: #0a444c;
-}
-
-@property --hf-035 {
-  syntax: "<color>";
-  inherits: false;
-  initial-value: #03535f;
-}
-
-@property --hf-025 {
-  syntax: "<color>";
-  inherits: false;
-  initial-value: #02525d;
-}
-
-@property --hf-055 {
-  syntax: "<color>";
-  inherits: false;
-  initial-value: #055560;
-}
-
-@property --hf-053 {
-  syntax: "<color>";
-  inherits: false;
-  initial-value: #053d45;
-}
-
-@property --hf-287 {
-  syntax: "<color>";
-  inherits: false;
-  initial-value: #287b62;
-}
+@property --hf-base { syntax: "<color>"; inherits: false; initial-value: #0c6f63; }
+@property --hf-mint { syntax: "<color>"; inherits: false; initial-value: #18d39b; }
+@property --hf-115 { syntax: "<color>"; inherits: false; initial-value: #115b5a; }
+@property --hf-0a4 { syntax: "<color>"; inherits: false; initial-value: #0a444c; }
+@property --hf-035 { syntax: "<color>"; inherits: false; initial-value: #03535f; }
+@property --hf-025 { syntax: "<color>"; inherits: false; initial-value: #02525d; }
+@property --hf-055 { syntax: "<color>"; inherits: false; initial-value: #055560; }
+@property --hf-053 { syntax: "<color>"; inherits: false; initial-value: #053d45; }
+@property --hf-287 { syntax: "<color>"; inherits: false; initial-value: #287b62; }
 
 .hire-app--desk {
   isolation: isolate;
@@ -6435,7 +6225,6 @@ html.dark .vc-card {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .hire-field,
   .hire-field__shade,
   .hire-field__glow-core {
@@ -6462,7 +6251,6 @@ html.dark .vc-card {
     opacity: 0;
     transform: translateY(8px);
   }
-
   to {
     opacity: 1;
     transform: none;
@@ -6516,14 +6304,14 @@ html.dark .vc-card {
   z-index: 0;
 }
 
-.hire-app--landing>* {
+.hire-app--landing > * {
   position: relative;
   z-index: 1;
 }
 
 /* ...except the field, which is a fixed backdrop. Same specificity as the rule
    above, so it has to come after it. */
-.hire-app--landing>.hire-field {
+.hire-app--landing > .hire-field {
   position: fixed;
   z-index: -1;
 }
@@ -6673,7 +6461,6 @@ html.dark .vc-card {
     opacity: 1;
     transform: none;
   }
-
   to {
     opacity: 0;
     transform: translateY(-10px);
@@ -6681,7 +6468,6 @@ html.dark .vc-card {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .rsearch.is-leaving .rsearch__title,
   .rsearch.is-leaving .rsearch__suggest,
   .rsearch.is-leaving .rsearch__reply,
@@ -6978,7 +6764,6 @@ html.dark .vc-card {
     opacity: 0;
     transform: translateY(6px);
   }
-
   to {
     opacity: 1;
     transform: none;
@@ -6998,7 +6783,6 @@ html.dark .vc-card {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .rsearch__suggest-slot.is-1,
   .rsearch__suggest-slot.is-2 {
     display: none;
@@ -7518,16 +7302,16 @@ html.dark .vc-card {
   background: #f4f5f5;
 }
 
-.hire-side__projectli>.hire-side__row {
+.hire-side__projectli > .hire-side__row {
   flex: 1 1 auto;
   min-width: 0;
 }
 
-.hire-side__projectli>.hire-side__row:hover {
+.hire-side__projectli > .hire-side__row:hover {
   background: transparent;
 }
 
-.hire-side__projectli>.hire-side__more {
+.hire-side__projectli > .hire-side__more {
   margin-right: 4px;
 }
 
@@ -7810,15 +7594,15 @@ button.hire-side__me {
     "composer panel";
 }
 
-.scout__body>.chat-output {
+.scout__body > .chat-output {
   grid-area: chat;
 }
 
-.scout__body>.scout-composer {
+.scout__body > .scout-composer {
   grid-area: composer;
 }
 
-.scout__body>.hire-detail {
+.scout__body > .hire-detail {
   grid-area: panel;
 }
 
@@ -7888,7 +7672,7 @@ button.hire-side__me {
   }
 
   /* The panel tops out on the card line, below the Filters row. */
-  .hire-app--results .scout__body>.hire-detail {
+  .hire-app--results .scout__body > .hire-detail {
     margin-top: 36px;
   }
 }
@@ -8493,7 +8277,7 @@ button.hire-profile__in:focus-visible {
   color: #18181b;
 }
 
-.hire-profile__org>span:last-child {
+.hire-profile__org > span:last-child {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -8767,7 +8551,7 @@ button.hire-profile__in:focus-visible {
   gap: 12px;
 }
 
-.hire-profile__org-block+.hire-profile__org-block {
+.hire-profile__org-block + .hire-profile__org-block {
   margin-top: 16px;
 }
 
@@ -8980,7 +8764,7 @@ button.hire-profile__in:focus-visible {
   padding: 8px 12px;
 }
 
-.hire-profile__cert+.hire-profile__cert {
+.hire-profile__cert + .hire-profile__cert {
   border-top: 1px solid #e4e4e7;
 }
 
@@ -9294,7 +9078,6 @@ button.hire-profile__in:focus-visible {
 }
 
 @media (min-width: 901px) {
-
   .scout--hero .rsearch__title,
   .rsearch__title.is-leaving {
     max-width: none;
@@ -9482,7 +9265,6 @@ button.hire-profile__in:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .rsearch__title.is-leaving,
   .rsearch__suggest.is-leaving {
     animation: none;
@@ -9569,14 +9351,12 @@ button.hire-profile__in:focus-visible {
   from {
     background-position: 100% 0;
   }
-
   to {
     background-position: -100% 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .hire-skel__avatar,
   .hire-skel__line,
   .hire-skel__chip,
@@ -9648,8 +9428,7 @@ button.hire-profile__in:focus-visible {
 .hire-field__glow-core {
   display: block;
   will-change: transform;
-  animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1);
-  /* sine in-out */
+  animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1); /* sine in-out */
   animation-iteration-count: infinite;
   animation-direction: alternate;
   animation-play-state: paused;
@@ -9686,66 +9465,48 @@ button.hire-profile__in:focus-visible {
 
 /* Geometry: the export's ellipse, box = 2 x radii, centred on its point.
    Drift: how far it wanders (--gx / --gy) and how slowly (--g*-t). */
-.hire-field__glow--a {
-  /* 7.5% 23.8%, r 20.2% x 48.8% */
+.hire-field__glow--a {        /* 7.5% 23.8%, r 20.2% x 48.8% */
   left: -12.7vw;
   top: -25vh;
   width: 40.4vw;
   height: 97.6vh;
-  --gx: 30vw;
-  --gx-t: 17s;
-  --gy: 32vh;
-  --gy-t: 13.5s;
+  --gx: 30vw;  --gx-t: 17s;
+  --gy: 32vh;  --gy-t: 13.5s;
   --gs-t: 11s;
   --gf-t: 8.5s;
 }
 
-.hire-field__glow--b {
-  /* 39.8% 86.8%, r 28.2% x 40.3% */
+.hire-field__glow--b {        /* 39.8% 86.8%, r 28.2% x 40.3% */
   left: 11.6vw;
   top: 46.5vh;
   width: 56.4vw;
   height: 80.6vh;
-  --gx: -28vw;
-  --gx-t: 19s;
-  --gy: -26vh;
-  --gy-t: 15.5s;
-  --gs-t: 14s;
-  --gs-d: -5.5s;
-  --gf-t: 10.5s;
-  --gf-d: -4s;
+  --gx: -28vw; --gx-t: 19s;
+  --gy: -26vh; --gy-t: 15.5s;
+  --gs-t: 14s; --gs-d: -5.5s;
+  --gf-t: 10.5s; --gf-d: -4s;
 }
 
-.hire-field__glow--c {
-  /* 84.8% 81.4%, r 13.6% x 32.2% */
+.hire-field__glow--c {        /* 84.8% 81.4%, r 13.6% x 32.2% */
   left: 71.2vw;
   top: 49.2vh;
   width: 27.2vw;
   height: 64.4vh;
-  --gx: -34vw;
-  --gx-t: 15.5s;
-  --gy: -30vh;
-  --gy-t: 21s;
-  --gs-t: 12.5s;
-  --gs-d: -8.5s;
-  --gf-t: 7s;
-  --gf-d: -3s;
+  --gx: -34vw; --gx-t: 15.5s;
+  --gy: -30vh; --gy-t: 21s;
+  --gs-t: 12.5s; --gs-d: -8.5s;
+  --gf-t: 7s; --gf-d: -3s;
 }
 
-.hire-field__glow--d {
-  /* 35.4% 27.0%, r 13.1% x 28.8% */
+.hire-field__glow--d {        /* 35.4% 27.0%, r 13.1% x 28.8% */
   left: 22.3vw;
   top: -1.8vh;
   width: 26.2vw;
   height: 57.6vh;
-  --gx: 30vw;
-  --gx-t: 14s;
-  --gy: 34vh;
-  --gy-t: 18s;
-  --gs-t: 10.5s;
-  --gs-d: -3.5s;
-  --gf-t: 9s;
-  --gf-d: -6.5s;
+  --gx: 30vw;  --gx-t: 14s;
+  --gy: 34vh;  --gy-t: 18s;
+  --gs-t: 10.5s; --gs-d: -3.5s;
+  --gf-t: 9s; --gf-d: -6.5s;
 }
 
 .hire-app--landing .hire-field__glow,
@@ -9755,52 +9516,31 @@ button.hire-profile__in:focus-visible {
 }
 
 @keyframes hire-drift-x {
-  from {
-    transform: translate3d(calc(var(--gx) * -1), 0, 0);
-  }
-
-  to {
-    transform: translate3d(var(--gx), 0, 0);
-  }
+  from { transform: translate3d(calc(var(--gx) * -1), 0, 0); }
+  to { transform: translate3d(var(--gx), 0, 0); }
 }
 
 @keyframes hire-drift-y {
-  from {
-    transform: translate3d(0, calc(var(--gy) * -1), 0);
-  }
-
-  to {
-    transform: translate3d(0, var(--gy), 0);
-  }
+  from { transform: translate3d(0, calc(var(--gy) * -1), 0); }
+  to { transform: translate3d(0, var(--gy), 0); }
 }
 
 /* Grows past its design size more than it shrinks below it, so the field
    never ends up with less light than the design has. */
 @keyframes hire-breathe {
-  from {
-    transform: scale(0.96);
-  }
-
-  to {
-    transform: scale(1.12);
-  }
+  from { transform: scale(0.96); }
+  to { transform: scale(1.12); }
 }
 
 /* A shimmer, not a fade-out: the design's brightness is the floor, near
    enough. Dipping to 20% (as this first did) visibly darkened the screen. */
 @keyframes hire-fade {
-  from {
-    opacity: 0.8;
-  }
-
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0.8; }
+  to { opacity: 1; }
 }
 
 /* Reduced motion: the blobs simply stay where the design put them. */
 @media (prefers-reduced-motion: reduce) {
-
   .hire-field__glow,
   .hire-field__glow-y,
   .hire-field__glow-core {
@@ -9851,7 +9591,6 @@ button.hire-profile__in:focus-visible {
     opacity: 1;
     transform: none;
   }
-
   to {
     opacity: 0;
     transform: translateY(8px);
@@ -9871,7 +9610,6 @@ button.hire-profile__in:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .scout.is-returning .scout__toolbar,
   .scout.is-returning .chat-output,
   .scout--hero.is-arriving .rsearch__title,
@@ -9905,7 +9643,7 @@ button.hire-profile__in:focus-visible {
   align-items: center;
 }
 
-.hire-app__logo-swap>img {
+.hire-app__logo-swap > img {
   grid-area: 1 / 1;
   transition: opacity 1200ms cubic-bezier(0.45, 0.05, 0.25, 1);
 }
@@ -9923,19 +9661,18 @@ button.hire-profile__in:focus-visible {
 }
 
 .hire-app--results .hire-app__badge,
-.hire-app--results .hire-app__nav>.hire-hbtn {
+.hire-app--results .hire-app__nav > .hire-hbtn {
   animation: hire-results-in 700ms var(--ease) 500ms both;
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .hire-app__header,
-  .hire-app__logo-swap>img {
+  .hire-app__logo-swap > img {
     transition: none;
   }
 
   .hire-app--results .hire-app__badge,
-  .hire-app--results .hire-app__nav>.hire-hbtn {
+  .hire-app--results .hire-app__nav > .hire-hbtn {
     animation: none;
   }
 }
@@ -10040,51 +9777,23 @@ button.hire-profile__in:focus-visible {
 }
 
 @keyframes rsearch-cube-in {
-  from {
-    transform: rotateX(-90deg);
-    opacity: 0;
-  }
-
-  to {
-    transform: rotateX(0deg);
-    opacity: 1;
-  }
+  from { transform: rotateX(-90deg); opacity: 0; }
+  to { transform: rotateX(0deg); opacity: 1; }
 }
 
 @keyframes rsearch-cube-out {
-  from {
-    transform: rotateX(0deg);
-    opacity: 1;
-  }
-
-  to {
-    transform: rotateX(90deg);
-    opacity: 0;
-  }
+  from { transform: rotateX(0deg); opacity: 1; }
+  to { transform: rotateX(90deg); opacity: 0; }
 }
 
 @keyframes rsearch-cube-in-back {
-  from {
-    transform: rotateX(90deg);
-    opacity: 0;
-  }
-
-  to {
-    transform: rotateX(0deg);
-    opacity: 1;
-  }
+  from { transform: rotateX(90deg); opacity: 0; }
+  to { transform: rotateX(0deg); opacity: 1; }
 }
 
 @keyframes rsearch-cube-out-back {
-  from {
-    transform: rotateX(0deg);
-    opacity: 1;
-  }
-
-  to {
-    transform: rotateX(-90deg);
-    opacity: 0;
-  }
+  from { transform: rotateX(0deg); opacity: 1; }
+  to { transform: rotateX(-90deg); opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -10145,7 +9854,6 @@ button.hire-profile__in:focus-visible {
 }
 
 @media (min-width: 901px) {
-
   .scout-composer__row,
   .scout-field,
   .scout-field textarea,
@@ -10230,7 +9938,6 @@ button.hire-profile__in:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .scout-composer,
   .scout-composer__row,
   .scout-field,
@@ -10426,8 +10133,8 @@ button.hire-profile__in:focus-visible {
   min-width: 0;
 }
 
-.hire-filter-field>span,
-.hire-filter-field>legend {
+.hire-filter-field > span,
+.hire-filter-field > legend {
   font-family: var(--font-inter), sans-serif;
   font-size: 14px;
   line-height: 20px;
@@ -10540,6 +10247,660 @@ button.hire-profile__in:focus-visible {
 
   .hire-filter-bar {
     padding: 12px 14px;
+  }
+}
+
+/* ==========================================================================
+   Hire UI/UX pass — scrollbars, centred workspace, Projects/History
+   ========================================================================== */
+
+/* --- Hidden scrollbars, intact scrolling ---------------------------------
+   Visual only. Nothing here sets `overflow: hidden`, so wheel, trackpad,
+   touch, keyboard (arrows / PageUp / PageDown / Home / End), focus-scroll and
+   `scrollIntoView` all behave exactly as before — the scrollbar is painted
+   away, the scroll container is not.
+
+   Scoped to `.hire-app` and its portalled dialogs rather than applied
+   globally, so the student dashboard and every other route keep their native
+   scrollbars.
+
+   `scrollbar-width: none` covers Firefox, `-ms-overflow-style` old Edge, and
+   the WebKit pseudo-element Chrome and Safari. All three are needed; none of
+   them is sufficient alone. */
+.hire-app,
+.hire-app *,
+.hire-unlock,
+.hire-unlock * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hire-app::-webkit-scrollbar,
+.hire-app *::-webkit-scrollbar,
+.hire-unlock::-webkit-scrollbar,
+.hire-unlock *::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
+/* Keyboard users still need to see where they are once the bar is gone. */
+.hire-app [tabindex]:focus-visible,
+.hire-app a:focus-visible,
+.hire-app button:focus-visible {
+  outline: 2px solid #03535f;
+  outline-offset: 2px;
+}
+
+/* --- Projects / History --------------------------------------------------- */
+
+/* Measure and padding now come from `.hire-shell__content` above, shared with
+   Messages and Settings. This keeps only what is its own. */
+.hire-history {
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  color: #1f2a2e;
+}
+
+.hire-history__head {
+  margin-bottom: 26px;
+}
+
+.hire-history__kicker {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #03535f;
+}
+
+.hire-history__title {
+  margin: 0;
+  font-family: var(--font-outfit), var(--font-inter), sans-serif;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 38px;
+  color: #14212a;
+}
+
+.hire-history__lede {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: #6b7477;
+}
+
+.hire-history__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hire-history__project {
+  border: 1px solid #e6e9ea;
+  border-radius: 14px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.hire-history__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+}
+
+.hire-history__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: #6b7477;
+  cursor: pointer;
+}
+
+.hire-history__toggle:hover {
+  background: #f1f3f3;
+  color: #03535f;
+}
+
+.hire-history__chevron {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.1;
+  transition: transform 150ms ease;
+}
+
+.hire-history__chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.hire-history__folder {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: #03535f;
+  stroke-width: 1.9;
+}
+
+.hire-history__name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 21px;
+  color: #14212a;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hire-history__name:hover {
+  color: #03535f;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.hire-history__meta {
+  margin-left: auto;
+  flex: none;
+  font-size: 12.5px;
+  line-height: 18px;
+  color: #9aa2a5;
+  white-space: nowrap;
+}
+
+.hire-history__open {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid #cfd8da;
+  border-radius: 9px;
+  background: #f7f9f9;
+  font-size: 13px;
+  font-weight: 600;
+  color: #03535f;
+  text-decoration: none;
+}
+
+.hire-history__open:hover {
+  border-color: #03535f;
+  background: #edf5f5;
+}
+
+.hire-history__searches {
+  padding: 0 16px 14px 52px;
+  border-top: 1px solid #f0f2f2;
+}
+
+.hire-history__none {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #9aa2a5;
+}
+
+.hire-history__sessions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hire-history__session {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  color: #1f2a2e;
+  text-decoration: none;
+}
+
+.hire-history__session:hover {
+  background: #f4f6f6;
+}
+
+.hire-history__clock {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  color: #9aa2a5;
+  stroke-width: 1.9;
+}
+
+.hire-history__stext {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.hire-history__stitle {
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 19px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hire-history__smeta {
+  font-size: 12px;
+  line-height: 16px;
+  color: #9aa2a5;
+}
+
+.hire-history__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 56px 24px;
+  border: 1px dashed #d9dedf;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.hire-history__emptyicon {
+  width: 30px;
+  height: 30px;
+  color: #9aa2a5;
+  stroke-width: 1.6;
+}
+
+.hire-history__emptyh {
+  margin: 6px 0 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #14212a;
+}
+
+.hire-history__emptyp {
+  margin: 0;
+  max-width: 380px;
+  font-size: 13.5px;
+  line-height: 20px;
+  color: #6b7477;
+}
+
+.hire-history__emptycta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 41px;
+  margin-top: 12px;
+  padding: 0 18px;
+  border-radius: 10px;
+  background: #03535f;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.hire-history__emptycta:hover {
+  background: #076573;
+}
+
+.hire-history__emptyctaicon {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.2;
+}
+
+.hire-history__foot {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 22px 0 0;
+  font-size: 12px;
+  line-height: 17px;
+  color: #9aa2a5;
+}
+
+.hire-history__footicon {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  stroke-width: 1.9;
+}
+
+@media (max-width: 720px) {
+  .hire-shell__content {
+    padding: 28px 16px 48px;
+  }
+
+  .hire-history__title {
+    font-size: 25px;
+    line-height: 32px;
+  }
+
+  .hire-history__meta {
+    display: none;
+  }
+
+  .hire-history__searches {
+    padding-left: 20px;
+  }
+}
+
+/* --- Toolbar controls at their stated size, through the desk zoom ---------
+   `.hire-app--results` carries `zoom: var(--hire-zoom)` (0.75 at 1440px) to
+   fit the design frame to the viewport, so a 41px control is painted at 31px
+   and reads exactly as "too small and subtle" again. Dividing by the same
+   variable makes the PAINTED size the specified one at every breakpoint:
+   41 / 0.75 = 54.7 CSS px, which the zoom then renders back to 41.
+
+   Scoped to the results screen because only it is zoomed — the landing keeps
+   the plain values above. */
+.hire-app--results .scout-filters {
+  height: calc(41px / var(--hire-zoom, 1));
+  gap: calc(7px / var(--hire-zoom, 1));
+  padding: 0 calc(16px / var(--hire-zoom, 1));
+  border-radius: calc(10px / var(--hire-zoom, 1));
+  font-size: calc(14px / var(--hire-zoom, 1));
+  line-height: calc(20px / var(--hire-zoom, 1));
+}
+
+.hire-app--results .scout-action {
+  padding: 0 calc(18px / var(--hire-zoom, 1));
+}
+
+.hire-app--results .scout-filters__icon {
+  width: calc(16px / var(--hire-zoom, 1));
+  height: calc(16px / var(--hire-zoom, 1));
+}
+
+.hire-app--results .scout-filters__icon img {
+  width: calc(16px / var(--hire-zoom, 1));
+  height: calc(15px / var(--hire-zoom, 1));
+}
+
+.hire-app--results .scout__toolbar {
+  /* 8px was set when these were 28px-high text links; against the 41px pills
+     they now are, it read as one segmented control rather than three separate
+     actions. 14px lets them breathe without drifting apart. */
+  gap: calc(14px / var(--hire-zoom, 1));
+  padding-bottom: calc(12px / var(--hire-zoom, 1));
+}
+
+/* --- Three zones: sidebar | results | reserved detail rail ----------------
+   The right column is part of the grid whether or not a candidate is open.
+   It used to be `1fr 0fr` when closed, so the results stretched across the
+   whole stage and then jumped when the panel pushed in. Reserving the track
+   in both states means the panel slides into space that already exists — the
+   card list does not reflow — and the empty rail is deliberate, not a gap.
+
+   The results column keeps a readable measure and sits centred in its own
+   track rather than hugging the sidebar. */
+@media (min-width: 1101px) {
+  .hire-app--results .scout__body,
+  .hire-app--results .scout__body.is-open {
+    /* The detail rail was landing on its 380px floor (285px once the desk zoom
+       is applied), which is why the profile's own rows wrapped — "Availability
+       unconfirmed" over two lines, tags stacking. Widening it narrows the
+       centre column by the same amount, because the two share this grid: the
+       cards come down to a tighter reading measure and the profile gets room
+       to lay its labels and values out on one line.
+
+       Still identical open and closed, so opening a candidate moves the card
+       list by zero pixels. */
+    grid-template-columns: minmax(0, 1fr) clamp(480px, 40vw, 660px);
+    column-gap: 22px;
+  }
+
+  /* The reserved rail already sets the measure: at 1440 the centre track is
+     1125 CSS px and at 1920 it is 1367, which paint (through the 0.75 desk
+     zoom) at 844 and 1025 — the readable widths we want. So this cap is only
+     a backstop for ultra-wide monitors, set high enough NOT to bind at either
+     common width. A lower cap made the cards 19px narrower than the composer,
+     which cannot be centred the same way because it is zoom-cancelled. */
+  .hire-app--results .scout__toolbar,
+  .hire-app--results .chat-output > * {
+    width: 100%;
+    max-width: 1400px;
+    margin-inline: auto;
+  }
+
+  /* The composer is deliberately NOT in the rule above. It carries
+     `zoom: calc(1 / var(--hire-zoom))` to cancel the desk zoom, so a
+     `margin-inline: auto` inside it resolves against a different coordinate
+     space and paints ~94px to the right of the cards. It already fills the
+     centre grid column, which is the same edge — so it is left alone. */
+}
+
+/* --- Shared shell for every non-desk /hire page ---------------------------
+   Same header above, same sidebar beside, page content in the middle. The
+   candidate detail rail is not part of this: it belongs to the results grid.
+
+   `.hire-plain` stays as the inner measure for page bodies that still use it,
+   so nothing that already renders inside one has to change. */
+.hire-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  /* stretch, not flex-start: the rail and the content pane both need to fill
+     the shell's height so each can scroll inside itself. */
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.hire-shell__content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  /* The page measure lives here, not on each page. Search history had its own
+     centred container while Messages and Settings rendered flush against the
+     sidebar with no gutter, so the three read as separate implementations.
+     One rule, and every plain /hire page is laid out the same. */
+  padding: 40px 24px 64px;
+}
+
+.hire-shell__content > * {
+  width: 100%;
+  max-width: 880px;
+  margin-inline: auto;
+}
+
+/* The rail holds the nav card at its declared size — 281px, the size the
+   sidebar was designed at. The DESK is the one that has to come to this (see
+   the zoom-cancel below), not the other way round: shrinking these pages to
+   the desk's 211px made the good sidebar worse. The 20px/45px inset matches
+   `.hire-app--results .hire-workspace`'s padding so the card starts at the
+   same x and y on every page. */
+.hire-shell__rail {
+  flex: none;
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+
+@media (min-width: 901px) {
+  .hire-shell__rail {
+    padding: 20px 0 0 45px;
+  }
+
+  /* Overrides the <=1365px results rule, which hides the card by viewport
+     width; under the rail's zoom there is room for it, same as the desk. */
+  .hire-shell__rail > .hire-side {
+    display: flex;
+  }
+}
+
+/* Below the desk's own breakpoint the rail gives way and the page takes the
+   full width, exactly as the results screen already does. */
+@media (max-width: 900px) {
+  .hire-shell__rail {
+    display: none;
+  }
+}
+
+/* --- The desk's nav card renders at its declared size ---------------------
+   `.hire-app--results` scales its whole shell with `zoom: var(--hire-zoom)`
+   (0.75 at 1440px), which dragged the sidebar down to 211px painted while the
+   same component on /hire/projects, /hire/messages and /hire/settings drew at
+   its designed 281px. Same component, two sizes, and the small one was the
+   worse one.
+
+   Cancelling the zoom here makes every declared length paint at face value —
+   281px wide, 36px/31px margins, and the type at the size it was set — so the
+   card is identical on the desk and on every plain page. The results column
+   simply gets the remaining width, which the reserved-rail grid already
+   handles.
+
+   `max-height` is the one length that needs adjusting: its percentage resolves
+   in the zoomed parent's space, so it is multiplied back up to leave exactly
+   the 36px top margin. */
+@media (min-width: 901px) {
+  .hire-app--results .hire-side {
+    zoom: calc(1 / var(--hire-zoom, 1));
+    /* `align-self: stretch` instead of a percentage max-height. A percentage
+       resolves in the containing block's coordinate space while the zoomed
+       element lives in its own, so the two disagree and the card stopped ~290px
+       short of the viewport with its lower half — All projects, Support,
+       Upgrade, the account row — clipped away. Stretch is resolved by flex
+       layout on both sides of the zoom, so the card fills the workspace
+       exactly, whatever the zoom happens to be. */
+    align-self: stretch;
+    max-height: none;
+    margin-bottom: 20px;
+  }
+}
+
+/* --- Plain /hire/* pages scroll like the desk, not like a document --------
+   `.hire-app` is `min-height: 100dvh`, so a plain page grew with its content
+   and the whole DOCUMENT scrolled. Two visible consequences: the browser's own
+   scrollbar appeared down the right (which the rest of this UI deliberately
+   hides), and the nav card scrolled away with the page — its lower half cut
+   off at the viewport edge instead of sitting still beside the content.
+
+   The desk already solves this by pinning itself to the viewport and scrolling
+   inside. Plain pages now do the same: the shell owns the height, the content
+   pane scrolls within it, and the rail stays put.
+
+   Desktop only — phones keep normal document scrolling. */
+@media (min-width: 901px) {
+  .hire-app:not(.hire-app--desk) {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* Same treatment as the desk's card, so the two are identical: fills the
+     available height rather than sizing to its content, and scrolls inside
+     itself (with the scrollbar hidden) when a recruiter has enough projects
+     to overflow it. */
+  .hire-shell__rail > .hire-side {
+    align-self: stretch;
+    max-height: none;
+    margin-bottom: 20px;
+  }
+}
+
+/* One ground across the whole of /hire: the desk's field converges on this
+   grey (above) and every plain page paints the same, so moving between the
+   desk and Search history / Messages / Settings does not change the page
+   colour under you. */
+.hire-app--results {
+  background: #f4f4f5;
+}
+
+.hire-app:not(.hire-app--desk) {
+  background: #f4f4f5;
+}
+
+/* --- The nav card arrives with the bar ------------------------------------
+   Screen 1 -> 2, the composer travels down the page over HIRE_STAGE_MS
+   (1200ms, hire-stage-flip.ts) and the green field morphs to the dashboard
+   over the same 1200ms — that shared duration is what makes the surface feel
+   attached to the bar. The sidebar used to simply pop into place on the frame
+   it mounted, which broke that: one element cut while everything else moved.
+
+   Same duration and same easing as the bar's travel, with a short lead-in so
+   the bar starts first and the rail follows it in rather than racing it. It
+   slides from the left because that is the edge it belongs to.
+
+   `both` holds the from-state through the delay, so there is no flash of the
+   card at full opacity before the animation starts. Guarded on
+   prefers-reduced-motion, like every other stage move here. */
+@keyframes hire-side-in {
+  from {
+    opacity: 0;
+    transform: translateX(-22px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hire-app--results .hire-side {
+    animation: hire-side-in 1200ms 120ms cubic-bezier(0.45, 0.05, 0.25, 1) both;
+  }
+}
+
+/* --- Header and rail meet at the top-left corner --------------------------
+   The student dashboard seats its wordmark in the sidebar's own column: the
+   header's bottom rule starts where the sidebar's right rule starts, and the
+   two cross. Hire had a full-width header floating above a detached rounded
+   card, so there was no corner at all.
+
+   So on every non-hero screen the rail goes flush — no top or left margin, no
+   rounded left corners, no drop shadow — and picks up a right border; the
+   header picks up a bottom border. Where they meet is the corner.
+
+   NOT applied to the hero: screen 1 has no sidebar, and its header sits on the
+   green field with no rule under it. That is also what keeps the search bar's
+   travel intact — the FLIP measures the composer's real rects at run time, so
+   it simply lands against the new geometry. */
+@media (min-width: 901px) {
+  .hire-app:not(.hire-app--landing) .hire-app__header {
+    border-bottom: 1px solid var(--h-border);
+    background: #ffffff;
+  }
+
+  .hire-app--results .hire-workspace {
+    padding-top: 0;
+    padding-left: 0;
+  }
+
+  .hire-shell__rail {
+    padding: 0;
+  }
+
+  .hire-app--results .hire-side,
+  .hire-shell__rail > .hire-side {
+    margin: 0;
+    border-radius: 0;
+    border-right: 1px solid var(--h-border);
+    box-shadow: none;
+  }
+}
+
+/* --- Breathing room between the rail and the results ----------------------
+   Flushing the sidebar to the viewport edge left the cards starting 2px from
+   its border, so the list looked welded to the nav. A gutter separates them
+   and takes a little width off the cards, which they could spare. */
+@media (min-width: 901px) {
+  .hire-app--results .hire-scout-region {
+    padding-left: calc(28px / var(--hire-zoom, 1));
   }
 }
 
@@ -10826,7 +11187,7 @@ button.hire-profile__in:focus-visible {
   font-weight: 600;
 }
 
-.hire-jobs__filters>div {
+.hire-jobs__filters > div {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -10866,7 +11227,7 @@ button.hire-profile__in:focus-visible {
   font-weight: 700;
 }
 
-.hire-jobs__empty>p {
+.hire-jobs__empty > p {
   margin: 8px 0 20px;
   max-width: 36ch;
   color: #787878;
@@ -10918,24 +11279,9 @@ button.hire-profile__in:focus-visible {
   clip-path: polygon(50% 0, 61% 35%, 100% 50%, 61% 65%, 50% 100%, 39% 65%, 0 50%, 39% 35%);
 }
 
-.hire-jobs__spark--a {
-  top: 16px;
-  right: 36px;
-}
-
-.hire-jobs__spark--b {
-  top: 48px;
-  right: 18px;
-  width: 6px;
-  height: 6px;
-}
-
-.hire-jobs__spark--c {
-  top: 22px;
-  left: 40px;
-  width: 5px;
-  height: 5px;
-}
+.hire-jobs__spark--a { top: 16px; right: 36px; }
+.hire-jobs__spark--b { top: 48px; right: 18px; width: 6px; height: 6px; }
+.hire-jobs__spark--c { top: 22px; left: 40px; width: 5px; height: 5px; }
 
 .hire-jobs__or {
   display: flex;
@@ -11198,7 +11544,7 @@ button.hire-profile__in:focus-visible {
   gap: 8px;
 }
 
-.hire-jobs-form__field>span:first-child {
+.hire-jobs-form__field > span:first-child {
   color: #353535;
   font-size: 14px;
   font-weight: 600;
@@ -11383,7 +11729,7 @@ button.hire-profile__in:focus-visible {
 }
 
 .hire-jobs-form__tips header svg,
-.hire-jobs-form__note>svg {
+.hire-jobs-form__note > svg {
   width: 18px;
   height: 18px;
   flex: none;
