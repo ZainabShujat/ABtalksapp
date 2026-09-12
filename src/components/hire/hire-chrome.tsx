@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Bookmark, Briefcase, ClipboardCheck, FolderKanban, UserCheck, X } from "lucide-react";
+import { Bookmark, Briefcase, ClipboardCheck, FolderKanban, Menu, UserCheck, X } from "lucide-react";
 import { RecruiterAccountMenu } from "@/components/hire/recruiter-account-menu";
 import { CreditBalancePill } from "@/components/hire/credit-balance-pill";
 import { useHireAuth } from "@/components/hire/hire-auth-provider";
@@ -109,6 +109,37 @@ export function HireChrome({
   // 1585:46): nav card left, results over the composer, profile panel right.
   const isResults = desk && !isLanding;
 
+  // Phones (≤900px) hide the nav card, so it becomes a drawer behind a menu
+  // button. Only offered where a sidebar is actually rendered below.
+  const hasNav = isResults || (!desk && Boolean(account));
+  const [navOpen, setNavOpen] = useState(false);
+  const [navPath, setNavPath] = useState(pathname);
+  if (pathname !== navPath) {
+    setNavPath(pathname);
+    setNavOpen(false);
+  }
+
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setNavOpen(false);
+    };
+    // A link or "New search" inside the drawer closes it, including links to
+    // the page already open, which the pathname check above cannot see.
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as Element | null;
+      if (target?.closest(".hire-side a[href], .hire-side .hire-side__new")) {
+        setNavOpen(false);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("click", onClick);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("click", onClick);
+    };
+  }, [navOpen]);
+
   const [seenCartCount, setSeenCartCount] = useState(cartCount);
   if (cartCount !== seenCartCount) {
     setSeenCartCount(cartCount);
@@ -124,6 +155,8 @@ export function HireChrome({
         desk && "hire-app--desk",
         isLanding && "hire-app--landing",
         isResults && "hire-app--results",
+        hasNav && "hire-app--has-nav",
+        hasNav && navOpen && "hire-app--nav-open",
       )}
     >
       {/* The green field is its OWN layer, not the landing's background, so
@@ -153,6 +186,17 @@ export function HireChrome({
       )}
 
       <header className="hire-app__header">
+        {hasNav && (
+          <button
+            type="button"
+            className="hire-menu-btn"
+            aria-label={navOpen ? "Close menu" : "Open menu"}
+            aria-expanded={navOpen}
+            onClick={() => setNavOpen((v) => !v)}
+          >
+            <Menu className="hire-menu-btn__icon" aria-hidden="true" />
+          </button>
+        )}
         <Link href="/" className="hire-app__brand" aria-label="ABTalks home">
           <span className="hire-app__logo">
             {/* The same stacked-wordmark swap runs on the desk AND on plain
@@ -373,6 +417,16 @@ export function HireChrome({
           )}
           <div className="hire-shell__content">{children}</div>
         </main>
+      )}
+
+      {hasNav && navOpen && (
+        <button
+          type="button"
+          className="hire-nav-scrim"
+          aria-label="Close menu"
+          tabIndex={-1}
+          onClick={() => setNavOpen(false)}
+        />
       )}
 
       {/* Same reasoning as the header pills: this bar's "View Shortlist"

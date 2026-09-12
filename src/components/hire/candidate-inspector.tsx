@@ -354,6 +354,41 @@ export function CandidateInspector({
 
   useEffect(() => () => window.clearTimeout(jumpTimerRef.current), []);
 
+  // On a narrow panel the tab strip scrolls sideways, so the active tab (set by
+  // a click or by the scroll-spy below) is brought to the middle of the strip.
+  // `scrollTo` on the strip itself: `scrollIntoView` would also move the
+  // panel's vertical scroll and fight the spy.
+  const tabsRef = useRef<HTMLElement>(null);
+
+  // Phones: once the name has scrolled out of the panel, a compact copy rides
+  // above the tabs so the recruiter always knows whose profile they are in.
+  const nameRef = useRef<HTMLHeadingElement>(null);
+  const [nameStuck, setNameStuck] = useState(false);
+  useEffect(() => {
+    const root = scrollRef.current;
+    const heading = nameRef.current;
+    if (!root || !heading) return;
+    const check = () => {
+      setNameStuck(
+        heading.getBoundingClientRect().bottom <
+          root.getBoundingClientRect().top + 4,
+      );
+    };
+    root.addEventListener("scroll", check, { passive: true });
+    check();
+    return () => root.removeEventListener("scroll", check);
+  }, []);
+  useEffect(() => {
+    const strip = tabsRef.current;
+    if (!strip || strip.scrollWidth <= strip.clientWidth) return;
+    const active = strip.querySelector<HTMLElement>(".hire-profile__tab.is-active");
+    if (!active) return;
+    strip.scrollTo({
+      left: active.offsetLeft - (strip.clientWidth - active.offsetWidth) / 2,
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    });
+  }, [tab]);
+
   // Scroll-spy: the tabs follow the scroll, not just drive it.
   //
   // A scroll listener over `getBoundingClientRect`, NOT an IntersectionObserver.
@@ -559,7 +594,7 @@ export function CandidateInspector({
 
         <div className="hire-profile__identity">
           <div className="hire-profile__namerow">
-            <h3 className="hire-profile__name">
+            <h3 ref={nameRef} className="hire-profile__name">
               {name}
               <OpenToWorkBadge openToWork={match.openToWork} />
             </h3>
@@ -655,7 +690,21 @@ export function CandidateInspector({
           </div>
         )}
 
-        <nav className="hire-profile__tabs" aria-label="Profile sections">
+        <div className={cn("hire-profile__stick", nameStuck && "is-stuck")}>
+        {/* A visual repeat of the heading above, so hidden from assistive tech;
+            a locked preview shows the role rather than a second locked field. */}
+        <div className="hire-profile__stickname" aria-hidden="true">
+          <span className="hire-profile__stickname-inner">
+            <span className="hire-profile__stickname-text">
+              {preview ? match.jobRole : name}
+            </span>
+          </span>
+        </div>
+        <nav
+          ref={tabsRef}
+          className="hire-profile__tabs"
+          aria-label="Profile sections"
+        >
           {TABS.map((t) => (
             <button
               key={t.id}
@@ -668,6 +717,7 @@ export function CandidateInspector({
             </button>
           ))}
         </nav>
+        </div>
 
         <section
           data-section="overview"

@@ -19,8 +19,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import {
+  Briefcase,
   ChartColumn,
   ChevronDown,
+  ClipboardCheck,
   Clock,
   Folder,
   FolderKanban,
@@ -211,6 +213,32 @@ export function HireSidebar({
             Settings
           </Link>
         )}
+        {/* Phones only: the header drops its Jobs / Assessments pills to fit
+            the menu button, so the drawer carries them instead. */}
+        <Link
+          href="/hire/jobs"
+          className={cn(
+            "hire-side__item hire-side__item--phone",
+            pathname.startsWith("/hire/jobs") && "is-current",
+          )}
+          aria-current={pathname.startsWith("/hire/jobs") ? "page" : undefined}
+        >
+          <Briefcase className="hire-side__icon" aria-hidden="true" />
+          Jobs
+        </Link>
+        <Link
+          href="/hire/assessments"
+          className={cn(
+            "hire-side__item hire-side__item--phone",
+            pathname.startsWith("/hire/assessments") && "is-current",
+          )}
+          aria-current={
+            pathname.startsWith("/hire/assessments") ? "page" : undefined
+          }
+        >
+          <ClipboardCheck className="hire-side__icon" aria-hidden="true" />
+          Assessments
+        </Link>
         <span
           className="hire-side__item is-disabled"
           aria-disabled="true"

@@ -9277,11 +9277,16 @@ button.hire-profile__in:focus-visible {
    space the results will take. */
 .hire-skeletons {
   display: grid;
+  /* minmax(0, 1fr), not the implicit auto track: five fixed-width chips gave
+     the card a ~350px minimum and pushed it past a phone's edge. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 
 .hire-skel {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 14px;
   padding: 20px 24px;
   border: 1px solid #e4e4e7;
@@ -9325,9 +9330,11 @@ button.hire-profile__in:focus-visible {
 .hire-skel__chips {
   display: flex;
   gap: 8px;
+  overflow: hidden;
 }
 
 .hire-skel__chip {
+  flex: none;
   width: 64px;
   height: 22px;
   border-radius: 999px;
@@ -11898,5 +11905,1005 @@ button.hire-profile__in:focus-visible {
   .hire-jobs-form__actions .hire-jobs__btn,
   .hire-jobs-form__actions-end .hire-jobs__btn {
     flex: 1;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Phones: menu drawer, full-screen candidate sheet, uncrowded header.
+
+   Kept at the end of the file on purpose — several desktop rules above share
+   these selectors' specificity (`.hire-app--results .hire-detail.hire-profile`
+   set `position: relative` AFTER the phone sheet rule, which is what shrank
+   "View More Details" to a 54px strip behind the results), so source order is
+   what lets the phone layout win.
+   -------------------------------------------------------------------------- */
+.hire-menu-btn,
+.hire-nav-scrim {
+  display: none;
+}
+
+@media (min-width: 901px) {
+  .hire-app .hire-side__item--phone {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  /* The step strip (1 · 2 · 3, "N matched candidates") cost ~120px of a
+     phone screen for no action; the results start straight under the header. */
+  .hire-app .hire-rail {
+    display: none;
+  }
+
+  /* Menu button, left of the wordmark. */
+  .hire-menu-btn {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    margin-left: -8px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #1f2a2e;
+    cursor: pointer;
+  }
+
+  .hire-menu-btn:hover,
+  .hire-menu-btn[aria-expanded="true"] {
+    background: rgba(3, 83, 95, 0.08);
+  }
+
+  .hire-menu-btn:focus-visible {
+    outline: 2px solid #03535f;
+    outline-offset: 1px;
+  }
+
+  .hire-menu-btn__icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .hire-app--has-nav .hire-app__header {
+    justify-content: flex-start;
+  }
+
+  .hire-app--has-nav .hire-app__nav {
+    margin-left: auto;
+  }
+
+  .hire-app__brand {
+    flex: none;
+  }
+
+  /* The nav card becomes an off-canvas drawer. The plain-page rail is
+     `display: none` at this width; `contents` lets its card escape as the
+     fixed drawer without the rail taking any room in the page. */
+  .hire-app .hire-shell__rail {
+    display: contents;
+  }
+
+  .hire-app .hire-side,
+  .hire-app--results .hire-side,
+  .hire-shell__rail > .hire-side {
+    display: flex;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 110;
+    width: min(86vw, 320px);
+    /* The base card is `align-self: flex-start`, which also applies to a
+       fixed box and shrinks it to its content instead of top→bottom. */
+    align-self: stretch;
+    max-height: none;
+    margin: 0;
+    padding: 20px 14px calc(16px + env(safe-area-inset-bottom));
+    border-radius: 0 16px 16px 0;
+    border-right: 0;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.18);
+    overscroll-behavior: contain;
+    animation: none;
+    transform: translateX(-104%);
+    visibility: hidden;
+    transition:
+      transform 240ms var(--ease),
+      visibility 0s linear 240ms;
+  }
+
+  .hire-app--nav-open .hire-side,
+  .hire-app--nav-open.hire-app--results .hire-side,
+  .hire-app--nav-open .hire-shell__rail > .hire-side {
+    transform: none;
+    visibility: visible;
+    transition: transform 240ms var(--ease);
+  }
+
+  .hire-nav-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 105;
+    padding: 0;
+    border: 0;
+    background: rgba(0, 0, 0, 0.42);
+    cursor: default;
+  }
+
+  /* "View More Details": a real full-screen sheet above the header, the
+     drawer and the shortlist bar. It carries its own back button. */
+  .hire-app .scout__body.is-open {
+    grid-template-columns: minmax(0, 1fr) 0;
+    column-gap: 0;
+  }
+
+  .hire-app .scout__body.is-open > .hire-detail,
+  .hire-app--results .scout__body.is-open .hire-detail.hire-profile {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    width: auto;
+    height: auto;
+    margin: 0;
+    border-radius: 0;
+    border-left: 0;
+    background: var(--h-surface);
+  }
+
+  .hire-app--results .scout__body.is-open .hire-profile::after {
+    display: none;
+  }
+
+  /* Inside the sheet: labels give the values room, and a pill that wraps
+     grows instead of spilling its second line over the next pill. */
+  .hire-app .hire-detail .hire-profile__label {
+    width: 104px;
+  }
+
+  .hire-app .hire-detail .hire-profile__tags .desk-pill {
+    height: auto;
+    min-height: 32px;
+    padding-block: 4px;
+    line-height: 20px;
+  }
+
+  /* Nothing in the results column may scroll sideways on a phone —
+     skeletons, cards, summaries all stay inside the viewport. */
+  .hire-app--results .chat-output {
+    overflow-x: hidden;
+  }
+
+  .hire-app--results .chat-output > *,
+  .hire-app--results .scout-thread > *,
+  .hire-app--results .scout-results > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Toolbar: one line each, sharing the row evenly. */
+  .hire-app .scout__toolbar {
+    gap: 8px;
+  }
+
+  .hire-app .scout__toolbar > * {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .hire-app .scout__toolbar .scout-filters {
+    width: 100%;
+    padding: 0 10px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .hire-app--has-nav .hire-app__header {
+    padding: 0 14px;
+    gap: 6px;
+  }
+
+  /* The drawer carries these two on phones; the header keeps its room for
+     the wordmark, the panel toggles and the account. */
+  .hire-app--has-nav .hire-app__nav > a.hire-hbtn[href="/hire/jobs"],
+  .hire-app--has-nav .hire-app__nav > a.hire-hbtn[href="/hire/assessments"] {
+    display: none;
+  }
+
+  .hire-app .scout__toolbar .scout-filters {
+    font-size: 13px;
+  }
+
+}
+
+@media (max-width: 900px) {
+  /* Result cards, compact: a card was 430–560px tall, so a phone showed barely
+     one. Smaller type and controls, tighter rhythm, and skills + summary use
+     the card's full width instead of sitting indented under the avatar. */
+  .hire-app--results .scout-thread,
+  .hire-app--results .scout-thread__results,
+  .hire-app--results .scout-results {
+    gap: 12px;
+  }
+
+  .hire-app .desk-card.desk-card--result {
+    padding: 14px;
+  }
+
+  .hire-app .desk-card--result .desk-card__row {
+    gap: 10px;
+  }
+
+  .hire-app .desk-card--result .desk-card__photo {
+    width: 36px;
+    height: 36px;
+  }
+
+  .hire-app .desk-card--result .desk-card__namerow {
+    min-height: 0;
+    gap: 8px;
+  }
+
+  .hire-app .desk-card--result .desk-card__nameblock {
+    gap: 4px;
+  }
+
+  .hire-app .desk-card--result .desk-card__name {
+    font-size: 18px;
+    line-height: 24px;
+  }
+
+  .hire-app .desk-card--result .desk-card__meta {
+    gap: 2px 12px;
+  }
+
+  .hire-app .desk-card--result .desk-card__meta li {
+    gap: 5px;
+    font-size: 12.5px;
+    line-height: 18px;
+  }
+
+  .hire-app .desk-card--result .desk-card__meta svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .hire-app .desk-card--result .desk-shortlist {
+    height: 34px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+
+  .hire-app .desk-card--result .desk-card__skills,
+  .hire-app .desk-card--result .desk-card__ai {
+    margin-left: -46px;
+  }
+
+  .hire-app .desk-card--result .desk-card__skills {
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .hire-app .desk-card--result .desk-card__skills-h {
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  .hire-app .desk-card--result .desk-card__chips {
+    gap: 6px;
+  }
+
+  .hire-app .desk-card--result .desk-chip {
+    min-height: 26px;
+    padding: 3px 10px;
+    font-size: 12px;
+    line-height: 18px;
+  }
+
+  .hire-app .desk-card--result .desk-card__ai {
+    margin-top: 32px;
+  }
+
+  .hire-app .desk-card--result .desk-card__ai-text {
+    padding: 8px 12px;
+    font-size: 12.5px;
+    line-height: 19px;
+  }
+
+  .hire-app .desk-card--result .desk-card__cta {
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .hire-app .desk-card--result .desk-ghost,
+  .hire-app .desk-card--result .desk-pod {
+    height: 38px;
+    min-height: 38px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+
+  /* Save for later: an icon toggle in the card's top-right corner instead of
+     a full button wedged under the meta lines. The label stays in the DOM, so
+     it is still the button's accessible name. */
+  .hire-app .desk-card.desk-card--result {
+    position: relative;
+  }
+
+  .hire-app .desk-card--result .desk-card__nameblock {
+    padding-right: 40px;
+  }
+
+  .hire-app .desk-card--result .desk-shortlist {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+    border-color: #e4e4e7;
+    border-radius: 10px;
+    font-size: 0;
+  }
+
+  .hire-app .desk-card--result .desk-shortlist__box {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* AI summary: a quiet labelled block, not the desktop's tab graphic. */
+  .hire-app .desk-card--result .desk-card__ai {
+    margin-top: 12px;
+    padding: 8px 12px 10px;
+    border-radius: 10px;
+    background: #f5fafa;
+  }
+
+  .hire-app .desk-card--result .desk-card__ai-tab {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0 0 2px;
+    padding: 0;
+    background: none;
+    gap: 5px;
+    align-items: center;
+    font-size: 11.5px;
+    line-height: 16px;
+  }
+
+  .hire-app .desk-card--result .desk-card__ai-tab img {
+    width: 12px;
+    height: 12px;
+    margin: 0;
+  }
+
+  .hire-app .desk-card--result .desk-card__ai-text {
+    padding: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  /* Actions: the two real choices side by side, then a quiet status row
+     (Viewed / New + Reject) under them instead of three mismatched buttons. */
+  .hire-app .desk-card--result .desk-card__cta {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .hire-app .desk-card--result .desk-card__cta:has(> .desk-card__triage) {
+    grid-template-areas:
+      "view pod"
+      "triage triage";
+  }
+
+  /* Named areas only where they are defined: an undefined area name makes
+     the grid invent columns and stacks both buttons in one cell. */
+  .hire-app .desk-card--result .desk-card__cta:has(> .desk-card__triage) > .desk-ghost {
+    grid-area: view;
+  }
+
+  .hire-app .desk-card--result .desk-card__cta:has(> .desk-card__triage) > .desk-pod {
+    grid-area: pod;
+  }
+
+  .hire-app .desk-card--result .desk-card__cta > .desk-card__triage {
+    grid-area: triage;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .hire-app .desk-card--result .desk-card__triage .desk-ghost {
+    width: auto;
+    height: 28px;
+    min-height: 28px;
+    margin-left: auto;
+    padding: 0 12px;
+    border-color: transparent;
+    background: transparent;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #8f8f8f;
+  }
+
+  .hire-app .desk-card--result .desk-card__triage .desk-ghost:hover {
+    border-color: #e4e4e7;
+    color: #b42318;
+  }
+
+  .hire-app .desk-card--result .desk-card__triage:not(:has(.desk-badge)) .desk-ghost {
+    margin-left: 0;
+  }
+}
+
+/* Phones show the mark as "AB" across all of /hire. The image is drawn at a
+   fixed 102px and a 36px window shows exactly "AB": in both the light and dark
+   files "AB" ends at ~33% of the width and "T" starts at ~37%. */
+@media (max-width: 900px) {
+  .hire-app .hire-app__header .hire-app__logo {
+    flex: none;
+    width: 36px;
+    height: 24px;
+    overflow: hidden;
+  }
+
+  .hire-app .hire-app__header .hire-app__logo img {
+    width: 102px;
+    height: auto;
+    max-width: none;
+  }
+}
+
+/* Landing heading on phones: 40px put "Who are you looking for?" across most
+   of a small screen. */
+@media (max-width: 640px) {
+  .hire-app .rsearch__title {
+    font-size: clamp(26px, 8vw, 32px);
+    line-height: 1.15;
+  }
+}
+
+/* Landing search card on phones: one radius across field, button and card,
+   tighter padding, and the requirement checklist as small centred chips
+   instead of a ragged wrapped sentence. */
+@media (max-width: 640px) {
+  .hire-app .scout--hero .scout-composer {
+    gap: 12px;
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .hire-app .scout--hero .scout-composer__row {
+    gap: 10px;
+  }
+
+  .hire-app .scout--hero .scout-field {
+    min-height: 50px;
+    padding: 0 14px;
+    border-radius: 12px;
+  }
+
+  .hire-app .scout--hero .scout-send {
+    min-height: 46px;
+    height: 46px;
+    border-radius: 12px;
+    font-size: 15px;
+  }
+
+  .hire-app .scout--hero .scout-criteria {
+    justify-content: center;
+    gap: 6px;
+    padding: 2px 0 0;
+  }
+
+  .hire-app .scout--hero .scout-criterion {
+    gap: 5px;
+    padding: 3px 10px 3px 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    font-size: 12px;
+    line-height: 18px;
+    white-space: nowrap;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Phones, polish pass: one type scale (11 / 12.5 / 13 / 15 / 17), one control
+   height (36px, 44px for the composer), hairline borders instead of the
+   desktop's inset shadows, and quieter secondary actions.
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  /* Header: the nav keeps its natural width so the wordmark is what gives way
+     (HireChrome clips it to "AB"); a shrinking nav slid its pills over it. */
+  .hire-app .hire-app__header .hire-app__nav {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+
+  /* Toolbar */
+  .hire-app .scout__toolbar {
+    padding: 0 0 10px;
+  }
+
+  .hire-app .scout__toolbar .scout-filters {
+    height: 36px;
+    border-color: #e4e4e7;
+    border-radius: 10px;
+    background: #ffffff;
+    font-size: 13px;
+    font-weight: 500;
+    color: #3f3f46;
+  }
+
+  .hire-app .scout__toolbar .scout-action--search {
+    border-color: #cfe3e5;
+    background: #eef6f6;
+    color: #03535f;
+  }
+
+  /* "Filters from this search": a label + Edit on one line, chips under it. */
+  .hire-app .hire-filter-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title edit"
+      "chips chips";
+    gap: 8px 12px;
+    margin: 0 0 12px;
+    padding: 12px 14px;
+    border-color: #ececef;
+    border-radius: 14px;
+  }
+
+  .hire-app .hire-filter-bar__title {
+    grid-area: title;
+    align-self: center;
+    font-family: var(--font-inter), sans-serif;
+    font-size: 11px;
+    line-height: 16px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #71717a;
+  }
+
+  .hire-app .hire-filter-bar__edit {
+    grid-area: edit;
+    height: 28px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .hire-app .hire-filter-bar__chips {
+    grid-area: chips;
+    gap: 6px;
+  }
+
+  .hire-app .hire-filter-chip {
+    padding: 3px 10px;
+    font-size: 12.5px;
+    line-height: 18px;
+  }
+
+  .hire-app .hire-filter-bar__empty {
+    font-size: 12.5px;
+  }
+
+  .hire-app .scout-gap {
+    margin: 0 2px 12px;
+    font-size: 13px;
+    line-height: 20px;
+    color: #52525b;
+  }
+
+  /* Card surface */
+  .hire-app .desk-card.desk-card--result,
+  .hire-app .desk-card.desk-card--result:hover {
+    border: 1px solid #ececef;
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(24, 24, 27, 0.04);
+  }
+
+  .hire-app .desk-card.desk-card--result.is-selected {
+    border-color: #03535f;
+    box-shadow: 0 0 0 1px #03535f;
+  }
+
+  .hire-app .desk-card--result .desk-card__name {
+    font-size: 17px;
+    line-height: 22px;
+  }
+
+  .hire-app .desk-card--result .desk-card__header {
+    gap: 6px;
+  }
+
+  .hire-app .desk-card--result .desk-card__badge {
+    padding: 1px 7px;
+    font-size: 10.5px;
+    line-height: 14px;
+  }
+
+  /* The chips say "skills" on their own; the heading was a whole extra row. */
+  .hire-app .desk-card--result .desk-card__skills-h {
+    display: none;
+  }
+
+  .hire-app .desk-card--result .desk-chip {
+    min-height: 24px;
+    padding: 2px 9px;
+    border-color: #ececef;
+    background: #fafafa;
+    font-size: 12px;
+    color: #3f3f46;
+  }
+
+  .hire-app .desk-card--result .desk-shortlist {
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border-color: #ececef;
+  }
+
+  .hire-app .desk-card--result .desk-ghost,
+  .hire-app .desk-card--result .desk-pod {
+    height: 36px;
+    min-height: 36px;
+    border-radius: 10px;
+    font-size: 13px;
+  }
+
+  .hire-app .desk-card--result .desk-card__cta > .desk-ghost {
+    border-color: #e4e4e7;
+  }
+
+  .hire-app .desk-card--result .desk-pod {
+    box-shadow: none;
+  }
+
+  /* Composer */
+  .hire-app--results .scout-field {
+    min-height: 44px;
+    padding: 8px 14px;
+    border-width: 1.5px;
+  }
+
+  .hire-app--results .scout-field textarea {
+    font-size: 15px;
+  }
+
+  .hire-app--results .scout-send {
+    height: 44px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Header controls one size: 34px squares, the balance pill at the same
+     height, so a signed-in header (bookmark, shortlist, $, account) fits. */
+  .hire-app .hire-app__header .hire-hbtn {
+    height: 34px;
+    min-width: 34px;
+    padding: 0 8px;
+  }
+
+  .hire-app .hire-app__header .hire-credits {
+    padding: 0 10px;
+    font-size: 13px;
+  }
+
+  .hire-app .hire-app__header .hire-account {
+    padding: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Phones: result cards breathe. Less on the card, more space around it — the
+   full profile is one tap away, so the card only has to answer "who, what,
+   why": two meta facts, one row of skills, two lines of summary, two actions.
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .hire-app--results .scout-thread,
+  .hire-app--results .scout-thread__results,
+  .hire-app--results .scout-results {
+    gap: 14px;
+  }
+
+  .hire-app .desk-card.desk-card--result {
+    padding: 16px;
+  }
+
+  .hire-app .desk-card--result .desk-card__row {
+    gap: 12px;
+  }
+
+  .hire-app .desk-card--result .desk-card__photo {
+    width: 40px;
+    height: 40px;
+  }
+
+  .hire-app .desk-card--result .desk-card__nameblock {
+    gap: 6px;
+    padding-right: 44px;
+  }
+
+  .hire-app .desk-card--result .desk-card__meta {
+    gap: 4px 12px;
+  }
+
+  .hire-app .desk-card--result .desk-card__meta li:nth-child(n + 3) {
+    display: none;
+  }
+
+  .hire-app .desk-card--result .desk-card__meta li {
+    color: #52525b;
+  }
+
+  .hire-app .desk-card--result .desk-card__meta svg {
+    color: #03535f;
+  }
+
+  /* Skills: one row that fades out at the edge instead of three rows of pills. */
+  .hire-app .desk-card--result .desk-card__skills,
+  .hire-app .desk-card--result .desk-card__ai {
+    margin-left: -52px;
+  }
+
+  .hire-app .desk-card--result .desk-card__skills {
+    margin-top: 16px;
+  }
+
+  .hire-app .desk-card--result .desk-card__chips {
+    flex-wrap: nowrap;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to right, #000 82%, transparent);
+    mask-image: linear-gradient(to right, #000 82%, transparent);
+  }
+
+  .hire-app .desk-card--result .desk-chip {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  .hire-app .desk-card--result .desk-card__ai {
+    margin-top: 12px;
+    padding: 10px 12px;
+  }
+
+  .hire-app .desk-card--result .desk-card__ai-text {
+    font-size: 13px;
+    line-height: 20px;
+    color: #52525b;
+  }
+
+  .hire-app .desk-card--result .desk-card__cta {
+    margin-top: 16px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Phones: the candidate sheet on a phone type scale. The panel was set in the
+   desktop rail's sizes — a 32px name and 16–17px body — which at 375px wide
+   pushed the tabs below the fold and wrapped every row.
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .hire-app .scout__body .hire-detail .hire-profile__name {
+    font-size: 24px;
+    line-height: 30px;
+  }
+
+  .hire-app .scout__body .hire-detail .hire-profile__more {
+    font-size: 18px;
+  }
+
+  .hire-app .scout__body .hire-detail .hire-profile__loc {
+    font-size: 13.5px;
+    line-height: 20px;
+  }
+
+  .hire-app .scout__body .hire-detail .hire-profile__orgs {
+    gap: 6px 12px;
+  }
+
+  .hire-app .scout__body .hire-detail .hire-profile__org {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .hire-app .scout__body .hire-detail .hire-profile__orglogo {
+    font-size: 10px;
+    line-height: 18px;
+  }
+
+  /* The two actions share the row; the resume eye is a fixed square at the
+     end, not a third item wrapping onto its own line. */
+  .hire-app .scout__body .hire-detail .hire-profile__actions {
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 16px 10px;
+  }
+
+  .hire-app .scout__body .hire-detail .hire-profile__actions > * {
+    min-width: 0;
+  }
+
+  .hire-app .scout__body .hire-detail .hire-profile__actions .desk-pod,
+  .hire-app .scout__body .hire-detail .hire-profile__actions .desk-shortlist {
+    flex: 1 1 0;
+    height: 40px;
+    min-height: 40px;
+    padding: 0 10px;
+    font-size: 13.5px;
+    white-space: nowrap;
+  }
+
+  .hire-app .scout__body .hire-detail .hire-profile__actions .desk-pod {
+    justify-content: center;
+    gap: 6px;
+    overflow: hidden;
+  }
+
+  .hire-app .scout__body .hire-detail .hire-profile__actions .desk-pod svg {
+    display: none;
+  }
+
+  .hire-app .scout__body .hire-detail .hire-profile__actions .hire-profile__view {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0;
+  }
+
+  .hire-app .scout__body .hire-detail .hire-profile__row {
+    min-height: 38px;
+  }
+
+  .hire-app .scout__body .hire-detail .hire-profile__actions button,
+  .hire-app .scout__body .hire-detail .hire-profile__actions a {
+    height: 40px;
+    min-height: 40px;
+    font-size: 14px;
+  }
+
+  .hire-app .scout__body .hire-detail .hire-profile__tabs {
+    height: 44px;
+    scrollbar-width: none;
+  }
+
+  .hire-app .scout__body .hire-detail .hire-profile__tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hire-app .scout__body .hire-detail .hire-profile__tab {
+    font-size: 14px;
+  }
+
+  .hire-app .scout__body .hire-detail .hire-profile__label {
+    font-size: 13.5px;
+    line-height: 22px;
+  }
+
+  .hire-app .scout__body .hire-detail .hire-profile__value,
+  .hire-app .scout__body .hire-detail .hire-profile__reveal,
+  .hire-app .scout__body .hire-detail .hire-profile__text,
+  .hire-app .scout__body .hire-detail .hire-profile__org-sub,
+  .hire-app .scout__body .hire-detail .hire-profile__role-title,
+  .hire-app .scout__body .hire-detail .hire-profile__group-h,
+  .hire-app .scout__body .hire-detail .hire-profile__card-head,
+  .hire-app .scout__body .hire-detail .hire-profile__cert-title {
+    font-size: 14px;
+    line-height: 22px;
+  }
+
+  .hire-app .scout__body .hire-detail .hire-profile__meta,
+  .hire-app .scout__body .hire-detail .hire-profile__note,
+  .hire-app .scout__body .hire-detail .hire-profile__cert-sub,
+  .hire-app .scout__body .hire-detail .hire-profile__cert-date {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .hire-app .scout__body .hire-detail .hire-profile__h {
+    font-size: 19px;
+    line-height: 26px;
+  }
+
+  .hire-app .scout__body .hire-detail .hire-profile__org-name {
+    font-size: 16px;
+    line-height: 22px;
+  }
+
+  .hire-app .scout__body .hire-detail .hire-profile__chip {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .hire-app .scout__body .hire-detail .desk-pill {
+    font-size: 13px;
+  }
+}
+
+/* --- Candidate panel: name rides above the tabs once scrolled past ---------
+   The wrapper takes over the tabs' stickiness so the name row and the tab
+   strip stick as one block. The name row only exists on phones; on desktop the
+   wrapper is invisible and the tabs stick exactly as before. */
+.hire-profile__stick {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #ffffff;
+}
+
+.hire-profile__stick > .hire-profile__tabs {
+  position: static;
+}
+
+.hire-profile__stickname {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .hire-app .hire-detail .hire-profile__stickname {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 200ms var(--ease);
+  }
+
+  .hire-app .hire-detail .hire-profile__stick.is-stuck .hire-profile__stickname {
+    grid-template-rows: 1fr;
+  }
+
+  .hire-app .hire-detail .hire-profile__stickname-inner {
+    min-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 200ms var(--ease);
+  }
+
+  .hire-app .hire-detail .hire-profile__stick.is-stuck .hire-profile__stickname-inner {
+    opacity: 1;
+  }
+
+  .hire-app .hire-detail .hire-profile__stickname-text {
+    display: block;
+    overflow: hidden;
+    padding: 10px 16px 2px;
+    font-family: var(--font-outfit), sans-serif;
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 24px;
+    color: #18181b;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .hire-app .hire-detail .hire-profile__stick.is-stuck {
+    box-shadow: 0 1px 0 #e4e4e7, 0 4px 12px rgba(24, 24, 27, 0.05);
+  }
+
+  /* Tab jumps land below the taller sticky block. */
+  .hire-app .hire-detail [data-section] {
+    scroll-margin-top: 84px;
   }
 }
