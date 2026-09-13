@@ -34,6 +34,7 @@ import {
   filterSummary,
 } from "@/components/hire/hire-filter-dialog";
 import { CandidateInspector } from "@/components/hire/candidate-inspector";
+import { ScoutPeek } from "@/components/hire/scout-peek";
 import { GapReport } from "@/components/hire/gap-report";
 import {
   useHireDesk,
@@ -1853,6 +1854,7 @@ export function ScoutChat({
         >
           <div className="scout-composer__row">
             <div className="scout-field">
+              <ScoutPeek />
               <label className="sr-only" htmlFor="scout-prompt">
                 Your answer to Scout
               </label>
