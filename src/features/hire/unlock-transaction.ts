@@ -1,5 +1,6 @@
 import "server-only";
 
+import { formatCreditsMinor } from "@/lib/credits-format";
 import { persistableSource } from "@/features/hire/track-loaders";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -72,6 +73,21 @@ export const REFUSAL_MESSAGE: Record<UnlockRefusal, string> = {
   INSUFFICIENT_CREDITS: "You do not have enough credits for this unlock.",
   UNAVAILABLE: "Could not complete the unlock. Try again.",
 };
+
+/**
+ * "Not enough credits" with the actual figures, so the recruiter knows what
+ * was blocked and by how much. Nothing was charged when this is returned.
+ */
+export function insufficientCreditsMessage(
+  costMinor: number,
+  balanceMinor: number,
+): string {
+  return (
+    `${REFUSAL_MESSAGE.INSUFFICIENT_CREDITS} This unlock costs ` +
+    `${formatCreditsMinor(costMinor)} and you have ${formatCreditsMinor(balanceMinor)} ` +
+    "remaining. Nothing was charged. Contact ABTalks at team@abtalks.in for more credits."
+  );
+}
 
 /**
  * The allowance every credit movement runs under.
@@ -227,7 +243,8 @@ export async function unlockResolvedContact(
       return {
         ok: false,
         reason: "INSUFFICIENT_CREDITS",
-        message: REFUSAL_MESSAGE.INSUFFICIENT_CREDITS,
+        // T-231: name the real numbers, not just the category.
+        message: insufficientCreditsMessage(costMinor, result.balance),
         balanceMinor: result.balance,
       };
     }

@@ -16,7 +16,7 @@ import { HireDeskProvider } from "@/components/hire/hire-desk-context";
 import { HireChrome } from "@/components/hire/hire-chrome";
 import { MergeGuestCart } from "@/components/hire/merge-guest-cart";
 import type { CartRow } from "@/components/hire/shortlist-cart";
-import { HIRE_ZOOM_SCRIPT } from "@/components/hire/hire-zoom";
+import { HireZoomScript } from "@/components/hire/hire-zoom-script";
 import "./hire-scout.css";
 
 export default async function HireLayout({ children }: { children: ReactNode }) {
@@ -149,8 +149,9 @@ export default async function HireLayout({ children }: { children: ReactNode }) 
   return (
     <>
       {/* Screen 2's scale, set while the HTML is still parsing — before the
-          dashboard can paint at full size. Static string, no user input. */}
-      <script dangerouslySetInnerHTML={{ __html: HIRE_ZOOM_SCRIPT }} />
+          dashboard can paint at full size. HireZoomScript safely handles SSR
+          and avoids React 19 client <script> warnings. */}
+      <HireZoomScript />
       <HireAuthProvider
         approved={active}
         signedIn={Boolean(userId)}
@@ -168,6 +169,7 @@ export default async function HireLayout({ children }: { children: ReactNode }) 
                 ? {
                   balanceMinor: credits.data.balanceMinor,
                   currency: credits.data.currency,
+                  level: credits.data.level,
                 }
                 : null
             }

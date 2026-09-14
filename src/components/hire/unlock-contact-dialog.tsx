@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Loader2, Lock } from "lucide-react";
@@ -222,7 +223,11 @@ export function UnlockContactDialog({
                   {formatCreditsMinor(preview.balanceMinor, currency)} and this
                   unlock costs{" "}
                   {formatCreditsMinor(preview.costMinor, currency)}. Nothing has
-                  been charged.
+                  been charged.{" "}
+                  <Link href="/hire/credits" onClick={() => setOpen(false)}>
+                    View credits
+                  </Link>{" "}
+                  or contact ABTalks at team@abtalks.in for more credits.
                 </p>
               ) : null}
             </>

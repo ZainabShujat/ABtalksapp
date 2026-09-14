@@ -13007,3 +13007,60 @@ button.hire-profile__in:focus-visible {
     opacity: 1;
   }
 }
+/* ── T-231 credits page + pill states ──────────────────────────────── */
+a.hire-credits { cursor: pointer; text-decoration: none; }
+a.hire-credits:hover { border-color: var(--h-primary); }
+.hire-credits--low .hire-credits__value,
+.hire-credits--very-low .hire-credits__value { color: var(--h-warn-ink); }
+.hire-credits--very-low,
+.hire-credits--empty { border-color: var(--h-warn-ink); }
+.hire-credits--empty .hire-credits__value { color: #b42318; }
+
+.hire-creditsx { display: grid; gap: 20px; }
+.hire-creditsx .hire-jobs__head { margin-bottom: 0; }
+.hire-creditsx h2 { margin: 0; font-size: 22px; line-height: 30px; font-weight: 700; }
+.hire-creditsx p { margin: 0; color: #626262; font-size: 15px; line-height: 24px; }
+.hire-creditsx__alert { display: grid; gap: 6px; padding: 16px 18px; border-radius: 14px; border: 1px solid; }
+.hire-creditsx__alert strong { font-size: 16px; }
+.hire-creditsx__alert a { color: var(--h-primary); font-weight: 600; font-size: 14px; }
+.hire-creditsx__alert--low { background: #fffaf0; border-color: var(--h-warn); }
+.hire-creditsx__alert--very-low { background: var(--h-warn); border-color: var(--h-warn-ink); }
+.hire-creditsx__alert--empty { background: #fef3f2; border-color: #f04438; }
+.hire-creditsx__alert--empty strong { color: #b42318; }
+.hire-creditsx__stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.hire-creditsx__stat { display: grid; gap: 4px; padding: 16px 18px; border-radius: 14px; background: var(--h-card); border: 1px solid var(--h-card-line); }
+.hire-creditsx__stat span { color: #787878; font-size: 13px; }
+.hire-creditsx__stat strong { font-size: 26px; line-height: 34px; font-variant-numeric: tabular-nums; }
+.hire-creditsx__stat.is-strong strong { color: var(--h-primary); }
+.hire-creditsx__grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.hire-creditsx__side { display: grid; gap: 16px; }
+.hire-creditsx__card { display: grid; gap: 10px; padding: 20px; border-radius: 15px; background: #ffffff; border: 1px solid var(--h-border); }
+.hire-creditsx__card .hire-jobs__btn { justify-self: start; text-decoration: none; }
+.hire-creditsx__card .hire-jobs__btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.hire-creditsx .hire-creditsx__kicker { display: flex; align-items: center; gap: 8px; color: #787878; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.hire-creditsx__badge { padding: 2px 8px; border-radius: 999px; background: var(--h-warn); color: var(--h-warn-ink); font-size: 11px; letter-spacing: 0.02em; }
+.hire-creditsx__facts { display: grid; margin: 0; }
+.hire-creditsx__facts > div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--h-border); font-size: 14px; }
+.hire-creditsx__facts dt { color: #626262; }
+.hire-creditsx__facts dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.hire-creditsx__histhead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.hire-creditsx__histhead span { color: #787878; font-size: 13px; }
+.hire-creditsx__list { list-style: none; margin: 0; padding: 0; }
+.hire-creditsx__row { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-top: 1px solid var(--h-border); }
+.hire-creditsx__what { display: grid; gap: 2px; min-width: 0; }
+.hire-creditsx__what strong { font-size: 15px; overflow-wrap: anywhere; }
+.hire-creditsx__what span { color: #787878; font-size: 13px; }
+.hire-creditsx__amounts { display: grid; gap: 2px; text-align: right; font-size: 13px; color: #787878; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.hire-creditsx__amt { font-size: 16px; font-weight: 700; }
+.hire-creditsx__amt--in { color: #067647; }
+.hire-creditsx__amt--out { color: #b42318; }
+.hire-creditsx__empty { padding: 8px 0; }
+.hire-creditsx__foot a { color: var(--h-primary); font-weight: 600; font-size: 14px; }
+@media (max-width: 900px) {
+  .hire-creditsx__stats,
+  .hire-creditsx__grid { grid-template-columns: 1fr; }
+  .hire-creditsx .hire-jobs__head h1 { font-size: 30px; line-height: 38px; }
+  .hire-creditsx__row { flex-direction: column; gap: 6px; }
+  .hire-creditsx__amounts { display: flex; gap: 12px; align-items: baseline; text-align: left; }
+}
+.hire-creditsx__mail { color: var(--h-primary); font-weight: 600; }

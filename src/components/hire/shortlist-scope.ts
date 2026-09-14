@@ -24,6 +24,7 @@ const NOT_A_PROJECT = new Set([
   "projects",
   "settings",
   "jobs",
+  "credits",
 ]);
 
 /** The project id in `/hire/<id>` or `/hire/<id>/candidates`, else null. */

@@ -94,6 +94,27 @@ export const PLATFORM_CONFIG_KEYS = {
     description:
       "PLACEHOLDER — product must set this before T-229 ships. Cost of one contact unlock, USD cents.",
   },
+  /**
+   * T-231 balance warnings. Presentation thresholds only: they change what the
+   * recruiter is told, never what the server lets them spend. A balance at or
+   * below the value shows the warning. $50 ≈ five unlocks, $20 ≈ two.
+   */
+  "credits.low_balance_threshold_minor": {
+    kind: "int",
+    default: 5_000,
+    min: 0,
+    max: 10_000_000,
+    description:
+      "Balance at or below which recruiters see a low-credit warning. USD cents. 5000 = $50.00.",
+  },
+  "credits.very_low_balance_threshold_minor": {
+    kind: "int",
+    default: 2_000,
+    min: 0,
+    max: 10_000_000,
+    description:
+      "Balance at or below which recruiters see a very-low-credit warning. USD cents. 2000 = $20.00.",
+  },
   "credits.currency": {
     kind: "string",
     default: "USD",
@@ -117,6 +138,10 @@ export type StringConfigKey = {
 export const STARTING_GRANT_KEY = "credits.starting_grant_minor" satisfies IntConfigKey;
 export const CONTACT_UNLOCK_COST_KEY =
   "credits.contact_unlock_cost_minor" satisfies IntConfigKey;
+export const LOW_BALANCE_THRESHOLD_KEY =
+  "credits.low_balance_threshold_minor" satisfies IntConfigKey;
+export const VERY_LOW_BALANCE_THRESHOLD_KEY =
+  "credits.very_low_balance_threshold_minor" satisfies IntConfigKey;
 export const CREDITS_CURRENCY_KEY = "credits.currency" satisfies StringConfigKey;
 
 /**

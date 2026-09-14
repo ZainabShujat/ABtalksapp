@@ -1,17 +1,26 @@
 import "server-only";
 
 import { requireRecruiterWorkspace } from "@/features/recruiter-workspace/workspace";
+import { prisma } from "@/lib/db";
 import {
   getCreditBalance,
   listCreditTransactions,
+  summarizeCreditLedger,
   type CreditLedgerEntry,
 } from "@/repositories/credits";
 import {
   CONTACT_UNLOCK_COST_KEY,
   CREDITS_CURRENCY_KEY,
+  LOW_BALANCE_THRESHOLD_KEY,
+  VERY_LOW_BALANCE_THRESHOLD_KEY,
   getIntConfig,
   getStringConfig,
 } from "@/lib/platform-config";
+import {
+  creditLevel,
+  type CreditLevel,
+  type CreditThresholds,
+} from "@/lib/credits-format";
 
 /**
  * What product code calls to ask about a recruiter's credits.
@@ -39,10 +48,13 @@ export type WorkspaceCredits = {
   balanceMinor: number;
   currency: string;
   /**
-   * What one contact unlock will cost when T-229 ships. Surfaced here so a cost
-   * preview has one place to read it; nothing spends it yet.
+   * What one contact unlock costs. Surfaced here so a cost preview has one
+   * place to read it; the unlock re-reads it before spending.
    */
   unlockCostMinor: number;
+  /** T-231 warning thresholds, from `PlatformConfig`. */
+  thresholds: CreditThresholds;
+  level: CreditLevel;
 };
 
 export type WorkspaceCreditsResult =
@@ -53,13 +65,26 @@ export async function getWorkspaceCredits(): Promise<WorkspaceCreditsResult> {
   const workspace = await requireRecruiterWorkspace();
   if (!workspace.ok) return { ok: false, message: workspace.message };
 
-  const [balanceMinor, currency, unlockCostMinor] = await Promise.all([
-    getCreditBalance(workspace.data.organizationId),
-    getStringConfig(CREDITS_CURRENCY_KEY),
-    getIntConfig(CONTACT_UNLOCK_COST_KEY),
-  ]);
+  const [balanceMinor, currency, unlockCostMinor, lowMinor, veryLowMinor] =
+    await Promise.all([
+      getCreditBalance(workspace.data.organizationId),
+      getStringConfig(CREDITS_CURRENCY_KEY),
+      getIntConfig(CONTACT_UNLOCK_COST_KEY),
+      getIntConfig(LOW_BALANCE_THRESHOLD_KEY),
+      getIntConfig(VERY_LOW_BALANCE_THRESHOLD_KEY),
+    ]);
+  const thresholds = { lowMinor, veryLowMinor };
 
-  return { ok: true, data: { balanceMinor, currency, unlockCostMinor } };
+  return {
+    ok: true,
+    data: {
+      balanceMinor,
+      currency,
+      unlockCostMinor,
+      thresholds,
+      level: creditLevel(balanceMinor, thresholds, unlockCostMinor),
+    },
+  };
 }
 
 export type WorkspaceLedgerResult =
@@ -75,6 +100,92 @@ export async function getWorkspaceCreditHistory(
   return {
     ok: true,
     data: await listCreditTransactions(workspace.data.organizationId, opts),
+  };
+}
+
+/** One ledger row as the recruiter reads it on `/hire/credits` (T-231). */
+export type CreditHistoryRow = {
+  id: string;
+  amountMinor: number;
+  balanceAfterMinor: number;
+  type: CreditLedgerEntry["type"];
+  reason: string;
+  /** ISO — crosses to the client. */
+  createdAt: string;
+  /**
+   * Who an unlock was for. The candidate's name only while this recruiter
+   * still holds contact access; otherwise their public id, which is what the
+   * unlock dialog showed when the money was spent.
+   */
+  candidateLabel: string | null;
+};
+
+export type WorkspaceCreditOverview = WorkspaceCredits & {
+  grantedMinor: number;
+  spentMinor: number;
+  transactionCount: number;
+  history: CreditHistoryRow[];
+};
+
+export type WorkspaceCreditOverviewResult =
+  | { ok: true; data: WorkspaceCreditOverview }
+  | { ok: false; message: string };
+
+/** The history page caps at the repository's maximum page; T-231 has no pagination yet. */
+const HISTORY_LIMIT = 200;
+
+export async function getWorkspaceCreditOverview(): Promise<WorkspaceCreditOverviewResult> {
+  const workspace = await requireRecruiterWorkspace();
+  if (!workspace.ok) return { ok: false, message: workspace.message };
+  const { organizationId, userId } = workspace.data;
+
+  const [credits, summary, entries] = await Promise.all([
+    getWorkspaceCredits(),
+    summarizeCreditLedger(organizationId),
+    listCreditTransactions(organizationId, { limit: HISTORY_LIMIT }),
+  ]);
+  if (!credits.ok) return credits;
+
+  const candidateIds = [
+    ...new Set(entries.map((e) => e.candidateUserId).filter((id): id is string => !!id)),
+  ];
+  const engagements =
+    candidateIds.length > 0
+      ? await prisma.talentEngagementRequest.findMany({
+          where: { recruiterUserId: userId, candidateUserId: { in: candidateIds } },
+          orderBy: { createdAt: "desc" },
+          select: {
+            candidateUserId: true,
+            candidatePublicId: true,
+            status: true,
+            candidate: { select: { name: true } },
+          },
+        })
+      : [];
+  const labels = new Map<string, string>();
+  for (const e of engagements) {
+    if (labels.has(e.candidateUserId)) continue;
+    const name = e.status === "CONTACT_SHARED" ? e.candidate.name?.trim() : null;
+    labels.set(e.candidateUserId, name || e.candidatePublicId);
+  }
+
+  return {
+    ok: true,
+    data: {
+      ...credits.data,
+      ...summary,
+      history: entries.map((e) => ({
+        id: e.id,
+        amountMinor: e.amount,
+        balanceAfterMinor: e.balanceAfter,
+        type: e.type,
+        reason: e.reason,
+        createdAt: e.createdAt.toISOString(),
+        candidateLabel: e.candidateUserId
+          ? (labels.get(e.candidateUserId) ?? "Candidate")
+          : null,
+      })),
+    },
   };
 }
 

@@ -26,6 +26,7 @@ import {
 import type { RecruiterAccountSnapshot } from "@/features/hire/recruiter-account-types";
 import { hireZoomFor } from "@/components/hire/hire-zoom";
 import { cn } from "@/lib/utils";
+import type { CreditLevel } from "@/lib/credits-format";
 
 export function HireChrome({
   account,
@@ -37,7 +38,7 @@ export function HireChrome({
 }: {
   account: RecruiterAccountSnapshot | null;
   /** Null when this visitor has no recruiter workspace to have a balance in. */
-  credits: { balanceMinor: number; currency: string } | null;
+  credits: { balanceMinor: number; currency: string; level: CreditLevel } | null;
   /** Every shortlist row the recruiter has, tagged with its project; scoped below. */
   podRows: CartRow[];
   /** T-232: unread outreach replies, resolved server-side in the layout. */
@@ -287,6 +288,8 @@ export function HireChrome({
                 <CreditBalancePill
                   balanceMinor={credits.balanceMinor}
                   currency={credits.currency}
+                  level={credits.level}
+                  current={pathname.startsWith("/hire/credits")}
                 />
               ) : null}
               <Link

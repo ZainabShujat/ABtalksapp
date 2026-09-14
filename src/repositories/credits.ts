@@ -157,6 +157,32 @@ export async function sumLedgerBalance(
   return agg._sum.amount ?? 0;
 }
 
+/**
+ * Lifetime money in and money out, derived from the ledger (T-231). Not from
+ * `CreditAccount.lifetimeEarned/Spent` — those are the cache, and reads never
+ * consult the cache.
+ */
+export async function summarizeCreditLedger(
+  organizationId: string,
+): Promise<{ grantedMinor: number; spentMinor: number; transactionCount: number }> {
+  const [credits, debits, transactionCount] = await Promise.all([
+    prisma.creditTransaction.aggregate({
+      where: { organizationId, amount: { gt: 0 } },
+      _sum: { amount: true },
+    }),
+    prisma.creditTransaction.aggregate({
+      where: { organizationId, amount: { lt: 0 } },
+      _sum: { amount: true },
+    }),
+    prisma.creditTransaction.count({ where: { organizationId } }),
+  ]);
+  return {
+    grantedMinor: credits._sum.amount ?? 0,
+    spentMinor: Math.abs(debits._sum.amount ?? 0),
+    transactionCount,
+  };
+}
+
 export async function listCreditTransactions(
   organizationId: string,
   opts?: { limit?: number; beforeSeq?: string },

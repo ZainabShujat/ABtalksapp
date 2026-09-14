@@ -1,54 +1,59 @@
-import { formatCreditsMinor } from "@/lib/credits-format";
+import Link from "next/link";
+import {
+  formatCreditsMinor,
+  formatCreditsSpelled,
+  type CreditLevel,
+} from "@/lib/credits-format";
+import { cn } from "@/lib/utils";
 
 /**
- * The recruiter's credit balance, in the desk header (T-229).
+ * The recruiter's credit balance, in the desk header (T-229, T-231).
  *
- * ## Why it exists
+ * A link to `/hire/credits`, where the balance is explained: what was granted,
+ * where it went, and what to do when it runs low. The figure shows in dollars;
+ * the hover text spells it as credits (one credit = one dollar).
  *
- * Until now the balance was only visible inside the unlock dialog, which meant
- * a recruiter had to start spending to find out what they had. This is the
- * smallest honest fix: one figure, in the header they already look at, beside
- * the shortlist counts.
+ * `level` is decided on the server from `PlatformConfig` thresholds — this
+ * component only styles it, so no threshold number lives in the client.
  *
- * ## Who sees it
- *
- * Approved recruiters only. The balance is granted earlier — at setup
- * completion, before an admin reviews the application — but a figure is only
- * worth showing to someone allowed to spend it, and unlocking refuses an
- * unapproved recruiter. The layout decides this; the component simply renders
- * nothing when it is handed nothing.
- *
- * ## Why it is a plain server-rendered figure
- *
- * The value arrives as a prop from `hire/layout.tsx`, which already resolves
- * the workspace server-side. No fetch, no client state, and therefore no
- * loading state to design.
- *
- * ## Temporary
- *
- * The placement is a decision made in the absence of T-202, not a considered
- * one. It borrows `hire-hbtn`'s geometry so it sits correctly beside the
- * existing pills, and it is a single component with a single prop so it can be
- * moved or replaced wholesale later without unpicking anything.
+ * Approved recruiters only; the layout decides, and hands nothing otherwise.
  */
+const LEVEL_HINT: Record<CreditLevel, string> = {
+  normal: "",
+  low: " Your balance is getting low.",
+  "very-low": " Only a small balance remains.",
+  empty: " You are out of credits for paid unlocks.",
+};
+
 export function CreditBalancePill({
   balanceMinor,
   currency,
+  level,
+  current = false,
 }: {
   balanceMinor: number;
   currency: string;
+  level: CreditLevel;
+  current?: boolean;
 }) {
   const amount = formatCreditsMinor(balanceMinor, currency);
 
   return (
-    <span
-      className="hire-hbtn hire-credits"
-      title={`${amount} in credits. Contact unlocks are charged from this balance.`}
+    <Link
+      href="/hire/credits"
+      className={cn(
+        "hire-hbtn hire-credits",
+        level !== "normal" && `hire-credits--${level}`,
+        current && "is-current",
+      )}
+      aria-current={current ? "page" : undefined}
+      title={`${formatCreditsSpelled(balanceMinor)} available.${LEVEL_HINT[level]} View credit history.`}
+      aria-label={`Credits: ${formatCreditsSpelled(balanceMinor)}.${LEVEL_HINT[level]} View credit history.`}
     >
       <span className="hire-credits__label">Credits</span>
       {/* Not inside the label span: at ≤900px the header hides pill labels, and
           the one part of this that must survive is the number. */}
       <span className="hire-credits__value">{amount}</span>
-    </span>
+    </Link>
   );
 }

@@ -24,7 +24,11 @@
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { formatCreditsMinor } from "@/lib/credits-format";
+import {
+  creditLevel,
+  formatCreditsMinor,
+  formatCreditsSpelled,
+} from "@/lib/credits-format";
 import {
   CONTACT_UNLOCK_COST_KEY,
   PLATFORM_CONFIG_KEYS,
@@ -566,6 +570,30 @@ suite("the credit layer stays generic — it knows nothing about unlocking", () 
   assert(
     !/hasContactAccess|talentEngagementRequest/i.test(repo),
     "the ledger must not reach into contact access; the unlock composes them",
+  );
+});
+
+console.log("\nT-231 balance states");
+
+suite("credit levels follow configured thresholds", () => {
+  const t = { lowMinor: 5_000, veryLowMinor: 2_000 };
+  assert(creditLevel(20_000, t, 1_000) === "normal", "$200 is normal");
+  assert(creditLevel(5_000, t, 1_000) === "low", "$50 is low");
+  assert(creditLevel(2_000, t, 1_000) === "very-low", "$20 is very low");
+  assert(creditLevel(600, t, 1_000) === "empty", "$6 cannot afford a $10 unlock");
+  assert(creditLevel(0, t, 1_000) === "empty", "$0 is empty");
+});
+
+suite("credits are spelled out for hover text", () => {
+  assert(formatCreditsSpelled(20_000) === "200 credits", "20000 → 200 credits");
+  assert(formatCreditsSpelled(100) === "1 credit", "singular");
+});
+
+suite("warning thresholds are configuration, not component constants", () => {
+  assert(
+    "credits.low_balance_threshold_minor" in PLATFORM_CONFIG_KEYS &&
+      "credits.very_low_balance_threshold_minor" in PLATFORM_CONFIG_KEYS,
+    "both thresholds must be registered in PlatformConfig",
   );
 });
 
