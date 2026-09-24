@@ -16,6 +16,7 @@ import {
   isThirdPartyDataRequest,
 } from "@/lib/chatbot-matcher";
 import { buildLiveFacts } from "@/lib/chatbot/live-facts";
+import { learnMoreLine, learnMorePage } from "@/lib/chatbot/page-links";
 
 /**
  * The chatbot endpoint.
@@ -44,6 +45,11 @@ const requestSchema = z.object({
     )
     .min(1)
     .max(40),
+  /**
+   * The page a menu pick is about ("4. Workshops" -> /workshop). A hint only:
+   * `learnMorePage` ignores anything not on the public page list.
+   */
+  page: z.string().trim().max(80).optional(),
 });
 
 /**
@@ -154,6 +160,12 @@ export async function POST(req: Request) {
   );
   const turns: ChatTurn[] = messages.slice(-HISTORY_TURNS);
 
+  // Chosen from retrieval, not generated — see lib/chatbot/page-links.ts. A
+  // clarifying question gets no link: it has not answered anything yet.
+  const linkPage = ambiguous
+    ? null
+    : learnMorePage(retrieval.results, parsed.data.page);
+
   const generation = await generateStream(system, turns);
   if (!generation.ok) {
     // Retrieval SUCCEEDED and generation did not. Saying the knowledge base has
@@ -172,14 +184,27 @@ export async function POST(req: Request) {
     async start(controller) {
       const reader = generation.stream.getReader();
       let produced = false;
+      let answer = "";
       try {
         for (;;) {
           const { done, value } = await reader.read();
           if (done) break;
           if (value) {
             produced = true;
+            answer += value;
             controller.enqueue(encoder.encode(sseFrame(value)));
           }
+        }
+        // Issue #576: end a real answer with the page it came from. Not on the
+        // model's own "I don't have that" reply, and not when the model
+        // already linked the same page itself.
+        if (
+          produced &&
+          linkPage &&
+          !answer.includes(FALLBACK_MESSAGE) &&
+          !answer.includes(`](${linkPage})`)
+        ) {
+          controller.enqueue(encoder.encode(sseFrame(learnMoreLine(linkPage))));
         }
         // A provider that opened a stream and then said nothing must not leave
         // an empty bubble on screen. This is an upstream failure, so it reports

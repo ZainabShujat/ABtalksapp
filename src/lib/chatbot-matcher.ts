@@ -82,7 +82,9 @@ export function isMenuCommand(input: string): boolean {
  * the menu by number without that turning into a factual answer — the returned
  * category becomes a retrieval query, not a canned reply.
  */
-export function matchCategory(input: string): { label: string; query: string } | null {
+export function matchCategory(
+  input: string,
+): { label: string; query: string; page: string | null } | null {
   const trimmed = input.trim();
   const asNumber = /^\d{1,2}$/.test(trimmed) ? Number(trimmed) : null;
   const category =
@@ -92,7 +94,11 @@ export function matchCategory(input: string): { label: string; query: string } |
           (c) => c.label.toLowerCase() === trimmed.toLowerCase(),
         );
   if (!category) return null;
-  return { label: category.label, query: category.seedQuestion };
+  return {
+    label: category.label,
+    query: category.seedQuestion,
+    page: category.href,
+  };
 }
 
 export function matchQuestion(query: string): MatchResult | null {

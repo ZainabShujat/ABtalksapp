@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import * as cheerio from 'cheerio';
 
@@ -22,11 +22,15 @@ const ALLOWLIST_ROUTES = [
   { path: '/', slug: 'homepage' },
   { path: '/challenges', slug: 'challenges-page' },
   { path: '/claude-signup', slug: 'claude-signup-page' },
-  { path: '/ai-workshop', slug: 'ai-workshop-page' },
-  { path: '/ai-workshop/events', slug: 'ai-workshop-events' },
+  // /ai-workshop and /program are redirects now (next.config.ts): /program
+  // lands on the signed-in dashboard, so crawling it would capture the login
+  // page. Crawl where the pages actually live; slugs are unchanged so chunk
+  // ids — and the embeddings keyed on them — stay stable.
+  { path: '/workshop', slug: 'ai-workshop-page' },
+  { path: '/workshop/events', slug: 'ai-workshop-events' },
   { path: '/ai-cohort-register', slug: 'ai-cohort-register' },
   { path: '/ai-cohort-india', slug: 'ai-cohort-india' },
-  { path: '/program', slug: 'program-landing-page' },
+  { path: '/program/ai-cohort', slug: 'program-landing-page' },
   { path: '/hackathon', slug: 'hackathon-page' },
   { path: '/contact', slug: 'contact-page' },
   { path: '/terms', slug: 'legal-terms' },
@@ -92,7 +96,19 @@ function domToMarkdown($: cheerio.CheerioAPI, $el: any): string {
   return lines.join('\n');
 }
 
-async function ingestRoute(route: string, slug: string): Promise<{ success: boolean; chunks: number; error?: string }> {
+/**
+ * Everything in a generated file except its `ingested_at` stamp. Two runs over
+ * an unchanged page must compare equal, or the nightly refresh
+ * (.github/workflows/chatbot-knowledge-refresh.yml) opens a PR every night
+ * whose only change is a timestamp.
+ */
+function contentKey(markdown: string): string {
+  return createHash('sha256')
+    .update(markdown.replace(/\r\n/g, '\n').replace(/^ingested_at: .*$/m, ''))
+    .digest('hex');
+}
+
+async function ingestRoute(route: string, slug: string): Promise<{ success: boolean; chunks: number; changed?: boolean; error?: string }> {
   const url = `${SITE_BASE_URL}${route}`;
   let html: string;
 
@@ -100,6 +116,15 @@ async function ingestRoute(route: string, slug: string): Promise<{ success: bool
     const res = await fetch(url);
     if (!res.ok) {
       return { success: false, chunks: 0, error: `HTTP ${res.status}` };
+    }
+    // fetch follows redirects silently. A route that now redirects elsewhere
+    // (a feature switched off, a renamed page) would otherwise be saved under
+    // its old name with another page's content — e.g. /claude-signup -> / wrote
+    // the homepage in as the Claude Challenge page. Keep the previous file and
+    // fail loudly instead.
+    const landed = new URL(res.url).pathname.replace(/(.)\/+$/, '$1');
+    if (res.redirected && landed !== route) {
+      return { success: false, chunks: 0, error: `redirected to ${landed} — kept the previous copy; update ALLOWLIST_ROUTES if the page moved` };
     }
     html = await res.text();
   } catch (err) {
@@ -145,9 +170,13 @@ ${markdownBody}
 `;
 
   const outPath = path.join(GENERATED_DIR, `${slug}.md`);
+  const chunks = markdownBody.split('\n\n').filter(p => p.trim().length > 0).length;
+  if (existsSync(outPath) && contentKey(readFileSync(outPath, 'utf8')) === contentKey(finalMarkdown)) {
+    return { success: true, chunks, changed: false };
+  }
   writeFileSync(outPath, finalMarkdown, 'utf8');
 
-  return { success: true, chunks: markdownBody.split('\n\n').filter(p => p.trim().length > 0).length };
+  return { success: true, chunks, changed: true };
 }
 
 async function main() {
@@ -161,7 +190,7 @@ async function main() {
     const result = await ingestRoute(route, slug);
     if (result.success) {
       successCount++;
-      console.log(`✅ [SUCCESS] ${route} -> generated/${slug}.md (${result.chunks} content blocks)`);
+      console.log(`✅ [SUCCESS] ${route} -> generated/${slug}.md (${result.chunks} content blocks${result.changed ? '' : ', unchanged'})`);
     } else {
       failCount++;
       console.error(`❌ [FAILED]  ${route} -> ${result.error}`);

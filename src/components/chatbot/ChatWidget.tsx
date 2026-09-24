@@ -227,7 +227,7 @@ export function ChatWidget() {
     }
   }
 
-  async function streamApiMessage(text: string) {
+  async function streamApiMessage(text: string, page?: string | null) {
     if (!currentSessionId) return;
     
     const id = generateId();
@@ -269,7 +269,8 @@ export function ChatWidget() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: history })
+        // `page` names a menu pick's page so the answer links it (#576).
+        body: JSON.stringify({ messages: history, ...(page ? { page } : {}) })
       });
 
       if (!response.ok) {
@@ -424,7 +425,7 @@ export function ChatWidget() {
     const category = matchCategory(trimmed);
     if (category) {
       addUserMessage(trimmed);
-      void streamApiMessage(category.query);
+      void streamApiMessage(category.query, category.page);
       return;
     }
 

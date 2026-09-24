@@ -54,6 +54,7 @@ import { buildLexicalIndex } from "../src/lib/chatbot/lexical";
 import { rankAndGate, type RetrievalResult } from "../src/lib/chatbot/engine";
 import { embedTexts, type EmbeddingArtifact } from "../src/lib/chatbot/openai-embeddings";
 import { isThirdPartyDataRequest } from "../src/lib/chatbot-matcher";
+import { learnMorePage, publicPage } from "../src/lib/chatbot/page-links";
 
 config({ path: ".env.local" });
 config();
@@ -463,8 +464,45 @@ async function main() {
     `${gateOk ? "PASS" : "FAIL"}  gate refuses despite a ranked best chunk existing [coverage=${gateProbe.coverage.retrieved.toFixed(2)}/${gateProbe.coverage.vocabulary.toFixed(2)}]`,
   );
 
+  /* ---- #576: the "Learn more" link comes from the page the answer came from ---- */
+  const LINK_CASES: { query: string; hint: string | null; want: string | null }[] = [
+    { query: "What is the next workshop?", hint: null, want: "/workshop" },
+    { query: "What do I need to submit for the hackathon?", hint: null, want: "/hackathon" },
+    // A menu pick's page wins over whatever ranked first.
+    { query: "What programs does ABTalks offer?", hint: "/workshop", want: "/workshop" },
+    // A hint that is not a public page is ignored, never linked.
+    { query: "What do I need to submit for the hackathon?", hint: "/dashboard", want: "/hackathon" },
+    // Certificates live behind a login: no page, so no link.
+    { query: "How can I get my certificate?", hint: null, want: null },
+    // A student asking about their own profile is not sent to the recruiter
+    // search page; the menu's "Hiring & Recruiters" pick still is.
+    { query: "Who can see my profile?", hint: null, want: null },
+    { query: "Who can see my profile?", hint: "/hire", want: "/hire" },
+    { query: "Can I delete my data?", hint: null, want: "/privacy" },
+  ];
+  for (const c of LINK_CASES) {
+    const got = learnMorePage(run(c.query).results, c.hint);
+    const ok = got === c.want;
+    if (ok) passed++;
+    else failures.push(`learn-more link for "${c.query}" was ${got}, wanted ${c.want}`);
+    console.log(`${ok ? "PASS" : "FAIL"}  learn-more link: ${c.query} -> ${got}`);
+  }
+  const renameOk =
+    publicPage("/ai-workshop") === "/workshop" &&
+    publicPage("/program") === "/program/ai-cohort" &&
+    publicPage("/hire/requests") === null &&
+    publicPage("//evil.example") === null;
+  if (renameOk) passed++;
+  else failures.push("publicPage did not follow renames or let a non-public path through");
+  console.log(`${renameOk ? "PASS" : "FAIL"}  learn-more link: renamed and non-public routes`);
+
   const total =
-    CASES.length + THIRD_PARTY_QUERIES.length + NOT_THIRD_PARTY.length + 1;
+    CASES.length +
+    THIRD_PARTY_QUERIES.length +
+    NOT_THIRD_PARTY.length +
+    1 +
+    LINK_CASES.length +
+    1;
 
   console.log(
     `\nsemantic retrieval ran on ${semanticRuns}/${CASES.length} cases` +

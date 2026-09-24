@@ -1,0 +1,83 @@
+name: Chatbot knowledge refresh
+
+# Keeps Rudra AI's site knowledge in step with the live website.
+#
+# Nightly: copy the public pages into knowledge/generated/, re-embed only the
+# chunks whose text changed, run both chatbot suites, and open (or update) ONE
+# pull request with the diff. Nothing reaches production without a review, and
+# a refresh that makes retrieval worse fails here instead of shipping.
+#
+# No database, no deploy. Curated files in knowledge/processed/ stay
+# hand-edited; this job never touches them.
+#
+# Needs:
+#   secrets.OPENAI_API_KEY   embeddings (text-embedding-3-small; a typical
+#                            night re-embeds a handful of chunks, fractions of
+#                            a cent)
+#   vars.CHATBOT_SITE_URL    optional, defaults to https://www.abtalks.in
+#   Settings -> Actions -> "Allow GitHub Actions to create and approve pull
+#   requests" must be on, or the last step cannot open the PR.
+
+on:
+  schedule:
+    # 21:30 UTC = 03:00 IST, after the day's content edits.
+    - cron: "30 21 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: chatbot-knowledge-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    env:
+      # Prisma's client is constructed at import time; nothing connects.
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      DIRECT_URL: postgresql://ci:ci@localhost:5432/ci
+      SITE_BASE_URL: ${{ vars.CHATBOT_SITE_URL || 'https://www.abtalks.in' }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+
+      - name: Copy the public pages
+        run: npm run ingest:site
+
+      - name: Embed changed chunks
+        run: npm run kb:embed
+
+      - name: Retrieval regression
+        run: npm run test:chatbot-retrieval
+
+      - name: Edge cases
+        run: npm run test:chatbot-edgecases
+
+      - name: Open or update the refresh PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: bot/chatbot-knowledge-refresh
+          delete-branch: true
+          add-paths: |
+            knowledge/generated/**
+            knowledge/embeddings.json
+          commit-message: "Refresh chatbot knowledge from the live site"
+          title: "Refresh chatbot knowledge from the live site"
+          body: |
+            Nightly refresh of Rudra AI's site knowledge.
+
+            - `knowledge/generated/`: public pages that changed since the last refresh
+            - `knowledge/embeddings.json`: vectors for the changed chunks only
+
+            Both chatbot suites passed on this content (`test:chatbot-retrieval`,
+            `test:chatbot-edgecases`). Review the page diffs for anything that should
+            not be answerable, then merge to ship.
+          labels: chatbot

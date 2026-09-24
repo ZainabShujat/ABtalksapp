@@ -11,6 +11,12 @@ export type ChatbotCategory = {
    * truth that can drift away from it.
    */
   seedQuestion: string;
+  /**
+   * The public page this category is about, linked under the answer (issue
+   * #576). Null when no single public page covers it — the voice interview and
+   * certificates both live behind a login.
+   */
+  href: string | null;
 };
 
 export const CHATBOT_CATEGORIES: ChatbotCategory[] = [
@@ -19,60 +25,70 @@ export const CHATBOT_CATEGORIES: ChatbotCategory[] = [
     number: 1,
     label: "ABTalks",
     seedQuestion: "What is ABTalks and what does it do?",
+    href: "/",
   },
   {
     id: "programs",
     number: 2,
     label: "Programs & Challenges",
-    seedQuestion: "What programs and challenges does ABTalks ovffer?",
+    seedQuestion: "What programs and challenges does ABTalks offer?",
+    href: "/challenges",
   },
   {
     id: "hackathons",
     number: 3,
     label: "Hackathons",
     seedQuestion: "Tell me about the ABTalks hackathon, its rules and status.",
+    href: "/hackathon",
   },
   {
     id: "workshops-events",
     number: 4,
     label: "Workshops & Events",
     seedQuestion: "What workshops and events are coming up, and is registration open?",
+    href: "/workshop",
   },
   {
     id: "claude-challenge",
     number: 5,
     label: "Claude Challenge",
     seedQuestion: "How does the 60-Day Claude Challenge work?",
+    href: "/claude-signup",
   },
   {
     id: "ai-cohort",
     number: 6,
     label: "AI Cohort",
     seedQuestion: "What is the 31-Day AI Cohort and how do I apply?",
+    href: "/program/ai-cohort",
   },
   {
     id: "voice-interview",
     number: 7,
     label: "Voice Interview",
     seedQuestion: "What is the ABTalks AI voice interview and who can take it?",
+    href: null,
   },
   {
     id: "certificates",
     number: 8,
     label: "Certificates",
     seedQuestion: "Which ABTalks programs give certificates and how do I claim mine?",
+    href: null,
   },
   {
     id: "hiring",
     number: 9,
     label: "Hiring & Recruiters",
     seedQuestion: "How does hiring through ABTalks work and who can see my profile?",
+    href: "/hire",
   },
   {
     id: "socials-contact",
     number: 10,
     label: "Socials & Contact",
     seedQuestion: "What are the official ABTalks social channels and contact email?",
+    href: "/contact",
   },
 ];
 
