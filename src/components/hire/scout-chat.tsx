@@ -2,6 +2,7 @@
 
 import {
   Fragment,
+  type CSSProperties,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -1811,39 +1812,11 @@ export function ScoutChat({
                 );
               })}
 
-              {pending && (
-                <div className="scout-turn">
-                  <ScoutLoader />
-                  <p className="scout-turn__text scout-loader__label">
-                    Looking through verified work…
-                  </p>
-                </div>
-              )}
-              {/* The workspace is on screen before the backend has answered —
-                  the bar has already arrived. Card-shaped placeholders hold
-                  the space the results will take, so they populate into it
-                  rather than pushing the layout around. */}
-              {pending && (
-                <div className="hire-skeletons" aria-hidden="true">
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className="hire-skel">
-                      <div className="hire-skel__head">
-                        <span className="hire-skel__avatar" />
-                        <span className="hire-skel__lines">
-                          <span className="hire-skel__line hire-skel__line--name" />
-                          <span className="hire-skel__line hire-skel__line--meta" />
-                        </span>
-                      </div>
-                      <div className="hire-skel__chips">
-                        {[0, 1, 2, 3, 4].map((c) => (
-                          <span key={c} className="hire-skel__chip" />
-                        ))}
-                      </div>
-                      <span className="hire-skel__summary" />
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* The progress is the loading state on its own. Placeholder
+                  cards used to sit under it, and the thread follows its own
+                  bottom while pending — so the pane scrolled to the empty
+                  cards and pushed the progress out of view. */}
+              {pending && <ScoutProgress />}
               <div ref={bottomRef} className="scout-thread__end" aria-hidden="true" />
             </div>
             </>
@@ -1991,6 +1964,91 @@ export function ScoutChat({
         onApply={applyFilters}
       />
     </section>
+  );
+}
+
+/** What a search does, and roughly when each part starts (ms after the ask). */
+const SEARCH_STEPS = [
+  {
+    label: "Reading your brief",
+    detail: "Pulling out the role, location and must-have skills",
+    at: 0,
+  },
+  {
+    label: "Matching skills & experience",
+    detail: "Comparing your brief against every opted-in candidate",
+    at: 1400,
+  },
+  {
+    label: "Checking verified projects",
+    detail: "Looking at shipped work, not just what profiles claim",
+    at: 3200,
+  },
+  {
+    label: "Ranking the best fits",
+    detail: "Ordering the strongest matches first",
+    at: 6000,
+  },
+] as const;
+
+/**
+ * The loading state for a search, in place of placeholder cards: the thread
+ * follows its bottom while pending, so anything under this pushed it out of
+ * view. The steps tick off on a timer — the backend reports no progress, so
+ * this paces the wait rather than measuring it — and the last one stays
+ * active until the results land. Mounted only while pending, so every search
+ * starts from the first step.
+ */
+function ScoutProgress() {
+  const [active, setActive] = useState(0);
+
+  useEffect(() => {
+    const ids = SEARCH_STEPS.slice(1).map((step, i) =>
+      window.setTimeout(() => setActive(i + 1), step.at),
+    );
+    return () => ids.forEach((id) => window.clearTimeout(id));
+  }, []);
+
+  // Halfway through the active step, so the bar never claims to be finished.
+  const percent = ((active + 0.5) / SEARCH_STEPS.length) * 100;
+
+  return (
+    <div
+      className="scout-progress"
+      style={{ "--scout-progress": `${percent}%` } as CSSProperties}
+    >
+      <span className="scout-progress__glow" aria-hidden="true">
+        <i />
+        <i />
+      </span>
+      <div className="scout-progress__head">
+        <ScoutLoader />
+        <div className="scout-progress__heading">
+          <p className="scout-progress__title">Scout is searching</p>
+          <p key={active} className="scout-progress__detail">
+            {SEARCH_STEPS[active].detail}
+          </p>
+        </div>
+      </div>
+      <div className="scout-progress__bar" aria-hidden="true">
+        <span />
+      </div>
+      <ol className="scout-progress__steps">
+        {SEARCH_STEPS.map((step, i) => (
+          <li
+            key={step.label}
+            className="scout-progress__step"
+            data-state={i < active ? "done" : i === active ? "active" : "todo"}
+          >
+            <span className="scout-progress__dot" aria-hidden="true" />
+            <span className="scout-progress__label">{step.label}</span>
+          </li>
+        ))}
+      </ol>
+      <p className="sr-only" role="status">
+        {SEARCH_STEPS[active].label}
+      </p>
+    </div>
   );
 }
 
