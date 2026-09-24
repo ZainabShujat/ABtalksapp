@@ -2,6 +2,7 @@
 
 import {
   Fragment,
+  type ReactNode,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -514,6 +515,63 @@ export function ScoutChat({
     return () => ro.disconnect();
   }, []);
   const reqMenuRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Toolbar labels never wrap; when New search / New project / Filters do not
+   * all fit with their labels, the buttons go icon-only (`.is-compact`).
+   *
+   * Measured, not a breakpoint: on screen 2 the toolbar is scaled by
+   * `--hire-zoom` and its labels are sized against it, so the width at which
+   * they stop fitting moves with the zoom — and opening the profile panel
+   * narrows the toolbar without the viewport changing at all. The full width is
+   * read while the labels are showing and remembered, because once compact
+   * there is nothing left to measure it from.
+   */
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const toolbarFullWidth = useRef(0);
+  const [toolbarCompact, setToolbarCompact] = useState(false);
+  useLayoutEffect(() => {
+    const bar = toolbarRef.current;
+    if (!bar || typeof ResizeObserver === "undefined") return;
+    const px = (value: string) => parseFloat(value) || 0;
+    // What a button's content needs, not the width it happens to have: on a
+    // phone the buttons share the row (`flex: 1 1 0`), so their current width
+    // is the share, and a label can be clipped inside it without the button
+    // ever looking too wide.
+    const needed = (button: HTMLElement) => {
+      const s = getComputedStyle(button);
+      const parts = [...button.children].filter(
+        (el) => getComputedStyle(el).position !== "absolute",
+      );
+      return (
+        px(s.paddingLeft) +
+        px(s.paddingRight) +
+        px(s.borderLeftWidth) +
+        px(s.borderRightWidth) +
+        parts.reduce((sum, el) => sum + px(getComputedStyle(el).width), 0) +
+        px(s.columnGap) * Math.max(0, parts.length - 1)
+      );
+    };
+    const check = () => {
+      // Hidden (screen 1): nothing to measure, and nothing to decide.
+      if (bar.clientWidth === 0) return;
+      const style = getComputedStyle(bar);
+      if (!bar.classList.contains("is-compact")) {
+        const buttons = [...bar.querySelectorAll<HTMLElement>("button.scout-filters")];
+        toolbarFullWidth.current =
+          buttons.reduce((sum, b) => sum + needed(b), 0) +
+          px(style.columnGap) * Math.max(0, buttons.length - 1);
+      }
+      const available =
+        bar.clientWidth - px(style.paddingLeft) - px(style.paddingRight);
+      setToolbarCompact(available < toolbarFullWidth.current);
+    };
+    // The observer reports once on `observe`, which is the initial check.
+    const ro = new ResizeObserver(check);
+    ro.observe(bar);
+    return () => ro.disconnect();
+  }, [toolbarCompact]);
+
   /**
    * The search bar — ONE element on both screens. It is never unmounted
    * between them; the stage change moves it and `playStageFlip` shows the
@@ -1466,22 +1524,29 @@ export function ScoutChat({
           the right column. "New search" moved to the nav card's
           "+ Create New Project"; the Requirement menu is behind Filters. */}
       <div className={cn("scout__body", openMatch && "is-open")}>
-        <div className="scout__toolbar">
+        <div
+          ref={toolbarRef}
+          className={cn("scout__toolbar", toolbarCompact && "is-compact")}
+        >
           <button
             type="button"
             className="scout-filters scout-action scout-action--search"
             onClick={newSearch}
             disabled={returning}
+            title="New search"
           >
-            New search
+            <NewSearchIcon />
+            <span className="scout-action__label">New search</span>
           </button>
           <button
             type="button"
             className="scout-filters scout-action"
             onClick={newProject}
             disabled={returning}
+            title="New project"
           >
-            New project
+            <NewProjectIcon />
+            <span className="scout-action__label">New project</span>
           </button>
           <div className="hire-req" ref={reqMenuRef}>
             <button
@@ -1489,11 +1554,14 @@ export function ScoutChat({
               className="scout-filters"
               aria-expanded={searched ? filtersOpen : detailsOpen}
               aria-haspopup={searched ? "dialog" : "menu"}
+              title="Filters"
               onClick={() => {
                 if (searched) setFiltersOpen(true);
                 else setDetailsOpen((o) => !o);
               }}
             >
+              <FiltersIcon />
+              <span className="scout-action__label">Filters</span>
               <span className="scout-filters__icon" aria-hidden="true">
                 <img
                   src="/hire/filters-chevron.png"
@@ -1502,7 +1570,6 @@ export function ScoutChat({
                   height={15}
                 />
               </span>
-              Filters
             </button>
             {!searched && detailsOpen && (
               <div className="hire-req__menu" role="menu">
@@ -1991,6 +2058,68 @@ export function ScoutChat({
         onApply={applyFilters}
       />
     </section>
+  );
+}
+
+/*
+ * Toolbar glyphs, traced from the design's icon sheet as strokes in
+ * `currentColor` so they follow the button's text colour through hover and
+ * disabled states — the supplied bitmaps carried a white background that
+ * showed as a box on the tinted buttons.
+ */
+function ToolbarIcon({ children }: { children: ReactNode }) {
+  return (
+    <svg
+      className="scout-action__icon"
+      viewBox="0 0 24 24"
+      width={16}
+      height={16}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {children}
+    </svg>
+  );
+}
+
+/** Magnifier with a plus at its shoulder. */
+function NewSearchIcon() {
+  return (
+    <ToolbarIcon>
+      <path d="M6 2.5v7M2.5 6h7" />
+      <path d="M11.2 6.6A5.8 5.8 0 1 1 7.3 11" />
+      <path d="M17.6 17.6 21 21" />
+    </ToolbarIcon>
+  );
+}
+
+/** Open folder with a plus above its spine. */
+function NewProjectIcon() {
+  return (
+    <ToolbarIcon>
+      <path d="M6 2.5v7M2.5 6h7" />
+      <path d="M12 6h2.2l1.8 2.2h3.5a1.5 1.5 0 0 1 1.5 1.5v1.5" />
+      <path d="M6 12.5v6a2 2 0 0 0 2 2h10.4a1.5 1.5 0 0 0 1.4-1l2.1-6.3a1 1 0 0 0-1-1.3H11a1.5 1.5 0 0 0-1.4 1L7 20.2" />
+    </ToolbarIcon>
+  );
+}
+
+/** Three sliders; the line breaks around each knob, as in the design. */
+function FiltersIcon() {
+  return (
+    <ToolbarIcon>
+      <path d="M3 6h2.5M10.5 6H21" />
+      <circle cx="8" cy="6" r="2.5" />
+      <path d="M3 12h10.5M18.5 12H21" />
+      <circle cx="16" cy="12" r="2.5" />
+      <path d="M3 18h2.5M10.5 18H21" />
+      <circle cx="8" cy="18" r="2.5" />
+    </ToolbarIcon>
   );
 }
 

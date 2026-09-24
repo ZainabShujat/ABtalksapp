@@ -10979,6 +10979,51 @@ a.hire-profile__ext-link:focus-visible {
   cursor: default;
 }
 
+/* Toolbar glyphs (New search, New project, Filters), left of the label. */
+.scout-action__icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+/* A toolbar label never wraps. A button sizes to its full label and does not
+   shrink; when the toolbar is too narrow for all three labelled buttons,
+   `scout-chat.tsx` sets `.is-compact` and the buttons go icon-only. Measured
+   in JS rather than a breakpoint: on screen 2 the toolbar is scaled by
+   `--hire-zoom`, so the width that fits changes with the zoom. */
+.scout__toolbar .scout-filters {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* With buttons that no longer shrink, the toolbar's min-content width became
+   their full labelled width, and on a narrow phone that stretched the whole
+   grid column past the screen (359px in a 296px column at 320px). The toolbar
+   may be narrower than its buttons; that is exactly what `.is-compact` is for. */
+.scout__toolbar {
+  min-width: 0;
+}
+
+/* Icon-only: the label leaves the layout but stays the button's accessible
+   name (and `title` gives sighted users a tooltip). */
+.scout__toolbar.is-compact .scout-action__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.scout__toolbar.is-compact .scout-filters {
+  padding-inline: 12px;
+}
+
+.hire-app--results .scout__toolbar.is-compact .scout-filters {
+  padding-inline: calc(12px / var(--hire-zoom, 1));
+}
+
 /* --- screen 2 -> 1 ----------------------------------------------------------
    Beat 1 (`is-returning`): the workspace leaves, ease-in. Beat 2 (after the
    reset): the bar travels back up on the FLIP, the surface morphs back to
@@ -12088,7 +12133,8 @@ a.hire-profile__ext-link:focus-visible {
   padding: 0 calc(18px / var(--hire-zoom, 1));
 }
 
-.hire-app--results .scout-filters__icon {
+.hire-app--results .scout-filters__icon,
+.hire-app--results .scout-action__icon {
   width: calc(16px / var(--hire-zoom, 1));
   height: calc(16px / var(--hire-zoom, 1));
 }
