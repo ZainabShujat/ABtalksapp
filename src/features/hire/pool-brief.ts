@@ -13,6 +13,7 @@ import {
   trackLabels,
   tracksForGeo,
 } from "@/features/hire/track-registry";
+import { normalizeBrief } from "@/features/hire/spec-fields";
 
 export type PoolGeo = "IN" | "US";
 
@@ -42,7 +43,9 @@ const EMPTY: PoolBrief = {
  * track. We do not pretend anyone filled in a city.
  */
 export function extractPoolBrief(raw: string): PoolBrief {
-  const msg = raw.trim().toLowerCase();
+  // Same spelling rewrite the other parsers and the checklist ticks use, so
+  // "node js", "sde" and "mongo db" are read here too.
+  const msg = normalizeBrief(raw).toLowerCase();
   if (!msg) return EMPTY;
 
   // Track names come from the registry, not from regexes kept here. A new track
@@ -168,8 +171,20 @@ const ROLE_HINTS: { re: RegExp; title: string }[] = [
   { re: /\bback[-\s]?end\b/, title: "Backend engineer" },
   { re: /\bfront[-\s]?end\b/, title: "Frontend engineer" },
   { re: /\bdata\s*\/?\s*ml\b|\bdata engineer|\bml engineer\b/, title: "Data / ML engineer" },
-  { re: /\bai engineer\b/, title: "AI engineer" },
-  { re: /\breact\s+(?:developer|engineer|dev)\b/, title: "React developer" },
+  { re: /\bai engineer\b|\bgen\s?ai\b|\bllm engineer\b/, title: "AI engineer" },
+  { re: /\bdata scien(?:ce|tist)s?\b/, title: "Data scientist" },
+  { re: /\bdata analysts?\b/, title: "Data analyst" },
+  { re: /\bmachine learning engineer\b/, title: "Data / ML engineer" },
+  { re: /\bdevops\b|\bsre\b|\bsite reliability\b/, title: "DevOps engineer" },
+  {
+    re: /\b(?:android|ios|mobile|flutter|react native)\s+(?:developer|engineer)\b/,
+    title: "Mobile developer",
+  },
+  { re: /\bqa\b|\bsdet\b|\btest(?:ing)? engineer\b/, title: "QA engineer" },
+  { re: /\breact\s+(?:developer|engineer)s?\b/, title: "React developer" },
+  // Last: "software engineer" (and "sde", which `normalizeBrief` rewrites to
+  // it) only when nothing more specific was named.
+  { re: /\bsoftware (?:engineer|developer)s?\b/, title: "Software engineer" },
 ];
 
 const STACK_HINTS = [
@@ -193,6 +208,37 @@ const STACK_HINTS = [
   "flask",
   "spring",
   "fastapi",
+  "mongodb",
+  "mysql",
+  "express",
+  "next.js",
+  "vue",
+  "angular",
+  "html",
+  "css",
+  "tailwind",
+  "php",
+  "laravel",
+  "ruby",
+  "rails",
+  "c#",
+  ".net",
+  "flutter",
+  "dart",
+  "aws",
+  "azure",
+  "gcp",
+  "docker",
+  "kubernetes",
+  "redis",
+  "kafka",
+  "graphql",
+  "spark",
+  "pandas",
+  "pytorch",
+  "tensorflow",
+  "langchain",
+  "langgraph",
 ];
 
 function extractRoleStack(msg: string): {
@@ -219,7 +265,9 @@ function extractRoleStack(msg: string): {
       token === "go"
         ? /\bgo\b(?!lang)/
         : new RegExp(
-            `(^|[^a-z0-9])${token.replace(/\+/g, "\\+")}(?![a-z0-9])`,
+            // Every regex special escaped, not just "+": "next.js" and ".net"
+            // carry a dot that would otherwise match any character.
+            `(^|[^a-z0-9])${token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![a-z0-9])`,
             "i",
           );
     if (re.test(msg)) {

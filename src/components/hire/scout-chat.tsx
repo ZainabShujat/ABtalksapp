@@ -11,6 +11,12 @@ import {
 import { useRouter } from "next/navigation";
 import { Search, Sparkles } from "lucide-react";
 import { suggestChips } from "@/features/hire/scout-chips";
+import { applyPoolBrief, extractPoolBrief } from "@/features/hire/pool-brief";
+import {
+  BRIEF_CITIES,
+  applyObviousAnswers,
+  normalizeBrief,
+} from "@/features/hire/spec-fields";
 import { toast } from "sonner";
 import {
   applyHireFiltersAction,
@@ -201,10 +207,29 @@ function displaySalaryChips(): Option[] {
   ];
 }
 
-/** Juicebox-style: ticks go green as the recruiter types, not only after Scout stores the spec. */
+/** Checklist cities, built from the same list the brief parser reads. */
+const SPOKEN_CITY = new RegExp(
+  `\\b(${BRIEF_CITIES.join("|")}|india|remote|hybrid|onsite|on-site|wfh|work from home|anywhere)\\b`,
+);
+
+/**
+ * Juicebox-style: ticks go green as the recruiter types, not only after Scout
+ * stores the spec.
+ *
+ * The text goes through the SAME deterministic parse the server runs before
+ * searching (`extractPoolBrief` + `applyObviousAnswers`), so a tick means the
+ * search will actually use that field — "two years", "blr based" and "sde"
+ * light it exactly when they reach the query. The keyword checks after each
+ * `||` stay as a looser net for phrasings only the model will pick up.
+ */
 function detectSpoken(raw: string) {
-  const text = raw.toLowerCase();
+  const text = normalizeBrief(raw).toLowerCase();
+  const parsed = applyObviousAnswers(
+    applyPoolBrief({}, extractPoolBrief(text)),
+    text,
+  );
   const role =
+    Boolean(parsed.title?.trim()) ||
     /\b(backend|front-?end|full[-\s]?stack|data\s*\/?\s*ml|ai|ml|software|react|python|node|java|ios|android|mobile|devops|platform|cloud|security|qa|product)\b.{0,20}\b(engineer|developer|designer|scientist|analyst|manager|architect)\b/.test(
       text,
     ) ||
@@ -212,20 +237,24 @@ function detectSpoken(raw: string) {
       text,
     );
   const experience =
-    /\b\d{1,2}\s*(\+|plus)?\s*(yrs?|years?)\b/.test(text) ||
-    /\b(fresher|entry[-\s]?level|junior|jr\.?|mid[-\s]?level|senior|sr\.?|staff|principal|lead|intern)\b/.test(
+    parsed.minExperience != null ||
+    parsed.maxExperience != null ||
+    parsed.seniority != null ||
+    /\b\d{1,2}\s*\+?\s*years?\b/.test(text) ||
+    /\b(fresher|entry[-\s]?level|junior|jr\.?|mid[-\s]?level|senior|sr\.?|staff|principal|lead|intern|experienced)\b/.test(
       text,
     );
   const location =
-    /\b(delhi|ncr|mumbai|bangalore|bengaluru|hyderabad|chennai|pune|kolkata|gurgaon|gurugram|noida|india|remote|hybrid|onsite|on-site|wfh|work from home|anywhere)\b/.test(
-      text,
-    );
+    Boolean(parsed.locationCity) ||
+    parsed.workMode != null ||
+    SPOKEN_CITY.test(text);
   const education =
-    /\b(b\.?\s?tech|m\.?\s?tech|bca|mca|mba|bachelor|master|degree|diploma|graduate|iit|nit)\b/.test(
+    /\b(b\.tech|m\.tech|b\.?\s?e\.|b\.?\s?sc|m\.?\s?sc|bca|mca|mba|bba|phd|bachelors?|masters?|degree|diploma|graduat(?:e|es|ion)|post[\s-]?grad(?:uate)?|under[\s-]?grad(?:uate)?|iit|nit|bits)\b/.test(
       text,
     );
   const skills =
-    /\b(python|java|javascript|typescript|react|node|next\.?js|sql|postgres|mongodb|aws|docker|kubernetes|golang|go\b|rust|django|flask|spring|redis|graphql|html|css|tailwind|pytorch|tensorflow|langchain)\b/.test(
+    (parsed.mustHaveStack?.length ?? 0) > 0 ||
+    /\b(python|java|javascript|typescript|react|node|next\.js|sql|postgresql|mongodb|aws|docker|kubernetes|golang|go\b|rust|django|flask|spring|redis|graphql|html|css|tailwind|pytorch|tensorflow|langchain)\b/.test(
       text,
     );
   const availability =
@@ -1099,6 +1128,7 @@ export function ScoutChat({
       on:
         spec.seniority != null ||
         spec.minExperience != null ||
+        spec.maxExperience != null ||
         spoken.experience,
     },
     {

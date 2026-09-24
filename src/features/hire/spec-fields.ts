@@ -302,17 +302,232 @@ export function extractStatedStack(text: string): string[] {
   return found.slice(0, 6);
 }
 
+/**
+ * The brief as recruiters actually type it, rewritten into the forms the
+ * parsers below and in `pool-brief.ts` recognise.
+ *
+ * Every parser here used to look for one spelling: "2 years" but not "two
+ * years", "bangalore" but not "blr", "node" but not "node js". A recruiter who
+ * typed the other one got no experience band, no city or a missing skill — and
+ * the search ran vaguer than they asked, silently. Rewriting the spelling once,
+ * before any parser runs, fixes every parser at the same time, and the /hire
+ * checklist ticks read the same text so they light up for exactly what the
+ * search will use.
+ *
+ * Pure and browser-safe: `scout-chat.tsx` runs it on every keystroke.
+ */
+const NUMBER_WORDS: Record<string, number> = {
+  zero: 0,
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+  eleven: 11,
+  twelve: 12,
+  fifteen: 15,
+  twenty: 20,
+};
+
+/** Only a number word that is about to be a count of years — "one of the
+ *  best" and "five candidates" are left alone. */
+const NUMBER_WORD_BEFORE_YEARS = new RegExp(
+  `\\b(${Object.keys(NUMBER_WORDS).join("|")})\\b(?=\\s*(?:\\+|plus\\b|-|–|to\\b|or\\b|years?\\b|yrs?\\b|yoe\\b))`,
+  "gi",
+);
+
+const BRIEF_REWRITES: [RegExp, string][] = [
+  // Years, however written: "3yrs", "3 yr.", "3y exp", "yoe", "a year".
+  [/\b(\d{1,2})\s*(?:yrs?|years?|y)\b\.?/gi, "$1 years"],
+  [/\byrs?\b\.?/gi, "years"],
+  [/\byoe\b/gi, "years experience"],
+  [/\bexp\b\.?/gi, "experience"],
+  [/\b(?:a\s+)?couple\s+of\s+years\b/gi, "2 years"],
+  [/\b(?:a|an)\s+year\b/gi, "1 year"],
+  [/\b(\d{1,2})\s*(?:\+|plus\b)/gi, "$1+"],
+  [/\batleast\b/gi, "at least"],
+  [/\bmin(?:imum)?\.?\s+(?=\d)/gi, "at least "],
+  // Skills written as two words or with a suffix.
+  [/\bnode\s*\.?\s*js\b/gi, "node"],
+  [/\breact\s*\.?\s*js\b/gi, "react"],
+  [/\bnext\s*\.?\s*js\b/gi, "next.js"],
+  [/\bexpress\s*\.?\s*js\b/gi, "express"],
+  [/\bvue\s*\.?\s*js\b/gi, "vue"],
+  [/\bangular\s*\.?\s*js\b/gi, "angular"],
+  [/\bmongo(?:\s*db)?\b/gi, "mongodb"],
+  [/\bpostgre(?:s|\s*sql)\b/gi, "postgresql"],
+  [/\btype\s+script\b/gi, "typescript"],
+  [/\bjava\s+script\b/gi, "javascript"],
+  [/\bc\s*plus\s*plus\b|\bcpp\b/gi, "c++"],
+  [/\bk8s\b/gi, "kubernetes"],
+  // Role shorthand.
+  [/\b(?:sde|swe)(?:\s*-?\s*(?:iii|ii|i|[123]))?\b/gi, "software engineer"],
+  [/\bdevs?\b/gi, "developer"],
+  // Degrees: "b tech", "b. tech", "btech" all mean the same thing.
+  [/\bb\s*\.?\s*tech\b/gi, "b.tech"],
+  [/\bm\s*\.?\s*tech\b/gi, "m.tech"],
+  // City nicknames and misspellings (same aliases the ranker folds, see
+  // `CITY_ALIASES` in score-candidate.ts).
+  [/\b(?:blr|banglore|bangaluru|bengluru)\b/gi, "bangalore"],
+  [/\bbombay\b/gi, "mumbai"],
+  [/\bnew\s+delhi\b/gi, "delhi"],
+  [/\b(?:hyd|hydrabad)\b/gi, "hyderabad"],
+  [/\bmadras\b/gi, "chennai"],
+  [/\bcalcutta\b/gi, "kolkata"],
+  [/\bpoona\b/gi, "pune"],
+  [/\bgurgaon\b/gi, "gurugram"],
+  [/\bcochin\b/gi, "kochi"],
+  [/\bmysore\b/gi, "mysuru"],
+  [/\btrivandrum\b/gi, "thiruvananthapuram"],
+  [/\bvizag\b/gi, "visakhapatnam"],
+];
+
+export function normalizeBrief(raw: string): string {
+  let s = raw.replace(
+    NUMBER_WORD_BEFORE_YEARS,
+    (w) => String(NUMBER_WORDS[w.toLowerCase()]),
+  );
+  for (const [re, to] of BRIEF_REWRITES) s = s.replace(re, to);
+  return s.replace(/\s+/g, " ").trim();
+}
+
+/** Cities the brief can name, as `normalizeBrief` leaves them. */
+export const BRIEF_CITIES = [
+  "delhi ncr",
+  "bengaluru",
+  "bangalore",
+  "delhi",
+  "ncr",
+  "mumbai",
+  "hyderabad",
+  "chennai",
+  "pune",
+  "kolkata",
+  "gurugram",
+  "noida",
+  "ahmedabad",
+  "jaipur",
+  "kochi",
+  "indore",
+  "chandigarh",
+  "mohali",
+  "coimbatore",
+  "lucknow",
+  "bhubaneswar",
+  "nagpur",
+  "mysuru",
+  "thiruvananthapuram",
+  "visakhapatnam",
+  "surat",
+  "vadodara",
+  "bhopal",
+  "patna",
+  "goa",
+] as const;
+
+const BRIEF_CITY_RE = new RegExp(`\\b(${BRIEF_CITIES.join("|")})\\b`, "i");
+
+/** The city named anywhere in the brief, as the requirement stores it. */
+export function parseBriefCity(text: string): string | null {
+  const hit = BRIEF_CITY_RE.exec(normalizeBrief(text));
+  if (!hit?.[1]) return null;
+  const city = hit[1].toLowerCase();
+  if (city === "bangalore" || city === "bengaluru") return "Bengaluru";
+  if (city === "ncr" || city === "delhi ncr") return "Delhi NCR";
+  return city.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * An experience band in years: "2-3 years", "2 to 3 yrs", "at least two
+ * years", "5+ years", "up to 4 years". Null when the brief states none.
+ */
+export function parseExperience(
+  text: string,
+): { min: number | null; max: number | null } | null {
+  const t = normalizeBrief(text).toLowerCase();
+  const range = /\b(\d{1,2})\s*(?:-|–|to|or)\s*(\d{1,2})\s*\+?\s*years?\b/.exec(t);
+  if (range) {
+    const lo = Number(range[1]);
+    const hi = Number(range[2]);
+    if (hi >= lo && hi <= 50) return { min: lo, max: hi };
+  }
+  const upTo =
+    /\b(?:up\s*to|upto|max(?:imum)?|less than|under|below)\s*(\d{1,2})\s*years?\b/.exec(t);
+  if (upTo) return { min: null, max: Number(upTo[1]) };
+  const floor = /\b(\d{1,2})\s*\+?\s*years?\b/.exec(t);
+  if (floor) return { min: Number(floor[1]), max: null };
+  return null;
+}
+
+/**
+ * Role nouns a brief is built around. "developer for react" still names a
+ * developer; the words either side are the constraints.
+ */
+const ROLE_NOUN =
+  /\b(engineer|developer|designer|manager|analyst|architect|scientist|tester)s?\b/i;
+
+/** Words that describe a constraint, never the role — stripped from a title. */
+const TITLE_NOISE = new RegExp(
+  [
+    `\\b(?:${BRIEF_CITIES.join("|")})\\b`,
+    "\\b\\d{1,2}\\s*\\+?\\s*(?:-\\s*\\d{1,2}\\s*)?years?\\b",
+    "\\b(?:fresher|freshers|entry[\\s-]?level|experienced?|remote|hybrid|on[\\s-]?site|full[\\s-]?time|part[\\s-]?time|b\\.tech|m\\.tech|bca|mca|graduate)\\b",
+    "\\b(?:someone|somebody|a guy|a girl|a person|people|candidates?)\\b",
+    "\\b(?:one of the|best|good|great|strong|top|skilled|talented|solid|decent|some|few)\\b",
+  ].join("|"),
+  "gi",
+);
+
+/**
+ * A role title from a sentence-shaped brief, or null.
+ *
+ * Takes the phrase ending in the role noun ("fresher java developer chennai" →
+ * "java developer"), after cutting the clauses that carry constraints.
+ */
+export function parseBriefRole(text: string): string | null {
+  const seed = normalizeBrief(text)
+    .replace(/\b(?:with|having|who|that|which|based|from|in|for)\b[\s\S]*$/i, "")
+    .replace(TITLE_NOISE, " ")
+    .replace(/[,.;:!?]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const m = /((?:[a-z][a-z0-9.+#/-]*\s+){0,3}?(?:engineer|developer|designer|manager|analyst|architect|scientist|tester)s?)\b/i.exec(
+    seed,
+  );
+  if (!m?.[1]) return null;
+  // One developer is the role; "react developers" is how people ask for it.
+  const role = asRoleTitle(m[1].replace(/s$/i, ""));
+  return role && ROLE_NOUN.test(role) ? role : null;
+}
+
 export function applyObviousAnswers(spec: JobSpec, msg: string): JobSpec {
-  const text = msg.trim();
-  if (!text || text.length > 400) return spec;
-  if (/\b(not|don't|dont|doesn't|except)\b/i.test(text)) return spec;
+  const raw = msg.trim();
+  if (!raw || raw.length > 400) return spec;
+
+  // A negated clause belongs to the model ("not in delhi", "don't need a
+  // degree"). It used to drop the WHOLE message, so "backend, 2 years, doesn't
+  // matter where" lost the role and the years too. Only the negated clause is
+  // set aside now; the rest is read as usual.
+  const NEGATION = /\b(not|don't|dont|doesn't|doesnt|except|no need)\b/i;
+  const text = normalizeBrief(
+    raw
+      .split(/\s*(?:[,;.]|\bbut\b)\s*/i)
+      .filter((clause) => !NEGATION.test(clause))
+      .join(", "),
+  );
+  if (!text) return spec;
 
   const next: JobSpec = { ...spec };
 
   if (next.seniority == null) {
     const seniority = firstHit(text, [
       [/\bintern(?:ship)?\b/i, "INTERN"],
-      [/\bjunior\b|\bjr\.?\b/i, "JUNIOR"],
+      [/\bjunior\b|\bjr\.?\b|\bfreshers?\b|\bentry[\s-]?level\b/i, "JUNIOR"],
       [/\bmid(?:[\s-]?level)?\b/i, "MID"],
       [/\bsenior\b|\bsr\.?\b/i, "SENIOR"],
       [/\blead\b/i, "LEAD"],
@@ -337,42 +552,23 @@ export function applyObviousAnswers(spec: JobSpec, msg: string): JobSpec {
     else if (/\breact\s+(?:developer|engineer|dev)\b/i.test(text)) {
       next.title = "React developer";
     } else {
-      // Strip trailing constraints so "AI engineer with 2 years in Bengaluru"
-      // becomes a title, not a sentence stored as the role.
-      const roleSeed = text
-        .replace(/\bwith\b[\s\S]*$/i, "")
-        .replace(/\bin\b[\s\S]*$/i, "")
-        .replace(/\bfor\b[\s\S]*$/i, "")
-        .trim();
-      const role = asRoleTitle(roleSeed);
-      if (
-        role &&
-        /\b(engineer|developer|designer|manager|analyst|architect|dev)\b/i.test(
-          role,
-        )
-      ) {
-        next.title = role;
-      }
+      // "fresher java developer chennai" is a java developer; the city and
+      // the seniority are constraints, not part of the role.
+      const role = parseBriefRole(text);
+      if (role) next.title = role;
     }
   }
 
   if (!next.locationCity) {
-    const loc =
-      /\b(?:in|only|from)\s+(bengaluru|bangalore|delhi(?:\s*ncr)?|mumbai|hyderabad|chennai|pune|kolkata|remote)\b/i.exec(
-        text,
-      ) ??
-      /^(bengaluru|bangalore|delhi(?:\s*ncr)?|mumbai|hyderabad|chennai|pune|kolkata|remote)\s*[.!,]*$/i.exec(
-        text,
-      );
-    if (loc?.[1]) {
-      const city = loc[1].toLowerCase();
-      next.locationCity =
-        city === "bangalore" || city === "bengaluru"
-          ? "Bengaluru"
-          : city === "remote"
-            ? "Remote"
-            : city.replace(/\b\w/g, (c) => c.toUpperCase());
-    }
+    // A named city counts wherever it sits — "blr based", "mumbai", "in pune".
+    // "Remote" as a location still needs the preposition, as before; bare
+    // "remote" is the work mode above.
+    const city =
+      parseBriefCity(text) ??
+      (/\b(?:in|only|from)\s+remote\b|^remote\s*[.!,]*$/i.test(text)
+        ? "Remote"
+        : null);
+    if (city) next.locationCity = city;
   }
 
   if (next.employmentType == null) {
@@ -414,9 +610,20 @@ export function applyObviousAnswers(spec: JobSpec, msg: string): JobSpec {
     }
   }
 
-  if (next.minExperience == null) {
-    const years = /\b(\d{1,2})\s*\+?\s*(?:years?|yrs?)\b/i.exec(text);
-    if (years) next.minExperience = Number(years[1]);
+  // "developer for react": the bare noun says nothing the stack does not, so
+  // name the role after the first skill instead.
+  if (
+    /^(?:developer|engineer)$/i.test(next.title?.trim() ?? "") &&
+    next.mustHaveStack?.[0]
+  ) {
+    const lead = next.mustHaveStack[0];
+    next.title = `${lead.charAt(0).toUpperCase()}${lead.slice(1)} developer`;
+  }
+
+  if (next.minExperience == null && next.maxExperience == null) {
+    const band = parseExperience(text);
+    if (band?.min != null) next.minExperience = band.min;
+    if (band?.max != null) next.maxExperience = band.max;
   }
 
   return next;

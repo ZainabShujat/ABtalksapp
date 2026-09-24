@@ -920,6 +920,73 @@ suite("role-only brief is searchable without stack", () => {
   assert(!searchable({ locationCity: "Bengaluru" }), "location alone never");
 });
 
+/* ══ 8c. Natural language — the brief as recruiters type it ═════════════ */
+
+console.log("\nnatural language briefs");
+
+/** The deterministic read the agent does before any model call. */
+function readBrief(msg: string): JobSpec {
+  const stated = extractPoolBrief(msg);
+  const seeded = briefTouched(stated) ? applyPoolBrief({}, stated) : {};
+  return applyObviousAnswers(seeded, msg);
+}
+
+suite("number words and shorthand become an experience band", () => {
+  assert(readBrief("backend engineer with two years of experience").minExperience === 2, "two years");
+  assert(readBrief("python developer, five plus years").minExperience === 5, "five plus years");
+  assert(readBrief("react developer 3yrs exp").minExperience === 3, "3yrs exp");
+  const range = readBrief("frontend engineer, 2-3 yrs");
+  assert(range.minExperience === 2 && range.maxExperience === 3, "2-3 yrs is a band, not a floor of 3");
+  const words = readBrief("backend developer, atleast two to three years");
+  assert(words.minExperience === 2 && words.maxExperience === 3, "two to three years");
+  const cap = readBrief("android developer up to 4 years");
+  assert(cap.maxExperience === 4 && cap.minExperience == null, "up to 4 years is a ceiling");
+  assert(readBrief("fresher java developer").seniority === "JUNIOR", "fresher is junior");
+});
+
+suite("cities are read without a preposition and by nickname", () => {
+  assert(readBrief("backend developer, blr based").locationCity === "Bengaluru", "blr");
+  assert(readBrief("data scientist mumbai").locationCity === "Mumbai", "bare city");
+  assert(readBrief("python developer in gurgaon").locationCity === "Gurugram", "gurgaon");
+  assert(readBrief("react developer noida").locationCity === "Noida", "noida (new city)");
+});
+
+suite("crooked sentences keep role, skills and constraints", () => {
+  const sde = readBrief("sde with node js and mongo db, 4 years, hyderabad, b.tech cs");
+  assert(sde.title === "Software engineer", `sde → ${sde.title}`);
+  assert(
+    JSON.stringify(sde.mustHaveStack) === JSON.stringify(["node", "mongodb"]),
+    `split skill names → ${JSON.stringify(sde.mustHaveStack)}`,
+  );
+  assert(sde.minExperience === 4 && sde.locationCity === "Hyderabad", "years and city");
+
+  const ds = readBrief("hiring data scientist having one year of exp mumbai");
+  assert(ds.title === "Data scientist" && ds.minExperience === 1, "data scientist, one year");
+
+  const fresher = readBrief("fresher java developer chennai");
+  assert(fresher.title === "java developer", `city stays out of the title → ${fresher.title}`);
+
+  const bare = readBrief("i want developer for react who has three years experience");
+  assert(bare.title === "React developer", `bare developer named after the stack → ${bare.title}`);
+
+  const filler = readBrief("one of the best react developers in pune");
+  assert(filler.title === "React developer", `filler words dropped → ${filler.title}`);
+});
+
+suite("a negated clause no longer drops the whole message", () => {
+  const spec = readBrief("backend dev, 3yrs, location doesn't matter");
+  assert(spec.title === "Backend engineer" && spec.minExperience === 3, "role and years kept");
+  assert(spec.locationCity == null, "the negated clause sets nothing");
+});
+
+suite("the reported non-brief still applies nothing", () => {
+  assert(!briefTouched(extractPoolBrief("who is prime minister of india")), "trivia stays trivia");
+  assert(
+    readBrief("one of the best in town").minExperience == null,
+    "'one' only becomes a number before years",
+  );
+});
+
 /* ══ 9. Boundary — server-only must not leak to the client ═══════════════ */
 
 console.log("\nboundary");
