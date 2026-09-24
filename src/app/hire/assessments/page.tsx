@@ -138,7 +138,7 @@ export default async function HireAssessmentsPage() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <div className="hire-assess-list">
+    <div className="hire-assess-page">
       <Link href="/hire" className="hire-back">
         <svg
           viewBox="0 0 24 24"

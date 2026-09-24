@@ -1457,6 +1457,40 @@ export function ScoutChat({
         arriving && "is-arriving",
       )}
       aria-label="Scout assistant"
+      // The desk is locked to the viewport, so `.chat-output` is the only
+      // scroller — a wheel over the empty profile rail or the gutters around
+      // the cards hit nothing that could scroll and the list stood still.
+      // Hand those wheels to the list, unless something under the pointer can
+      // scroll itself (an open profile, a long composer). Portaled dialogs
+      // bubble here through React too; `contains` keeps them out.
+      onWheel={(e) => {
+        const list = scrollRef.current;
+        const target = e.target as HTMLElement;
+        if (
+          !list ||
+          e.ctrlKey ||
+          list.contains(target) ||
+          !e.currentTarget.contains(target)
+        ) {
+          return;
+        }
+        for (
+          let el: HTMLElement | null = target;
+          el && el !== e.currentTarget;
+          el = el.parentElement
+        ) {
+          const { overflowY } = getComputedStyle(el);
+          if (
+            (overflowY === "auto" || overflowY === "scroll") &&
+            el.scrollHeight > el.clientHeight
+          ) {
+            return;
+          }
+        }
+        const unit =
+          e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? list.clientHeight : 1;
+        list.scrollBy({ top: e.deltaY * unit });
+      }}
     >
       {persist && (
         <NewProjectDialog open={newProjectOpen} onOpenChange={setNewProjectOpen} />

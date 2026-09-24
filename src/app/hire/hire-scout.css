@@ -5932,6 +5932,14 @@ html.dark .vc-card {
   margin: 24px auto 32px;
 }
 
+/* The index page's outer wrapper (back link + list) used to be a second
+   `.hire-assess-list`, so its 64px bottom margin stacked on the list's 32px and
+   the shell's 64px padding — the page scrolled ~160px past its last row. The
+   wrapper is plain now, and the shell's padding is the only space below. */
+.hire-assess-page > .hire-assess-list--index {
+  margin-bottom: 0;
+}
+
 .hire-assess-list--index .hire-assess-list__head {
   align-items: flex-end;
   gap: 16px;
