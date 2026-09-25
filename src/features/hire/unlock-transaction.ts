@@ -14,6 +14,7 @@ import {
   CONTACT_UNLOCK_COST_KEY,
   getIntConfig,
 } from "@/lib/platform-config";
+import { hasUnclaimedImportForUser } from "@/repositories/resume-import";
 
 /**
  * The money half of a contact unlock (T-229, T-230).
@@ -39,6 +40,8 @@ import {
 export type UnlockRefusal =
   | "NOT_A_RECRUITER"
   | "CANDIDATE_UNAVAILABLE"
+  /** Plan 154: imported from a résumé and not yet signed in — no consent to share contact. */
+  | "CANDIDATE_NOT_CLAIMED"
   | "INSUFFICIENT_CREDITS"
   | "UNAVAILABLE";
 
@@ -70,6 +73,8 @@ export type UnlockResult = UnlockSuccess | UnlockFailure;
 export const REFUSAL_MESSAGE: Record<UnlockRefusal, string> = {
   NOT_A_RECRUITER: "Sign in as a recruiter to unlock contact details.",
   CANDIDATE_UNAVAILABLE: "This candidate is no longer available.",
+  CANDIDATE_NOT_CLAIMED:
+    "This candidate hasn't activated their account yet, so their contact details can't be shared. Nothing was charged.",
   INSUFFICIENT_CREDITS: "You do not have enough credits for this unlock.",
   UNAVAILABLE: "Could not complete the unlock. Try again.",
 };
@@ -143,6 +148,18 @@ export async function unlockResolvedContact(
       costMinor: 0,
       balanceMinor: await getCreditBalance(organizationId),
       engagementId: existing.id,
+    };
+  }
+
+  // Plan 154: a student an admin imported from a résumé has not signed in, so
+  // has not agreed to their contact details going to anyone. Paying cannot
+  // stand in for that. Checked before any money moves.
+  if (await hasUnclaimedImportForUser(candidateUserId)) {
+    return {
+      ok: false,
+      reason: "CANDIDATE_NOT_CLAIMED",
+      message: REFUSAL_MESSAGE.CANDIDATE_NOT_CLAIMED,
+      balanceMinor: await getCreditBalance(organizationId),
     };
   }
 

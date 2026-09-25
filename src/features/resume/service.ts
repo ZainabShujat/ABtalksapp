@@ -21,6 +21,7 @@ import {
 } from "@/features/resume/ingest";
 import { looksLikeResume } from "@/features/resume/normalize";
 import { parseResumeDocument } from "@/features/resume/parse";
+import { isCandidateRegistered } from "@/features/registration/registration-gate";
 import { analyseResumeStrength, STRENGTH_VERSION } from "@/features/resume/strength";
 import { deleteResumeFile, storeResumeFile } from "@/features/resume/storage";
 import { toResumeView } from "@/features/resume/view";
@@ -197,7 +198,13 @@ async function processDocument(
     await deleteResumeFile(existing.blobPathname);
   }
 
-  const parsed = await parseResumeDocument({ bytes, mimeType, fileName });
+  // Usage accounting only (plan 154): no profile yet means this is the
+  // registration step, otherwise the /profile page.
+  const parseSource = (await isCandidateRegistered(userId)) ? "PROFILE" : "REGISTER";
+  const parsed = await parseResumeDocument(
+    { bytes, mimeType, fileName },
+    { source: parseSource, userId },
+  );
   if (!parsed.ok) {
     await markFailed(userId, base, blobPathname, parsed.message);
     return { ok: false, message: parsed.message };
@@ -279,6 +286,18 @@ export async function applyStoredResumeToProfile(
   const applied = await mergeIntoProfile(userId, row.parsedData);
   logger.info("[resume] deferred merge", { userId, enriched: applied });
   return applied;
+}
+
+/**
+ * The same additive merge, for a document that is not (or not only) this
+ * user's stored résumé — an admin import attached to an existing account
+ * (plan 154). Exposed rather than duplicated so there is one merge path.
+ */
+export async function applyParsedResumeToProfile(
+  userId: string,
+  parsed: ParsedResumeInput,
+): Promise<MergeSection[]> {
+  return mergeIntoProfile(userId, parsed);
 }
 
 /** Keeps the stored filename when a link fetch re-sends the same document. */

@@ -10,6 +10,11 @@ import { recordNewsletterOptIn } from "@/features/legal/record-newsletter-optin"
 import { logger } from "@/lib/logger";
 import { verifyRecruiterOtp } from "@/features/recruiter-auth/otp";
 import { isJwtInvalidated } from "@/lib/account-status";
+import {
+  attachParsedImportToUser,
+  evaluateGoogleLink,
+  onGoogleAccountLinked,
+} from "@/features/resume/import/claim";
 //auth is the full config with PrismaAdapter and real Credentials authorize. Used everywhere else.
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -118,19 +123,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             authorization: {
               params: { prompt: "select_account" },
             },
+            // Plan 154: lets a verified Google sign-in link to the account an
+            // admin created from the student's résumé. `callbacks.signIn` →
+            // `evaluateGoogleLink` narrows this to exactly that case and denies
+            // every other existing-email link, as Auth.js did before.
+            allowDangerousEmailAccountLinking: true,
           }),
         ]
       : []),
   ],
   callbacks: {
     ...authConfig.callbacks,
-    async signIn({ user }) {
-      if (!user?.id) return true;
-      const row = await prisma.user.findUnique({
-        where: { id: user.id },
-        select: { deletedAt: true, disabledAt: true },
-      });
-      if (row?.deletedAt || row?.disabledAt) return false;
+    async signIn({ user, account, profile }) {
+      if (user?.id) {
+        const row = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { deletedAt: true, disabledAt: true },
+        });
+        if (row?.deletedAt || row?.disabledAt) return false;
+      }
+      if (account?.provider === "google") {
+        const decision = await evaluateGoogleLink({
+          providerAccountId: account.providerAccountId,
+          email: profile?.email ?? user?.email,
+          emailVerified: (profile as { email_verified?: boolean } | undefined)?.email_verified === true,
+        });
+        // The exact outcome Auth.js produced before linking was enabled.
+        if (decision === "deny") return "/login?error=OAuthAccountNotLinked";
+      }
       return true;
     },
     async session({ session, token }) {
@@ -174,30 +194,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
      * Never throws: a failure here must not break sign-in.
      */
     async createUser({ user }) {
+      if (!user.id) return;
+      await recordOAuthConsent(user.id, user.email ?? null, "oauth_signup");
+      // Plan 154: an admin parsed this student's résumé but never registered
+      // it — attach it so /register's résumé step is already done.
       try {
-        await recordLegalConsents({
-          userId: user.id,
-          email: user.email ?? null,
-          source: "oauth_signup",
-        });
-        // Login page writes abtalks_newsletter_pref before OAuth starts.
-        // Default true if the cookie is missing (e.g. old clients).
-        let newsletterOptIn = true;
-        try {
-          const pref = (await cookies()).get("abtalks_newsletter_pref")?.value;
-          if (pref === "0") newsletterOptIn = false;
-          if (pref === "1") newsletterOptIn = true;
-        } catch {
-          // cookies() can throw outside a request context — keep default.
-        }
-        await recordNewsletterOptIn({
-          userId: user.id,
-          email: user.email ?? null,
-          source: "oauth_signup",
-          optIn: newsletterOptIn,
-        });
+        await attachParsedImportToUser(user.id, user.email);
       } catch (error) {
-        logger.error("[legal] oauth signup consent not recorded", {
+        logger.error("[resume-import] attach at signup failed", {
+          userId: user.id,
+          error: String(error),
+        });
+      }
+    },
+    /**
+     * Plan 154: a Google account was linked. For a student an admin imported
+     * this IS the claim — the adapter linked their Google login to the User
+     * created for them (`createUser` never fires for it, so their consent is
+     * recorded here). For every ordinary signup it is a no-op.
+     *
+     * Never throws: a failure here must not break sign-in.
+     */
+    async linkAccount({ user, account }) {
+      if (account.provider !== "google" || !user.id) return;
+      try {
+        const claimed = await onGoogleAccountLinked(user.id);
+        if (claimed) await recordOAuthConsent(user.id, user.email ?? null, "oauth_claim");
+      } catch (error) {
+        logger.error("[resume-import] claim on link failed", {
           userId: user.id,
           error: String(error),
         });
@@ -205,3 +229,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 });
+
+/**
+ * Consent + newsletter preference for an OAuth arrival — the earliest point we
+ * hold their data. The login page carries the matching notice and writes
+ * abtalks_newsletter_pref before OAuth starts. Never throws.
+ */
+async function recordOAuthConsent(
+  userId: string,
+  email: string | null,
+  source: "oauth_signup" | "oauth_claim",
+): Promise<void> {
+  try {
+    await recordLegalConsents({ userId, email, source });
+    // Default true if the cookie is missing (e.g. old clients).
+    let newsletterOptIn = true;
+    try {
+      const pref = (await cookies()).get("abtalks_newsletter_pref")?.value;
+      if (pref === "0") newsletterOptIn = false;
+      if (pref === "1") newsletterOptIn = true;
+    } catch {
+      // cookies() can throw outside a request context — keep default.
+    }
+    await recordNewsletterOptIn({ userId, email, source, optIn: newsletterOptIn });
+  } catch (error) {
+    logger.error("[legal] oauth consent not recorded", {
+      userId,
+      source,
+      error: String(error),
+    });
+  }
+}

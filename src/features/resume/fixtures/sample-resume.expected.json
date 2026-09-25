@@ -1,0 +1,17 @@
+{
+  "candidateName": "Asha Menon",
+  "email": "asha.menon@example.com",
+  "counts": { "experience": 2, "projects": 4, "education": 1, "certifications": 1 },
+  "minSkills": 12,
+  "links": {
+    "linkedin": "https://www.linkedin.com/in/asha-menon",
+    "github": "https://github.com/ashamenon",
+    "portfolio": "https://asha.dev"
+  },
+  "projects": [
+    { "match": "ledgerly", "github": "https://github.com/ashamenon/ledgerly", "demo": "https://ledgerly.vercel.app" },
+    { "match": "pulse", "github": "https://github.com/ashamenon/pulse", "demo": "https://pulse-demo.netlify.app" },
+    { "match": "atlas", "github": "https://github.com/ashamenon/atlas", "demo": "https://atlas.pages.dev" },
+    { "match": "kettle", "github": null, "demo": null }
+  ]
+}

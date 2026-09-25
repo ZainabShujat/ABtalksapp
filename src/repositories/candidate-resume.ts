@@ -121,9 +121,14 @@ export type ResumeUpsert = {
   parsedAt: Date | null;
 };
 
+/**
+ * `db` lets a caller write the row inside its own transaction — the admin
+ * import creates the User, profile and résumé atomically (plan 154).
+ */
 export async function upsertResume(
   userId: string,
   input: ResumeUpsert,
+  db: Prisma.TransactionClient = writeClient(),
 ): Promise<ResumeRow> {
   // Validated on WRITE as well as on read — the other half of the
   // `InterviewReport` contract. `.parse` throws rather than storing a document
@@ -146,7 +151,7 @@ export async function upsertResume(
         : (resumeAnalysisSchema.parse(input.analysis) as Prisma.InputJsonValue),
   };
 
-  const row = await writeClient().candidateResume.upsert({
+  const row = await db.candidateResume.upsert({
     where: { userId },
     create: { userId, ...data },
     update: data,

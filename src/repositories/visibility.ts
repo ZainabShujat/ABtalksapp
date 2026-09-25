@@ -11,6 +11,15 @@ export const PROFILE_DEFAULT_CONSENT_SOURCE = "platform_default_profile";
 /** Historical ProgramMember.recruiterVisibilityConsentAt copied as a label. */
 export const PROGRAM_APPLY_CONSENT_SOURCE = "program_apply_migrated";
 
+/**
+ * Plan 154: an admin registered this student from an imported résumé, and
+ * attested that the student agreed to recruiter visibility. The student has
+ * not acted yet — `claim_consent` re-stamps the row when they sign in.
+ */
+export const ADMIN_IMPORT_CONSENT_SOURCE = "admin_resume_import";
+/** Plan 154: the imported student signed in with Google and took the account over. */
+export const OAUTH_CLAIM_CONSENT_SOURCE = "oauth_claim";
+
 export const PLATFORM_DEFAULT_CONSENT_SOURCES = [
   ENROLLMENT_DEFAULT_CONSENT_SOURCE,
   PROFILE_DEFAULT_CONSENT_SOURCE,
@@ -20,6 +29,8 @@ export type VisibilityKind =
   | "challenge_enroll"
   | "program_member"
   | "usable_profile"
+  | "admin_import"
+  | "claim_consent"
   | "admin_withdraw"
   | "probe_restore";
 
@@ -182,7 +193,41 @@ export async function applyVisibilityChange(
     };
   }
 
-  if (input.kind === "challenge_enroll" || input.kind === "usable_profile") {
+  if (input.kind === "claim_consent") {
+    // Only an import-sourced row is re-stamped: any other row records a
+    // decision made some other way, and the claim must not rewrite it.
+    if (!existing || existing.consentSource !== ADMIN_IMPORT_CONSENT_SOURCE) {
+      return {
+        ok: true,
+        searchableByRecruiters: existing?.searchableByRecruiters ?? false,
+        withdrawnAt: existing?.withdrawnAt ?? null,
+        created: false,
+        updated: false,
+        skipped: true,
+        skipReason: existing ? "already_exists" : "missing_row",
+        mirrorFailed: false,
+      };
+    }
+    await tx.candidateVisibility.update({
+      where: { userId: input.userId },
+      data: { consentSource: OAUTH_CLAIM_CONSENT_SOURCE, consentedAt: now },
+    });
+    return {
+      ok: true,
+      searchableByRecruiters: existing.searchableByRecruiters,
+      withdrawnAt: existing.withdrawnAt,
+      created: false,
+      updated: true,
+      skipped: false,
+      mirrorFailed: false,
+    };
+  }
+
+  if (
+    input.kind === "challenge_enroll" ||
+    input.kind === "usable_profile" ||
+    input.kind === "admin_import"
+  ) {
     if (existing) {
       return {
         ok: true,
@@ -198,7 +243,9 @@ export async function applyVisibilityChange(
     const consentSource =
       input.kind === "usable_profile"
         ? PROFILE_DEFAULT_CONSENT_SOURCE
-        : ENROLLMENT_DEFAULT_CONSENT_SOURCE;
+        : input.kind === "admin_import"
+          ? ADMIN_IMPORT_CONSENT_SOURCE
+          : ENROLLMENT_DEFAULT_CONSENT_SOURCE;
     await tx.candidateVisibility.create({
       data: {
         userId: input.userId,

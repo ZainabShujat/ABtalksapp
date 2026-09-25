@@ -1,6 +1,17 @@
 import "server-only";
 import { logger } from "@/lib/logger";
 import { normalizeParsedResume } from "@/features/resume/normalize";
+import { nextRetryDelayMs } from "@/features/resume/import/rate-budget";
+import {
+  callOpenAiResumeParser,
+  resumeOpenAiKey,
+  resumeOpenAiModel,
+  type ProviderCall,
+  type ProviderFailureKind,
+  type ProviderUsage,
+  type RateHeaders,
+} from "@/features/resume/providers/openai";
+import { recordParseUsage, type ParseContext } from "@/features/resume/usage";
 import type { ParsedResume } from "@/features/resume/types";
 
 /**
@@ -20,7 +31,10 @@ import type { ParsedResume } from "@/features/resume/types";
  * — so the model is asked for the mechanical fields too, and the schema below
  * is the agent's schema with those keys added back in.
  *
- * The API key is read here and nowhere else.
+ * Plan 154: the model is now OpenAI by default (`providers/openai.ts`), with
+ * Gemini kept as a configured fallback. Only the transport differs — both get
+ * these prompts, go through `parseFirstJsonObject` and `normalizeParsedResume`,
+ * and produce the same `ParsedResume`.
  */
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
@@ -67,6 +81,7 @@ type GeminiResponse = {
     content?: { parts?: { text?: string }[] };
     finishReason?: string;
   }[];
+  usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
   error?: { message?: string };
 };
 
@@ -124,8 +139,208 @@ function parseFirstJsonObject(text: string): unknown | null {
   return null;
 }
 
+/* ─── Provider selection (plan 154) ─────────────────────────────────────── */
+
+/**
+ * `RESUME_PARSER_PROVIDER` = `openai` (default) | `gemini`.
+ *
+ * OpenAI is the default since plan 154: Gemini's quota ran out whenever many
+ * students registered at once. Gemini stays as a configured fallback only. The
+ * prompts, the JSON extraction and the normaliser are the same for both — the
+ * provider is only the transport, so this is still one parser.
+ */
+export type ResumeParserProvider = "openai" | "gemini";
+
+export function resumeParserProvider(): ResumeParserProvider {
+  return (process.env.RESUME_PARSER_PROVIDER ?? "").trim().toLowerCase() === "gemini"
+    ? "gemini"
+    : "openai";
+}
+
 export function isParserConfigured(): boolean {
-  return Boolean(process.env.GEMINI_API_KEY);
+  return resumeParserProvider() === "gemini"
+    ? Boolean(process.env.GEMINI_API_KEY)
+    : Boolean(resumeOpenAiKey());
+}
+
+/* ─── User-facing messages ───────────────────────────────────────────────── */
+
+const UNAVAILABLE_MESSAGE =
+  "Résumé analysis is temporarily unavailable. Please try again later.";
+const BUSY_MESSAGE =
+  "Résumé analysis is busy right now. Please try again in a few minutes.";
+const NOT_ANALYSED_MESSAGE = "We could not analyse this résumé. Please try again.";
+const UNREADABLE_MESSAGE =
+  "We could not read this document. Make sure it is a text-based PDF rather than a scan or photo.";
+
+export type ParseFailureKind = ProviderFailureKind | "not_configured";
+
+function messageFor(kind: ParseFailureKind): string {
+  switch (kind) {
+    case "rate_limited":
+      return BUSY_MESSAGE;
+    case "not_configured":
+    case "quota":
+      return UNAVAILABLE_MESSAGE;
+    case "empty":
+      return UNREADABLE_MESSAGE;
+    case "unavailable":
+    case "truncated":
+    case "bad_output":
+      return NOT_ANALYSED_MESSAGE;
+  }
+}
+
+/* ─── The detailed parse ─────────────────────────────────────────────────── */
+
+export type DetailedParseResult =
+  | {
+      ok: true;
+      data: ParsedResume;
+      /** Every email the model listed (`all_emails`), read before normalising. */
+      emails: string[];
+      model: string;
+      /** Summed over every HTTP attempt of this parse. */
+      usage: ProviderUsage;
+      costMicroUsd: number;
+      rate: RateHeaders | null;
+    }
+  | {
+      ok: false;
+      kind: ParseFailureKind;
+      /** User-facing: no vendor names, no status codes. */
+      message: string;
+      retryAfterMs: number | null;
+      model: string;
+      usage: ProviderUsage;
+      costMicroUsd: number;
+      rate: RateHeaders | null;
+    };
+
+/** Interactive path (/register, /profile): the candidate is waiting. */
+const INTERACTIVE_MAX_RETRIES = 2;
+const INTERACTIVE_MAX_WAIT_MS = 8_000;
+const INTERACTIVE_TOTAL_WAIT_MS = 20_000;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function emailsFrom(raw: unknown): string[] {
+  if (raw === null || typeof raw !== "object") return [];
+  const list = (raw as { all_emails?: unknown }).all_emails;
+  return Array.isArray(list) ? list.filter((v): v is string => typeof v === "string") : [];
+}
+
+/**
+ * Parse a résumé into the canonical structure, with everything a caller needs
+ * to schedule, retry and account for the call.
+ *
+ * `retry429`: on a rate limit, wait (honouring `retry-after`, with full jitter)
+ * and try again, up to 2 more times and 20 s in total — sized for a 60 s
+ * request the candidate is watching. The import worker passes `false` and
+ * schedules its own retry instead of holding a slot.
+ *
+ * Every HTTP attempt writes one `ResumeParseUsage` row.
+ */
+export async function parseResumeDocumentDetailed(
+  input: { bytes: Uint8Array; mimeType: string; fileName: string | null },
+  opts: { ctx: ParseContext; retry429: boolean },
+): Promise<DetailedParseResult> {
+  const provider = resumeParserProvider();
+  const usage: ProviderUsage = { prompt: 0, completion: 0 };
+  let cost = 0;
+
+  if (!isParserConfigured()) {
+    logger.error("[resume] parser is not configured", { provider });
+    return {
+      ok: false,
+      kind: "not_configured",
+      message: messageFor("not_configured"),
+      retryAfterMs: null,
+      model: provider === "gemini" ? geminiModel() : resumeOpenAiModel(),
+      usage,
+      costMicroUsd: 0,
+      rate: null,
+    };
+  }
+
+  const user = input.fileName
+    ? `${RESUME_SCHEMA_PROMPT}\n\nOriginal filename: ${input.fileName}`
+    : RESUME_SCHEMA_PROMPT;
+
+  let waited = 0;
+  for (let attempt = 1; ; attempt++) {
+    const call =
+      provider === "gemini"
+        ? await callGemini({ bytes: input.bytes, mimeType: input.mimeType, user })
+        : await callOpenAiResumeParser({
+            bytes: input.bytes,
+            fileName: input.fileName,
+            system: RESUME_SYSTEM_PROMPT,
+            user,
+          });
+
+    usage.prompt += call.usage.prompt;
+    usage.completion += call.usage.completion;
+
+    let raw: unknown | null = null;
+    let outcome: string = call.ok ? "ok" : call.kind;
+    if (call.ok) {
+      raw = parseFirstJsonObject(call.text);
+      if (raw === null) outcome = "bad_output";
+    }
+
+    cost += await recordParseUsage({
+      ctx: opts.ctx,
+      provider,
+      model: call.model,
+      outcome,
+      promptTokens: call.usage.prompt,
+      completionTokens: call.usage.completion,
+      latencyMs: call.latencyMs,
+    });
+
+    if (call.ok && raw !== null) {
+      return {
+        ok: true,
+        data: normalizeParsedResume(raw),
+        emails: emailsFrom(raw),
+        model: call.model,
+        usage,
+        costMicroUsd: cost,
+        rate: call.rate,
+      };
+    }
+
+    const kind: ParseFailureKind = call.ok ? "bad_output" : call.kind;
+    const retryAfter = call.ok ? null : call.retryAfterMs;
+    logger.error("[resume] parse attempt failed", {
+      provider,
+      model: call.model,
+      kind,
+      attempt,
+      detail: call.ok ? "unusable JSON" : call.detail,
+    });
+
+    if (opts.retry429 && kind === "rate_limited" && attempt <= INTERACTIVE_MAX_RETRIES) {
+      const delay = Math.min(INTERACTIVE_MAX_WAIT_MS, nextRetryDelayMs(attempt, retryAfter));
+      if (waited + delay <= INTERACTIVE_TOTAL_WAIT_MS) {
+        waited += delay;
+        await sleep(delay);
+        continue;
+      }
+    }
+
+    return {
+      ok: false,
+      kind,
+      message: messageFor(kind),
+      retryAfterMs: retryAfter,
+      model: call.model,
+      usage,
+      costMicroUsd: cost,
+      rate: call.rate,
+    };
+  }
 }
 
 /**
@@ -134,30 +349,36 @@ export function isParserConfigured(): boolean {
  * Messages returned on failure are user-facing: no vendor names, no status
  * codes, no stack traces. The technical detail goes to the logger.
  */
-export async function parseResumeDocument({
+export async function parseResumeDocument(
+  input: { bytes: Uint8Array; mimeType: string; fileName: string | null },
+  ctx: ParseContext = { source: "PROFILE" },
+): Promise<ParseResult> {
+  const result = await parseResumeDocumentDetailed(input, { ctx, retry429: true });
+  return result.ok
+    ? { ok: true, data: result.data }
+    : { ok: false, message: result.message };
+}
+
+/* ─── Gemini transport (fallback provider) ───────────────────────────────── */
+
+function geminiModel(): string {
+  return process.env.RESUME_GEMINI_MODEL ?? process.env.GEMINI_MODEL ?? RESUME_DEFAULT_MODEL;
+}
+
+/** The original Gemini request, unchanged, returning the shared transport shape. */
+async function callGemini({
   bytes,
   mimeType,
-  fileName,
+  user,
 }: {
   bytes: Uint8Array;
   mimeType: string;
-  fileName: string | null;
-}): Promise<ParseResult> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    logger.error("[resume] GEMINI_API_KEY is not set");
-    return {
-      ok: false,
-      message: "Résumé analysis is temporarily unavailable. Please try again later.",
-    };
-  }
-
-  const model =
-    process.env.RESUME_GEMINI_MODEL ?? process.env.GEMINI_MODEL ?? RESUME_DEFAULT_MODEL;
-
-  const user = fileName
-    ? `${RESUME_SCHEMA_PROMPT}\n\nOriginal filename: ${fileName}`
-    : RESUME_SCHEMA_PROMPT;
+  user: string;
+}): Promise<ProviderCall> {
+  const apiKey = process.env.GEMINI_API_KEY ?? "";
+  const model = geminiModel();
+  const started = Date.now();
+  const none: ProviderUsage = { prompt: 0, completion: 0 };
 
   let json: GeminiResponse;
   try {
@@ -194,43 +415,50 @@ export async function parseResumeDocument({
 
     if (!res.ok) {
       const body = (await res.json().catch(() => null)) as GeminiResponse | null;
-      logger.error("[resume] parser request failed", {
-        status: res.status,
-        detail: body?.error?.message ?? null,
-      });
       return {
         ok: false,
-        message:
-          res.status === 429
-            ? "Résumé analysis is busy right now. Please try again in a few minutes."
-            : "We could not analyse this résumé. Please try again.",
+        kind: res.status === 429 ? "rate_limited" : "unavailable",
+        retryAfterMs: null,
+        usage: none,
+        rate: null,
+        latencyMs: Date.now() - started,
+        model,
+        detail: `HTTP ${res.status} ${body?.error?.message ?? ""}`.trim(),
       };
     }
 
     json = (await res.json()) as GeminiResponse;
   } catch (error) {
-    logger.error("[resume] parser request threw", { error: String(error) });
-    return { ok: false, message: "We could not analyse this résumé. Please try again." };
-  }
-
-  const candidate = json.candidates?.[0];
-  const text = candidate?.content?.parts?.[0]?.text ?? "";
-  if (text.length === 0) {
-    logger.error("[resume] parser returned no text", {
-      finishReason: candidate?.finishReason ?? "unknown",
-    });
     return {
       ok: false,
-      message:
-        "We could not read this document. Make sure it is a text-based PDF rather than a scan or photo.",
+      kind: "unavailable",
+      retryAfterMs: null,
+      usage: none,
+      rate: null,
+      latencyMs: Date.now() - started,
+      model,
+      detail: `request threw: ${String(error)}`,
     };
   }
 
-  const raw = parseFirstJsonObject(text);
-  if (raw === null) {
-    logger.error("[resume] parser returned unusable JSON");
-    return { ok: false, message: "We could not analyse this résumé. Please try again." };
+  const usage: ProviderUsage = {
+    prompt: json.usageMetadata?.promptTokenCount ?? 0,
+    completion: json.usageMetadata?.candidatesTokenCount ?? 0,
+  };
+  const candidate = json.candidates?.[0];
+  const text = candidate?.content?.parts?.[0]?.text ?? "";
+  if (text.length === 0) {
+    return {
+      ok: false,
+      kind: "empty",
+      retryAfterMs: null,
+      usage,
+      rate: null,
+      latencyMs: Date.now() - started,
+      model,
+      detail: `finishReason=${candidate?.finishReason ?? "unknown"}`,
+    };
   }
 
-  return { ok: true, data: normalizeParsedResume(raw) };
+  return { ok: true, text, usage, rate: null, latencyMs: Date.now() - started, model };
 }

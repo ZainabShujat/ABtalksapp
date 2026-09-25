@@ -1886,6 +1886,36 @@ enum ResumeProcessingStatus {
   FAILED
 }
 
+/// Plan 154 — lifecycle of one admin-imported résumé.
+enum ResumeImportStatus {
+  /// Stored, not yet requested. Shown as "Ready to Parse".
+  UPLOADED
+  QUEUED
+  /// Leased by a worker (`leaseUntil`).
+  PROCESSING
+  PARSED
+  /// Missing / conflicting / duplicate email, missing name, non-student account.
+  NEEDS_REVIEW
+  /// Retryable by an admin.
+  FAILED
+  /// A User + CandidateProfile exist for it; nobody has signed in as them yet.
+  REGISTERED
+  /// A Google account is linked to that User (or the User already had one).
+  CLAIMED
+}
+
+/// BATCH is reserved for a future OpenAI Batch API collector; nothing writes it yet.
+enum ResumeImportMode {
+  SYNC
+  BATCH
+}
+
+enum ResumeParseSource {
+  REGISTER
+  PROFILE
+  IMPORT
+}
+
 /// What kind of engagement a candidate is open to. Multi-select on
 /// `CandidatePreference`, not a column per type.
 enum OpportunityType {
@@ -2346,6 +2376,88 @@ model CandidateResume {
 
   @@index([status])
   @@index([updatedAt(sort: Desc)])
+}
+
+/// Plan 154 — one PDF an admin uploaded for a student who may not have an
+/// account yet. It is both the import record and the parse job (DB-backed
+/// queue: `status` + `nextAttemptAt` + `leaseUntil`).
+///
+/// No relations to `User` on purpose: uploader / registered user are
+/// snapshots, like `AdminAction`, so the import history survives deletions.
+model ResumeImport {
+  id                 String             @id @default(cuid())
+  originalFilename   String
+  fileSizeBytes      Int
+  /// sha256 of the bytes. Unique: the same PDF uploaded twice is one import.
+  contentHash        String             @unique
+  /// Private Vercel Blob pathname `resume-imports/<sha256>.pdf`. Never a URL.
+  blobPathname       String?
+  /// Email exactly as the parser returned it.
+  sourceEmail        String?
+  /// trim + lowercase + validated — the pre-registration identity.
+  normalizedEmail    String?
+  /// Every distinct valid email seen, for resolving NEEDS_REVIEW.
+  emailCandidates    String[]           @default([])
+  status             ResumeImportStatus @default(UPLOADED)
+  mode               ResumeImportMode   @default(SYNC)
+  providerBatchId    String?
+  /// Register the student as soon as the parse succeeds.
+  registerRequested  Boolean            @default(false)
+  attempts           Int                @default(0)
+  nextAttemptAt      DateTime?
+  leaseUntil         DateTime?
+  /// Admin-facing short message. Never a stack trace or a vendor body.
+  lastError          String?
+  documentVersion    Int                @default(1)
+  /// Same contract as `CandidateResume.parsedData`. Cleared once copied there.
+  parsedData         Json?
+  analysis           Json?
+  overallScore       Int?
+  model              String?
+  /// Summed over every attempt, including rate-limited ones.
+  promptTokens       Int                @default(0)
+  completionTokens   Int                @default(0)
+  costMicroUsd       Int                @default(0)
+  uploadedByUserId   String
+  registeredByUserId String?
+  /// The User this import became, or was attached to.
+  registeredUserId   String?
+  /// True when the email already belonged to an existing account.
+  linkedExisting     Boolean            @default(false)
+  registeredAt       DateTime?
+  claimedAt          DateTime?
+  parsedAt           DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  // SQL: CREATE UNIQUE INDEX "ResumeImport_open_email_key" ON "ResumeImport"("normalizedEmail")
+  //      WHERE "status" IN ('PARSED', 'REGISTERED');
+  @@index([status, nextAttemptAt])
+  @@index([normalizedEmail])
+  @@index([registeredUserId])
+  @@index([createdAt(sort: Desc)])
+}
+
+/// Plan 154 — one row per résumé model HTTP call, on every path, including
+/// rate-limited and failed calls. The record of actual tokens and cost.
+model ResumeParseUsage {
+  id               String            @id @default(cuid())
+  source           ResumeParseSource
+  userId           String?
+  resumeImportId   String?
+  provider         String
+  model            String
+  /// ok | rate_limited | quota | unavailable | bad_output | truncated | empty
+  outcome          String
+  promptTokens     Int               @default(0)
+  completionTokens Int               @default(0)
+  costMicroUsd     Int               @default(0)
+  latencyMs        Int
+  createdAt        DateTime          @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@index([source, createdAt(sort: Desc)])
+  @@index([resumeImportId])
 }
 
 model CandidateEducation {

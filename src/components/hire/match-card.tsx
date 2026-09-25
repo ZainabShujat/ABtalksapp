@@ -80,6 +80,12 @@ export type MatchCardData = {
    * `OpenToWorkBadge` in hire-card-facts.tsx.
    */
   openToWork: boolean;
+  /**
+   * Plan 154: built from a résumé an admin imported; the student has not
+   * signed in to confirm it. Everything on the card is still only what the
+   * résumé says, and contact stays locked until they do.
+   */
+  importedUnclaimed?: boolean;
   shortlisted?: boolean;
   /** Status of this recruiter's live engagement request, if any. */
   engagementStatus?: string | null;
@@ -281,6 +287,14 @@ function RealMatchCard({
               </span>
             )}
             <OpenToWorkBadge openToWork={match.openToWork} />
+            {match.importedUnclaimed && (
+              <span
+                className="rounded-full border px-2 py-0.5 text-sm font-medium text-muted-foreground"
+                title="Built from a résumé ABTalks imported. The candidate hasn’t signed in to confirm it yet."
+              >
+                Imported résumé · not yet claimed
+              </span>
+            )}
             {isTop && (
               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-sm font-semibold text-primary">
                 Top match

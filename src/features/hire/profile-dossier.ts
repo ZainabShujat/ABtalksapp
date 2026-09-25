@@ -1,6 +1,7 @@
 import "server-only";
 
 import { listProfileCandidates } from "@/repositories/hire";
+import { listUnclaimedImportUserIds } from "@/repositories/resume-import";
 import { encodeCandidateRef } from "@/features/hire/candidate-ref";
 import { computeCoverage, loadAvailabilityByUserId } from "@/features/hire/dossier";
 import { declared, derived, verified } from "@/features/hire/dossier-provenance";
@@ -58,7 +59,10 @@ export async function buildProfileDossierSet(
   const rows = await listProfileCandidates(opts?.limit ?? 200);
   if (rows.length === 0) return EMPTY;
 
-  const availability = await loadAvailabilityByUserId(rows.map((r) => r.userId));
+  const [availability, unclaimed] = await Promise.all([
+    loadAvailabilityByUserId(rows.map((r) => r.userId)),
+    listUnclaimedImportUserIds(rows.map((r) => r.userId)),
+  ]);
 
   const nameByUser = new Map<string, string>();
   const dossiers: CandidateDossier[] = rows.map((row) => {
@@ -74,6 +78,7 @@ export async function buildProfileDossierSet(
       candidateRef: encodeCandidateRef("PROFILE", row.userId),
       programMemberId: null,
       userId: row.userId,
+      importedUnclaimed: unclaimed.has(row.userId),
       roleFamily: derived("OTHER"),
       rawRoleLabel: p.role
         ? declared(tidyRoleLabel(p.role))

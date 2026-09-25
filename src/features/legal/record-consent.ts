@@ -22,6 +22,12 @@ export type ConsentSource =
    */
   | "oauth_signup"
   /**
+   * Plan 154: an admin-imported student signed in with Google and took over
+   * the account created for them. The adapter links an Account instead of
+   * creating a User, so `createUser` never fires — this is their first consent.
+   */
+  | "oauth_claim"
+  /**
    * First recruiter sign-in by emailed code. Credentials providers bypass the
    * adapter, so no createUser event fires — the User row is created inside
    * authorize(), and the consent is recorded there at the same moment.

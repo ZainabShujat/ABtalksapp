@@ -1,5 +1,5 @@
 import "server-only";
-import { del, get, put } from "@vercel/blob";
+import { del, get, put, rename } from "@vercel/blob";
 import { logger } from "@/lib/logger";
 
 /**
@@ -163,4 +163,80 @@ export async function readResumeFile(pathname: string): Promise<{
     logger.warn("[resume] blob read failed", { error: String(error) });
     return null;
   }
+}
+
+/* ─── Admin résumé import (plan 154) ─────────────────────────────────────── */
+
+/**
+ * The token for the admin upload route's client tokens. Server-only, like every
+ * other use here; `null` when storage is not configured.
+ */
+export function resumeBlobToken(): string | null {
+  return blobToken() ?? null;
+}
+
+/** Where the browser uploads before the server has looked at the file. */
+export const IMPORT_STAGING_PREFIX = "resume-imports/staging/";
+
+/**
+ * Final home of an imported résumé: content-addressed, private, and derived
+ * from the hash alone — no user input reaches the path.
+ */
+export function importPathname(contentHash: string): string {
+  return `resume-imports/${contentHash}.pdf`;
+}
+
+/**
+ * Move a verified staging upload to its content-addressed pathname.
+ * Returns the new pathname, or null (logged) when the move failed.
+ */
+export async function promoteImportFile(
+  stagingPathname: string,
+  contentHash: string,
+): Promise<string | null> {
+  if (!isStorageConfigured()) return null;
+  const target = importPathname(contentHash);
+  try {
+    await rename(stagingPathname, target, {
+      ...options(),
+      access: "private",
+      contentType: "application/pdf",
+      addRandomSuffix: false,
+      allowOverwrite: true,
+    });
+    return target;
+  } catch (error) {
+    logger.error("[resume-import] blob rename failed", { error: String(error) });
+    return null;
+  }
+}
+
+/** A whole private blob as bytes, refusing anything over `maxBytes`. */
+export async function readResumeBytes(
+  pathname: string,
+  maxBytes: number,
+): Promise<Uint8Array | null> {
+  const file = await readResumeFile(pathname);
+  if (!file) return null;
+  if (file.size > maxBytes) return null;
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  const reader = file.stream.getReader();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const c of chunks) {
+    out.set(c, offset);
+    offset += c.byteLength;
+  }
+  return out;
 }
