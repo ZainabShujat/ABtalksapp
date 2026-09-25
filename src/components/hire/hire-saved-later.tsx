@@ -3,7 +3,11 @@
 import { useState, useSyncExternalStore } from "react";
 import { ArrowRight, ChevronLeft, ChevronRight, UserRound } from "lucide-react";
 import { toast } from "sonner";
-import { decodeCandidateRef, refPublicId } from "@/features/hire/candidate-ref";
+import { decodeCandidateRef } from "@/features/hire/candidate-ref";
+import {
+  recruiterSummary,
+  summaryInputFromMatch,
+} from "@/features/hire/candidate-summary";
 import { useHireDesk } from "@/components/hire/hire-desk-context";
 import {
   DESK_SHORTLIST_EVENT,
@@ -184,7 +188,6 @@ export function HireSavedLater() {
               </div>
             ) : (
               rows.map((row) => {
-                const publicId = refPublicId(row.candidateRef);
                 const onShortlist = guestCartHas(row.candidateRef);
                 const match = savedToMatch(row);
                 const stack =
@@ -205,7 +208,8 @@ export function HireSavedLater() {
                           <OpenToWorkBadge openToWork={match.openToWork} />
                         </p>
                         {stack && <p className="desk-card__stack">{stack}</p>}
-                        <p className="hire-pod__ref">{publicId}</p>
+                        {/* The `AB-####` reference used to print here. It is
+                            gone from every search surface. */}
                         <MatchMetaTags match={match} />
                       </div>
                     </div>
@@ -218,9 +222,12 @@ export function HireSavedLater() {
                       </div>
                     )}
                     <MatchPills match={match} compact />
-                    {match.rationale && (
-                      <p className="desk-card__why">{match.rationale}</p>
-                    )}
+                    <p className="desk-card__why">
+                      {recruiterSummary(
+                        match.rationale,
+                        summaryInputFromMatch(match),
+                      )}
+                    </p>
                     <div className="hire-pod__actions">
                       <button
                         type="button"

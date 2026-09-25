@@ -64,6 +64,7 @@
     "test:observability:scan": "tsx scripts/scan-log-leaks.ts",
     "sentry:smoke": "tsx scripts/sentry-smoke.ts",
     "test:hire-score": "tsx src/features/hire/score-candidate.test.ts",
+    "test:spoken-brief": "tsx src/features/hire/spoken-brief.test.ts",
     "test:scout": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/scout-agent.test.ts",
     "test:sample": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/sample-card.test.ts",
     "test:visibility": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/visibility.test.ts",

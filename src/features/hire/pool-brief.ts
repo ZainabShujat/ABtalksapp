@@ -163,7 +163,12 @@ export function parseResultLimit(msg: string): number | null {
   return token ? parseCountToken(token) : null;
 }
 
-const ROLE_HINTS: { re: RegExp; title: string }[] = [
+/**
+ * Exported so the live composer ticks (`spoken-brief.ts`) read the same role and
+ * stack vocabulary Search extracts with. Growing these lists changes what Search
+ * puts in `mustHaveStack`, so tick-only vocabulary lives in `spoken-brief.ts`.
+ */
+export const ROLE_HINTS: readonly { re: RegExp; title: string }[] = [
   { re: /\bfull[-\s]?stack\b/, title: "Full-stack engineer" },
   { re: /\bback[-\s]?end\b/, title: "Backend engineer" },
   { re: /\bfront[-\s]?end\b/, title: "Frontend engineer" },
@@ -172,7 +177,7 @@ const ROLE_HINTS: { re: RegExp; title: string }[] = [
   { re: /\breact\s+(?:developer|engineer|dev)\b/, title: "React developer" },
 ];
 
-const STACK_HINTS = [
+export const STACK_HINTS: readonly string[] = [
   "python",
   "java",
   "javascript",
@@ -208,21 +213,7 @@ function extractRoleStack(msg: string): {
   }
   const mustHaveStack: string[] = [];
   for (const token of STACK_HINTS) {
-    // Explicit edges, not `\b`: a word boundary needs a word character on one
-    // side, so `\bc\+\+\b` could never match "c++ developer" — the second `\b`
-    // sits between "+" and a space, two non-word characters (QA-KI-010).
-    // `(^|[^a-z0-9])` / `(?![a-z0-9])` mean "not glued to a letter or digit",
-    // which is what `\b` meant for the alphanumeric tokens and still keeps
-    // "java" out of "javascript" and "sql" out of "postgresql". No lookbehind:
-    // this file ships to the browser, and older Safari rejects it.
-    const re =
-      token === "go"
-        ? /\bgo\b(?!lang)/
-        : new RegExp(
-            `(^|[^a-z0-9])${token.replace(/\+/g, "\\+")}(?![a-z0-9])`,
-            "i",
-          );
-    if (re.test(msg)) {
+    if (stackTokenRe(token).test(msg)) {
       mustHaveStack.push(
         token === "nodejs"
           ? "node"
@@ -233,6 +224,26 @@ function extractRoleStack(msg: string): {
     }
   }
   return { title, mustHaveStack: dedupeStack(mustHaveStack) };
+}
+
+/**
+ * The matcher for one stack token.
+ *
+ * Explicit edges, not `\b`: a word boundary needs a word character on one
+ * side, so `\bc\+\+\b` could never match "c++ developer" — the second `\b`
+ * sits between "+" and a space, two non-word characters (QA-KI-010).
+ * `(^|[^a-z0-9])` / `(?![a-z0-9])` mean "not glued to a letter or digit",
+ * which is what `\b` meant for the alphanumeric tokens and still keeps
+ * "java" out of "javascript" and "sql" out of "postgresql". No lookbehind:
+ * this file ships to the browser, and older Safari rejects it.
+ */
+export function stackTokenRe(token: string): RegExp {
+  return token === "go"
+    ? /\bgo\b(?!lang)/
+    : new RegExp(
+        `(^|[^a-z0-9])${token.replace(/[.+#]/g, "\\$&")}(?![a-z0-9])`,
+        "i",
+      );
 }
 
 function dedupeStack(tokens: string[]): string[] {

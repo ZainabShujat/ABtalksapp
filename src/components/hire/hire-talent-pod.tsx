@@ -12,7 +12,11 @@ import { useHireDesk } from "@/components/hire/hire-desk-context";
 import { DeskShortlistButton } from "@/components/hire/desk-shortlist-button";
 
 import { readGuestCart, toggleGuestCart } from "@/components/hire/guest-cart";
-import { decodeCandidateRef, refPublicId } from "@/features/hire/candidate-ref";
+import { decodeCandidateRef } from "@/features/hire/candidate-ref";
+import {
+  recruiterSummary,
+  summaryInputFromMatch,
+} from "@/features/hire/candidate-summary";
 import type { CartRow } from "@/components/hire/shortlist-cart";
 import { hydrateMatch } from "@/components/hire/evidence-cache";
 import {
@@ -283,7 +287,6 @@ export function HireTalentPod({
               </div>
             ) : (
               rows.map((row) => {
-                const publicId = refPublicId(row.candidateRef);
                 const asked = isAsked(row, requested);
                 const checked = selected.has(row.candidateRef);
                 const match = cartRowToMatch(row);
@@ -310,7 +313,7 @@ export function HireTalentPod({
                           checked={checked}
                           disabled={pending}
                           onChange={() => toggle(row.candidateRef)}
-                          aria-label={`Select ${row.displayName || publicId}`}
+                          aria-label={`Select ${row.displayName || row.jobRole}`}
                         />
                       ) : (
                         <span className="desk-card__avatar" aria-hidden="true">
@@ -323,7 +326,8 @@ export function HireTalentPod({
                           <OpenToWorkBadge openToWork={match.openToWork} />
                         </p>
                         {stack && <p className="desk-card__stack">{stack}</p>}
-                        <p className="hire-pod__ref">{publicId}</p>
+                        {/* The `AB-####` reference used to print here. It is
+                            gone from every search surface. */}
                         <MatchMetaTags match={match} />
                       </div>
                     </div>
@@ -334,9 +338,12 @@ export function HireTalentPod({
                       <span>out of 100</span>
                     </div>
                     <MatchPills match={match} compact />
-                    {match.rationale && (
-                      <p className="desk-card__why">{match.rationale}</p>
-                    )}
+                    <p className="desk-card__why">
+                      {recruiterSummary(
+                        match.rationale,
+                        summaryInputFromMatch(match),
+                      )}
+                    </p>
                     <div className="hire-pod__actions">
                       <button
                         type="button"

@@ -31,10 +31,11 @@ import {
   useUpgradePrompt,
 } from "@/components/hire/locked-field";
 import { cn } from "@/lib/utils";
+import { OpenToWorkBadge } from "@/components/hire/hire-card-facts";
 import {
-  coverageLede,
-  OpenToWorkBadge,
-} from "@/components/hire/hire-card-facts";
+  candidateSummaryLine,
+  summaryInputFromMatch,
+} from "@/features/hire/candidate-summary";
 
 /** Skill chips on a result card before the rest collapse into "+N". */
 const CARD_SKILLS = 8;
@@ -288,7 +289,7 @@ export function DeskMatchCard({
         {upgradeOpen && <UpgradeNotice onDismiss={dismissUpgrade} />}
 
         <p className="desk-card__why">
-          An example of what a full profile looks like — not a person in the
+          An example of what a full profile looks like, not a person in the
           pool. Blurred fields are what Pro fills in.
         </p>
 
@@ -360,7 +361,11 @@ export function DeskMatchCard({
     { key: "education", Icon: GraduationCap, label: e.educationLevel },
   ].filter((m) => Boolean(m.label));
   const shownSkills = skills.slice(0, CARD_SKILLS);
-  const summary = summaryPreview(match.rationale?.trim() || coverageLede(match));
+  // Built here rather than read off `match.rationale`. The stored rationale is
+  // two or three sentences written for the detail panel, and rows written
+  // before this change still open with an `AB-####` label and a score, which
+  // must never reach a card. `summaryPreview` stays as the length clamp.
+  const summary = summaryPreview(candidateSummaryLine(summaryInputFromMatch(match)));
 
   return (
     <article

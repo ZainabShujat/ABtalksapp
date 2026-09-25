@@ -6,9 +6,8 @@
  * of a query string and an unvalidated one is an open redirect. And source
  * assertions on the invariants that are cheap to break and invisible in a unit
  * test: that no candidate destination waves a profile-less user past the gate,
- * that the résumé requirement is checked against the stored row rather than a
- * client flag, and that the fields the résumé now fills in have actually left
- * the form.
+ * that registration does not require a résumé (optional upload; merge when
+ * present), and that the fields the résumé fills in have actually left the form.
  *
  * Run: npm run test:registration-gate
  */
@@ -237,14 +236,15 @@ suite("the form no longer renders the removed fields", () => {
   assert(!src.includes("GRADUATION_YEARS"), "no graduation year select");
 });
 
-/* ─── Résumé: required, and checked server-side ──────────────────────────── */
+/* ─── Résumé: optional; merge when present ────────────────────────────────── */
 
-suite("the résumé requirement reads the stored row, not a client flag", () => {
+suite("registration does not require a résumé", () => {
   const src = source("src/app/actions/registration-actions.ts");
-  assert(src.includes("getResumeView"), "reads the stored résumé");
-  const gate = src.indexOf("getResumeView");
-  const register = src.indexOf("completeRegistration(");
-  assert(gate > 0 && register > gate, "checked before the profile is created");
+  assert(
+    !src.includes("Please upload your resume before completing registration."),
+    "no mandatory-upload error message",
+  );
+  assert(!src.includes("getResumeView"), "no READY-row gate before register");
   assert(
     !src.includes("formData.get(\"resumeUploaded\")"),
     "no client-supplied résumé flag",

@@ -1,34 +1,44 @@
 "use client";
 
-import { useRef, useState } from "react";
-import Link from "next/link";
-import { useSafeReducedMotion } from "@/lib/motion";
-import { useInView } from "./motion/use-in-view";
+// Cards grid is temporarily hidden — restore these imports with it.
+// import { useRef, useState } from "react";
+// import Link from "next/link";
+// import { useSafeReducedMotion } from "@/lib/motion";
+// import { useInView } from "./motion/use-in-view";
 import { Reveal } from "./motion/reveal";
+import { CohortBanner } from "./cohort-banner";
 import type { CohortCard } from "./landing-content";
 
 type Props = {
   cards: CohortCard[];
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- `cards` returns with the grid below
 export function CohortsSection({ cards }: Props) {
-  const reduce = useSafeReducedMotion();
-  const gridRef = useRef<HTMLDivElement>(null);
-  const [inView, setInView] = useState(false);
-  useInView(gridRef, () => setInView(true), { threshold: 0.15 });
-
-  const shown = reduce || inView;
+  // const reduce = useSafeReducedMotion();
+  // const gridRef = useRef<HTMLDivElement>(null);
+  // const [inView, setInView] = useState(false);
+  // useInView(gridRef, () => setInView(true), { threshold: 0.15 });
+  //
+  // const shown = reduce || inView;
 
   return (
     <section className="section open" id="cohorts">
-      <div className="container">
+      {/* Heading sits inside the normal container */}
+      <div className="container" style={{ textAlign: "center" }}>
         <Reveal as="p" className="section-label">
-          Open right now
+          This is where you build.
         </Reveal>
         <Reveal as="h2" className="h2">
-          Four live tracks. One habit: ship.
+          Challenges, cohorts, and opportunities.
         </Reveal>
+      </div>
 
+      {/* Banner is full-bleed — it sits below the heading container */}
+      <CohortBanner />
+
+      {/* Cards grid — temporarily hidden.
+      <div className="container">
         <div
           className={shown ? "open__grid is-in" : "open__grid"}
           id="openGrid"
@@ -56,6 +66,7 @@ export function CohortsSection({ cards }: Props) {
           ))}
         </div>
       </div>
+      */}
     </section>
   );
 }

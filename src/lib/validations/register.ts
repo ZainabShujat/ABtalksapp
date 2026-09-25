@@ -106,9 +106,9 @@ const registerPayloadBase = z
  * Server-side registration payload (students + professionals).
  * `completeRegistrationAction` builds this from `FormData` (including default `userType`).
  *
- * The résumé is NOT in here. It is uploaded by its own action before submit, so
- * the mandatory-résumé check reads the stored row rather than a flag the client
- * could simply omit — see `completeRegistrationAction`.
+ * The résumé is NOT in here. Upload is optional and uses its own action; when a
+ * READY row exists, `completeRegistrationAction` merges it after the profile
+ * is created.
  */
 export const registerPayloadSchema = z
   .discriminatedUnion("userType", [

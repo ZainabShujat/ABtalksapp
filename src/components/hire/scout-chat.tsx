@@ -11,6 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 import { Search, Sparkles } from "lucide-react";
 import { suggestChips } from "@/features/hire/scout-chips";
+import { detectSpokenBrief } from "@/features/hire/spoken-brief";
 import { toast } from "sonner";
 import {
   applyHireFiltersAction,
@@ -201,56 +202,11 @@ function displaySalaryChips(): Option[] {
   ];
 }
 
-/** Juicebox-style: ticks go green as the recruiter types, not only after Scout stores the spec. */
-function detectSpoken(raw: string) {
-  const text = raw.toLowerCase();
-  const role =
-    /\b(backend|front-?end|full[-\s]?stack|data\s*\/?\s*ml|ai|ml|software|react|python|node|java|ios|android|mobile|devops|platform|cloud|security|qa|product)\b.{0,20}\b(engineer|developer|designer|scientist|analyst|manager|architect)\b/.test(
-      text,
-    ) ||
-    /\b(hiring|need|looking\s+for|want|recruit)\b.{0,28}\b(engineer|developer|designer|scientist|analyst)\b/.test(
-      text,
-    );
-  const experience =
-    /\b\d{1,2}\s*(\+|plus)?\s*(yrs?|years?)\b/.test(text) ||
-    /\b(fresher|entry[-\s]?level|junior|jr\.?|mid[-\s]?level|senior|sr\.?|staff|principal|lead|intern)\b/.test(
-      text,
-    );
-  const location =
-    /\b(delhi|ncr|mumbai|bangalore|bengaluru|hyderabad|chennai|pune|kolkata|gurgaon|gurugram|noida|india|remote|hybrid|onsite|on-site|wfh|work from home|anywhere)\b/.test(
-      text,
-    );
-  const education =
-    /\b(b\.?\s?tech|m\.?\s?tech|bca|mca|mba|bachelor|master|degree|diploma|graduate|iit|nit)\b/.test(
-      text,
-    );
-  const skills =
-    /\b(python|java|javascript|typescript|react|node|next\.?js|sql|postgres|mongodb|aws|docker|kubernetes|golang|go\b|rust|django|flask|spring|redis|graphql|html|css|tailwind|pytorch|tensorflow|langchain)\b/.test(
-      text,
-    );
-  const availability =
-    /\b(remote|hybrid|onsite|on-site|wfh|immediate|notice|available|full[-\s]?time|contract|intern(ship)?|part[-\s]?time)\b/.test(
-      text,
-    );
-  const compensation =
-    /\b(\d+(\.\d+)?\s*(-\s*\d+(\.\d+)?)?\s*(lpa|lakh|ctc)|salary|budget|₹|inr|compensation|stipend)\b/.test(
-      text,
-    );
-  const abtalks =
-    /\b(ab\s?talks?.{0,40}(recommend|verif|rank|approv|vett|certif|score)|platform[-\s]verified)\b/.test(
-      text,
-    );
-  return {
-    role,
-    experience,
-    location,
-    education,
-    skills,
-    availability,
-    compensation,
-    abtalks,
-  };
-}
+/*
+ * Juicebox-style: ticks go green as the recruiter types, not only after Scout
+ * stores the spec. The detector lives in `features/hire/spoken-brief.ts` so it
+ * shares role / stack vocabulary with Search and is unit-tested.
+ */
 
 function toLpa(rupees: number): string {
   const lakhs = rupees / 100_000;
@@ -1086,7 +1042,7 @@ export function ScoutChat({
     return ladder;
   })();
   const talked = messages.some((m) => m.role === "user") || searched;
-  const spoken = detectSpoken(
+  const spoken = detectSpokenBrief(
     [
       ...messages.filter((m) => m.role === "user").map((m) => m.content),
       text,

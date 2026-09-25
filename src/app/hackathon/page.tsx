@@ -1,199 +1,228 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { auth } from "@/auth";
 import {
-  HACKATHON,
-  isHackathonRegistrationOpen,
-} from "@/components/hackathon/hackathon-config";
-import { FaqAccordion } from "@/components/hackathon-v2/faq-accordion";
+  VIDEOTHON,
+  isVideothonRegistrationOpen,
+} from "@/features/hackathon-video/config";
+import { getMyVideoRegistration } from "@/features/hackathon-video/get-my-registration";
 import { HackathonShell } from "@/components/hackathon-v2/hackathon-shell";
-import { Hero } from "@/components/hackathon-v2/hero";
-import { LockedSections } from "@/components/hackathon-v2/locked-sections";
-import { RegistrationDialogTrigger } from "@/components/hackathon-v2/registration-dialog-trigger";
-import { TeamPanel } from "@/components/hackathon-v2/team-panel";
-import { UnlockProvider } from "@/components/hackathon-v2/unlock-provider";
-import { getMyRegistration } from "@/features/hackathon/get-my-registration";
-import {
-  getRegistrationPrefill,
-  type RegistrationPrefill,
-} from "@/features/hackathon/registration-identity";
-import "./_styles/hackathon-v2.css";
+import { FaqAccordion } from "@/components/hackathon-v2/faq-accordion";
+import { VideothonCountdown } from "@/components/hackathon-video/countdown";
+import { VideothonRegisterCTA } from "@/components/hackathon-video/register-cta";
+import "@/app/hackathon/_styles/hackathon-v2.css";
+import "@/components/hackathon-video/landing.css";
 
 export const metadata: Metadata = {
-  title: `Hackathon · ${HACKATHON.name}`,
+  title: `${VIDEOTHON.name} · ABTalks`,
   description:
-    "The next ABTalks hackathon — pre-register, see how it works, the timeline and the rules.",
+    "A 48-hour hackathon for video editors. Solo. One brief. Ship one cut.",
 };
 
 const HIW_STEPS = [
   {
     title: "Register",
-    body: "Sign up solo or create a team of up to 3. It takes under two minutes and it’s free.",
+    body: "Sign in with Google, fill a short form. Solo entry — no team code, no group chase.",
   },
   {
-    title: "Join the Discord",
-    body: "Every participant is required to join our Discord. Kickoff updates and the problem statement land there first.",
+    title: "Join the WhatsApp group",
+    body: "Every participant joins the group. Kickoff, the brief, judge Q&A and last-minute updates land there first.",
   },
   {
-    title: "Build for 48 hours",
-    body: "From Friday kickoff to Sunday deadline, describe what you want, let AI write the code, ship something real.",
+    title: "Cut for 48 hours",
+    body: "From Friday kickoff to Sunday deadline. Any software, any sources you have rights to. Ship one cut.",
   },
   {
     title: "Submit before the deadline",
-    body: "Public GitHub repo, live deployed URL, and your AI-usage log. Late submissions don’t count.",
+    body: "One public link — Drive, Behance, YouTube, Vimeo, anything a judge can open. Late is not counted.",
   },
 ];
 
 const TIMELINE = [
   {
     title: "Kickoff",
-    body: "The challenge drops. The clock starts. Jump in, think fast, and build something great before time runs out.",
-    art: "/hackathon-v2/documents.png",
-    artW: "45.7%",
-    w: 162,
-    h: 141,
+    body: "The brief lands in the WhatsApp group. The clock starts. Open your project.",
   },
   {
-    title: "Midpoint check-in",
-    body: "Optional pulse check in the Discord. Share progress, unblock teammates, keep shipping.",
-    art: "/hackathon-v2/chat.png",
-    artW: "31.9%",
-    w: 112,
-    h: 98,
+    title: "Halfway",
+    body: "Optional pulse check. Share rough cuts, get notes, keep cutting.",
   },
   {
     title: "Deadline",
-    body: "Repos locked. Repo public, deploy live, PROMPTS.md (or chat exports) in place.",
-    art: "/hackathon-v2/calendar.png",
-    artW: "35.1%",
-    w: 124,
-    h: 101,
+    body: "Submit the public link before the timer hits zero. Anything late is not counted.",
   },
   {
     title: "Results",
-    body: "Winners announced. Criteria: originality, polish, and how well you steered the AI.",
-    art: "/hackathon-v2/trophy.png",
-    artW: "39.1%",
-    w: 137,
-    h: 133,
+    body: "Winners announced with a public reel. Every entry gets a written judge note.",
   },
 ];
 
 const FAQ_ITEMS = [
   {
-    q: "Who can participate in ViCodathon 2.0 2026?",
-    a: "ViCodathon 2.0 is open to college students from any branch or year. You can participate solo or in a team of up to 3 members.",
+    q: "Who's it for?",
+    a: "Anyone who edits video — students, self-taught cutters, in-house editors, freelancers. All skill levels, worldwide.",
   },
   {
-    q: "Is ViCodathon 2.0 online or offline?",
-    a: "ViCodathon 2.0 is a 100% online, 48-hour hackathon, allowing participants to build and compete from anywhere.",
+    q: "Do I need to be in India?",
+    a: "No. It's a 48-hour online hackathon. Register with any phone number from the country-code list; submit from anywhere.",
   },
   {
-    q: "What will I win from ViCodathon 2.0?",
-    a: "Participants can compete for a prize pool up to ₹30,000, receive a certificate for every valid submission, and may get internship & hiring opportunities.",
+    q: "What software can I use?",
+    a: "Anything. Premiere, DaVinci, Final Cut, CapCut, After Effects — whatever ships your best cut. Your call.",
   },
   {
-    q: "Can we use AI tools during the hackathon?",
-    a: "Yes! You can use any AI tools including ChatGPT, Claude, Gemini, Cursor, Windsurf, Bolt, Lovable, Replit, GitHub Copilot, and more.",
+    q: "What's the brief?",
+    a: "It lands in the WhatsApp group at kickoff. One prompt everyone edits to — the constraint is what makes it interesting.",
+  },
+  {
+    q: "Do I get feedback if I don't win?",
+    a: "Yes. Every entry gets a short note from the judges. That's the point.",
+  },
+  {
+    q: "Is it free?",
+    a: "Yes. Registration and entry are completely free.",
   },
 ];
 
 const RULES = [
   {
     n: "01.",
-    title: "Solo or teams of up to 3",
-    body: "Enter alone or create a team. One shareable 6-character code joins teammates. Max three people total.",
+    title: "Solo entries only",
+    body: "Individual competition. No credited collaborators — one editor, one cut.",
     variant: "rule--1",
   },
   {
     n: "02.",
-    title: "Open to Indian college students",
-    body: "1st year through recent grads. One entry per person, enforced by email.",
+    title: "Sources allowed, credited",
+    body: "Stock is fine. Client work is not. If a shot isn't yours, name where it came from in your notes.",
     variant: "rule--2",
   },
   {
     n: "03.",
-    title: "Build starts at kickoff",
-    body: "No head starts. Anything pre-built must be disclosed in your submission notes.",
+    title: "Everything inside 48 hours",
+    body: "The cut, the grade, the sound, the export — all after kickoff. Pre-built templates disclosed in submission notes.",
     variant: "rule--3",
   },
   {
     n: "04.",
-    title: "Fair play",
-    body: "Use any AI coding tool. Don’t submit someone else’s work as yours. Be kind in the community chat.",
+    title: "One link, before the timer",
+    body: "Drive, Behance, YouTube, Vimeo — any public link a judge can open. Late is not counted.",
     variant: "rule--4",
   },
 ];
 
 export default async function HackathonPage() {
   const session = await auth();
-  const name = session?.user?.name ?? "";
   const userId = session?.user?.id ?? null;
   const isAuthed = Boolean(userId);
-  // Kept, not collapsed to a boolean: the same read feeds both the unlock gate
-  // and the "Your team" panel below the hero.
-  const registration = userId ? await getMyRegistration(userId) : null;
+  const registration = userId ? await getMyVideoRegistration(userId) : null;
   const registered = registration !== null;
-  // Everything the popup no longer asks for comes from here. Computed for any
-  // signed-in visitor, registered or not: the refresh that follows a successful
-  // registration re-runs this while the dialog is still open on its success
-  // panel, and returning null there would unmount the panel mid-read.
-  const prefill: RegistrationPrefill | null = userId
-    ? await getRegistrationPrefill(userId)
-    : null;
-  const registrationOpen = isHackathonRegistrationOpen();
+  const registrationOpen = isVideothonRegistrationOpen();
+  const prefill =
+    session?.user?.name && session.user.email
+      ? { fullName: session.user.name, email: session.user.email }
+      : null;
 
   const headerCta = (
-    <RegistrationDialogTrigger
+    <VideothonRegisterCTA
+      isAuthed={isAuthed}
       registered={registered}
       registrationOpen={registrationOpen}
-      isAuthed={isAuthed}
       prefill={prefill}
-      className="ab-btn ab-btn--primary ab-header__cta"
-      labelWhenRegister="Register"
-      labelWhenClosed="Closed"
+      variant="pill"
     />
   );
 
   return (
-    <UnlockProvider registered={registered}>
-      <HackathonShell
-        headerCta={headerCta}
-        isAuthed={isAuthed}
-        user={{
-          name,
-          email: session?.user?.email ?? "",
-          image: session?.user?.image ?? null,
-        }}
-      >
-        <a className="ab-skip" href="#hk-hero-title">
-          Skip to main content
-        </a>
+    <HackathonShell
+      headerCta={headerCta}
+      isAuthed={isAuthed}
+      user={{
+        name: session?.user?.name ?? "",
+        email: session?.user?.email ?? "",
+        image: session?.user?.image ?? null,
+      }}
+    >
+      <a className="ab-skip ab-sr" href="#vt-hero-title">
+        Skip to main content
+      </a>
 
-        <Hero
-          registrationOpen={registrationOpen}
-          isAuthed={isAuthed}
-          prefill={prefill}
-        />
+      <div className="vt-mono">
 
-        {registration && registration.team.entryType === "TEAM" ? (
-          <TeamPanel
-            entryType={registration.team.entryType}
-            teamCode={registration.team.code}
-            teamName={registration.team.name}
-            members={registration.members}
-            maxTeamSize={HACKATHON.maxTeamSize}
-          />
-        ) : null}
+      {/* 1 · HERO — reuses .hk-hero as the wrapper (background grid, ambient
+          fill from hackathon-v2.css) but overrides its layout via `.vt-hero`
+          so the head sits centered without expecting a right-side stage. */}
+      <section className="hk-hero vt-hero" aria-labelledby="vt-hero-title">
+        <div className="vt-hero__bg" aria-hidden>
+          <span className="vt-hero__scan" />
+          <span className="vt-hero__noise" />
+          <span className="vt-hero__dust" />
+          <span className="vt-hero__signal" />
+        </div>
+        <div className="vt-hero__reel vt-hero__reel--left" aria-hidden />
+        <div className="vt-hero__reel vt-hero__reel--right" aria-hidden />
+        <div className="vt-hero__inner">
+          <p className="vt-hero__eyebrow" aria-hidden>
+            <span className="vt-hero__dot" />
+            REC · 48 HOURS · ONE BRIEF
+          </p>
 
-        <LockedSections>
-          {/* 2 · Discover How It Works */}
-          <section className="hk-how" id="hk-how" aria-labelledby="hk-how-title">
+          <h1
+            className="vt-hero__title"
+            id="vt-hero-title"
+            data-glitch={VIDEOTHON.name}
+          >
+            <em data-glitch={VIDEOTHON.name}>{VIDEOTHON.name}</em>
+            <span className="vt-hero__title-sub">for video editors</span>
+          </h1>
+
+          <p className="vt-hero__lede">{VIDEOTHON.tagline}</p>
+
+          <div className="vt-hero__timer">
+            <VideothonCountdown
+              kickoffUtc={VIDEOTHON.kickoffUtc}
+              deadlineUtc={VIDEOTHON.deadlineUtc}
+            />
+          </div>
+
+          <div className="vt-hero__ctas">
+            <VideothonRegisterCTA
+              isAuthed={isAuthed}
+              registered={registered}
+              registrationOpen={registrationOpen}
+              prefill={prefill}
+              variant="cta"
+            />
+            <Link className="ab-btn ab-btn--ghost vt-hero__learn" href="#hk-how">
+              Learn more
+              <svg viewBox="0 0 24 24" aria-hidden focusable="false">
+                <path d="M4 12h15M13 6l6 6-6 6" />
+              </svg>
+            </Link>
+          </div>
+
+          <dl className="vt-hero__meta" aria-label="Event window">
+            <div>
+              <dt>Kickoff</dt>
+              <dd>{VIDEOTHON.kickoffLabel}</dd>
+            </div>
+            <div>
+              <dt>Deadline</dt>
+              <dd>{VIDEOTHON.deadlineLabel}</dd>
+            </div>
+            <div>
+              <dt>Results</dt>
+              <dd>{VIDEOTHON.resultsLabel.replace(/^Winners announced: /, "")}</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      {/* 2 · HOW IT WORKS */}
+      <section className="hk-how" id="hk-how" aria-labelledby="hk-how-title">
         <h2 className="hk-h2" id="hk-how-title">
-          Discover How it works
+          How it works
         </h2>
-
         <ol className="hk-how__grid">
           {HIW_STEPS.map((step, i) => (
             <li key={step.title} className="hiw">
@@ -209,43 +238,41 @@ export default async function HackathonPage() {
         </ol>
       </section>
 
-      {/* 2.5 · Discord callout — required by product */}
-      <section
-        className="hk-discord"
-        id="hk-discord"
-        aria-labelledby="hk-discord-title"
-      >
-        <div className="hk-discord__card">
-          <div className="hk-discord__body">
-            <span className="hk-discord__eyebrow">Community · Required</span>
-            <h2 className="hk-discord__title" id="hk-discord-title">
-              Every participant joins the Discord
-            </h2>
-            <p className="hk-discord__text">
-              Kickoff announcements, the problem statement, judge Q&amp;A,
-              teammate matching and last-minute updates all happen on our
-              Discord server first. If you&rsquo;re not in the server, you
-              will miss it.
-            </p>
+      {/* 3 · WhatsApp callout — the brief lands there first */}
+      {VIDEOTHON.whatsappLink ? (
+        <section
+          className="hk-discord"
+          id="hk-whatsapp"
+          aria-labelledby="hk-whatsapp-title"
+        >
+          <div className="hk-discord__card">
+            <div className="hk-discord__body">
+              <span className="hk-discord__eyebrow">Community · Required</span>
+              <h2 className="hk-discord__title" id="hk-whatsapp-title">
+                Every participant joins the WhatsApp group
+              </h2>
+              <p className="hk-discord__text">
+                Kickoff announcements, the brief, judge Q&amp;A and last-minute
+                updates all happen there first. If you&rsquo;re not in the group,
+                you will miss it.
+              </p>
+            </div>
+            <div className="hk-discord__cta">
+              <Link
+                href={VIDEOTHON.whatsappLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ab-btn ab-btn--primary hk-discord__btn"
+              >
+                Join the WhatsApp group →
+              </Link>
+              <p className="hk-discord__note">Opens WhatsApp in a new tab.</p>
+            </div>
           </div>
-          <div className="hk-discord__cta">
-            <Link
-              href={HACKATHON.discordLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ab-btn ab-btn--primary hk-discord__btn"
-            >
-              Join the Discord →
-            </Link>
-            <p className="hk-discord__note">
-              Opens {HACKATHON.discordLink.replace(/^https?:\/\//, "")} in a
-              new tab.
-            </p>
-          </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
-      {/* 3 · Timeline */}
+      {/* 4 · TIMELINE */}
       <section
         className="hk-timeline"
         data-timeline
@@ -255,7 +282,6 @@ export default async function HackathonPage() {
           <h2 className="hk-h2 tl__title" id="hk-timeline-title">
             Timeline
           </h2>
-
           <ol className="tl__cards">
             {TIMELINE.map((t, i) => (
               <li
@@ -265,25 +291,9 @@ export default async function HackathonPage() {
               >
                 <h3 className="tl-card__title">{t.title}</h3>
                 <p className="tl-card__text">{t.body}</p>
-                <Image
-                  className="tl-card__art"
-                  style={
-                    {
-                      ["--art-w" as string]: t.artW,
-                    } as React.CSSProperties
-                  }
-                  src={t.art}
-                  alt=""
-                  aria-hidden
-                  width={t.w}
-                  height={t.h}
-                  unoptimized
-                  loading="lazy"
-                />
               </li>
             ))}
           </ol>
-
           <div className="tl__rail" aria-hidden>
             <span className="tl__line" />
             {["14.77%", "38.26%", "61.74%", "85.23%"].map((x, i) => (
@@ -304,7 +314,7 @@ export default async function HackathonPage() {
         </div>
       </section>
 
-      {/* 4 · FAQ */}
+      {/* 5 · FAQ */}
       <section className="hk-faq" aria-labelledby="hk-faq-title">
         <div className="hk-faq__intro">
           <h2 className="hk-h2 hk-faq__title" id="hk-faq-title">
@@ -317,7 +327,7 @@ export default async function HackathonPage() {
         <FaqAccordion items={FAQ_ITEMS} />
       </section>
 
-      {/* 5 · Rules */}
+      {/* 6 · RULES */}
       <section className="hk-rules" aria-labelledby="hk-rules-title">
         <h2 className="ab-sr" id="hk-rules-title">
           Rules
@@ -326,30 +336,19 @@ export default async function HackathonPage() {
           <span className="rules__word" aria-hidden>
             RULES
           </span>
-            {RULES.map((r) => (
-              <article key={r.n} className={`rule ${r.variant}`} tabIndex={0}>
-                <Image
-                  className="rule__pin"
-                  src="/hackathon-v2/pin.png"
-                  alt=""
-                  aria-hidden
-                  width={267}
-                  height={288}
-                  unoptimized
-                  loading="lazy"
-                />
-                <div className="rule__note">
-                  <h3 className="rule__title">
-                    <b>{r.n}</b> {r.title}
-                  </h3>
-                  <p className="rule__text">{r.body}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-        </LockedSections>
-      </HackathonShell>
-    </UnlockProvider>
+          {RULES.map((r) => (
+            <article key={r.n} className={`rule ${r.variant}`} tabIndex={0}>
+              <div className="rule__note">
+                <h3 className="rule__title">
+                  <b>{r.n}</b> {r.title}
+                </h3>
+                <p className="rule__text">{r.body}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+      </div>
+    </HackathonShell>
   );
 }

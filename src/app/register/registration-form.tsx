@@ -147,10 +147,6 @@ export function RegistrationForm({
       toast.error("Please accept the Terms of Service and Privacy Policy.");
       return;
     }
-    if (!resumeUploaded) {
-      toast.error("Please upload your resume to continue.");
-      return;
-    }
     if (
       otpVerificationRequired &&
       values.phoneCountryCode === "+91" &&
@@ -546,9 +542,7 @@ export function RegistrationForm({
           HUB_BUTTON_CLASS,
           "inline-flex h-11 w-full items-center justify-center gap-2 sm:w-auto",
         )}
-        disabled={
-          isSubmitting || !resumeUploaded || !legalConsentAccepted(legalConsent)
-        }
+        disabled={isSubmitting || !legalConsentAccepted(legalConsent)}
       >
         {isSubmitting ? (
           <>
@@ -559,11 +553,6 @@ export function RegistrationForm({
           "Complete Registration"
         )}
       </Button>
-      {!resumeUploaded ? (
-        <p className="text-xs text-muted-foreground">
-          Upload your resume above to complete registration.
-        </p>
-      ) : null}
     </form>
   );
 }

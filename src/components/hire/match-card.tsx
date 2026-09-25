@@ -302,7 +302,10 @@ function RealMatchCard({
             )}
           </div>
           <p className="mt-0.5 text-base text-muted-foreground">
-            {[match.locationLabel, publicId].filter(Boolean).join(" · ")}
+            {/* The `AB-####` reference used to sit here. It is a hash of an
+                internal id, it addresses nothing a recruiter can use, and it is
+                no longer printed on any search surface. */}
+            {match.locationLabel}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-3">
@@ -483,12 +486,12 @@ function RealMatchCard({
         {match.engagementStatus === "CONTACT_SHARED" ? (
           <OutreachComposeDialog
             candidateRef={match.candidateRef}
-            candidateLabel={match.displayName ?? publicId}
+            candidateLabel={match.displayName ?? match.jobRole}
           />
         ) : (
           <UnlockContactDialog
             candidateRef={match.candidateRef}
-            publicId={publicId}
+            candidateLabel={match.displayName ?? match.jobRole}
           />
         )}
         <RequestIntroButton
@@ -575,7 +578,6 @@ function RealMatchCard({
               label="Est. compensation"
               value={match.compensationBand ?? "—"}
             />
-            <Stat label="Reference" value={publicId} />
           </dl>
 
           <p className="text-sm leading-relaxed text-muted-foreground">

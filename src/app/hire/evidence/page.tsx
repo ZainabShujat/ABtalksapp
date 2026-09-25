@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { requireRecruiter } from "@/lib/program-auth";
-import { EvidenceResume } from "@/components/hire/evidence-resume";
+import { CandidateEvidenceReport } from "@/components/hire/candidate-evidence-report";
 
 export const metadata: Metadata = {
-  title: "Evidence resume | ABTalks Hire",
+  title: "Candidate report | ABTalks Hire",
   description:
-    "Platform-verified evidence for a Scout match — not a self-written resume.",
+    "The full ABTalks report for a Scout match: verified evidence, experience and skills.",
 };
 
 export default async function HireEvidencePage({
@@ -13,8 +13,11 @@ export default async function HireEvidencePage({
 }: {
   searchParams: Promise<{ ref?: string | string[] }>;
 }) {
+  // The gate stays on the server. Everything the report renders below is
+  // either already in this recruiter's own browser cache or comes back from a
+  // server action that re-resolves the candidate handle for itself.
   await requireRecruiter();
   const raw = (await searchParams).ref;
   const lookup = Array.isArray(raw) ? (raw[0] ?? "") : (raw ?? "");
-  return <EvidenceResume lookup={lookup} />;
+  return <CandidateEvidenceReport lookup={lookup} />;
 }

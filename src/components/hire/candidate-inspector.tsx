@@ -5,18 +5,30 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
+  ArrowUpRight,
   Award,
+  Check,
   CircleMinus,
-  Eye,
+  Copy,
   Gauge,
+  Lock,
   Mail,
   Phone,
   Send,
   Tag,
+  Wallet,
   X,
   type LucideIcon,
 } from "lucide-react";
-import { refPublicId, type CandidateSource } from "@/features/hire/candidate-ref";
+import { toast } from "sonner";
+import {
+  NO_VERIFIED_EVIDENCE,
+  recruiterRoleLabel,
+  recruiterSummary,
+  summaryInputFromMatch,
+  trackLongLabel,
+  verifiedEvidenceSentence,
+} from "@/features/hire/candidate-summary";
 import { isLockedPreview } from "@/features/hire/locked-preview";
 import {
   LockedField,
@@ -32,11 +44,9 @@ import {
 import { ShortlistButton } from "@/components/talent/shortlist-button";
 import { AddToPipelineButton } from "@/components/hire/pipeline/add-to-pipeline-button";
 import { PanelResizer } from "@/components/hire/panel-resizer";
-import { EvidenceResumeBody } from "@/components/hire/evidence-resume";
 import { HireScoreChart } from "@/components/hire/hire-score-chart";
 import {
   buildCardPills,
-  coverageLede,
   OpenToWorkBadge,
 } from "@/components/hire/hire-card-facts";
 import type { MatchCardData, MatchDecision } from "@/components/hire/match-card";
@@ -57,21 +67,6 @@ import {
 import type { SelfReportedExternalLink } from "@/features/hire/self-reported-links";
 import type { RevealedContact } from "@/features/hire/unlock-contact";
 
-function trackLongLabel(source?: CandidateSource): string | null {
-  switch (source) {
-    case "CLAUDE":
-      return "Claude challenge";
-    case "CHALLENGE_60":
-      return "60-day challenge";
-    case "HACKATHON":
-      return "Hackathon";
-    case "PROGRAM":
-      return "US cohort";
-    default:
-      return null;
-  }
-}
-
 const WORK_MODE: Record<string, string> = {
   ONSITE: "Onsite",
   HYBRID: "Hybrid",
@@ -79,15 +74,20 @@ const WORK_MODE: Record<string, string> = {
   FLEXIBLE: "Flexible",
 };
 
-/** The panel's tabs jump to sections of one scroll, as in the design. */
+/**
+ * The panel's tabs jump to sections of one scroll, as in the design.
+ *
+ * ABTalks Evidence leads. It is the only thing on this panel a CV cannot claim,
+ * and it used to open below a Status / AB score / Email / Phone / Tags block
+ * that told a recruiter nothing they had not already read on the card. Contact
+ * and status are still here: View expands the rows; Reveal buys the values.
+ */
 const TABS = [
-  { id: "overview", label: "Overview" },
-  { id: "experience", label: "Experience" },
   { id: "evidence", label: "ABTalks Evidence" },
+  { id: "contact", label: "Contact" },
+  { id: "experience", label: "Experience" },
   { id: "education", label: "Education" },
   { id: "skills", label: "Skills" },
-  { id: "resume", label: "Resume" },
-  { id: "more", label: "More" },
 ] as const;
 
 const MONTH_SHORT = [
@@ -186,13 +186,13 @@ function LinkedInMark({
   href,
   locked,
   candidateRef,
-  publicId,
+  candidateLabel,
   onUnlocked,
 }: {
   href: string | null;
   locked: boolean;
   candidateRef: string;
-  publicId: string;
+  candidateLabel: string;
   onUnlocked: () => void;
 }) {
   if (href) {
@@ -215,7 +215,7 @@ function LinkedInMark({
     return (
       <UnlockContactDialog
         candidateRef={candidateRef}
-        publicId={publicId}
+        candidateLabel={candidateLabel}
         onUnlocked={onUnlocked}
         className="hire-profile__in"
         triggerLabel="in"
@@ -253,10 +253,11 @@ type Role = { key?: string; title: string; value: ReactNode; badge?: string; not
  * Experience is the candidate's own jobs (`CandidateExperience`, typed or
  * resume-merged), loaded on open. ABTalks Evidence is completed tracks and
  * hackathon placements, also loaded on open. Education is
- * the declared level. Contact is behind the paid unlock (T-229): "Reveal
- * email" / "Reveal number" open the unlock dialog, which states the cost
- * before charging. Resume uses the same credit unlock — billing is not
- * enabled, so the plans dialog must not be the gate.
+ * the declared level. Contact values are behind the paid unlock (T-229):
+ * "View Contact Details" only expands the section; "Reveal email" /
+ * "Reveal number" open the unlock dialog, which states the cost before
+ * charging. Resume uses the same credit unlock — billing is not enabled, so
+ * the plans dialog must not be the gate.
  */
 export function CandidateInspector({
   match,
@@ -279,17 +280,24 @@ export function CandidateInspector({
   decision?: MatchDecision | null;
 }) {
   const e = match.evidence ?? {};
-  const publicId = refPublicId(match.candidateRef);
+  const years =
+    typeof e.yearsExperience === "number" && e.yearsExperience > 0
+      ? e.yearsExperience
+      : null;
+  const roleLabel = recruiterRoleLabel({
+    jobRole: match.jobRole,
+    yearsExperience: years,
+  });
+  // What a dialog may print when it has to name this candidate. Never the
+  // `AB-####` reference: it is a hash of an internal id, it is not something a
+  // recruiter can act on, and it is no longer shown anywhere on search.
+  const contactLabel = match.displayName?.trim() || roleLabel;
   const sample = match.candidateRef.startsWith("SAMPLE:");
   const preview = isLockedPreview(match) ? match.preview : null;
   const { upgradeOpen, openUpgrade, dismissUpgrade } = useUpgradePrompt();
   const track = trackLongLabel(match.source);
   const skills = e.skills ?? [];
   const languages = e.workingLanguages ?? [];
-  const years =
-    typeof e.yearsExperience === "number" && e.yearsExperience > 0
-      ? e.yearsExperience
-      : null;
   const workMode = e.workMode ? (WORK_MODE[e.workMode] ?? e.workMode) : null;
   const tierLabel =
     match.tier === "STRONG"
@@ -302,10 +310,12 @@ export function CandidateInspector({
   );
   const status = decision ? DECISION_LABEL[decision] : null;
   const resumeHref = evidenceResumeHref(match.candidateRef);
-  const [tab, setTab] = useState<TabId>("overview");
+  const [tab, setTab] = useState<TabId>("evidence");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [contact, setContact] = useState<RevealedContact | null>(null);
+  /** Free expand only — does not unlock. Cleared when the candidate changes. */
+  const [contactOpen, setContactOpen] = useState(false);
   const onContactRevealedRef = useRef(onContactRevealed);
   onContactRevealedRef.current = onContactRevealed;
 
@@ -335,6 +345,7 @@ export function CandidateInspector({
   // the one now open.
   useEffect(() => {
     let alive = true;
+    setContactOpen(false);
     void (async () => {
       const found = sample
         ? null
@@ -536,12 +547,15 @@ export function CandidateInspector({
       }
     />
   ) : (
-    match.jobRole
+    roleLabel
   );
 
-  const orgs = [match.jobRole, track].filter((v): v is string => Boolean(v));
+  const orgs = [roleLabel, track].filter((v): v is string => Boolean(v));
 
   const evidenceItems = trackEvidence?.items ?? [];
+  // Completed tracks and hackathon placements. Compensation is deliberately not
+  // in this list any more: an ABTalks estimate is not verified evidence, and it
+  // now sits with the other availability facts under Contact.
   const evidenceRoles: Role[] = evidenceItems.map((item) => ({
     key: item.key,
     title: item.title,
@@ -549,24 +563,17 @@ export function CandidateInspector({
     badge: item.outcomeLabel,
     note: item.occurredAt ? monthYearFromIso(item.occurredAt) : undefined,
   }));
-  if (preview) {
-    evidenceRoles.push({
-      title: "Expected compensation",
-      value: (
-        <LockedField
-          value={preview.compensationBand}
-          label="Expected compensation"
-          onReveal={openUpgrade}
-        />
-      ),
-    });
-  } else if (match.compensationBand) {
-    evidenceRoles.push({
-      title: match.compensationDeclared ? "Expected CTC" : "Est. compensation",
-      value: match.compensationBand,
-      note: match.compensationDeclared ? undefined : COMPENSATION_DISCLAIMER,
-    });
-  }
+
+  const summaryInput = summaryInputFromMatch({
+    ...match,
+    locked: Boolean(preview),
+  });
+  const detailedSummary = sample
+    ? "Figures are taken from your requirement, not from a candidate."
+    : recruiterSummary(match.rationale, summaryInput);
+  const verifiedLine = verifiedEvidenceSentence(summaryInput);
+  const hasVerified =
+    !sample && (verifiedLine !== NO_VERIFIED_EVIDENCE || evidenceRoles.length > 0);
 
   const platforms: { title: string; sub: string; date: string }[] = sample
     ? []
@@ -643,7 +650,7 @@ export function CandidateInspector({
               aria-label="Back to results"
               onClick={onClose}
             >
-              <ArrowLeft size={17} strokeWidth={1} absoluteStrokeWidth aria-hidden="true" />
+              {/* <ArrowLeft size={17} strokeWidth={1} absoluteStrokeWidth aria-hidden="true" /> */}
             </button>
             {!sample && (
               <Link
@@ -651,10 +658,16 @@ export function CandidateInspector({
                 className="hire-profile__more"
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Open the full evidence profile"
-                title="Full evidence profile"
+                aria-label="View the full candidate report in a new tab"
+                title="View the full candidate report"
               >
-                •••
+                View as Report
+                <ArrowUpRight
+                  size={14}
+                  strokeWidth={1.8}
+                  absoluteStrokeWidth
+                  aria-hidden="true"
+                />
               </Link>
             )}
             <button
@@ -679,7 +692,7 @@ export function CandidateInspector({
                 href={safeLinkedinHref(contact?.linkedinUrl)}
                 locked={!sample && !preview && !contact}
                 candidateRef={match.candidateRef}
-                publicId={publicId}
+                candidateLabel={contactLabel}
                 onUnlocked={() => {
                   void loadContact();
                 }}
@@ -694,9 +707,12 @@ export function CandidateInspector({
                 onReveal={openUpgrade}
               />
             ) : sample ? (
-              "Sample profile — not a person in the pool"
+              "Sample profile, not a person in the pool"
             ) : (
-              [match.locationLabel, workMode, publicId].filter(Boolean).join(" · ")
+              // No `AB-####` here. It is a hash of an internal id, it addresses
+              // nothing a recruiter can act on, and it was the first thing they
+              // read under the name.
+              [match.locationLabel, workMode].filter(Boolean).join(" · ")
             )}
           </p>
           {orgs.length > 0 && (
@@ -739,20 +755,11 @@ export function CandidateInspector({
               candidateRef={match.candidateRef}
               fallbackLabel={match.displayName ?? match.jobRole}
             />
-            {/* For a locked preview this still opens the plan dialog. For a
-                readable candidate the resume is now a section of this panel,
-                so the button scrolls to it instead of gating it. "•••" remains
-                the way to the full page. */}
-            <button
-              type="button"
-              className="hire-profile__view"
-              aria-label={preview ? "View resume" : "Go to resume"}
-              title="Resume"
-              aria-haspopup={preview ? "dialog" : undefined}
-              onClick={() => (preview ? openUpgrade() : jump("resume"))}
-            >
-              <Eye size={16} strokeWidth={1} absoluteStrokeWidth aria-hidden="true" />
-            </button>
+            {/* The eye that jumped to Resume is gone: the Resume tab above does
+                the same thing with a label on it, and an unlabelled icon beside
+                three labelled buttons was read as a fourth action. A locked
+                preview still reaches the plan dialog through its blurred
+                fields; "•••" remains the way to the full page. */}
           </div>
         )}
 
@@ -771,9 +778,7 @@ export function CandidateInspector({
           className="hire-profile__tabs"
           aria-label="Profile sections"
         >
-          {/* A sample card has no evidence record, so it has no resume section
-              to jump to — drop the tab rather than leave it inert. */}
-          {TABS.filter((t) => t.id !== "resume" || !sample).map((t) => (
+          {TABS.map((t) => (
             <button
               key={t.id}
               type="button"
@@ -787,11 +792,125 @@ export function CandidateInspector({
         </nav>
         </div>
 
+        {/* The panel opens on what ABTalks can prove. Its three subheads are
+            the summary, the parameter breakdown and the verified counts — the
+            first two used to sit at the bottom under "More", where a recruiter
+            who scrolled that far had already decided. */}
         <section
-          data-section="overview"
-          className="hire-profile__overview"
-          aria-label="Overview"
+          data-section="evidence"
+          className="hire-profile__section"
+          aria-label="ABTalks Evidence"
         >
+          <h4 className="hire-profile__h">ABTalks Evidence</h4>
+
+          <div className="hire-profile__group">
+            <p className="hire-profile__group-h">Candidate summary</p>
+            <p className="hire-profile__text">{detailedSummary}</p>
+            {sample ? (
+              <p className="hire-profile__note">
+                This is an illustration of the requirement. Nobody in the pool
+                matches it yet, and the figures are taken from what you asked for
+                rather than from a candidate.
+              </p>
+            ) : null}
+          </div>
+
+          {!sample && match.scores && (
+            <div className="hire-profile__group">
+              <p className="hire-profile__group-h">Candidate parameters</p>
+              <HireScoreChart scores={match.scores} total={match.score} />
+              {/* <p className="hire-profile__note">
+                Slice size is each parameter&apos;s share of this candidate&apos;s
+                combined score; the exact value out of 100 is listed beside it.
+                Scores are derived from the evidence on record, so they are
+                indicative rather than a validated psychometric measure.
+              </p> */}
+            </div>
+          )}
+
+          <div className="hire-profile__group">
+            <p className="hire-profile__group-h">Verified evidence</p>
+            {sample ? (
+              <p className="hire-profile__meta">
+                Figures are taken from your requirement, not from a candidate.
+              </p>
+            ) : !hasVerified ? (
+              // Nothing passed, nothing committed, no completion on record. One
+              // plain sentence, and deliberately not a list of declared skills
+              // dressed up as "Verified: ..." — the Skills section already says
+              // what the candidate claims, and says whose claim it is.
+              <p className="hire-profile__meta">{NO_VERIFIED_EVIDENCE}</p>
+            ) : (
+              <div className="hire-profile__org-block">
+                <span className="hire-profile__tile" aria-hidden="true">
+                  {monogram("ABTalks")}
+                </span>
+                <div className="hire-profile__org-main">
+                  <div>
+                    <p className="hire-profile__org-name">
+                      Verified work on ABTalks
+                    </p>
+                    <p className="hire-profile__org-sub">{verifiedLine}</p>
+                  </div>
+                  {evidenceRoles.length > 0 && (
+                    <ul className="hire-profile__roles">
+                      {evidenceRoles.map((r) => (
+                        <li key={r.key ?? r.title} className="hire-profile__role">
+                          <span
+                            className="hire-profile__timeline"
+                            aria-hidden="true"
+                          />
+                          <div className="hire-profile__role-body">
+                            <div className="hire-profile__role-head">
+                              <p className="hire-profile__role-title">{r.title}</p>
+                              {r.badge && (
+                                <span className="hire-profile__promo">
+                                  {r.badge}
+                                </span>
+                              )}
+                            </div>
+                            <p className="hire-profile__meta">{r.value}</p>
+                            {r.note && (
+                              <p className="hire-profile__text">{r.note}</p>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Directly under ABTalks Evidence, above Experience — status, unlock,
+            tags and external profiles stay one scroll away from the proof. */}
+        <section
+          data-section="contact"
+          className="hire-profile__overview hire-profile__section--ruled"
+          aria-label="Contact and status"
+        >
+          {/* View expands the contact rows for free. Reveal email / Reveal
+              number open the paid unlock dialog (one purchase fills both). */}
+          <div className="hire-profile__headrow">
+            <h4 className="hire-profile__h">Contact and status</h4>
+            {!sample && !preview && !contact && !contactOpen && (
+              <button
+                type="button"
+                className="hire-profile__unlockcta"
+                onClick={() => setContactOpen(true)}
+              >
+                {/* <Lock
+                  size={13}
+                  strokeWidth={1.8}
+                  absoluteStrokeWidth
+                  aria-hidden="true"
+                /> */}
+                View Contact Details
+              </button>
+            )}
+          </div>
           <Row icon={CircleMinus} label="Status" muted={!status}>
             {status ?? "No status"}
           </Row>
@@ -818,18 +937,25 @@ export function CandidateInspector({
               </Row>
             </>
           ) : contact ? (
-            // What the unlock bought, next to the control that bought it.
             <>
               <Row icon={Mail} label="Email" muted={!contact.email}>
                 {contact.email ? (
-                  <a href={`mailto:${contact.email}`}>{contact.email}</a>
+                  <CopyableContact
+                    value={contact.email}
+                    href={`mailto:${contact.email}`}
+                    copyLabel="Copy email"
+                  />
                 ) : (
                   "Not provided"
                 )}
               </Row>
               <Row icon={Phone} label="Phone" muted={!contact.phone}>
                 {contact.phone ? (
-                  <a href={`tel:${contact.phone}`}>{contact.phone}</a>
+                  <CopyableContact
+                    value={contact.phone}
+                    href={`tel:${contact.phone}`}
+                    copyLabel="Copy phone"
+                  />
                 ) : (
                   "Not provided"
                 )}
@@ -838,34 +964,57 @@ export function CandidateInspector({
               <Row icon={Send} label="Message">
                 <OutreachComposeDialog
                   candidateRef={match.candidateRef}
-                  candidateLabel={match.displayName ?? publicId}
+                  candidateLabel={contactLabel}
                 />
               </Row>
             </>
-          ) : !sample ? (
-            // T-229: revealing contact is the paid unlock — the dialog shows the
-            // configured cost, the balance and what is left before anything is
-            // charged. It is not the plan gate; the plan is a different thing.
+          ) : contactOpen ? (
             <>
               <Row icon={Mail} label="Email">
                 <UnlockContactDialog
                   candidateRef={match.candidateRef}
-                  publicId={publicId}
+                  candidateLabel={contactLabel}
                   onUnlocked={loadContact}
-                  triggerLabel={"Reveal email  +"}
                   className="hire-profile__reveal"
+                  triggerLabel="Reveal email"
                 />
               </Row>
               <Row icon={Phone} label="Phone">
                 <UnlockContactDialog
                   candidateRef={match.candidateRef}
-                  publicId={publicId}
+                  candidateLabel={contactLabel}
                   onUnlocked={loadContact}
-                  triggerLabel={"Reveal number  +"}
                   className="hire-profile__reveal"
+                  triggerLabel="Reveal number"
                 />
               </Row>
             </>
+          ) : null}
+          {/* T-229: Reveal email / Reveal number open the unlock dialog, which
+              states the cost before charging. View Contact Details only expands
+              these rows; it never charges. */}
+          {preview ? (
+            <Row icon={Wallet} label="Expected compensation">
+              <LockedField
+                value={preview.compensationBand}
+                label="Expected compensation"
+                onReveal={openUpgrade}
+              />
+            </Row>
+          ) : match.compensationBand ? (
+            <Row
+              icon={Wallet}
+              label={
+                match.compensationDeclared ? "Expected CTC" : "Est. compensation"
+              }
+            >
+              {match.compensationBand}
+              {!match.compensationDeclared && (
+                <span className="hire-profile__note">
+                  {COMPENSATION_DISCLAIMER}
+                </span>
+              )}
+            </Row>
           ) : null}
           <Row icon={Tag} label="Tags" muted={tags.length === 0}>
             {tags.length > 0 ? (
@@ -883,21 +1032,21 @@ export function CandidateInspector({
           {upgradeOpen && <UpgradeNotice onDismiss={dismissUpgrade} />}
           {preview && (
             <p className="hire-profile__note">
-              This is an example of the full profile format — the details
-              behind the blur are generated, not a candidate.
+              This is an example of the full profile format. The details behind
+              the blur are generated, not a candidate.
             </p>
           )}
 
           {!sample && externalLinks === null ? (
-            <div className="hire-profile__card hire-profile__card--ext">
-              <p className="hire-profile__card-head">External profiles</p>
+            <div className="hire-profile__group">
+              <p className="hire-profile__group-h">External profiles</p>
               <p className="hire-profile__meta hire-profile__ext-empty">
                 Loading profiles…
               </p>
             </div>
           ) : declaredLinks.length > 0 ? (
-            <div className="hire-profile__card hire-profile__card--ext">
-              <p className="hire-profile__card-head">
+            <div className="hire-profile__group">
+              <p className="hire-profile__group-h">
                 External profiles <small>· {declaredLinks.length}</small>
               </p>
               {declaredLinks.map((link) => (
@@ -928,15 +1077,39 @@ export function CandidateInspector({
               ))}
             </div>
           ) : (
-            <div className="hire-profile__card hire-profile__card--ext">
-              <p className="hire-profile__card-head">External profiles</p>
+            <div className="hire-profile__group">
+              <p className="hire-profile__group-h">External profiles</p>
               <p className="hire-profile__meta hire-profile__ext-empty">
                 No external profiles declared
               </p>
             </div>
           )}
 
-          <div className="hire-profile__rule" />
+          {platforms.length > 0 && (
+            <div className="hire-profile__group">
+              <p className="hire-profile__group-h">
+                Credentials <small>· {platforms.length}</small>
+              </p>
+              {platforms.map((p) => (
+                <div key={p.title} className="hire-profile__cert">
+                  <Award
+                    size={14}
+                    strokeWidth={1.2}
+                    absoluteStrokeWidth
+                    color="#F97316"
+                    aria-hidden="true"
+                  />
+                  <span className="hire-profile__cert-body">
+                    <span className="hire-profile__cert-title">{p.title}</span>
+                    <span className="hire-profile__cert-sub">{p.sub}</span>
+                  </span>
+                  {p.date ? (
+                    <span className="hire-profile__cert-date">{p.date}</span>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <section
@@ -999,55 +1172,6 @@ export function CandidateInspector({
           )}
         </section>
 
-        <section
-          data-section="evidence"
-          className="hire-profile__section hire-profile__section--ruled"
-          aria-label="ABTalks Evidence"
-        >
-          <h4 className="hire-profile__h">ABTalks Evidence</h4>
-          <div className="hire-profile__org-block">
-            <span className="hire-profile__tile" aria-hidden="true">
-              {monogram("ABTalks")}
-            </span>
-            <div className="hire-profile__org-main">
-              <div>
-                <p className="hire-profile__org-name">Verified work on ABTalks</p>
-                <p className="hire-profile__org-sub">
-                  Completions and placements only
-                </p>
-              </div>
-              {evidenceRoles.length > 0 ? (
-                <ul className="hire-profile__roles">
-                  {evidenceRoles.map((r) => (
-                    <li key={r.key ?? r.title} className="hire-profile__role">
-                      <span
-                        className="hire-profile__timeline"
-                        aria-hidden="true"
-                      />
-                      <div className="hire-profile__role-body">
-                        <div className="hire-profile__role-head">
-                          <p className="hire-profile__role-title">{r.title}</p>
-                          {r.badge && (
-                            <span className="hire-profile__promo">{r.badge}</span>
-                          )}
-                        </div>
-                        <p className="hire-profile__meta">{r.value}</p>
-                        {r.note && <p className="hire-profile__text">{r.note}</p>}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="hire-profile__meta">
-                  {sample
-                    ? "Figures are taken from your requirement, not from a candidate."
-                    : "No completed tracks or placements recorded."}
-                </p>
-              )}
-            </div>
-          </div>
-        </section>
-
         <section className="hire-profile__section hire-profile__section--ruled hire-profile__section--wide">
           <div data-section="education" className="hire-profile__block">
             <h4 className="hire-profile__h">Education</h4>
@@ -1086,53 +1210,71 @@ export function CandidateInspector({
               for (const vs of verifiedSkills ?? []) {
                 verifiedMap.set(vs.name.trim().toLowerCase(), vs.sources);
               }
-              const hasSkills = skills.length > 0;
-              const hasVerified = (verifiedSkills ?? []).length > 0;
+              // One section per provenance — not a badge on every chip. A skill
+              // with evidence goes under Evidence-backed; everything else under
+              // Self-declared. Verified skills that never appear on the
+              // declared list still show in Evidence-backed.
+              const evidenceBacked: { name: string; sources: string[] }[] = [];
+              const seenVerified = new Set<string>();
+              for (const s of skills) {
+                const key = s.trim().toLowerCase();
+                const sources = verifiedMap.get(key);
+                if (sources && sources.length > 0) {
+                  evidenceBacked.push({ name: s, sources });
+                  seenVerified.add(key);
+                }
+              }
+              for (const vs of verifiedSkills ?? []) {
+                const key = vs.name.trim().toLowerCase();
+                if (seenVerified.has(key)) continue;
+                evidenceBacked.push({ name: vs.name, sources: vs.sources });
+                seenVerified.add(key);
+              }
+              const selfDeclared = skills.filter(
+                (s) => !verifiedMap.has(s.trim().toLowerCase()),
+              );
 
-              if (!hasSkills && !hasVerified) {
+              if (
+                evidenceBacked.length === 0 &&
+                selfDeclared.length === 0
+              ) {
                 return <p className="hire-profile__meta">No skills declared.</p>;
               }
 
               return (
                 <div className="space-y-4">
-                  <div className="hire-profile__group">
-                    <p className="hire-profile__group-h">
-                      Candidate Skills · <small className="text-xs text-muted-foreground">Proven & Declared</small>
-                    </p>
-                    <ul className="hire-profile__chips">
-                      {skills.map((s) => {
-                        const sources = verifiedMap.get(s.trim().toLowerCase());
-                        const isVerified = Boolean(sources && sources.length > 0);
-                        return (
+                  {evidenceBacked.length > 0 && (
+                    <div className="hire-profile__group">
+                      <p className="hire-profile__group-h">Evidence-backed</p>
+                      <ul className="hire-profile__chips">
+                        {evidenceBacked.map((s) => (
                           <li
-                            key={s}
-                            className={cn(
-                              "hire-profile__chip flex flex-col items-start gap-1 py-2 px-3",
-                              isVerified ? "border-[#03535f]/40 bg-[#03535f]/5" : "border-zinc-200"
-                            )}
+                            key={`verified:${s.name}`}
+                            className="hire-profile__chip border-[#03535f]/40 bg-[#03535f]/5"
+                            title={
+                              s.sources.length > 0
+                                ? `Source: ${s.sources.join(", ")}`
+                                : undefined
+                            }
                           >
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-zinc-900">{s}</span>
-                              {isVerified ? (
-                                <span className="inline-flex items-center rounded-full bg-[#03535f] px-2 py-0.5 text-[10px] font-semibold text-white tracking-wide uppercase">
-                                  Evidence-backed
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-500 tracking-wide uppercase">
-                                  Self-declared
-                                </span>
-                              )}
-                            </div>
-                            {isVerified && sources && sources.length > 0 && (
-                              <p className="text-[11px] text-[#03535f] font-normal leading-tight">
-                                Source: {sources.join(", ")}
-                              </p>
-                            )}
+                            {s.name}
                           </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {selfDeclared.length > 0 && (
+                    <div className="hire-profile__group">
+                      <p className="hire-profile__group-h">Self-declared</p>
+                      <ul className="hire-profile__chips">
+                        {selfDeclared.map((s) => (
+                          <li key={`declared:${s}`} className="hire-profile__chip">
+                            {s}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -1149,86 +1291,6 @@ export function CandidateInspector({
               </div>
             )}
           </div>
-        </section>
-
-        {!sample && (
-          <section
-            data-section="resume"
-            className="hire-profile__section hire-profile__section--ruled"
-            aria-label="Resume"
-          >
-            <h4 className="hire-profile__h">Resume</h4>
-            {/* The same record as /hire/evidence, rendered here so the
-                recruiter never leaves the results to read it. The identity
-                header is suppressed: the panel already shows the name and
-                score above. */}
-            <div className="hire-sheet hire-sheet--embed">
-              <EvidenceResumeBody match={match} showIdentity={false} />
-            </div>
-          </section>
-        )}
-
-        <section
-          data-section="more"
-          className="hire-profile__section hire-profile__section--ruled hire-profile__section--cred"
-          aria-label="More"
-        >
-          <h4 className="hire-profile__h">AI candidate summary</h4>
-          <p className="hire-profile__text">
-            {match.rationale?.trim() ||
-              "Resume analysis has not been recorded for this candidate yet."}
-          </p>
-          <p className="hire-profile__note">
-            {sample
-              ? "This is an illustration of the requirement — nobody in the pool matches it yet. Figures above are taken from what you asked for, not from a candidate."
-              : coverageLede(match)}
-          </p>
-
-          {!sample && match.scores && (
-            <div className="hire-profile__group">
-              <h4 className="hire-profile__h">Candidate parameters</h4>
-              <HireScoreChart scores={match.scores} total={match.score} />
-              <p className="hire-profile__note">
-                Slice size is each parameter&apos;s share of this candidate&apos;s
-                combined score; the exact value out of 100 is listed beside it.
-                Scores are derived from the evidence on record — indicative, not
-                a validated psychometric measure.
-              </p>
-            </div>
-          )}
-
-          {platforms.length > 0 && (
-            <div className="hire-profile__card">
-              <p className="hire-profile__card-head">
-                Credentials <small>· {platforms.length}</small>
-              </p>
-              {platforms.map((p) => (
-                <div key={p.title} className="hire-profile__cert">
-                  <Award
-                    size={14}
-                    strokeWidth={1.2}
-                    absoluteStrokeWidth
-                    color="#F97316"
-                    aria-hidden="true"
-                  />
-                  <span className="hire-profile__cert-body">
-                    <span className="hire-profile__cert-title">{p.title}</span>
-                    <span className="hire-profile__cert-sub">{p.sub}</span>
-                  </span>
-                  {p.date ? (
-                    <span className="hire-profile__cert-date">{p.date}</span>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <p className="hire-profile__note">
-            Mission, first-attempt, commit and project figures are verified by
-            ABTalks. Experience, skills, role and external profile links are
-            self-declared. Compensation and availability are shown only when the
-            candidate shared them.
-          </p>
         </section>
       </div>
     </aside>
@@ -1256,5 +1318,50 @@ function Row({
         {children}
       </div>
     </div>
+  );
+}
+
+/** Mailto/tel plus a one-shot copy control — inspector unlocked contact only. */
+function CopyableContact({
+  value,
+  href,
+  copyLabel,
+}: {
+  value: string;
+  href: string;
+  copyLabel: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      toast.success("Copied");
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      toast.error("Could not copy");
+    }
+  }
+
+  return (
+    <span className="hire-profile__contact-val">
+      <a href={href}>{value}</a>
+      <button
+        type="button"
+        className="hire-profile__copy"
+        aria-label={copyLabel}
+        title={copyLabel}
+        onClick={() => {
+          void copy();
+        }}
+      >
+        {copied ? (
+          <Check size={14} strokeWidth={2} absoluteStrokeWidth aria-hidden="true" />
+        ) : (
+          <Copy size={14} strokeWidth={1.75} absoluteStrokeWidth aria-hidden="true" />
+        )}
+      </button>
+    </span>
   );
 }

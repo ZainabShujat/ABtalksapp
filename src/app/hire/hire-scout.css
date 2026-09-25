@@ -9523,11 +9523,38 @@ button.hire-side__me {
   cursor: default;
 }
 
+/* Was a bare "•••", which named nothing and read as an overflow menu rather
+   than a link to a second page. Now a labelled control, sized and coloured
+   like the other chrome in this row. */
 .hire-app a.hire-profile__more {
-  font-size: 24px;
-  line-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 11px;
+  border: 1px solid var(--h-border-strong);
+  border-radius: 8px;
+  background: var(--h-surface);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  white-space: nowrap;
   color: #18181b;
   text-decoration: none;
+  transition:
+    background-color 160ms var(--ease),
+    border-color 160ms var(--ease);
+}
+
+.hire-app a.hire-profile__more:hover {
+  background: var(--h-card);
+  border-color: var(--h-primary);
+  color: var(--h-primary);
+}
+
+.hire-app a.hire-profile__more:focus-visible {
+  outline: 2px solid var(--h-primary);
+  outline-offset: 2px;
 }
 
 .hire-profile__identity {
@@ -9576,6 +9603,16 @@ button.hire-side__me {
   color: #ffffff;
   text-decoration: none;
   cursor: pointer;
+}
+
+/* The "in" glyph stays white once contact is unlocked.
+ *
+ * Same trap as the button-shaped links at the top of this file: `.hire-app a`
+ * is (0,1,1) and `.hire-profile__in` is (0,1,0), so `color: inherit` won the
+ * moment the mark stopped being a <button> and became a real <a>. The locked
+ * state looked right and the unlocked one came out black on LinkedIn blue. */
+.hire-app a.hire-profile__in {
+  color: #ffffff;
 }
 
 a.hire-profile__in:hover,
@@ -9843,6 +9880,124 @@ button.hire-profile__in:focus-visible {
 
 .hire-profile__reveal:hover {
   text-decoration: underline;
+}
+
+/* A section heading that carries its own action. The heading keeps the left,
+   the action sits on the right edge, and on a narrow panel the action wraps
+   under rather than squeezing the title. */
+.hire-profile__headrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.hire-profile__headrow .hire-profile__h {
+  min-width: 0;
+}
+
+/* Clay expand CTA — free "View Contact Details". Paid unlock lives on the
+   Reveal email / Reveal number row controls, not here. */
+.hire-profile__unlockcta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--h-primary);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow:
+    inset 0 -3px 6px rgba(0, 0, 0, 0.22),
+    inset 0 1px 1px rgba(255, 255, 255, 0.14),
+    0 4px 12px rgba(3, 83, 95, 0.16);
+  transition: background-color 160ms var(--ease);
+}
+
+.hire-profile__unlockcta:hover {
+  background: var(--h-primary-hover);
+}
+
+.hire-profile__unlockcta:active {
+  background: #02434d;
+}
+
+.hire-profile__unlockcta:focus-visible {
+  outline: 2px solid var(--h-primary);
+  outline-offset: 3px;
+}
+
+/* Text-weight reveal — opens the paid unlock dialog; not a second clay CTA. */
+.hire-profile__reveal {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--h-primary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.hire-profile__reveal:hover {
+  color: var(--h-primary-hover);
+}
+
+.hire-profile__reveal:focus-visible {
+  outline: 2px solid var(--h-primary);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.hire-profile__contact-val {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.hire-profile__contact-val a {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.hire-profile__copy {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--h-muted, #626262);
+  cursor: pointer;
+}
+
+.hire-profile__copy:hover {
+  background: rgba(3, 83, 95, 0.08);
+  color: var(--h-primary);
+}
+
+.hire-profile__copy:focus-visible {
+  outline: 2px solid var(--h-primary);
+  outline-offset: 2px;
 }
 
 .hire-profile__tags {
@@ -14728,3 +14883,1007 @@ a.hire-credits:hover { border-color: var(--h-primary); }
   .hire-creditsx__amounts { display: flex; gap: 12px; align-items: baseline; text-align: left; }
 }
 .hire-creditsx__mail { color: var(--h-primary); font-weight: 600; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Candidate report — /hire/evidence?ref=…
+
+   ONE document. The band, the headline figures and every section share a
+   single white sheet, separated by hairlines, rather than six cards floating
+   on a page each paying for its own border, radius, shadow and outer margin.
+   That was the page's biggest source of dead space: six gutters where one
+   rule does the same job.
+
+   Rhythm: 32px between a section's own heading and its content, 26/34px of
+   section padding, 22px between blocks inside a section. One horizontal
+   inset (--rep-pad) for every row in the document, so the band, the strip,
+   the sections and the footer all line up on the same left edge.
+
+   Tokens only (--h-*), so the report follows the desk into dark mode. The
+   band keeps forest green in both themes: white on #03535F is legible either
+   way, and a header that inverts stops reading as a header.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.hire-report {
+  --rep-pad: 38px;
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 8px 24px 64px;
+  color: var(--h-ink);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+.hire-report__back {
+  margin-bottom: 14px;
+}
+
+/* Back on the left, save on the right, above the sheet. Both are chrome for
+   reading the report, not part of it, so neither prints. */
+.hire-report__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.hire-report__bar .hire-report__back {
+  margin-bottom: 0;
+}
+
+.hire-report__pdf {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--h-primary);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow:
+    inset 0 -3px 6px rgba(0, 0, 0, 0.22),
+    inset 0 1px 1px rgba(255, 255, 255, 0.14),
+    0 4px 12px rgba(3, 83, 95, 0.16);
+  transition: background-color 160ms var(--ease);
+}
+
+.hire-report__pdf:hover {
+  background: var(--h-primary-hover);
+}
+
+.hire-report__pdf:focus-visible {
+  outline: 2px solid var(--h-primary);
+  outline-offset: 3px;
+}
+
+/* The sheet. `overflow: hidden` lets the band bleed to the corners without
+   restating the radius on it. */
+.hire-report__doc {
+  overflow: hidden;
+  border: 1px solid var(--h-border);
+  border-radius: 20px;
+  background: var(--h-surface);
+  box-shadow: 0 6px 26px rgba(0, 0, 0, 0.07);
+}
+
+/* ── Header band ────────────────────────────────────────────────────────── */
+
+.hire-report__band {
+  position: relative;
+  overflow: hidden;
+  padding: 30px var(--rep-pad);
+  background: linear-gradient(134deg, #03535f 0%, #076573 58%, #02434d 100%);
+  color: #ffffff;
+}
+
+.hire-report__band--quiet {
+  min-height: 132px;
+}
+
+/* One soft highlight for depth, not a glow. Behind the content and
+   pointer-transparent, so it can never eat a click. */
+.hire-report__glow {
+  position: absolute;
+  inset: -45% -8% auto auto;
+  width: 380px;
+  height: 380px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(166, 210, 213, 0.24) 0%,
+    rgba(166, 210, 213, 0) 68%
+  );
+  pointer-events: none;
+}
+
+/* Name and score share a line. Stacking the score under the meta row pushed
+   the first section below the fold on a laptop and bought nothing. */
+.hire-report__bandmain {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+.hire-report__who {
+  min-width: 0;
+}
+
+.hire-report__eyebrow {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.hire-report__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-family: var(--font-outfit), sans-serif;
+  font-size: 34px;
+  line-height: 40px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+}
+
+/* Default badge uses dark green (#197E23) for light cards — unreadable on
+   the report's forest band. Force light type + a stronger accent wash. */
+.hire-report__band .hire-open-to-work {
+  background: rgba(24, 211, 155, 0.28);
+  color: #ffffff;
+}
+
+.hire-report__loading {
+  position: relative;
+  margin: 0;
+  font-family: var(--font-outfit), sans-serif;
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.hire-report__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 9px;
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.hire-report__metaitem + .hire-report__metaitem::before {
+  content: "·";
+  margin-right: 9px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.hire-report__score {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 11px;
+  line-height: 14px;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.hire-report__score b {
+  font-family: var(--font-outfit), sans-serif;
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 700;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+}
+
+.hire-report__score--note {
+  max-width: 220px;
+  font-size: 12px;
+  line-height: 18px;
+  font-style: italic;
+}
+
+/* ── Headline figures ───────────────────────────────────────────────────── */
+
+/* A divided strip inside the document, not a row of floating cards. Each
+   figure is one line of text and a label; boxing it cost a border, a shadow
+   and 32px of padding to say "2 years". */
+.hire-report__strip {
+  display: flex;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--h-border);
+  background: var(--h-peach-wash);
+}
+
+.hire-report__metric {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "icon value"
+    "icon label";
+  align-items: center;
+  flex: 1 1 0;
+  min-width: 160px;
+  column-gap: 11px;
+  padding: 15px var(--rep-pad);
+}
+
+.hire-report__metric + .hire-report__metric {
+  border-left: 1px solid var(--h-border);
+}
+
+.hire-report__metric svg {
+  grid-area: icon;
+  color: var(--h-primary);
+}
+
+.hire-report__metricv {
+  grid-area: value;
+  font-family: var(--font-outfit), sans-serif;
+  font-size: 19px;
+  line-height: 24px;
+  font-weight: 600;
+  color: var(--h-ink);
+}
+
+.hire-report__metrick {
+  grid-area: label;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--h-gray-600);
+}
+
+/* ── Sections ───────────────────────────────────────────────────────────── */
+
+/* The stagger wrapper orchestrates the sections' entrance and must not add a
+   box of its own, or it would sit between the sheet and the sections and
+   break the hairline rhythm. `display: contents` gives it no box at all. */
+.hire-report__flow {
+  display: contents;
+}
+
+.hire-report__section {
+  padding: 26px var(--rep-pad) 30px;
+}
+
+/* The hairline between sections runs the full width of the sheet, which is
+   why the section head no longer needs a rule of its own trailing off into
+   empty space beside the title. */
+.hire-report__section + .hire-report__section {
+  border-top: 1px solid var(--h-border);
+}
+
+.hire-report__sechead {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 11px;
+  margin-bottom: 18px;
+}
+
+.hire-report__secnum {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--h-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.hire-report__sectitle {
+  margin: 0;
+  font-family: var(--font-outfit), sans-serif;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 600;
+  color: var(--h-ink);
+}
+
+.hire-report__secnote {
+  font-size: 13px;
+  color: var(--h-gray-600);
+}
+
+.hire-report__block + .hire-report__block {
+  margin-top: 22px;
+}
+
+.hire-report__blockh {
+  margin: 0 0 10px;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--h-gray-500);
+}
+
+/* The summary carries the page, so it reads a size up from body copy. */
+.hire-report__lede {
+  margin: 0;
+  max-width: 70ch;
+  font-size: 17px;
+  line-height: 28px;
+  color: var(--h-ink);
+}
+
+/* ── Candidate parameters ───────────────────────────────────────────────── */
+
+/* White, not tinted. The proof chips below are already the clay wash, and two
+   tinted panels stacked read as one continuous block of colour with a heading
+   dropped in the middle of it. Colour here belongs to the bars. */
+.hire-report__params {
+  padding: 18px 20px 20px;
+  border: 1px solid var(--h-border);
+  border-radius: 14px;
+  background: var(--h-surface);
+}
+
+.hire-report__paramtop {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--h-gray-600);
+}
+
+.hire-report__paramtotal {
+  font-family: var(--font-outfit), sans-serif;
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--h-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Capped so the caption breaks after "overall" rather than running the full
+   width of the panel and pulling the eye away from the number. */
+.hire-report__paramunit {
+  max-width: 34ch;
+}
+
+/* Two columns once there is room. A single column stretched each track to
+   ~700px on a laptop, which is a lot of empty rail for a 0-100 value and makes
+   two close scores harder to tell apart, not easier. Two columns halve the
+   rail and halve the block's height. */
+/* `min(290px, 100%)`, not a bare 290px: a bare minimum larger than the panel
+   is a floor auto-fit cannot go under, so on a phone the row overflowed its
+   own panel and pushed the score past the right edge. */
+.hire-report__paramlist {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(290px, 100%), 1fr));
+  gap: 11px 30px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Label, bar, number. A common baseline is what makes seven values
+   comparable at a glance, which a ring of slices cannot do. */
+.hire-report__param {
+  display: grid;
+  grid-template-columns: minmax(96px, 148px) 1fr 34px;
+  align-items: center;
+  gap: 14px;
+}
+
+.hire-report__paramk {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--h-gray-700);
+}
+
+.hire-report__track {
+  position: relative;
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--h-gray-100);
+  overflow: hidden;
+}
+
+.hire-report__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.hire-report__paramv {
+  font-size: 14px;
+  font-weight: 700;
+  text-align: right;
+  color: var(--h-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Verified evidence ──────────────────────────────────────────────────── */
+
+/* Chips that wrap, not a grid of minmax(240px) boxes: each fact is four or
+   five words, and a grid column sized for the longest one left the rest
+   two-thirds empty. */
+.hire-report__proof {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hire-report__prooflet {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 13px;
+  border: 1px solid var(--h-card-line);
+  border-radius: 10px;
+  background: var(--h-card);
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--h-ink);
+}
+
+.hire-report__prooflet svg {
+  flex: none;
+  color: var(--h-primary);
+}
+
+/* ── Timeline (completions and jobs) ────────────────────────────────────── */
+
+.hire-report__tl {
+  position: relative;
+  margin: 16px 0 0;
+  padding: 0 0 0 26px;
+  list-style: none;
+}
+
+.hire-report__tl::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--h-card-line);
+}
+
+.hire-report__tl--jobs {
+  margin-top: 0;
+  padding-left: 0;
+}
+
+.hire-report__tl--jobs::before {
+  display: none;
+}
+
+.hire-report__tlrow {
+  position: relative;
+  display: flex;
+  gap: 13px;
+}
+
+.hire-report__tlrow + .hire-report__tlrow {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--h-border);
+}
+
+.hire-report__tl:not(.hire-report__tl--jobs) .hire-report__tlrow + .hire-report__tlrow {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.hire-report__dot {
+  position: absolute;
+  left: -26px;
+  top: 5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--h-primary);
+  background: var(--h-surface);
+}
+
+.hire-report__tile {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: var(--h-card);
+  color: var(--h-primary);
+  font-family: var(--font-outfit), sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.hire-report__tltitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--font-outfit), sans-serif;
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 600;
+  color: var(--h-ink);
+}
+
+.hire-report__tlsub {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--h-gray-600);
+}
+
+.hire-report__tldate {
+  margin: 3px 0 0;
+  font-size: 12px;
+  line-height: 17px;
+  color: var(--h-gray-500);
+  font-variant-numeric: tabular-nums;
+}
+
+.hire-report__tlbody {
+  margin: 8px 0 0;
+  max-width: 66ch;
+  font-size: 14px;
+  line-height: 23px;
+  color: var(--h-gray-700);
+}
+
+.hire-report__tag {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--h-good);
+  color: var(--h-good-ink);
+  font-family: var(--font-inter), sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ── Contact rows ───────────────────────────────────────────────────────── */
+
+/* Label left, value right, hairline between. Boxed cards gave each one-line
+   fact a 230px card and 16px of padding around a short string. */
+.hire-report__rows {
+  margin: 0;
+  padding: 0;
+}
+
+.hire-report__row {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  align-items: baseline;
+  gap: 8px 20px;
+  padding: 13px 0;
+}
+
+.hire-report__row + .hire-report__row {
+  border-top: 1px solid var(--h-border);
+}
+
+.hire-report__row:first-child {
+  padding-top: 0;
+}
+
+.hire-report__rowk {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--h-gray-600);
+}
+
+.hire-report__rowk svg {
+  flex: none;
+  color: var(--h-gray-500);
+}
+
+.hire-report__rowv {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0;
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--h-ink);
+  overflow-wrap: anywhere;
+}
+
+.hire-report__rowv a {
+  color: var(--h-primary);
+  font-weight: 600;
+}
+
+.hire-report__fine {
+  flex-basis: 100%;
+  font-size: 12px;
+  line-height: 17px;
+  color: var(--h-gray-500);
+}
+
+.hire-report__unlock {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Clay, like every other primary control on the desk. */
+.hire-report__reveal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--h-primary);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: pre;
+  cursor: pointer;
+  box-shadow:
+    inset 0 -3px 6px rgba(0, 0, 0, 0.22),
+    inset 0 1px 1px rgba(255, 255, 255, 0.14),
+    0 4px 12px rgba(3, 83, 95, 0.16);
+  transition: background-color 160ms var(--ease);
+}
+
+.hire-report__reveal:hover {
+  background: var(--h-primary-hover);
+}
+
+.hire-report__reveal:focus-visible {
+  outline: 2px solid var(--h-primary);
+  outline-offset: 4px;
+}
+
+.hire-report__self {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--h-pill);
+  color: var(--h-pill-ink);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+/* ── Education ──────────────────────────────────────────────────────────── */
+
+.hire-report__edu {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+/* ── Skills ─────────────────────────────────────────────────────────────── */
+
+.hire-report__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hire-report__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--h-border-strong);
+  border-radius: 999px;
+  background: var(--h-surface);
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--h-ink);
+}
+
+/* Provenance is the border and the tick, not a word repeated on every chip. */
+.hire-report__chip--proven {
+  border-color: rgba(3, 83, 95, 0.4);
+  background: var(--h-card);
+  color: var(--h-primary);
+  font-weight: 600;
+}
+
+/* ── Footnote ───────────────────────────────────────────────────────────── */
+
+.hire-report__foot {
+  margin: 0;
+  padding: 16px var(--rep-pad) 20px;
+  border-top: 1px solid var(--h-border);
+  background: var(--h-peach-wash);
+  max-width: none;
+  font-size: 12px;
+  line-height: 19px;
+  color: var(--h-gray-500);
+}
+
+/* ── Nothing cached ─────────────────────────────────────────────────────── */
+
+.hire-report__blank {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  max-width: 520px;
+  margin: 40px auto;
+  padding: 40px 32px;
+  border: 1px solid var(--h-border);
+  border-radius: 20px;
+  background: var(--h-surface);
+  text-align: center;
+}
+
+.hire-report__blankmark {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 17px;
+  background: var(--h-card);
+  color: var(--h-primary);
+}
+
+.hire-report__blankh {
+  margin: 0;
+  font-family: var(--font-outfit), sans-serif;
+  font-size: 24px;
+  line-height: 31px;
+  font-weight: 600;
+  color: var(--h-ink);
+}
+
+.hire-report__blankp {
+  margin: 0;
+  font-size: 15px;
+  line-height: 23px;
+  color: var(--h-gray-600);
+}
+
+.hire-report__blankcta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 22px;
+  margin-top: 4px;
+  border-radius: 12px;
+  background: var(--h-primary);
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow:
+    inset 0 -3px 6px rgba(0, 0, 0, 0.22),
+    inset 0 1px 1px rgba(255, 255, 255, 0.14),
+    0 4px 12px rgba(3, 83, 95, 0.16);
+}
+
+.hire-report__blankcta:hover {
+  background: var(--h-primary-hover);
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .hire-report {
+    --rep-pad: 26px;
+    padding: 8px 20px 56px;
+  }
+
+  .hire-report__band {
+    padding: 26px var(--rep-pad);
+  }
+
+  .hire-report__name {
+    font-size: 29px;
+    line-height: 36px;
+  }
+
+  .hire-report__metric {
+    min-width: 50%;
+  }
+
+  /* Two per row: the second loses its left rule and every row after the
+     first gains a top one, so the strip stays a grid and not a stack. */
+  .hire-report__metric:nth-child(2n + 1) {
+    border-left: 0;
+  }
+
+  .hire-report__metric:nth-child(n + 3) {
+    border-top: 1px solid var(--h-border);
+  }
+
+  .hire-report__row {
+    grid-template-columns: 140px 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .hire-report {
+    --rep-pad: 18px;
+    padding: 8px 14px 44px;
+  }
+
+  .hire-report__doc {
+    border-radius: 16px;
+  }
+
+  .hire-report__bandmain {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .hire-report__name {
+    font-size: 25px;
+    line-height: 32px;
+  }
+
+  .hire-report__score {
+    align-self: flex-start;
+  }
+
+  .hire-report__metric {
+    min-width: 100%;
+    border-left: 0;
+  }
+
+  .hire-report__metric + .hire-report__metric {
+    border-left: 0;
+    border-top: 1px solid var(--h-border);
+  }
+
+  .hire-report__section {
+    padding: 22px var(--rep-pad) 26px;
+  }
+
+  .hire-report__sectitle {
+    font-size: 20px;
+    line-height: 26px;
+  }
+
+  .hire-report__lede {
+    font-size: 16px;
+    line-height: 26px;
+  }
+
+  /* Label over value: two columns in 375px left the value four words wide
+     and wrapping every line. */
+  .hire-report__row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .hire-report__param {
+    grid-template-columns: 1fr 34px;
+    gap: 4px 12px;
+  }
+
+  .hire-report__paramk {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ── Print ──────────────────────────────────────────────────────────────── */
+
+/* ── Print, and therefore Save as PDF ───────────────────────────────────────
+
+   The download button is `window.print()`, so this block IS the PDF. The page
+   box itself (A4, 12mm) is set once globally in globals.css.
+
+   `:has(.hire-report)` scopes the chrome rules to this page. Printing from
+   Messages or Settings is untouched; those pages have no print design and
+   should keep the browser default. */
+@media print {
+  .hire-app:has(.hire-report) .hire-app__header,
+  .hire-app:has(.hire-report) .hire-shell__rail,
+  .hire-app:has(.hire-report) .hire-nav-scrim,
+  .hire-app:has(.hire-report) .hire-journey,
+  .hire-report__bar {
+    display: none !important;
+  }
+
+  /* The shell is a two-column layout around a sidebar that is no longer
+     there. Flattened, the report gets the whole page box.
+
+     `overflow` and the fixed height matter more than the columns: on screen
+     the shell clips and `.hire-shell__content` scrolls inside it, and a
+     printed ancestor that clips to one viewport height prints ONE page and
+     drops the rest of the report. Both are released here. */
+  .hire-app:has(.hire-report),
+  .hire-app:has(.hire-report) .hire-shell,
+  .hire-app:has(.hire-report) .hire-shell__content {
+    display: block;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+    padding: 0;
+    margin: 0;
+  }
+
+  .hire-app:has(.hire-report) .hire-shell__content > * {
+    max-width: none;
+    margin-inline: 0;
+  }
+
+  .hire-report {
+    max-width: none;
+    padding: 0;
+  }
+
+  /* The sheet's frame is the paper now. */
+  .hire-report__doc {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .hire-report__band,
+  .hire-report__strip,
+  .hire-report__prooflet,
+  .hire-report__chip--proven,
+  .hire-report__tag,
+  .hire-report__fill,
+  .hire-report__foot {
+    /* Keep the greens on paper. A report whose header prints white loses the
+       one element that says which document this is, and a parameter bar with
+       no fill is not a chart. */
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Break between sections, never through a job, a row or a bar. */
+  .hire-report__section,
+  .hire-report__block,
+  .hire-report__tlrow,
+  .hire-report__row,
+  .hire-report__param,
+  .hire-report__params {
+    break-inside: avoid;
+  }
+
+  .hire-report__sectitle,
+  .hire-report__blockh {
+    break-after: avoid;
+  }
+
+  /* Underlining every URL is a screen affordance; on paper the address is
+     already the whole value. */
+  .hire-report__rowv a {
+    text-decoration: none;
+  }
+}

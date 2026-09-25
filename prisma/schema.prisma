@@ -193,6 +193,7 @@ model User {
   shortlistItems          RecruiterShortlistItem[]
   hackathonParticipants   HackathonParticipant[]
   hackathonRemovals       HackathonRemoval[]       @relation("HackathonRemoved")
+  hackathonVideoRegistrations HackathonVideoRegistration[] @relation("HackathonVideoRegistrant")
   newsletterSubscriptions NewsletterSubscription[]
   workshopRegistrations   WorkshopRegistration[]
   legalConsents           LegalConsent[]
@@ -1243,6 +1244,55 @@ model HackathonRemoval {
   @@index([userId, createdAt(sort: Desc)])
   @@index([teamId])
   @@index([createdAt(sort: Desc)])
+}
+
+enum HackathonVideoEmployment {
+  LEARNER
+  WORKING
+}
+
+/// VideoThon (video editors hackathon) registration. One row per user per event.
+/// Independent from `HackathonParticipant` which is coder-shaped (college,
+/// graduationYear). Video-track registrations are solo-only by design, so
+/// there is no `HackathonTeam` sibling — the row itself is the entry.
+///
+/// `currentCtc` is a free-text field so it can hold a rupees-per-year number,
+/// the literal string "NA", or an empty string (the form only requires it when
+/// employment=WORKING but accepts "NA" as a valid answer). `portfolioUrl` is
+/// any `https://` URL — Google Drive, Behance, YouTube, personal site.
+///
+/// Reads through `src/features/hackathon-video/*`, never direct Prisma calls
+/// outside that folder.
+model HackathonVideoRegistration {
+  id               String                   @id @default(cuid())
+  eventId          String
+  userId           String
+  fullName         String
+  email            String
+  phoneCountryCode String                   // e.g. "+91"
+  phoneNumber      String                   // digits only, no formatting
+  city             String
+  employment       HackathonVideoEmployment
+  currentCtc       String?
+  portfolioUrl     String
+  sourceSlug       String?
+
+  // Submission fields — populated during the submission window, null until
+  // the participant saves their entry. VideoThon is solo-only so there is
+  // no separate submission table; one row per participant, one lifecycle.
+  submissionUrl       String?
+  submissionNotes     String?
+  submissionUpdatedAt DateTime?
+
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+
+  user User @relation("HackathonVideoRegistrant", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId, createdAt(sort: Desc)])
+  @@index([userId])
+  @@index([sourceSlug])
 }
 
 /// Singleton (id always 1) — event-wide config editable from /admin/hackathon.

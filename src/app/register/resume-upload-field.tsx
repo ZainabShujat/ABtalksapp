@@ -12,7 +12,7 @@ import {
 } from "@/features/resume/types";
 
 /**
- * The résumé step of registration.
+ * Optional résumé upload on registration.
  *
  * Deliberately NOT `components/profile/resume-section.tsx`. That one shows a
  * strength breakdown, a "paste a link instead" alternative and a remove button
@@ -23,9 +23,8 @@ import {
  *
  * The upload runs on its own, before the form is submitted, because parsing
  * takes seconds and a candidate should watch that happen rather than watch a
- * Submit button hang. What it produces — a `CandidateResume` row keyed on the
- * user — is what `completeRegistrationAction` checks for, so this component
- * reporting success is a convenience for the button state, not the gate.
+ * Submit button hang. A READY `CandidateResume` is merged into the profile
+ * after registration; skipping upload still allows completion.
  */
 
 const MAX_MB = Math.floor(MAX_RESUME_BYTES / (1024 * 1024));
@@ -78,9 +77,9 @@ export function ResumeUploadField({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor="resume-upload">Resume</Label>
+      <Label htmlFor="resume-upload">Resume (optional)</Label>
       <p className="text-xs text-muted-foreground">
-        Resume will be used to fill in your education, experience, projects, skills
+        Optional — used to fill in your education, experience, projects, skills
         and links. PDF only, up to{" "}
         {MAX_MB} MB.
       </p>

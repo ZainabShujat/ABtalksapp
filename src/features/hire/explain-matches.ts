@@ -1,7 +1,12 @@
 import "server-only";
 
 import { logger } from "@/lib/logger";
-import { refPublicId } from "@/features/hire/candidate-ref";
+import {
+  candidateSummaryDetail,
+  cleanRecruiterCopy,
+  trackLongLabel,
+  type SummaryInput,
+} from "@/features/hire/candidate-summary";
 import type { ScoredCandidate } from "@/features/hire/types";
 import type { JobSpec } from "@/lib/validations/hire";
 
@@ -41,7 +46,7 @@ export function explainMatchesDeterministic(
 ): ExplainResult {
   const explained: ExplainedMatch[] = matches.map((m) => ({
     ...m,
-    rationale: buildRationale(m, spec),
+    rationale: buildRationale(m),
   }));
 
   const overallGap = buildOverallGap(matches, nearMisses, spec, context);
@@ -70,6 +75,29 @@ const EXPLAIN_SCHEMA: Record<string, unknown> = {
 };
 
 /**
+ * Exactly what the model is shown for one candidate.
+ *
+ * One function so the figure guard below reads the same object: were the two to
+ * drift, a rationale citing a number we had handed the model would be rejected
+ * for being ungrounded.
+ *
+ * No public id and no gaps. The id is no longer quoted anywhere a recruiter
+ * reads, and gaps are no longer surfaced on the card or in the panel — leaving
+ * either in the payload is an invitation to write them back into the prose.
+ */
+function matchFigures(m: ScoredCandidate) {
+  return {
+    score: m.score,
+    tier: m.tier,
+    evidence: m.evidence,
+    /** How long the track runs, so "42 of 60" is sayable rather than "42". */
+    totalTrackDays: m.dossier?.evidence.cohortProgress.value.ofDays ?? null,
+    trackName: trackLongLabel(m.source),
+    availabilityUnknown: m.availabilityUnknown,
+  };
+}
+
+/**
  * Every figure the model quotes must be one the platform actually gave it for
  * that candidate.
  *
@@ -87,16 +115,7 @@ const EXPLAIN_SCHEMA: Record<string, unknown> = {
 function groundedFigures(m: ScoredCandidate): Set<string> {
   // Deliberately excludes id and fullName — a cuid carries arbitrary digits
   // and would whitelist almost anything.
-  const source = JSON.stringify({
-    score: m.score,
-    tier: m.tier,
-    evidence: m.evidence,
-    gaps: m.gaps,
-    // The public id is digits the model is *told* to quote. Without it here the
-    // guard rejects every rationale for citing the label we asked it to use.
-    publicId: refPublicId(m.candidateRef),
-  });
-  return new Set(source.match(/\d+/g) ?? []);
+  return new Set(JSON.stringify(matchFigures(m)).match(/\d+/g) ?? []);
 }
 
 /**
@@ -175,15 +194,10 @@ export async function explainMatches(
       role: spec.title,
       mustHaveStack: spec.mustHaveStack,
       // No name goes to the model, so no name can come back in a rationale
-      // that a recruiter then reads. It refers to candidates by public id.
+      // that a recruiter then reads. It refers to candidates as "they".
       matches: matches.map((m) => ({
         id: m.candidateRef,
-        publicId: refPublicId(m.candidateRef),
-        score: m.score,
-        tier: m.tier,
-        evidence: m.evidence,
-        gaps: m.gaps,
-        availabilityUnknown: m.availabilityUnknown,
+        ...matchFigures(m),
       })),
       nearMissCount: nearMisses.length,
     };
@@ -192,19 +206,21 @@ export async function explainMatches(
       rationales: { id: string; rationale: string }[];
       overallGap: string;
     }>({
-      system: `You write recruiter-facing match rationales for ABTalks Scout, which ranks candidates on verified platform evidence — missions completed, first-attempt passes, commit days, graded projects, recorded interviews — never resumes or self-reported claims.
+      system: `You write recruiter-facing match rationales for ABTalks Scout, which ranks candidates on verified platform evidence (missions completed, first-attempt passes, commit days, graded projects, recorded interviews), never on resumes or self-reported claims.
 
 Rules:
-- Refer to each candidate by their publicId (e.g. AB-1234). You are not given names and must never invent one.
-- Provenance matters and must be worded correctly. Missions passed, first-attempt passes, commit days, project scores and interview scores are VERIFIED by the platform — state them as fact. Skills, job role and years of experience are SELF-DECLARED — write them as "declared" or "says they know". Never present a declared skill as proven.
-- "missionsPassed" is the number of missions they actually completed. Never quote "missionPoints" — it includes days waived to everyone at enrolment and overstates the work.
+- Write plain recruiter-facing prose. Refer to the candidate as "they" / "this candidate". You are not given names and must never invent one, and you must never write an ABTalks reference such as "AB-1234".
+- Never open with a score or tier. "AB-1042 scores 78/100 (PARTIAL)" is exactly the shape to avoid. Lead with what the person has done.
+- Provenance matters and must be worded correctly. Missions passed, first-attempt passes, commit days, project scores and interview scores are VERIFIED by the platform, so state them as fact. Skills, job role and years of experience are SELF-DECLARED, so write them as "declared" or "says they know". Never present a declared skill as proven.
+- "missionsPassed" is the number of missions they actually completed. Never quote "missionPoints": it includes days waived to everyone at enrolment and overstates the work. Where "totalTrackDays" and "trackName" are present, write the count as "42 of 60 missions of 60-Day Challenge".
 - Cite ONLY fields present in the JSON you are given. Never invent a score, a number, a project, a skill or an employer.
 - Every figure you write must appear verbatim in the payload. If you cannot support a claim, leave it out.
-- Two or three sentences per candidate. Say what the evidence shows, then what is missing.
+- Two or three sentences per candidate, describing what the verified evidence shows and what the candidate declares. Do not list shortcomings or gaps.
 - Where availabilityUnknown is true, say salary, notice and location are unconfirmed.
+- Never use an em dash. Use a comma, a full stop or a hyphen instead.
 - Never promise a hire, predict performance, or compare candidates as people.
 - "overallGap" is one short paragraph on what this shortlist does and does not cover.
-- In "overallGap", never use an absolute quantifier — no "all", "every", "none of them", "nobody". You cannot verify a claim about everybody. Write "the 6 shown here" or "most of this shortlist" instead.`,
+- In "overallGap", never use an absolute quantifier: no "all", "every", "none of them", "nobody". You cannot verify a claim about everybody. Write "the 6 shown here" or "most of this shortlist" instead.`,
       messages: [{ role: "user", content: JSON.stringify(payload) }],
       schemaName: "match_rationales",
       schema: EXPLAIN_SCHEMA,
@@ -241,7 +257,10 @@ Rules:
         if (!candidate || inventsFigures(candidate, groundedFigures(m))) {
           return m;
         }
-        return { ...m, rationale: candidate };
+        // The prompt forbids a reference label and an em dash; the sanitiser is
+        // what actually guarantees neither reaches the card.
+        const clean = cleanRecruiterCopy(candidate);
+        return clean.length > 0 ? { ...m, rationale: clean } : m;
       }),
       overallGap: gapUsable ? gap : base.overallGap,
     };
@@ -250,44 +269,58 @@ Rules:
   }
 }
 
-function buildRationale(m: ScoredCandidate, spec: JobSpec): string {
-  const e = m.evidence;
-  const parts: string[] = [];
-  // Public id, not the name: this string is rendered to recruiters and stored
-  // on the match row, so it must not carry identity.
-  parts.push(
-    `${refPublicId(m.candidateRef)} scores ${m.score}/100 (${m.tier}) for ${spec.title ?? "this role"}.`,
-  );
-  if (e.skills.length) {
-    parts.push(`Declared skills: ${e.skills.slice(0, 8).join(", ")}.`);
-  }
-  // Earned passes, not mission points. Points include the three days waived at
-  // enrolment, so quoting them credits every member with work none of them did.
-  parts.push(
-    `Verified: ${e.missionsPassed} missions passed of ${e.missionsAttempted} attempted, ${e.cleanPassCount} on the first run, ${e.commitDayCount} commit days.`,
-  );
-  if (e.workingLanguages.length) {
+/**
+ * The summary inputs for one scored candidate.
+ *
+ * `givenName` stays null on purpose. This sentence is stored on the match row
+ * and rendered to recruiters, so it must not carry identity — the card decides
+ * for itself whether the viewer may see a name, and builds its own copy.
+ */
+function summaryInput(m: ScoredCandidate): SummaryInput {
+  const ev = m.dossier?.evidence;
+  return {
+    source: m.source,
+    givenName: null,
+    jobRole: m.jobRole,
+    yearsExperience: m.evidence.yearsExperience,
+    availabilityUnknown: m.availabilityUnknown,
+    // Earned passes, not mission points. Points include the three days waived
+    // at enrolment, so quoting them credits a member with work they never did.
+    missionsPassed: m.evidence.missionsPassed,
+    totalTrackDays: ev?.cohortProgress.value.ofDays ?? null,
+    cleanPassCount: m.evidence.cleanPassCount,
+    commitDayCount: m.evidence.commitDayCount,
+    projectScores: m.evidence.projectScores,
+    certificateIssued: ev?.certificateIssued?.value ?? null,
+    quizAverage: ev?.quizAverage?.value ?? null,
+    workingLanguages: m.evidence.workingLanguages,
+    skills: m.evidence.skills,
+  };
+}
+
+/**
+ * Prose, not a field dump.
+ *
+ * This used to open with "AB-1042 scores 78/100 (PARTIAL)" and close with a
+ * semicolon-joined gap list, which is the shape a recruiter skips. The figures
+ * are unchanged — same verified counts, same provenance wording — but they are
+ * now sentences, and the public id is gone from a string that a recruiter reads
+ * on the card, in the panel and out of a stored match row.
+ */
+function buildRationale(m: ScoredCandidate): string {
+  const parts = [candidateSummaryDetail(summaryInput(m))];
+  const interview = m.evidence.interview;
+  if (interview?.overall != null) {
+    const sub = [
+      interview.comm != null ? `communication ${interview.comm}` : null,
+      interview.tech != null ? `technical ${interview.tech}` : null,
+      interview.problem != null ? `problem solving ${interview.problem}` : null,
+    ].filter((v): v is string => v !== null);
     parts.push(
-      `Worked in ${e.workingLanguages.map((l) => l.toLowerCase()).join(", ")} on the missions they passed.`,
+      sub.length > 0
+        ? `Their recorded interview scored ${interview.overall} overall (${sub.join(", ")}).`
+        : `Their recorded interview scored ${interview.overall} overall.`,
     );
-  }
-  if (e.projectScores.length) {
-    parts.push(
-      `Graded projects: ${e.projectScores.join(", ")} (platform rubric scores).`,
-    );
-  }
-  if (e.interview?.overall != null) {
-    parts.push(
-      `Interview overall ${e.interview.overall} (comm ${e.interview.comm ?? "—"}, tech ${e.interview.tech ?? "—"}, problem ${e.interview.problem ?? "—"}).`,
-    );
-  }
-  if (m.availabilityUnknown) {
-    parts.push(
-      "Availability (salary / notice / location) not shared — confirm at outreach.",
-    );
-  }
-  if (m.gaps.length) {
-    parts.push(`Gaps: ${m.gaps.slice(0, 4).join("; ")}.`);
   }
   return parts.join(" ");
 }
@@ -323,10 +356,12 @@ function buildOverallGap(
     );
   }
   if (matches.length === 0 && nearMisses.length > 0) {
+    // The closest profile is described, never labelled: an `AB-####` reference
+    // is not something a recruiter can act on, and it is no longer printed on
+    // any search surface.
     const sample = nearMisses[0]!;
     return (
-      `No strong matches for ${stack}. Closest profile: ${refPublicId(sample.candidateRef)} ` +
-      `(score ${sample.score}) — ${sample.gaps.slice(0, 3).join("; ") || "see gaps"}.${poolNote} ` +
+      `No strong matches for ${stack}. The closest profile scores ${sample.score}.${poolNote} ` +
       `Save this demand and we can train a cohort toward this stack.`
     );
   }
@@ -335,7 +370,7 @@ function buildOverallGap(
   if (partial > 0) {
     return (
       `Found ${matches.length} candidate(s); ${partial} are partial.${poolNote}${coverage} ` +
-      `Review gaps on each card — confirm availability offline before outreach.`
+      `Open each profile for the full evidence, and confirm availability offline before outreach.`
     );
   }
   return `Found ${matches.length} candidate(s) ranked by verified ABTalks evidence.${poolNote}${coverage}`;

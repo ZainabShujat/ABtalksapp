@@ -48,6 +48,8 @@ const css = read("src/app/hire/hire-scout.css");
 const scoutChat = read("src/components/hire/scout-chat.tsx");
 const inspector = read("src/components/hire/candidate-inspector.tsx");
 const resizer = read("src/components/hire/panel-resizer.tsx");
+const report = read("src/components/hire/candidate-evidence-report.tsx");
+const evidencePage = read("src/app/hire/evidence/page.tsx");
 
 // A roomy desk, where PANEL_MAX is reachable: 720 / 0.6 = 1200.
 const WIDE = 1600;
@@ -274,33 +276,82 @@ suite("next/previous are still rendered and disabled at the ends", () => {
   );
 });
 
-suite("the resume is a section of the panel", () => {
-  assert(
-    inspector.includes('data-section="resume"'),
-    "there must be a resume section to jump to",
-  );
-  assert(
-    inspector.includes("EvidenceResumeBody"),
-    "the panel must render the shared evidence body",
-  );
-  assert(
-    inspector.includes('{ id: "resume", label: "Resume" }'),
-    "the resume needs a tab",
-  );
-  assert(
-    inspector.includes("hire-sheet--embed"),
-    "the embedded sheet needs its narrow-column variant",
-  );
-});
-
-suite("the locked-preview paywall and the full-page link survive", () => {
-  assert(
-    inspector.includes('setGate("resume")'),
-    "a locked preview must still reach the plan dialog",
-  );
+suite("the full report is a page, not a section of the panel", () => {
+  // The resume used to be embedded in the panel, under its own tab, which made
+  // the same evidence render twice a few inches apart. It is now one page, and
+  // "•••" is the only way to it.
   assert(
     inspector.includes("evidenceResumeHref"),
     "the ••• escape hatch to /hire/evidence must remain",
+  );
+  assert(
+    !inspector.includes('data-section="resume"') &&
+      !inspector.includes("EvidenceResumeBody"),
+    "the panel must not re-embed the report it links to",
+  );
+  assert(
+    evidencePage.includes("CandidateEvidenceReport") &&
+      evidencePage.includes("requireRecruiter"),
+    "/hire/evidence renders the report behind the recruiter gate",
+  );
+});
+
+suite("the report omits absences instead of printing them", () => {
+  // The old sheet was a labelled grid, so a candidate with no graded projects
+  // read as a page of "Not shared" and "None recorded". Every one of these
+  // strings is a sentence about a missing row, printed under a person's name.
+  const banned = [
+    "No verified evidence",
+    "None recorded",
+    "Not shared",
+    "No work experience",
+    "No skills declared",
+    "Not disclosed",
+    "has not declared",
+  ];
+  const copy = stripComments(report);
+  for (const phrase of banned) {
+    assert(
+      !copy.includes(phrase),
+      `the report must not print "${phrase}"; omit the block instead`,
+    );
+  }
+  assert(
+    !copy.includes("—"),
+    "no em dashes in recruiter-facing report copy",
+  );
+  assert(
+    !/\bAB-[0-9?]/.test(copy),
+    "the AB-#### reference is not shown on the report",
+  );
+});
+
+suite("the report reuses the shared wording and the panel's loaders", () => {
+  for (const helper of [
+    "recruiterSummary",
+    "recruiterRoleLabel",
+    "verifiedEvidenceFacts",
+  ]) {
+    assert(
+      report.includes(helper),
+      `${helper} is the one wording path; the report must not invent another`,
+    );
+  }
+  for (const loader of [
+    "loadInspectorWorkHistoryAction",
+    "loadInspectorExternalLinksAction",
+    "loadInspectorTrackEvidenceAction",
+    "loadInspectorSkillEvidenceAction",
+  ]) {
+    assert(
+      report.includes(loader),
+      `${loader} keeps the report and the panel on the same data`,
+    );
+  }
+  assert(
+    report.includes("UnlockContactDialog") &&
+      report.includes("revealContactAction"),
+    "contact stays behind the existing unlock path",
   );
 });
 
@@ -334,6 +385,7 @@ suite("touched components log through no console and touch no prisma", () => {
   for (const [name, src] of [
     ["candidate-inspector", inspector],
     ["panel-resizer", resizer],
+    ["candidate-evidence-report", report],
   ] as const) {
     const code = stripComments(src);
     assert(!code.includes("console."), `${name} must not log to console`);
