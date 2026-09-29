@@ -58,7 +58,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   const [guidance, reviewPending] = await Promise.all([
     getCareerGuidance(session.user.id, []),
-    needsImportedProfileReview(session.user.id),
+    needsImportedProfileReview(session.user.id).catch(() => false),
   ]);
 
   const firstName =

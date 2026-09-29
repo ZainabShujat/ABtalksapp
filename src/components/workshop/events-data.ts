@@ -379,6 +379,12 @@ export const fullDate = (iso: string) =>
 /** The weekly Saturday workshop cadence begins here. */
 const SATURDAY_SERIES_START = "2026-09-01";
 
+/**
+ * Saturdays that had no event or were cancelled and must not show a placeholder
+ * tile on the calendar.
+ */
+const SKIPPED_SATURDAYS = new Set(["2026-09-19"]);
+
 const isoKey = (d: Date) => d.toISOString().slice(0, 10);
 
 /** Full month name + year, e.g. "August 2026". */
@@ -408,7 +414,11 @@ export const placeholderSaturdays = (
   while (cursor.getUTCMonth() === month) {
     if (cursor.getUTCDay() === 6) {
       const key = isoKey(cursor);
-      if (key >= SATURDAY_SERIES_START && !taken.has(key)) {
+      if (
+        key >= SATURDAY_SERIES_START &&
+        !taken.has(key) &&
+        !SKIPPED_SATURDAYS.has(key)
+      ) {
         out.push({
           id: `workshop-${key}`,
           date: key,

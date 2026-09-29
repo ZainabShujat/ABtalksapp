@@ -170,9 +170,14 @@ export async function attachParsedImportToUser(userId: string, rawEmail: string 
  * registration sets `reviewPendingSince`; verifying a phone clears it.
  */
 export async function needsImportedProfileReview(userId: string): Promise<boolean> {
-  const row = await prisma.candidateProfile.findUnique({
-    where: { userId },
-    select: { reviewPendingSince: true, phoneVerified: true },
-  });
-  return Boolean(row?.reviewPendingSince) && row?.phoneVerified !== true;
+  try {
+    const row = await prisma.candidateProfile.findUnique({
+      where: { userId },
+      select: { reviewPendingSince: true, phoneVerified: true },
+    });
+    return Boolean(row?.reviewPendingSince) && row?.phoneVerified !== true;
+  } catch (error) {
+    logger.warn("[resume-import] failed to check imported profile review status", { userId, error });
+    return false;
+  }
 }
