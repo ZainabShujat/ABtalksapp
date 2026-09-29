@@ -54,8 +54,15 @@ import { config } from "dotenv";
 import {
   Role,
   Domain,
-  EnrollmentStatus,
-  SubmissionStatus,
+  EnrollmentStatusV2,
+  AttemptStatus,
+  AttemptLateness,
+  EvaluatorType,
+  ActivityType,
+  ActivityUnlockRule,
+  CohortStartMode,
+  CohortStatus,
+  ProgramVersionStatus,
   EvidenceSourceType,
   SkillProficiency,
   TalentRequestStatus,
@@ -120,6 +127,12 @@ const { ensureRecruiterWorkspace } = seedRequire(
 const { addToPipeline } = seedRequire(
   "../src/repositories/talent-pipeline",
 ) as typeof import("../src/repositories/talent-pipeline");
+const {
+  activityIdForDailyTask,
+  attemptIdForSubmission,
+  cohortSlugForDomain,
+  peIdForEnrollment,
+} = seedRequire("../src/repositories/ids") as typeof import("../src/repositories/ids");
 
 const PRODUCTION_DB_HOST_IDS = ["ep-nameless-term-ams9a5e3", ".main."] as const;
 const SUFFIX = "@demo.abtalks.dev";
@@ -589,6 +602,110 @@ async function ensureChallenge(domain: Domain, days: number): Promise<string> {
     });
   }
 
+  const slug = cohortSlugForDomain(domain);
+  let cohort = await prisma.cohort.findUnique({
+    where: { slug },
+    select: { id: true, programVersionId: true },
+  });
+  if (!cohort) {
+    let category = await prisma.programCategory.findFirst({
+      where: { isActive: true },
+      select: { id: true },
+    });
+    if (!category) {
+      category = await prisma.programCategory.upsert({
+        where: { slug: "engineering" },
+        create: {
+          slug: "engineering",
+          name: "Engineering",
+        },
+        update: {},
+        select: { id: true },
+      });
+    }
+    const program = await prisma.learningProgram.upsert({
+      where: { slug },
+      create: {
+        slug,
+        title: `${domain} Challenge`,
+        description: `${domain} 60-day challenge.`,
+        categoryId: category.id,
+      },
+      update: {},
+      select: { id: true },
+    });
+    const version = await prisma.programVersion.upsert({
+      where: {
+        programId_versionNumber: { programId: program.id, versionNumber: 1 },
+      },
+      create: {
+        programId: program.id,
+        versionNumber: 1,
+        status: ProgramVersionStatus.PUBLISHED,
+        plannedDurationDays: 60,
+      },
+      update: {},
+      select: { id: true },
+    });
+    cohort = await prisma.cohort.upsert({
+      where: { slug },
+      create: {
+        programVersionId: version.id,
+        slug,
+        name: `${domain} Challenge`,
+        startMode: CohortStartMode.ROLLING,
+        timezone: "Asia/Kolkata",
+        status: CohortStatus.ACTIVE,
+      },
+      update: {},
+      select: { id: true, programVersionId: true },
+    });
+  }
+
+  const module = await prisma.module.upsert({
+    where: {
+      programVersionId_position: {
+        programVersionId: cohort.programVersionId,
+        position: 1,
+      },
+    },
+    create: {
+      programVersionId: cohort.programVersionId,
+      position: 1,
+      title: "Missions",
+      startDay: 1,
+      endDay: 60,
+    },
+    update: {},
+    select: { id: true },
+  });
+
+  const allTasks = await prisma.dailyTask.findMany({
+    where: { challengeId: challenge.id, dayNumber: { lte: days } },
+  });
+  for (const task of allTasks) {
+    const actId = activityIdForDailyTask(task.id);
+    await prisma.activity.upsert({
+      where: { id: actId },
+      create: {
+        id: actId,
+        moduleId: module.id,
+        position: task.dayNumber,
+        type: ActivityType.EXTERNAL_SUBMISSION,
+        title: task.title,
+        dayNumber: task.dayNumber,
+        points: 10,
+        isRequired: true,
+        unlockRule: ActivityUnlockRule.SCHEDULED,
+        maxAttempts: 1,
+        estimatedMinutes: task.estimatedMinutes,
+        difficulty: task.difficulty,
+        tags: task.tags,
+      },
+      update: {},
+    });
+  }
+
   return challenge.id;
 }
 
@@ -806,23 +923,37 @@ async function seedChallengeTrack(
 ): Promise<void> {
   const challengeId = await ensureChallenge(spec.domain, spec.submissions);
 
-  const enrollment = await prisma.enrollment.upsert({
-    where: { userId_challengeId: { userId, challengeId } },
+  const slug = cohortSlugForDomain(spec.domain);
+  const cohort = await prisma.cohort.findUnique({
+    where: { slug },
+    select: { id: true },
+  });
+  if (!cohort) {
+    throw new Error(`Missing cohort ${slug}`);
+  }
+
+  const existingPe = await prisma.programEnrollment.findUnique({
+    where: { userId_cohortId: { userId, cohortId: cohort.id } },
+    select: { id: true },
+  });
+  const peId = existingPe?.id ?? peIdForEnrollment(userId);
+
+  const enrollment = await prisma.programEnrollment.upsert({
+    where: { id: peId },
     create: {
+      id: peId,
       userId,
-      challengeId,
-      domain: spec.domain,
-      status: EnrollmentStatus.ACTIVE,
+      cohortId: cohort.id,
+      status: EnrollmentStatusV2.ACTIVE,
       startedAt: T0,
-      daysCompleted: spec.submissions,
-      currentStreak: Math.min(spec.streak, 7),
-      longestStreak: spec.streak,
-      lastSubmittedDay: spec.submissions,
+      enrolledAt: T0,
+      joinedAt: T0,
+      trackCurrentStreak: Math.min(spec.streak, 7),
+      trackLongestStreak: spec.streak,
     },
     update: {
-      daysCompleted: spec.submissions,
-      longestStreak: spec.streak,
-      lastSubmittedDay: spec.submissions,
+      trackCurrentStreak: Math.min(spec.streak, 7),
+      trackLongestStreak: spec.streak,
     },
     select: { id: true },
   });
@@ -833,31 +964,68 @@ async function seedChallengeTrack(
   });
   const taskByDay = new Map(tasks.map((t) => [t.dayNumber, t.id]));
 
+  const existingAttempts = await prisma.activityAttempt.findMany({
+    where: {
+      enrollmentId: enrollment.id,
+      id: { startsWith: "aa_sub_" },
+    },
+    select: { activity: { select: { dayNumber: true } } },
+  });
   const have = new Set(
-    (
-      await prisma.submission.findMany({
-        where: { enrollmentId: enrollment.id },
-        select: { dayNumber: true },
-      })
-    ).map((s) => s.dayNumber),
+    existingAttempts
+      .map((a) => a.activity.dayNumber)
+      .filter((d): d is number => d != null),
   );
 
   for (let day = 1; day <= spec.submissions; day++) {
     if (have.has(day)) continue;
     const dailyTaskId = taskByDay.get(day);
     if (!dailyTaskId) continue;
-    await prisma.submission.create({
-      data: {
-        userId,
+    const activityId = activityIdForDailyTask(dailyTaskId);
+    const subId = `${key}-d${day}`;
+    const attemptId = attemptIdForSubmission(subId);
+    const submittedAt = daysAfter(day);
+
+    await prisma.activityAttempt.upsert({
+      where: { id: attemptId },
+      create: {
+        id: attemptId,
         enrollmentId: enrollment.id,
-        dailyTaskId,
-        dayNumber: day,
-        // `githubUrl` is @unique across the table — namespace it per candidate.
-        githubUrl: `https://github.com/demo-${key}/challenge/day-${day}`,
-        linkedinUrl: `https://linkedin.com/posts/demo-${key}-day-${day}`,
-        status: SubmissionStatus.ON_TIME,
-        submittedAt: daysAfter(day),
+        activityId,
+        attemptNumber: 1,
+        status: AttemptStatus.EVALUATED,
+        lateness: AttemptLateness.ON_TIME,
+        payload: {
+          githubUrl: `https://github.com/demo-${key}/challenge/day-${day}`,
+          linkedinUrl: `https://linkedin.com/posts/demo-${key}-day-${day}`,
+          legacySubmissionId: subId,
+        },
+        passed: true,
+        pointsAwarded: 10,
+        startedAt: submittedAt,
+        submittedAt,
       },
+      update: {
+        submittedAt,
+        passed: true,
+        status: AttemptStatus.EVALUATED,
+        lateness: AttemptLateness.ON_TIME,
+      },
+    });
+
+    await prisma.activityEvaluation.upsert({
+      where: { id: `ev_sub_${subId}` },
+      create: {
+        id: `ev_sub_${subId}`,
+        attemptId,
+        evaluatorType: EvaluatorType.AUTO,
+        passed: true,
+        score: 100,
+        maxScore: 100,
+        isAuthoritative: true,
+        createdAt: submittedAt,
+      },
+      update: { passed: true },
     });
   }
 }

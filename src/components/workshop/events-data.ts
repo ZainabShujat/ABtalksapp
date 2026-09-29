@@ -7,7 +7,6 @@ import {
   CalendarClock,
   Clapperboard,
   Code2,
-  GitBranch,
   GraduationCap,
   Palette,
   Rocket,
@@ -315,22 +314,6 @@ export const EVENTS: WorkshopEvent[] = [
       "From Prompt to Running App",
       "Ship & Deploy Your Build",
     ],
-  },
-  {
-    id: "workshop-2026-09-19",
-    date: "2026-09-19",
-    time: "7:00 PM IST",
-    tag: "Developer",
-    accent: "#076573",
-    track: "workshop",
-    Icon: GitBranch,
-    title: "GitHub Essentials: From Code to Collaboration",
-    desc: "Learn how to use GitHub effectively for version control, collaboration, project management, and building a strong developer workflow.",
-    host: "Sohail",
-    location: "Live · YouTube",
-    // No `register` / `registrationOpen`: signups all land in one table keyed
-    // by `getRegistrableEvent()`, which returns the SOONEST open event. Opening
-    // two at once would silently file both rosters under the earlier workshop.
   },
   {
     id: "workshop-2026-09-26",
