@@ -12,6 +12,10 @@ import {
   markImportRegisteredTx,
 } from "@/repositories/resume-import";
 import { normalizeEmail } from "@/features/resume/import/email";
+import { createCandidateIdentity } from "@/repositories/candidate-identity";
+import { generateUniqueReferralCode } from "@/features/registration/generate-referral-code";
+import { identityFromParsedResume } from "@/features/resume/import/identity-mapping";
+import { applyParsedResumeToProfile } from "@/features/resume/service";
 
 /**
  * How a student's Google sign-in takes over the candidate an admin imported
@@ -146,6 +150,39 @@ export async function attachParsedImportToUser(userId: string, rawEmail: string 
         tx,
       );
     }
+    const hasProfile = await tx.candidateProfile.findUnique({ where: { userId }, select: { id: true } });
+    if (!hasProfile) {
+      const mapped = identityFromParsedResume(parsed);
+      const user = await tx.user.findUnique({ where: { id: userId }, select: { name: true } });
+      const fullName = mapped.ok ? mapped.identity.fullName : (user?.name || "Candidate");
+      const userType = mapped.ok ? mapped.identity.userType : "STUDENT";
+      const headline = mapped.ok ? mapped.identity.headline : null;
+      const referralCode = await generateUniqueReferralCode();
+      await createCandidateIdentity(tx, {
+        userId,
+        fullName,
+        userType,
+        referralCode,
+        phone: null,
+        phoneVerified: false,
+        college: null,
+        collegeId: null,
+        organization: null,
+        role: null,
+        yearsExperience: null,
+        headline,
+        locationCity: null,
+        locationRegion: null,
+        countryCode: null,
+        synergyPoints: 0,
+      });
+      await tx.candidateProfile.update({
+        where: { userId },
+        data: { reviewPendingSince: new Date() },
+        select: { id: true },
+      });
+      await applyVisibilityChange(tx, { userId, kind: "admin_import" });
+    }
     const ok = await markImportRegisteredTx(tx, imp.id, {
       status: "CLAIMED",
       userId,
@@ -158,7 +195,14 @@ export async function attachParsedImportToUser(userId: string, rawEmail: string 
     if (error instanceof Error && error.message === LOST_RACE) return false;
     throw error;
   });
-  if (attached) logger.info("[resume-import] parsed import attached at signup", { userId, importId });
+  if (attached) {
+    try {
+      await applyParsedResumeToProfile(userId, parsed);
+    } catch {
+      // quiet
+    }
+    logger.info("[resume-import] parsed import attached at signup", { userId, importId });
+  }
   return attached;
 }
 
@@ -180,4 +224,96 @@ export async function needsImportedProfileReview(userId: string): Promise<boolea
     logger.warn("[resume-import] failed to check imported profile review status", { userId, error });
     return false;
   }
+}
+
+/**
+ * Checks whether an imported candidate needs to see the one-time /claim-profile interstitial.
+ * True when the profile was flagged by admin import (reviewPendingSince) AND
+ * they have not yet acknowledged the claim on /claim-profile.
+ */
+export async function needsClaimProfileAcknowledgement(userId: string): Promise<boolean> {
+  const reviewPending = await needsImportedProfileReview(userId);
+  if (!reviewPending) return false;
+
+  try {
+    const { cookies } = await import("next/headers");
+    const cookieStore = await cookies();
+    if (cookieStore.get("abtalks_claim_ack")?.value === "1") {
+      return false;
+    }
+  } catch {
+    // outside request context or cookies() not available
+  }
+
+  const ack = await prisma.legalConsent.findFirst({
+    where: {
+      userId,
+      source: "claim_profile_ack",
+    },
+    select: { id: true },
+  });
+
+  return ack === null;
+}
+
+/**
+ * Records that the candidate has acknowledged their imported profile on /claim-profile.
+ */
+export async function acknowledgeClaimProfile(userId: string): Promise<void> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  });
+  if (!user) return;
+
+  const { recordLegalConsents } = await import("@/features/legal/record-consent");
+  await recordLegalConsents({
+    userId,
+    email: user.email,
+    source: "claim_profile_ack",
+  });
+}
+
+/**
+ * Returns a summary of the candidate's pre-filled data to display on /claim-profile.
+ */
+export async function getCandidateClaimSummary(userId: string) {
+  const [profile, resume] = await Promise.all([
+    prisma.candidateProfile.findUnique({
+      where: { userId },
+      select: {
+        fullName: true,
+        headline: true,
+        phone: true,
+        phoneVerified: true,
+        education: {
+          select: {
+            degree: true,
+            institutionName: true,
+            graduationYear: true,
+          },
+          orderBy: { graduationYear: { sort: "desc", nulls: "last" } },
+          take: 1,
+        },
+        skills: {
+          select: { skill: { select: { name: true } } },
+          take: 10,
+        },
+      },
+    }),
+    prisma.candidateResume.findUnique({
+      where: { userId },
+      select: { fileName: true },
+    }),
+  ]);
+
+  return {
+    fullName: profile?.fullName ?? "",
+    headline: profile?.headline ?? "",
+    phone: profile?.phone ?? null,
+    phoneVerified: profile?.phoneVerified ?? false,
+    education: profile?.education[0] ?? null,
+    skills: profile?.skills.map((s) => s.skill.name) ?? [],
+    resumeFileName: resume?.fileName ?? null,
+  };
 }

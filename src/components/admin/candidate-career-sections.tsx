@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { CheckCircle2, ExternalLink } from "lucide-react";
+import { CheckCircle2, Download, ExternalLink } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -393,8 +393,20 @@ export function CandidateCareerSections({
             {detail.resume ? (
               <div className="space-y-1 text-sm">
                 <Fact label="Status">{detail.resume.status}</Fact>
-                {detail.resume.fileName ? (
-                  <Fact label="File">{detail.resume.fileName}</Fact>
+                {detail.resume.fileName || detail.resumeDownloadHref ? (
+                  <Fact label="File">
+                    {detail.resumeDownloadHref ? (
+                      <a
+                        className="inline-flex items-center gap-1 text-[#03535F] underline"
+                        href={detail.resumeDownloadHref}
+                      >
+                        {detail.resume.fileName || "Download résumé"}{" "}
+                        <Download className="size-3" />
+                      </a>
+                    ) : (
+                      detail.resume.fileName
+                    )}
+                  </Fact>
                 ) : null}
                 {detail.resume.sourceUrl ? (
                   <Fact label="Source">

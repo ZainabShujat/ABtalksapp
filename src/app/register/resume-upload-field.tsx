@@ -98,6 +98,11 @@ export function ResumeUploadField({
       }
       setFileName(result.data.fileName ?? file.name);
       onUploadedChange(true);
+      if (result.autoRegistered) {
+        toast.success("Profile created from your résumé! Redirecting to dashboard…");
+        window.location.assign("/dashboard");
+        return;
+      }
       toast.success("Resume analysed");
     } catch {
       toast.error("Something went wrong. Please try again.");

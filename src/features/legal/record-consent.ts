@@ -38,7 +38,11 @@ export type ConsentSource =
    * as `oauth_signup` — the account is created at sign-in, before any form —
    * and the same notice on the login page covers it.
    */
-  | "email_signup";
+  | "email_signup"
+  /**
+   * Student acknowledged their pre-filled imported profile on /claim-profile.
+   */
+  | "claim_profile_ack";
 
 type RecordConsentArgs = {
   userId?: string | null;

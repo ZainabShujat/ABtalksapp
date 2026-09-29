@@ -71,6 +71,15 @@ export type AdminCandidateDetail = {
   ops: StudentDetail | null;
   profile: CandidateDetail | null;
   resume: ResumeView | null;
+  /**
+   * Admin-scoped download href for the stored résumé file, or null when no
+   * file is stored.
+   *
+   * NOT `resume.downloadPath` — that constant is hard-coded to the owner-only
+   * `/api/profile/resume/file`, which resolves the blob from the session and
+   * would serve the ADMIN their own résumé (or a 404). Wrong file, no error.
+   */
+  resumeDownloadHref: string | null;
   accomplishments: VerifiedAccomplishment[];
   mockInterviews: HistoryEntry[];
   applications: ApplicationWithJob[];
@@ -232,6 +241,11 @@ export async function getAdminCandidateDetail(
     ops,
     profile,
     resume,
+    // `downloadPath` is non-null exactly when `CandidateResume.blobPathname`
+    // is set, so this is a free presence test rather than another query.
+    resumeDownloadHref: resume?.downloadPath
+      ? `/api/admin/candidates/${encodeURIComponent(userId)}/resume`
+      : null,
     accomplishments,
     mockInterviews: mockHistory.ok ? mockHistory.data : [],
     applications: applicationsResult.ok ? applicationsResult.data : [],

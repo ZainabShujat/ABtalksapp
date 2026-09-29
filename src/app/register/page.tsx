@@ -53,6 +53,10 @@ export default async function RegisterPage({ searchParams }: PageProps) {
     redirect("/api/auth/signout?callbackUrl=/login");
   }
 
+  if (session.user.isAdmin || userExists.role === "ADMIN") {
+    redirect("/admin");
+  }
+
   const registered = await isCandidateRegistered(session.user.id);
 
   // Registered = CandidateProfile (W4-B). Registration no longer requires a

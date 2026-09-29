@@ -7,6 +7,7 @@ import {
   ArrowUpRight,
   Award,
   Check,
+  ChevronDown,
   CircleMinus,
   Copy,
   Gauge,
@@ -350,6 +351,9 @@ export function CandidateInspector({
   );
   const status = decision ? DECISION_LABEL[decision] : null;
   const [reportOpen, setReportOpen] = useState(false);
+  /** Plan 165: which experience rows are expanded. Collapsed is the default —
+   *  the whole point is that the section was too long to scan. */
+  const [openJobs, setOpenJobs] = useState<Set<string>>(new Set());
   const [tab, setTab] = useState<TabId>("evidence");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -1252,43 +1256,77 @@ export function CandidateInspector({
           ) : workHistory === null ? (
             <p className="hire-profile__meta">Loading experience…</p>
           ) : jobs.length > 0 ? (
-            jobs.map((job) => (
-              <div key={job.id} className="hire-profile__org-block">
-                <span className="hire-profile__tile" aria-hidden="true">
-                  {monogram(job.companyName || job.title)}
-                </span>
-                <div className="hire-profile__org-main">
-                  <div>
-                    <p className="hire-profile__org-name">{job.companyName}</p>
-                    <p className="hire-profile__org-sub">
-                      {[job.title, job.employmentType, job.locationCity]
-                        .map((part) => part?.trim())
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  </div>
-                  <ul className="hire-profile__roles">
-                    <li className="hire-profile__role">
-                      <span
-                        className="hire-profile__timeline"
-                        aria-hidden="true"
-                      />
-                      <div className="hire-profile__role-body">
-                        <div className="hire-profile__role-head">
-                          <p className="hire-profile__role-title">{job.title}</p>
-                        </div>
-                        <p className="hire-profile__meta">{jobSpan(job)}</p>
-                        {job.description?.trim() ? (
-                          <p className="hire-profile__text">
-                            {job.description.trim()}
-                          </p>
-                        ) : null}
+            jobs.map((job) => {
+              // Plan 165: a résumé description is a multi-paragraph block, and
+              // four jobs turned this section into a wall of text between
+              // "Experience" and "Education". The role is what a recruiter
+              // scans; the description is what they read once they care.
+              //
+              // A job with no description gets no toggle at all — a disclosure
+              // that opens onto nothing is worse than a plain row.
+              const detail = job.description?.trim() ?? "";
+              const expandable = detail.length > 0;
+              const open = openJobs.has(job.id);
+              const panelId = `hire-job-detail-${job.id}`;
+              const head = (
+                <>
+                  <span className="hire-profile__job-role">{job.title}</span>
+                  <span className="hire-profile__job-at">
+                    {[job.companyName, job.employmentType, job.locationCity]
+                      .map((part) => part?.trim())
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                  <span className="hire-profile__meta">{jobSpan(job)}</span>
+                </>
+              );
+
+              return (
+                <div key={job.id} className="hire-profile__org-block">
+                  <span className="hire-profile__tile" aria-hidden="true">
+                    {monogram(job.companyName || job.title)}
+                  </span>
+                  <div className="hire-profile__org-main">
+                    {expandable ? (
+                      <button
+                        type="button"
+                        className="hire-profile__job-head"
+                        aria-expanded={open}
+                        aria-controls={panelId}
+                        onClick={() =>
+                          setOpenJobs((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(job.id)) next.delete(job.id);
+                            else next.add(job.id);
+                            return next;
+                          })
+                        }
+                      >
+                        <span className="hire-profile__job-headings">{head}</span>
+                        {/* aria-hidden: `aria-expanded` on the button is what
+                            conveys state; the chevron only draws it. */}
+                        <ChevronDown
+                          className={cn(
+                            "hire-profile__job-chevron",
+                            open && "is-open",
+                          )}
+                          aria-hidden="true"
+                        />
+                      </button>
+                    ) : (
+                      <div className="hire-profile__job-head hire-profile__job-head--static">
+                        <span className="hire-profile__job-headings">{head}</span>
                       </div>
-                    </li>
-                  </ul>
+                    )}
+                    {expandable && open ? (
+                      <p id={panelId} className="hire-profile__text">
+                        {detail}
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <p className="hire-profile__meta">No work experience recorded</p>
           )}

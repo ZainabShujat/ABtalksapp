@@ -38,6 +38,10 @@ export default async function WelcomePage({ searchParams }: Props) {
     redirect(`/login?from=${encodeURIComponent(next)}`);
   }
 
+  if (session.user.isAdmin || (session.user as { role?: string }).role === "ADMIN") {
+    redirect("/admin");
+  }
+
   const profile = await getProfileSummary(session.user.id);
   const name = firstName(profile?.fullName, session.user.name);
 

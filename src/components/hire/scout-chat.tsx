@@ -1972,8 +1972,25 @@ export function ScoutChat({
               {pending ? "Searching" : "Search"}
             </button>
           </div>
-          {hero && (
-          <div className="scout-criteria-slot is-open">
+          {/* Plan 165: the requirement ticks now ride BOTH composers.
+              They were hero-only, so the moment a recruiter pressed Search the
+              row they had been reading vanished — and the results composer,
+              which is where refinements are actually typed, gave no signal that
+              anything in the sentence had been recognised.
+
+              The hero keeps its existing always-open behaviour. On the results
+              screen the slot opens on the first character and closes when the
+              box is emptied, which is what lifts the bar and settles it back:
+              `.scout-criteria-slot` animates grid-template-rows 0fr → 1fr, so
+              the composer rises as the row makes room for itself. No transform
+              and no absolute positioning — both would fight the rect
+              measurement `hire-stage-flip` takes of this same composer. */}
+          <div
+            className={cn(
+              "scout-criteria-slot",
+              (hero || text.trim().length > 0) && "is-open",
+            )}
+          >
             <div className="scout-criteria-slot__clip">
               <ul
                 className="scout-criteria"
@@ -1997,7 +2014,6 @@ export function ScoutChat({
               </ul>
             </div>
           </div>
-          )}
         </form>
 
         <div className="scout-hero-slot scout-hero-slot--below">

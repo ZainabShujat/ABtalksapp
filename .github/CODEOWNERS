@@ -76,3 +76,14 @@
 /src/app/dev/interview-agent/                       @zainabshujat
 /src/app/dev/mock-voice-poc/                        @zainabshujat
 /src/app/program/ai-cohort/(interview)/             @zainabshujat
+
+# ------------------------------------------------------------------------------
+# 4. Platform Admin / Candidate Search Domain
+# ------------------------------------------------------------------------------
+# Deliberately narrow: claiming /src/app/admin/ or /src/features/admin/ wholesale
+# would override the resume-imports, hire, recruiters and mock-interview lines
+# above (last match wins).
+/src/app/api/admin/candidates/                      @byteninjaa0
+/src/app/admin/search/                              @byteninjaa0
+/src/features/admin/search-admin-console.ts         @byteninjaa0
+/src/features/admin/admin-resume-download.test.ts   @byteninjaa0

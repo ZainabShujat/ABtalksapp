@@ -65,6 +65,13 @@ export default async function AdminActionsPage({
                   >
                     {row.targetName}
                   </Link>
+                ) : row.detailHref ? (
+                  <Link
+                    href={row.detailHref}
+                    className="w-[8.5rem] shrink-0 truncate text-primary hover:underline"
+                  >
+                    {row.targetName}
+                  </Link>
                 ) : (
                   <span className="w-[8.5rem] shrink-0 truncate text-muted-foreground">
                     {row.targetName}

@@ -47,6 +47,10 @@ export default async function LoginPage({ searchParams }: Props) {
 
   const session = await auth();
   if (session?.user?.id) {
+    if (session.user.isAdmin || (session.user as { role?: string }).role === "ADMIN") {
+      redirect("/admin");
+    }
+
     if (!from) redirect("/");
 
     // Recruiters and program applicants have their own funnels and their own

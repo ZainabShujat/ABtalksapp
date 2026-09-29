@@ -29,6 +29,7 @@ export async function searchAdminConsole(q: string) {
         name: true,
         disabledAt: true,
         candidateProfile: { select: { fullName: true } },
+        resume: { select: { blobPathname: true, fileName: true } },
       },
     }),
     prisma.recruiterProfile.findMany({
@@ -76,8 +77,12 @@ export async function searchAdminConsole(q: string) {
   ]);
 
   const names = await listCandidateProfiles(candidates.map((c) => c.id));
-  const namedCandidates = candidates.map((c) => ({
+  // `resume` is destructured away on purpose: the page needs a boolean and a
+  // name, and a private blob pathname has no business on a rendered payload.
+  const namedCandidates = candidates.map(({ resume, ...c }) => ({
     ...c,
+    hasResumeFile: Boolean(resume?.blobPathname),
+    resumeFileName: resume?.fileName ?? null,
     studentProfile: {
       fullName:
         names.get(c.id)?.fullName ?? c.candidateProfile?.fullName ?? c.name ?? c.email,

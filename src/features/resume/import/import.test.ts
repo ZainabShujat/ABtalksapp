@@ -50,7 +50,7 @@ async function suite(name: string, fn: () => void | Promise<void>) {
 }
 
 const ROOT = process.cwd();
-const src = (p: string) => readFileSync(join(ROOT, p), "utf8");
+const src = (p: string) => readFileSync(join(ROOT, p), "utf8").replace(/\r\n/g, "\n");
 
 /** Deterministic PRNG so the load simulation is reproducible. */
 function mulberry32(seed: number) {
@@ -218,7 +218,7 @@ async function main() {
     const s = src("src/app/actions/admin-resume-import-actions.ts");
     assert(s.startsWith('"use server"'), "is a server action file");
     const fns = s.split(/\nexport async function /).slice(1);
-    assert(fns.length === 6, `expected 6 actions, found ${fns.length}`);
+    assert(fns.length === 7, `expected 7 actions, found ${fns.length}`);
     for (const fn of fns) {
       const body = fn.slice(fn.indexOf("{\n") + 2).trim();
       assert(
@@ -848,10 +848,10 @@ async function main() {
     assert(m.includes(`WHERE "status" IN ('PARSED', 'REGISTERED')`), "one open import per email");
   });
 
-  await suite("T16: registering against an existing account creates nothing and only merges additively", () => {
+  await suite("T16: registering against an existing account creates no new user and merges additively", () => {
     const s = src("src/features/resume/import/register.ts");
     const attach = s.slice(s.indexOf("async function attachToExisting"), s.indexOf("export async function registerImportedStudent"));
-    assert(!attach.includes("user.create") && !attach.includes("createCandidateIdentity"), "no creation");
+    assert(!attach.includes("user.create"), "no user creation");
     assert(attach.includes("const attachResume = user.resume === null"), "résumé attached only if none");
     assert(attach.includes("await mergeQuietly(user.id"), "additive merge path");
     const merge = s.slice(s.indexOf("async function mergeQuietly"), s.indexOf("async function attachToExisting"));

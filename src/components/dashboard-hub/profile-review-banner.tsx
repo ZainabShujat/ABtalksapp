@@ -29,7 +29,7 @@ export function ProfileReviewBanner() {
         </div>
         <Link
           href="/profile"
-          className={cn(buttonVariants({ size: "sm" }), "shrink-0 self-start sm:self-center")}
+          className={cn(buttonVariants({ size: "sm" }), "shrink-0 w-full sm:w-auto justify-center text-center self-stretch sm:self-center")}
         >
           Review my profile
         </Link>

@@ -72,7 +72,12 @@ export default async function JobDetailPage({ params }: PageProps) {
             <p className="font-heading text-[13px] font-semibold uppercase tracking-[0.08em] text-[#03535F]">
               {JOB_TYPE_LABEL[job.type]}
             </p>
-            <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-black sm:text-[40px] sm:leading-[48px]">
+            {/* Sized against the job card it opens from, which is
+                `text-xl font-semibold` / `sm:text-2xl`. At 40px bold this
+                heading was roughly twice its own card and a real job title
+                wrapped to two outsized lines. Standard scale tokens rather
+                than an arbitrary [40px], still a step above the card. */}
+            <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight text-black sm:text-3xl sm:leading-[40px]">
               {job.title}
             </h1>
             <p className="mt-1.5 text-sm text-[#4B4B4B]">

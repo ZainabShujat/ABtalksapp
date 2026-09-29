@@ -6,6 +6,8 @@ type RecentAdminAction = {
   actionLabel: string;
   targetUserId: string | null;
   targetName: string;
+  /** Set when the target no longer exists (self-deleted account). */
+  detailHref: string | null;
   createdAtRelative: string;
 };
 
@@ -44,6 +46,10 @@ export function ActivityTimeline({ items }: ActivityTimelineProps) {
                   href={`/admin/students/${row.targetUserId}`}
                   className="text-primary hover:underline"
                 >
+                  {row.targetName}
+                </Link>
+              ) : row.detailHref ? (
+                <Link href={row.detailHref} className="text-primary hover:underline">
                   {row.targetName}
                 </Link>
               ) : (

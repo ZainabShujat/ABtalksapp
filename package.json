@@ -78,6 +78,7 @@
     "test:visibility": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/visibility.test.ts",
     "test:demo1-security": "NODE_OPTIONS=--conditions=react-server tsx src/features/hire/isolation.test.ts && NODE_OPTIONS=--conditions=react-server tsx src/features/hire/contact-payload.test.ts && NODE_OPTIONS=--conditions=react-server tsx src/lib/rate-limit-policy.test.ts && NODE_OPTIONS=--conditions=react-server tsx src/lib/admin-auth.test.ts",
     "test:audit": "tsx src/features/admin/audit.test.ts",
+    "test:admin-resume-download": "tsx src/features/admin/admin-resume-download.test.ts",
     "test:cohorts": "cross-env NODE_OPTIONS=--conditions=react-server tsx src/features/admin/get-cohorts.test.ts",
     "test:account-ops": "tsx src/features/admin/account-ops.test.ts",
     "test:platform-config-write": "NODE_OPTIONS=--conditions=react-server tsx src/lib/platform-config.test.ts",

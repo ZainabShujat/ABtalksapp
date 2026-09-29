@@ -14,7 +14,10 @@ import { FaqSection } from "@/components/dashboard-hub/faq-section";
 import { HUB_CARD_HOVER_CLASS } from "@/components/dashboard-hub/nav-items";
 import { getHubData } from "@/features/dashboard/get-hub-data";
 import { registrationRedirect } from "@/features/registration/registration-gate";
-import { needsImportedProfileReview } from "@/features/resume/import/claim";
+import {
+  needsImportedProfileReview,
+  needsClaimProfileAcknowledgement,
+} from "@/features/resume/import/claim";
 import { ProfileReviewBanner } from "@/components/dashboard-hub/profile-review-banner";
 import type { Domain } from "@prisma/client";
 
@@ -60,6 +63,10 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     getCareerGuidance(session.user.id, []),
     needsImportedProfileReview(session.user.id).catch(() => false),
   ]);
+
+  if (reviewPending && (await needsClaimProfileAcknowledgement(session.user.id))) {
+    redirect("/claim-profile");
+  }
 
   const firstName =
     data.profile?.fullName.split(/\s+/)[0] ??

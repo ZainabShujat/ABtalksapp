@@ -16295,3 +16295,83 @@ a.hire-credits:hover { border-color: var(--h-primary); }
   flex-direction: column;
   gap: 4px;
 }
+
+/* ── Experience disclosure, candidate report (plan 165) ────────────────────
+   A résumé description is a multi-paragraph block; four jobs made this
+   section a wall of text. The row is now the scannable part and the
+   description opens on request.
+
+   Colours come from the --h-* tokens above, NOT --primary/--border: those hold
+   bare HSL triplets for Tailwind's hsl(var(--x)) wrapper, so a plain var() is
+   an invalid value and the rule silently drops (plan 158 shipped that bug). */
+.hire-profile__job-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background-color 150ms var(--ease);
+}
+
+.hire-profile__job-head:hover {
+  background: var(--h-peach-wash);
+}
+
+.hire-profile__job-head:focus-visible {
+  outline: 2px solid var(--h-primary);
+  outline-offset: 2px;
+}
+
+/* A job with no description is not a control: no pointer, no hover, no focus
+   ring, nothing that promises something will open. */
+.hire-profile__job-head--static {
+  cursor: default;
+}
+
+.hire-profile__job-head--static:hover {
+  background: none;
+}
+
+.hire-profile__job-headings {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hire-profile__job-role {
+  font-weight: 600;
+  color: var(--h-ink);
+}
+
+.hire-profile__job-at {
+  font-size: 13px;
+  color: var(--h-gray-600);
+}
+
+.hire-profile__job-chevron {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  color: var(--h-gray-500);
+  transition: transform 200ms var(--ease);
+}
+
+.hire-profile__job-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hire-profile__job-head,
+  .hire-profile__job-chevron {
+    transition: none;
+  }
+}

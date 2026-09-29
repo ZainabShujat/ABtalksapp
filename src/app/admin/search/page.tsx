@@ -66,6 +66,13 @@ export default async function AdminSearchPage({
                 row.name?.trim() ||
                 row.email,
               meta: `${row.email}${row.disabledAt ? " · Disabled" : ""}`,
+              action: row.hasResumeFile
+                ? {
+                    href: `/api/admin/candidates/${encodeURIComponent(row.id)}/resume`,
+                    label: "Résumé",
+                    title: row.resumeFileName ?? undefined,
+                  }
+                : undefined,
             }))}
           />
           <ResultList
@@ -110,7 +117,13 @@ function ResultList({
 }: {
   title: string;
   empty: string;
-  items: Array<{ href: string; title: string; meta: string }>;
+  items: Array<{
+    href: string;
+    title: string;
+    meta: string;
+    /** Optional trailing link, rendered beside the row rather than inside it. */
+    action?: { href: string; label: string; title?: string };
+  }>;
 }) {
   return (
     <section className="rounded-xl border border-[#E9E9E9] bg-white p-5">
@@ -122,11 +135,23 @@ function ResultList({
       ) : (
         <ul className="mt-3 divide-y divide-[#E9E9E9]">
           {items.map((item) => (
-            <li key={`${item.href}-${item.title}`}>
-              <Link href={item.href} className="block py-3 hover:underline">
+            <li
+              key={`${item.href}-${item.title}`}
+              className="flex items-center gap-3"
+            >
+              <Link href={item.href} className="block flex-1 py-3 hover:underline">
                 <p className="text-sm font-medium text-[#353535]">{item.title}</p>
                 <p className="text-xs text-[#787878]">{item.meta}</p>
               </Link>
+              {item.action ? (
+                <a
+                  href={item.action.href}
+                  title={item.action.title}
+                  className="shrink-0 text-xs text-[#03535F] underline"
+                >
+                  {item.action.label}
+                </a>
+              ) : null}
             </li>
           ))}
         </ul>

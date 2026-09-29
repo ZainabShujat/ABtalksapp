@@ -11,6 +11,9 @@ const GOOGLE_ADS_ID = "AW-18456978326";
 export default async function HomePage() {
   const session = await auth();
   if (session?.user?.id) {
+    if (session.user.isAdmin || (session.user as { role?: string }).role === "ADMIN") {
+      redirect("/admin");
+    }
     // RecruiterProfile is the current database-backed recruiter authority.
     // Checking it here keeps a stale JWT role from sending the wrong account
     // to its home surface.

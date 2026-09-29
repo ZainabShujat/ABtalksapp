@@ -17,7 +17,7 @@ import {
 } from "@/features/resume/storage";
 import { MAX_RESUME_BYTES } from "@/features/resume/types";
 import { normalizeEmail } from "@/features/resume/import/email";
-import { drainAndContinue } from "@/features/resume/import/worker";
+import { drainAndContinue, drainResumeImports } from "@/features/resume/import/worker";
 import {
   CONSENT_ATTESTATION,
   loadImportStatus,
@@ -285,7 +285,12 @@ export async function requestRegistrationAction(raw: unknown): Promise<Result<{ 
   }
   const requested = await requestRegistration(parsed.data.selection as Selection, admin.userId);
   await audit(admin.userId, "RESUME_IMPORT_REGISTER", { requested, attestation: CONSENT_ATTESTATION });
-  if (requested > 0) startDrain();
+  if (requested > 0) {
+    if (process.env.NODE_ENV !== "production") {
+      await drainResumeImports({ budgetMs: 15_000 }).catch(() => undefined);
+    }
+    startDrain();
+  }
   revalidatePath(PAGE);
   return { ok: true, data: { requested } };
 }
@@ -302,6 +307,10 @@ export async function getImportStatusAction(raw: unknown): Promise<Result<Import
   if (!admin) return NOT_AUTHORISED;
   const parsed = statusSchema.safeParse(raw ?? {});
   if (!parsed.success) return { ok: false, message: "Invalid input" };
+
+  if (process.env.NODE_ENV !== "production" && (await hasPendingImportWork())) {
+    await drainResumeImports({ budgetMs: 10_000 }).catch(() => undefined);
+  }
 
   const view = await loadImportStatus(parsed.data);
   // Belt and braces: work waiting and nobody working on it → start a drain.

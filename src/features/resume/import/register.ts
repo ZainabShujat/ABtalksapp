@@ -63,6 +63,7 @@ async function findUserByEmail(email: string) {
     where: { email: { equals: email, mode: "insensitive" } },
     select: {
       id: true,
+      name: true,
       role: true,
       deletedAt: true,
       disabledAt: true,
@@ -92,6 +93,7 @@ async function attachToExisting(
   parsed: ParsedResume,
   analysis: ResumeAnalysis,
   user: NonNullable<Awaited<ReturnType<typeof findUserByEmail>>>,
+  mappedIdentity: { fullName: string; userType: any; headline: string | null },
 ): Promise<RegisterOutcome> {
   if (user.role !== Role.STUDENT || user.deletedAt || user.disabledAt) {
     await markImportNeedsReview(imp.id, {
@@ -108,6 +110,40 @@ async function attachToExisting(
   const moved = await writeClient()
     .$transaction(async (tx) => {
       if (attachResume) await upsertResume(user.id, resumeFromImport(imp, parsed, analysis), tx);
+      if (!user.candidateProfile) {
+        const referralCode = await generateUniqueReferralCode();
+        await createCandidateIdentity(tx, {
+          userId: user.id,
+          fullName: mappedIdentity.fullName,
+          userType: mappedIdentity.userType,
+          referralCode,
+          phone: null,
+          phoneVerified: false,
+          college: null,
+          collegeId: null,
+          organization: null,
+          role: null,
+          yearsExperience: null,
+          headline: mappedIdentity.headline,
+          locationCity: null,
+          locationRegion: null,
+          countryCode: null,
+          synergyPoints: 0,
+        });
+        await tx.candidateProfile.update({
+          where: { userId: user.id },
+          data: { reviewPendingSince: new Date() },
+          select: { id: true },
+        });
+        await applyVisibilityChange(tx, { userId: user.id, kind: "admin_import" });
+      }
+      if (!user.name && mappedIdentity.fullName) {
+        await tx.user.update({
+          where: { id: user.id },
+          data: { name: mappedIdentity.fullName },
+          select: { id: true },
+        });
+      }
       const ok = await markImportRegisteredTx(tx, imp.id, {
         status,
         userId: user.id,
@@ -123,9 +159,7 @@ async function attachToExisting(
     });
   if (!moved) return "SKIPPED";
 
-  // No profile yet (they signed in but never finished /register): they finish
-  // it themselves, and registration's own deferred merge reads this résumé.
-  if (user.candidateProfile) await mergeQuietly(user.id, imp.id, parsed);
+  await mergeQuietly(user.id, imp.id, parsed);
   logger.info("[resume-import] attached to existing account", { importId: imp.id, userId: user.id, status });
   return status;
 }
@@ -152,7 +186,7 @@ export async function registerImportedStudent(importId: string): Promise<Registe
   }
 
   const existing = await findUserByEmail(email);
-  if (existing) return attachToExisting(imp, parsed, analysis, existing);
+  if (existing) return attachToExisting(imp, parsed, analysis, existing, mapped.identity);
 
   const referralCode = await generateUniqueReferralCode();
   let userId: string | null;
@@ -210,7 +244,7 @@ export async function registerImportedStudent(importId: string): Promise<Registe
     // or another import). Treat it as the existing-account case.
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const now = await findUserByEmail(email);
-      if (now) return attachToExisting(imp, parsed, analysis, now);
+      if (now) return attachToExisting(imp, parsed, analysis, now, mapped.identity);
     }
     throw error;
   }

@@ -16,6 +16,24 @@ export type AuditInput = {
   organizationId?: string | null;
 };
 
+/**
+ * Name + email saved on an ACCOUNT_SELF_DELETE row. The user row is gone
+ * by the time anyone reads it, so this is the only way to show who left.
+ */
+export function deletedUserSnapshot(
+  metadata: Prisma.JsonValue,
+): { name: string | null; email: string } | null {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null;
+  }
+  const raw = metadata.deletedUser;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const email = typeof raw.email === "string" ? raw.email : null;
+  if (!email) return null;
+  const name = typeof raw.name === "string" && raw.name.trim() ? raw.name : null;
+  return { name, email };
+}
+
 export async function writeAudit(
   tx: Prisma.TransactionClient,
   input: AuditInput,
