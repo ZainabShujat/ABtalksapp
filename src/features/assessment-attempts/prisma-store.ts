@@ -56,6 +56,8 @@ export function prismaAttemptStore(): AttemptStore {
           assessment: {
             select: {
               status: true,
+              source: true,
+              deadlineAt: true,
               title: true,
               subheading: true,
               instructions: true,
@@ -96,6 +98,8 @@ export function prismaAttemptStore(): AttemptStore {
         endReason: a.endReason,
         assessment: {
           status: a.assessment.status,
+          source: a.assessment.source,
+          closesAt: a.assessment.source === "PLATFORM" ? a.assessment.deadlineAt : null,
           title: a.assessment.title,
           subheading: a.assessment.subheading,
           instructions: a.assessment.instructions,
@@ -117,10 +121,14 @@ export function prismaAttemptStore(): AttemptStore {
           id: true,
           status: true,
           assignedAt: true,
+          startedAt: true,
           submittedAt: true,
           assessment: {
             select: {
               title: true,
+              subheading: true,
+              source: true,
+              deadlineAt: true,
               durationMinutes: true,
               strictMode: true,
               cameraRequired: true,
@@ -132,14 +140,44 @@ export function prismaAttemptStore(): AttemptStore {
       return rows.map((r) => ({
         assignmentId: r.id,
         title: r.assessment.title,
+        subheading: r.assessment.subheading,
+        source: r.assessment.source,
         status: r.status,
         assignedAt: r.assignedAt,
+        startedAt: r.startedAt,
         submittedAt: r.submittedAt,
+        closesAt: r.assessment.source === "PLATFORM" ? r.assessment.deadlineAt : null,
         durationMinutes: r.assessment.durationMinutes,
         questionCount: r.assessment._count.questions,
         strictMode: r.assessment.strictMode,
         cameraRequired: r.assessment.cameraRequired,
       }));
+    },
+
+    async listStartedPastClose(assessmentId, now) {
+      const rows = await prisma.recruiterAssessmentAssignment.findMany({
+        where: {
+          assessmentId,
+          status: "STARTED",
+          assessment: { source: "PLATFORM", deadlineAt: { lte: now } },
+        },
+        select: {
+          id: true,
+          candidateUserId: true,
+          assessment: { select: { deadlineAt: true } },
+        },
+      });
+      return rows.flatMap((r) =>
+        r.assessment.deadlineAt
+          ? [
+              {
+                assignmentId: r.id,
+                candidateUserId: r.candidateUserId,
+                closesAt: r.assessment.deadlineAt,
+              },
+            ]
+          : [],
+      );
     },
 
     async start(assignmentId, candidateUserId, at) {

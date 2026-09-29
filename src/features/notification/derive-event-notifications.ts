@@ -1,6 +1,6 @@
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
+import type { WorkshopEvent } from "@/components/workshop/events-data";
 import { HACKATHON } from "@/components/hackathon/hackathon-config";
-import { EVENTS } from "@/components/workshop/events-data";
 import {
   VIDEOTHON,
   isVideothonRegistrationOpen,
@@ -17,7 +17,7 @@ import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
  * while `now` sits inside its window; outside it the item is simply not
  * produced, which is what makes expiry free.
  *
- * NOTE: `EVENTS` entries carry an `Icon: LucideIcon`. Never copy it (or spread a
+ * NOTE: workshop entries carry an `iconName`, not a component. Never spread a
  * whole event) into a notification — Lucide components cannot cross the
  * Server→Client boundary. The client picks an icon from `category`.
  */
@@ -36,6 +36,14 @@ export type DeriveEventNotificationsInput = {
   programEnabled: boolean;
   /** `WorkshopRegistration.eventId`s this user already holds — those workshops stay silent. */
   registeredWorkshopEventIds: Set<string>;
+  /**
+   * The workshops to consider. Plan 163 moved the schedule out of the
+   * `EVENTS` module constant and into the database, which this module cannot
+   * read synchronously — so it arrives as input, like every other fact here.
+   * The caller passes the publicly visible list; the selection rules below are
+   * unchanged.
+   */
+  workshopEvents: readonly WorkshopEvent[];
   /** True when the user already has a HackathonParticipant row. */
   isHackathonRegistered: boolean;
   /** `ProgramMember.cohortId`s this user already belongs to (any status). */
@@ -71,6 +79,7 @@ export function deriveEventNotifications(
     enrollingCohorts,
     programEnabled,
     registeredWorkshopEventIds,
+    workshopEvents,
     isHackathonRegistered,
     joinedCohortIds,
     isVideothonRegistered,
@@ -82,7 +91,7 @@ export function deriveEventNotifications(
   // Visible from 7 IST days before the event until the end of the event's own
   // IST day. Keys are `yyyy-MM-dd`, which sorts chronologically as plain
   // strings — the same comparison `isPastEvent` uses in events-data.ts.
-  for (const ev of EVENTS) {
+  for (const ev of workshopEvents) {
     if (!ev.register || !ev.registrationOpen) continue;
     // Already signed up for this exact workshop → nothing to tell them.
     if (registeredWorkshopEventIds.has(ev.id)) continue;

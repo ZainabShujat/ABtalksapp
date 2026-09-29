@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { CalendarDays, Clock3, LayoutGrid } from "lucide-react";
 import {
+  WorkshopIcon,
   type EventStatus,
   type WorkshopEvent,
   eventStatus,
@@ -14,7 +15,7 @@ import {
 /**
  * The Upcoming Workshops column beside the calendar.
  *
- * Reads nothing of its own: `sidebarEvents` is the same EVENTS array the grid
+ * Reads nothing of its own: `sidebarEvents` is the same list the grid
  * draws from, filtered by absolute time. Two lists that could disagree about
  * what is coming up would be worse than no sidebar at all.
  *
@@ -78,7 +79,6 @@ function WorkshopCard({
   status: EventStatus;
   canRegister: boolean;
 }) {
-  const Icon = event.Icon;
 
   return (
     <article
@@ -105,7 +105,13 @@ function WorkshopCard({
             border: "1px solid rgba(var(--wk-a1-rgb),0.16)",
           }}
         >
-          <Icon size={17} strokeWidth={2} style={{ color: "var(--wk-a1)" }} aria-hidden />
+          <WorkshopIcon
+            name={event.iconName}
+            size={17}
+            strokeWidth={2}
+            style={{ color: "var(--wk-a1)" }}
+            aria-hidden
+          />
         </span>
 
         {/* `min-w-0` or the flex item refuses to shrink below its longest word
@@ -201,14 +207,22 @@ function WorkshopCard({
   );
 }
 
-export default function UpcomingWorkshops({ nowMs }: { nowMs: number | null }) {
+export default function UpcomingWorkshops({
+  nowMs,
+  allEvents,
+}: {
+  nowMs: number | null;
+  allEvents: WorkshopEvent[];
+}) {
   // Nothing is rendered until the client has a clock. Server and client agree
   // on "empty", so there is no hydration mismatch to reconcile.
   // 3 was the whole list when the column could not scroll — a fourth card
   // would simply have run past the calendar beside it. The list scrolls now,
   // so the cap is only there to stop a very long series rendering in full.
-  const events = nowMs === null ? [] : sidebarEvents(nowMs, SIDEBAR_LIMIT);
-  const openId = nowMs === null ? undefined : getRegistrableEvent(nowMs)?.id;
+  const events =
+    nowMs === null ? [] : sidebarEvents(allEvents, nowMs, SIDEBAR_LIMIT);
+  const openId =
+    nowMs === null ? undefined : getRegistrableEvent(allEvents, nowMs)?.id;
 
   return (
     /*

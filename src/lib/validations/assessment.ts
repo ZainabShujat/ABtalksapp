@@ -137,6 +137,37 @@ export type CreateAndSendFromPresetsInput = z.infer<
 >;
 
 // ---------------------------------------------------------------------------
+// Plan 166 — platform (admin-authored) assessments.
+// ---------------------------------------------------------------------------
+
+export const PLATFORM_AUDIENCE_DOMAINS = ["AI", "DS", "SE", "CLAUDE"] as const;
+
+/** Who a platform assessment goes to. `all` = every candidate profile. */
+export const platformAudienceSchema = z
+  .object({
+    all: z.boolean().default(false),
+    domains: z.array(z.enum(PLATFORM_AUDIENCE_DOMAINS)).max(4).default([]),
+    workshopEventIds: z.array(z.string().trim().min(1).max(100)).max(100).default([]),
+  })
+  .refine((a) => a.all || a.domains.length > 0 || a.workshopEventIds.length > 0, {
+    message: "Pick who this assessment goes to",
+  });
+
+export type PlatformAudienceInput = z.infer<typeof platformAudienceSchema>;
+
+/** Latest a deadline may be set, from now. */
+export const MAX_PLATFORM_DEADLINE_DAYS = 365;
+
+export const createAndSendPlatformSchema = z.object({
+  draft: assessmentDraftSchema,
+  audience: platformAudienceSchema,
+  /** ISO timestamp. Checked against the server clock in the service. */
+  deadlineAt: z.string().datetime({ offset: true, message: "Set a deadline" }),
+});
+
+export type CreateAndSendPlatformInput = z.infer<typeof createAndSendPlatformSchema>;
+
+// ---------------------------------------------------------------------------
 // T-218 (plan 129) — candidate answers. Shared by the candidate screen and the
 // server so the two can never disagree about what counts as an answer.
 // ---------------------------------------------------------------------------
@@ -204,6 +235,7 @@ export const ASSESSMENT_END_REASONS = [
   "TAB_SWITCH_LIMIT",
   "FULLSCREEN_LIMIT",
   "LEFT_PAGE",
+  "DEADLINE",
 ] as const;
 export type AssessmentEndReason = (typeof ASSESSMENT_END_REASONS)[number];
 

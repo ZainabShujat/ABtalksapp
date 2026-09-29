@@ -131,6 +131,9 @@ export function endReasonCopy(reason: AssessmentEndReason | null): string | null
       return "Time ran out";
     case "LEFT_PAGE":
       return "Ended when the candidate left the page";
+    case "DEADLINE":
+      // Plan 166 — platform assessments only; recruiter ones have no deadline.
+      return "Auto-submitted at the deadline";
     default:
       return null;
   }

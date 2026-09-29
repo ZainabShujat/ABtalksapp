@@ -9,6 +9,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  closeAttemptsPastDeadline,
   finishAttempt,
   endAttempt,
   finishAttemptForced,
@@ -96,6 +97,9 @@ type StoredAssessment = {
   correct: Map<string, string[]>;
   strictMode: boolean;
   cameraRequired: boolean;
+  /** Plan 166. */
+  source: "RECRUITER" | "PLATFORM";
+  closesAt: Date | null;
 };
 
 type StoredSession = {
@@ -157,6 +161,8 @@ function inMemoryStore() {
         endReason: a.endReason,
         assessment: {
           status: s.status,
+          source: s.source,
+          closesAt: s.closesAt,
           title: s.title,
           subheading: null,
           instructions: "Read carefully.",
@@ -182,15 +188,27 @@ function inMemoryStore() {
           return {
             assignmentId: a.id,
             title: s.title,
+            subheading: null,
+            source: s.source,
             status: a.status,
             assignedAt: a.assignedAt,
+            startedAt: a.startedAt,
             submittedAt: a.submittedAt,
+            closesAt: s.closesAt,
             durationMinutes: s.durationMinutes,
             questionCount: s.questions.length,
             strictMode: s.strictMode,
             cameraRequired: s.cameraRequired,
           };
         });
+    },
+    async listStartedPastClose(assessmentId, now) {
+      const s = assessments.get(assessmentId);
+      if (!s || s.source !== "PLATFORM" || !s.closesAt || s.closesAt > now) return [];
+      const closesAt = s.closesAt;
+      return [...assignments.values()]
+        .filter((a) => a.assessmentId === assessmentId && a.status === "STARTED")
+        .map((a) => ({ assignmentId: a.id, candidateUserId: a.candidateUserId, closesAt }));
     },
     async start(assignmentId, candidateUserId, at) {
       const a = owned(assignmentId, candidateUserId);
@@ -339,6 +357,8 @@ function inMemoryStore() {
       durationMinutes: 30,
       strictMode: false,
       cameraRequired: false,
+      source: "RECRUITER",
+      closesAt: null,
       correct: new Map([
         [`${id}_q1`, [`${id}_o1a`]],
         [`${id}_q2`, [`${id}_o2a`, `${id}_o2b`]],
@@ -777,8 +797,10 @@ async function run() {
     const res = await submitAttempt(f.store, C, { assignmentId: f.aC });
     assert(res.ok, "ok");
     if (res.ok) {
+      // Plan 166: `source` (RECRUITER | PLATFORM) is not a result; the action
+      // reads it server-side and still returns submittedAt only.
       assert(
-        JSON.stringify(Object.keys(res.data)) === JSON.stringify(["submittedAt"]),
+        JSON.stringify(Object.keys(res.data)) === JSON.stringify(["submittedAt", "source"]),
         `keys: ${Object.keys(res.data).join()}`,
       );
     }
@@ -2114,6 +2136,76 @@ async function run() {
     assert(ACTIVITY_DISCLAIMER.includes("does not detect"), "does not detect");
     assert(ACTIVITY_DISCLAIMER.includes("not proof"), "not proof");
     assert(CAMERA_DISCLAIMER.includes("doesn't record or see the video"), "camera");
+  });
+
+  // ---- Plan 166: platform assessment deadline -----------------------------
+
+  function platformFixture(closesInMs: number): Fixture {
+    const f = fixture();
+    const s = f.assessments.get(f.s.id)!;
+    s.source = "PLATFORM";
+    s.durationMinutes = null;
+    s.closesAt = new Date(Date.now() + closesInMs);
+    return f;
+  }
+
+  await suite("P1. attemptDeadline is the earlier of the timer and the closing time", async () => {
+    const f = platformFixture(10 * 60_000);
+    f.assessments.get(f.s.id)!.durationMinutes = 30;
+    await startAttempt(f.store, C, { assignmentId: f.aC });
+    const loaded = await loadAttempt(f.store, C, f.aC);
+    assert(loaded.ok, "load ok");
+    const closes = f.assessments.get(f.s.id)!.closesAt!;
+    assert(loaded.data.deadlineAt?.getTime() === closes.getTime(), "closing time wins");
+  });
+
+  await suite("P2. start after the deadline → CONFLICT and load reports missed", async () => {
+    const f = platformFixture(-60_000);
+    const res = await startAttempt(f.store, C, { assignmentId: f.aC });
+    assert(!res.ok && res.code === "CONFLICT", "start refused");
+    assert(f.assignments.get(f.aC)!.status === "ASSIGNED", "still ASSIGNED");
+    const loaded = await loadAttempt(f.store, C, f.aC);
+    assert(loaded.ok && loaded.data.missed, "missed");
+  });
+
+  await suite("P3. a STARTED attempt reopened after the deadline auto-submits as DEADLINE", async () => {
+    const f = platformFixture(60 * 60_000);
+    await startAttempt(f.store, C, { assignmentId: f.aC });
+    await answerAll(f);
+    f.assessments.get(f.s.id)!.closesAt = new Date(Date.now() - 60_000);
+    const loaded = await loadAttempt(f.store, C, f.aC);
+    assert(loaded.ok && loaded.data.status === "SUBMITTED", "submitted on load");
+    const a = f.assignments.get(f.aC)!;
+    assert(a.endReason === "DEADLINE", `endReason DEADLINE, got ${a.endReason}`);
+    assert(a.scorePercent === 100, `saved answers graded, got ${a.scorePercent}`);
+    assert(!loaded.data.missed, "a submitted attempt is not missed");
+  });
+
+  await suite("P4. listing and the admin sweep close expired attempts; recruiter ones untouched", async () => {
+    const f = platformFixture(60 * 60_000);
+    await startAttempt(f.store, C, { assignmentId: f.aC });
+    await startAttempt(f.store, D, { assignmentId: f.aD });
+    f.assessments.get(f.s.id)!.closesAt = new Date(Date.now() - 1_000);
+
+    const listed = await listCandidateAttempts(f.store, C);
+    assert(listed.ok && listed.data[0]?.status === "SUBMITTED", "C closed by the list");
+    assert(f.assignments.get(f.aD)!.status === "STARTED", "D not touched by C's list");
+
+    const closed = await closeAttemptsPastDeadline(f.store, f.s.id);
+    assert(closed === 1, `sweep closed D only, got ${closed}`);
+    assert(f.assignments.get(f.aD)!.endReason === "DEADLINE", "D ended by DEADLINE");
+
+    const r = fixture();
+    await startAttempt(r.store, C, { assignmentId: r.aC });
+    assert((await closeAttemptsPastDeadline(r.store, r.s.id)) === 0, "recruiter untouched");
+  });
+
+  await suite("P5. submit carries the source so the recruiter notification can be skipped", async () => {
+    const f = platformFixture(60 * 60_000);
+    await startAttempt(f.store, C, { assignmentId: f.aC });
+    await answerAll(f);
+    const res = await submitAttempt(f.store, C, { assignmentId: f.aC });
+    assert(res.ok && res.data.source === "PLATFORM", "source PLATFORM");
   });
 
   console.log(`\n${passed} passed, ${failed} failed\n`);

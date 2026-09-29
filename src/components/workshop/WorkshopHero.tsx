@@ -141,11 +141,17 @@ const GAP_TITLE_DESC = 30;
 const GAP_DESC_COUNT = 20;
 const GAP_COUNT_CTA = 34;
 
-const DEFAULT_DESC =
-  "Turn one idea into a week of content — generate scroll-stopping posts, carousels and short-form videos with AI, then edit and schedule them in minutes.";
-
-const DEFAULT_TITLE = "Create Anything with AI: From Prompt to Published Content";
-const DEFAULT_TITLE_ACCENTS = ["AI", "Published Content"];
+/*
+ * DEFAULT_TITLE / DEFAULT_DESC / DEFAULT_TITLE_ACCENTS lived here.
+ *
+ * They were what the page fell back to when no workshop was scheduled, so with
+ * the schedule empty it advertised a workshop that existed nowhere — under a
+ * countdown frozen at 00:00:00:00 and a Register button the server always
+ * refused. None of it was in the database, so no admin could fix it.
+ *
+ * The page now renders the Coming Soon screen instead, and this component only
+ * ever describes a real published event. See plan 163 phase 1c.
+ */
 
 /**
  * Renders `title` with each substring in `accents` in the accent colour.
@@ -198,19 +204,17 @@ export default function WorkshopHero({
    * page, so the page resolves it and passes primitives (never the event: it
    * carries a LucideIcon, which cannot cross the boundary).
    */
-  eventTitle: string | null;
-  eventAccents: string[] | null;
-  eventDesc: string | null;
+  eventTitle: string;
+  eventAccents: string[];
+  eventDesc: string;
+  /** Optional: a published workshop without a poster still renders LIVE. */
   eventPoster: string | null;
 }) {
   const { ref, scale } = useCanvasScale(FRAME_W);
-  const desc = eventDesc ?? DEFAULT_DESC;
+  const desc = eventDesc;
   const poster = eventPoster ?? undefined;
 
-  const title = accentedTitle(
-    eventTitle ?? DEFAULT_TITLE,
-    eventAccents ?? DEFAULT_TITLE_ACCENTS,
-  );
+  const title = accentedTitle(eventTitle, eventAccents);
 
   return (
     <>

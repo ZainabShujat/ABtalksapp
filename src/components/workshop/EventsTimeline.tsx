@@ -5,7 +5,7 @@ import Link from "next/link";
 import { CalendarClock, CalendarX2, Check, MapPin } from "lucide-react";
 import ComingSoonCard from "@/components/workshop/ComingSoonCard";
 import {
-  EVENTS,
+  WorkshopIcon,
   dayNum,
   fullDate,
   getRegistrableEvent,
@@ -14,9 +14,19 @@ import {
   pastEvents,
   upcomingEvents,
   weekday,
+  type WorkshopEvent,
 } from "@/components/workshop/events-data";
 
-export default function EventsTimeline() {
+/**
+ * `events` arrives from the server parent. It used to be the module-level
+ * EVENTS array; the schedule now lives in the database, and a Client Component
+ * cannot read it (plan 163).
+ */
+export default function EventsTimeline({
+  events,
+}: {
+  events: WorkshopEvent[];
+}) {
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
 
   // Resolved on the client only: this page is statically prerendered, so a
@@ -41,14 +51,15 @@ export default function EventsTimeline() {
 
   const { upcoming, past, openEventId } = useMemo(() => {
     if (!todayKey) {
-      return { upcoming: EVENTS, past: [] as typeof EVENTS, openEventId: undefined };
+      return { upcoming: events, past: [] as WorkshopEvent[], openEventId: undefined };
     }
     return {
-      upcoming: upcomingEvents(todayKey),
-      past: pastEvents(todayKey),
-      openEventId: nowMs === null ? undefined : getRegistrableEvent(nowMs)?.id,
+      upcoming: upcomingEvents(events, todayKey),
+      past: pastEvents(events, todayKey),
+      openEventId:
+        nowMs === null ? undefined : getRegistrableEvent(events, nowMs)?.id,
     };
-  }, [todayKey, nowMs]);
+  }, [events, todayKey, nowMs]);
 
   const isPastTab = tab === "past";
   const list = isPastTab ? past : upcoming;
@@ -290,7 +301,12 @@ export default function EventsTimeline() {
                         border: `1px solid ${ev.accent}30`,
                       }}
                     >
-                      <ev.Icon size={30} strokeWidth={1.5} style={{ color: ev.accent }} />
+                      <WorkshopIcon
+                        name={ev.iconName}
+                        size={30}
+                        strokeWidth={1.5}
+                        style={{ color: ev.accent }}
+                      />
                       <span
                         className="mt-1.5 text-[9px] font-bold uppercase tracking-widest"
                         style={{ color: ev.accent }}

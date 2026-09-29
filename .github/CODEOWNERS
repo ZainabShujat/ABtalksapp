@@ -87,3 +87,17 @@
 /src/app/admin/search/                              @byteninjaa0
 /src/features/admin/search-admin-console.ts         @byteninjaa0
 /src/features/admin/admin-resume-download.test.ts   @byteninjaa0
+
+# ------------------------------------------------------------------------------
+# 5. Workshop Domain (plan 163)
+#
+# The schedule is database-backed: WorkshopEvent + src/repositories/workshop.ts.
+# The public pages are visual surfaces — loop in UI/UX for design changes.
+# ------------------------------------------------------------------------------
+/src/app/workshop/                                  @byteninjaa0
+/src/app/admin/workshop/                            @byteninjaa0
+/src/components/workshop/                           @byteninjaa0
+/src/features/workshop/                             @byteninjaa0
+/src/repositories/workshop.ts                       @byteninjaa0
+/src/app/actions/workshop-actions.ts                @byteninjaa0
+/prisma/content/workshop-events.json                @byteninjaa0

@@ -1,4 +1,5 @@
 import "server-only";
+import { z } from "zod";
 
 import { cache } from "react";
 import { prisma, writeClient } from "@/lib/db";
@@ -121,6 +122,46 @@ export const PLATFORM_CONFIG_KEYS = {
     default: "USD",
     description: "ISO currency code credit amounts are denominated in.",
   },
+  /*
+   * Workshop surface controls. Plan 163 phase 3b.
+   *
+   * These four are deliberately independent of each other and of the workshop
+   * lifecycle: the mode does not depend on a poster, the calendar toggle does
+   * not depend on the mode, and none of them feed the countdown — that comes
+   * from the event's own date and time.
+   */
+  "workshop.mode": {
+    kind: "string",
+    default: "LIVE",
+    description:
+      "LIVE or COMING_SOON. COMING_SOON hides the workshop hero even when one is published. With no eligible published workshop the page shows Coming Soon regardless — this key can only force it ON, never off.",
+  },
+  "workshop.calendar_visible": {
+    kind: "int",
+    default: 1,
+    min: 0,
+    max: 1,
+    description:
+      "1 shows the events calendar at the bottom of /workshop, 0 hides it. Independent of the workshop lifecycle and of workshop.mode.",
+  },
+  "workshop.zoom_link": {
+    kind: "string",
+    default: "",
+    description: "Joining link for the live workshop. Replaces the Supabase workshop_config row.",
+  },
+  "workshop.whatsapp_link": {
+    kind: "string",
+    default:
+      "https://chat.whatsapp.com/LDUvHRIlb5dGHpDJLueR9i?s=cl&p=a&mlu=0&amv=0",
+    description:
+      "WhatsApp community link shown after registering. Default is the value the Supabase workshop_config row carried.",
+  },
+  "workshop.coming_soon_message": {
+    kind: "string",
+    default: "",
+    description:
+      "Optional line shown on the Coming Soon screen. Empty uses the built-in copy.",
+  },
   /**
    * D-11: first N completed mock interviews are free. Missing row uses 3,
    * never 0, so a config outage does not silently make every mock paid.
@@ -169,6 +210,14 @@ export const VERY_LOW_BALANCE_THRESHOLD_KEY =
 export const CREDITS_CURRENCY_KEY = "credits.currency" satisfies StringConfigKey;
 export const MOCK_FREE_ALLOWANCE_KEY = "mock.free_allowance" satisfies IntConfigKey;
 export const MOCK_POINT_COST_KEY = "mock.point_cost" satisfies IntConfigKey;
+export const WORKSHOP_MODE_KEY = "workshop.mode" satisfies StringConfigKey;
+export const WORKSHOP_CALENDAR_VISIBLE_KEY =
+  "workshop.calendar_visible" satisfies IntConfigKey;
+export const WORKSHOP_ZOOM_LINK_KEY = "workshop.zoom_link" satisfies StringConfigKey;
+export const WORKSHOP_WHATSAPP_LINK_KEY =
+  "workshop.whatsapp_link" satisfies StringConfigKey;
+export const WORKSHOP_COMING_SOON_MESSAGE_KEY =
+  "workshop.coming_soon_message" satisfies StringConfigKey;
 
 /**
  * The fail-closed resolution rule, separated from the database so it can be
@@ -293,6 +342,81 @@ export async function writeIntConfig(input: {
       reason: input.reason,
       previousState: { intValue: previous },
       newState: { intValue: parsed.data },
+    });
+  });
+}
+
+/**
+ * Write a string config value.
+ *
+ * The registry had `getStringConfig` and `resolveStringConfig` but no writer,
+ * so every string key was read-only and an admin could not change one at all
+ * (plan 163 §3b found this). Mirrors `writeIntConfig` exactly — validate, then
+ * upsert and audit in one transaction — rather than introducing a second
+ * config mechanism.
+ *
+ * **Empty is allowed only where the default is empty.** `stringConfigSchema`
+ * is `.min(1)`, which is right for `credits.currency` — a blank currency is a
+ * bug — but wrong for `workshop.coming_soon_message`, where blank is the
+ * meaningful "use the built-in copy". Keying it off the spec's own default
+ * keeps that judgement with the key instead of in a list someone has to
+ * maintain.
+ */
+export async function writeStringConfig(input: {
+  key: StringConfigKey;
+  stringValue: string;
+  actorUserId: string;
+  reason: string;
+}): Promise<void> {
+  const spec = PLATFORM_CONFIG_KEYS[input.key] as StringKeySpec;
+  if (spec.kind !== "string") {
+    throw new Error(`Unknown string config key: ${input.key}`);
+  }
+
+  const allowEmpty = spec.default === "";
+  const schema = allowEmpty
+    ? z.string().trim().max(200)
+    : stringConfigSchema;
+  const parsed = schema.safeParse(input.stringValue);
+  if (!parsed.success) {
+    throw new Error(
+      allowEmpty
+        ? `${input.key} must be 200 characters or fewer.`
+        : `${input.key} must be between 1 and 200 characters.`,
+    );
+  }
+
+  await writeClient().$transaction(async (tx) => {
+    const existing = await tx.platformConfig.findUnique({
+      where: { key: input.key },
+      select: { stringValue: true },
+    });
+    const previous = resolveStringConfig(input.key, existing?.stringValue);
+
+    await tx.platformConfig.upsert({
+      where: { key: input.key },
+      create: {
+        key: input.key,
+        stringValue: parsed.data,
+        description: spec.description,
+        updatedByUserId: input.actorUserId,
+      },
+      update: {
+        stringValue: parsed.data,
+        updatedByUserId: input.actorUserId,
+      },
+    });
+
+    await writeAudit(tx, {
+      actorUserId: input.actorUserId,
+      adminUserId: input.actorUserId,
+      targetUserId: null,
+      entityType: "PlatformConfig",
+      entityId: input.key,
+      actionType: "PLATFORM_CONFIG_UPDATE",
+      reason: input.reason,
+      previousState: { stringValue: previous },
+      newState: { stringValue: parsed.data },
     });
   });
 }

@@ -13,14 +13,16 @@ import {
   isSnowflakeEnabled,
 } from "@/lib/feature-flags";
 import { loadAvailableInterviews } from "@/features/dashboard/load-available-interviews";
+import { listPublicEvents } from "@/repositories/workshop";
 import {
   buildHubSearchIndex,
   type HubSearchItem,
 } from "@/features/dashboard/hub-search-index";
 import type { HubEnrollment } from "@/features/dashboard/get-hub-data";
 
-function guestCatalog(): HubSearchItem[] {
+async function guestCatalog(): Promise<HubSearchItem[]> {
   return buildHubSearchIndex({
+    workshopEvents: await listPublicEvents(),
     enrollments: [],
     joinedDomains: [],
     abandonedDomains: [],
@@ -75,6 +77,7 @@ export const getSiteSearchItems = cache(async (): Promise<HubSearchItem[]> => {
   }));
 
   return buildHubSearchIndex({
+    workshopEvents: await listPublicEvents(),
     enrollments,
     joinedDomains: [...new Set(joined.map((r) => r.domain))],
     abandonedDomains: [

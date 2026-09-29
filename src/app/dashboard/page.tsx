@@ -10,6 +10,7 @@ import { getCareerGuidance } from "@/features/career-guidance/get-career-guidanc
 import { OtherChallenges } from "@/components/dashboard-hub/other-challenges";
 import { Roadmaps } from "@/components/dashboard-hub/roadmaps";
 import { EventsSection } from "@/components/dashboard-hub/events-section";
+import { listPublicEvents } from "@/repositories/workshop";
 import { FaqSection } from "@/components/dashboard-hub/faq-section";
 import { HUB_CARD_HOVER_CLASS } from "@/components/dashboard-hub/nav-items";
 import { getHubData } from "@/features/dashboard/get-hub-data";
@@ -147,7 +148,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         showDatabricksAi={data.hasDatabricksAiAccess}
         showLangchain={data.hasLangchainAccess}
       />
-      <EventsSection />
+      <EventsSection events={await listPublicEvents()} />
       
       <FaqSection />
     </DashboardShell>

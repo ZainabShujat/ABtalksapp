@@ -4,6 +4,7 @@ import { HACKATHON } from "@/components/hackathon/hackathon-config";
 import { prisma } from "@/lib/db";
 import { isProgramEnabled } from "@/lib/feature-flags";
 import { deriveEventNotifications } from "./derive-event-notifications";
+import { listPublicEvents } from "@/repositories/workshop";
 import { filterFeedForView, type FeedInputRow } from "./recruiter-feed-filter";
 import { VIDEOTHON } from "@/features/hackathon-video/config";
 import { listAiCohortMemberships } from "@/repositories/program-state";
@@ -199,6 +200,7 @@ export async function getNotificationsForUser(
     isHackathonRegistered: Boolean(hackathonMembership),
     joinedCohortIds: new Set(programMemberships.map((m) => m.cohortId)),
     isVideothonRegistered: Boolean(videothonRegistration),
+    workshopEvents: await listPublicEvents(),
   });
 
   // T-249 recruiter-side gate. Pure function, unit-tested in

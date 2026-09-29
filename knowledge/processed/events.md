@@ -26,14 +26,17 @@ YouTube, free. Saturdays with no announced topic yet show on the events
 calendar as "Workshop — TBA", 6:00 PM IST — register to be notified when the
 session opens. Exactly one upcoming event accepts signups at a time.
 
-## Create Anything with AI: From Prompt to Published Content (NEXT / REGISTRATION OPEN)
+## Create Anything with AI: From Prompt to Published Content (past)
 
 - Date: Saturday, September 5, 2026
 - Time: **7:00 PM IST**
 - Platform: Live on YouTube
 - Price: free
-- Status: **upcoming, registration OPEN** — this is the one event currently
-  accepting signups. Register from `/ai-workshop` or `/ai-workshop/events`.
+- Status: **past; registration is closed.** This session has run. The
+  workshop schedule is now managed in the admin console, so the event that is
+  currently open for signups is whichever one `/workshop` is showing — this
+  file does not name it, because a hardcoded "next event" here goes stale the
+  moment the schedule changes.
 - Description: turn one idea into a week of content — generate
   scroll-stopping posts, carousels and short-form videos with AI, then edit
   and schedule them in minutes.

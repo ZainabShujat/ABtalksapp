@@ -93,8 +93,9 @@ function scopeWhere(scope: Scope) {
  * is implied by nesting under the parent create/update). Nesting the whole tree
  * into a single `create`/`update` avoids an interactive `$transaction`, which
  * the Neon serverless driver cannot hold across many sequential statements.
+ * Exported for plan 166: platform assessments share the same question tables.
  */
-function questionCreateNested(
+export function questionCreateNested(
   q: ContentInput["questions"][number],
   position: number,
 ) {
@@ -200,6 +201,9 @@ export function prismaAssessmentStore(): AssessmentStore {
       if (!row) return null;
       return {
         ...row,
+        // Matched on scopeWhere, so it is the workspace's own id (plan 166
+        // made the column nullable for platform rows, which never match).
+        organizationId: scope.organizationId,
         questions: row.questions as AssessmentQuestionRow[],
       };
     },

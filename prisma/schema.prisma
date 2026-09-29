@@ -147,67 +147,67 @@ model College {
 }
 
 model User {
-  id                      String                   @id @default(cuid())
-  email                   String                   @unique
-  emailVerified           DateTime?
-  name                    String?
-  image                   String?
+  id                          String                       @id @default(cuid())
+  email                       String                       @unique
+  emailVerified               DateTime?
+  name                        String?
+  image                       String?
   /// scrypt hash from `src/lib/password.ts` (`scrypt$…`). Any other value —
   /// e.g. an old plain-text dev seed — is treated as "no password" and never
   /// compared.
-  password                String?
-  role                    Role                     @default(STUDENT)
+  password                    String?
+  role                        Role                         @default(STUDENT)
   /// Soft delete. Set instead of DELETE; PII is scrubbed by the anonymizer.
-  deletedAt               DateTime?
-  anonymizedAt            DateTime?
+  deletedAt                   DateTime?
+  anonymizedAt                DateTime?
   /// T-254 first-touch UTM attribution. Captured on the landing page from
   /// URL query, persisted to a cookie, then written here on signup finalise.
   /// First touch wins — later visits do not overwrite. Bounded free strings
   /// with a 200-char max at the write boundary (validations/utm.ts). Never
   /// sent to analytics as raw values; only campaign-level aggregates count.
-  utmSource               String?
-  utmMedium               String?
-  utmCampaign             String?
-  utmTerm                 String?
-  utmContent              String?
-  utmCapturedAt           DateTime?
+  utmSource                   String?
+  utmMedium                   String?
+  utmCampaign                 String?
+  utmTerm                     String?
+  utmContent                  String?
+  utmCapturedAt               DateTime?
   /// T-272 reversible operator freeze. Distinct from deletedAt (plan 119).
-  disabledAt              DateTime?
-  disabledReason          String?
-  disabledByUserId        String?
+  disabledAt                  DateTime?
+  disabledReason              String?
+  disabledByUserId            String?
   /// JWT iat older than this is rejected. Set on disable and on secure.
-  sessionInvalidatedAt    DateTime?
-  createdAt               DateTime                 @default(now())
-  updatedAt               DateTime                 @updatedAt
-  accounts                Account[]
-  adminActionsPerformed   AdminAction[]            @relation("AdminActor")
-  adminActionsReceived    AdminAction[]            @relation("AdminTarget")
-  referredBy              Referral?                @relation("Referral_referredIdToUser")
-  referralsMade           Referral[]               @relation("Referral_referrerIdToUser")
-  sessions                Session[]
-  phoneVerification       PhoneVerification?
-  recruiterReview         RecruiterReview?
-  jobApplications         JobApplication[]
-  redemptions             Redemption[]
-  remarksReceived         AdminRemark[]            @relation("RemarkStudent")
-  remarksAuthored         AdminRemark[]            @relation("RemarkAdmin")
-  programEntryAttempts    ProgramEntryAttempt[]
-  recruiterProfile        RecruiterProfile?
-  shortlistItems          RecruiterShortlistItem[]
-  hackathonParticipants   HackathonParticipant[]
-  hackathonRemovals       HackathonRemoval[]       @relation("HackathonRemoved")
+  sessionInvalidatedAt        DateTime?
+  createdAt                   DateTime                     @default(now())
+  updatedAt                   DateTime                     @updatedAt
+  accounts                    Account[]
+  adminActionsPerformed       AdminAction[]                @relation("AdminActor")
+  adminActionsReceived        AdminAction[]                @relation("AdminTarget")
+  referredBy                  Referral?                    @relation("Referral_referredIdToUser")
+  referralsMade               Referral[]                   @relation("Referral_referrerIdToUser")
+  sessions                    Session[]
+  phoneVerification           PhoneVerification?
+  recruiterReview             RecruiterReview?
+  jobApplications             JobApplication[]
+  redemptions                 Redemption[]
+  remarksReceived             AdminRemark[]                @relation("RemarkStudent")
+  remarksAuthored             AdminRemark[]                @relation("RemarkAdmin")
+  programEntryAttempts        ProgramEntryAttempt[]
+  recruiterProfile            RecruiterProfile?
+  shortlistItems              RecruiterShortlistItem[]
+  hackathonParticipants       HackathonParticipant[]
+  hackathonRemovals           HackathonRemoval[]           @relation("HackathonRemoved")
   hackathonVideoRegistrations HackathonVideoRegistration[] @relation("HackathonVideoRegistrant")
-  newsletterSubscriptions NewsletterSubscription[]
-  workshopRegistrations   WorkshopRegistration[]
-  legalConsents           LegalConsent[]
-  dataRightsRequests      DataRightsRequest[]
-  notificationReads       NotificationRead[]
-  userNotifications       UserNotification[]       @relation("UserNotifications")
-  notificationPreferences NotificationPreference[] @relation("NotificationPreferences")
-  jobAlerts               JobAlert[]               @relation("CandidateJobAlerts")
+  newsletterSubscriptions     NewsletterSubscription[]
+  workshopRegistrations       WorkshopRegistration[]
+  legalConsents               LegalConsent[]
+  dataRightsRequests          DataRightsRequest[]
+  notificationReads           NotificationRead[]
+  userNotifications           UserNotification[]           @relation("UserNotifications")
+  notificationPreferences     NotificationPreference[]     @relation("NotificationPreferences")
+  jobAlerts                   JobAlert[]                   @relation("CandidateJobAlerts")
   /// Interview platform attempts (plan 103). Direct User relation: a mock
   /// interview needs registration only, never cohort enrollment.
-  mockInterviews          MockInterview[]
+  mockInterviews              MockInterview[]
 
   // Canonical identity / learning / talent relations (078 complete).
   roleAssignments             UserRoleAssignment[]         @relation("RoleSubject")
@@ -1279,10 +1279,10 @@ model HackathonVideoRegistration {
   userId           String
   fullName         String
   email            String
-  phoneCountryCode String                   // e.g. "+91"
-  phoneNumber      String                   // digits only, no formatting
+  phoneCountryCode String // e.g. "+91"
+  phoneNumber      String // digits only, no formatting
   city             String
-  state            String?                  // Indian state / UT; null on rows created before it was asked
+  state            String? // Indian state / UT; null on rows created before it was asked
   employment       HackathonVideoEmployment
   currentCtc       String?
   portfolioUrl     String
@@ -1295,8 +1295,8 @@ model HackathonVideoRegistration {
   submissionNotes     String?
   submissionUpdatedAt DateTime?
 
-  createdAt        DateTime                 @default(now())
-  updatedAt        DateTime                 @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user User @relation("HackathonVideoRegistrant", fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1403,6 +1403,80 @@ model WorkshopRegistration {
 
 // NOTE: `workshop_config` deliberately stays in Supabase — only registrations
 // migrated. See src/lib/workshop-supabase.ts for the config reader.
+
+/// Which product track an event belongs to. Drives the calendar tile colour
+/// and what a click does — only `WORKSHOP` entries open the replay modal.
+///
+/// Deliberately its own enum. `NotificationCategory` carries the same four
+/// values but is a LOCKED enum in the notification module, and `CertificateType`
+/// is certificate semantics. Neither may be reused here — see plan 163 §5.
+enum WorkshopTrack {
+  WORKSHOP
+  HACKATHON
+  COHORT
+  CHALLENGE
+}
+
+/// A workshop or event on the public calendar. Plan 163.
+///
+/// Replaces the hardcoded `EVENTS` array in
+/// `src/components/workshop/events-data.ts`, so a new workshop is an admin
+/// action rather than a code change and a deploy.
+///
+/// **`id` is the roster key.** `WorkshopRegistration.eventId` points here by
+/// string, with no foreign key (366 rows predate this table). New ids follow
+/// `workshop-YYYY-MM-DD`; the ported ones keep whatever they already were,
+/// including three that predate that convention. It is never editable — a
+/// changed id silently detaches a roster.
+model WorkshopEvent {
+  id               String        @id
+  /// The calendar day. Day-precision: comparisons are on the IST calendar day,
+  /// which is what keeps an event under "Upcoming" for the whole of its own day.
+  date             DateTime
+  /// Display string as written, e.g. "7:00 PM IST" or "Day 1". Not parsed.
+  timeLabel        String
+  title            String
+  description      String
+  host             String
+  location         String
+  tag              String
+  accent           String
+  /// A lucide icon NAME, never a component: a component cannot be stored, and
+  /// this repo forbids passing one across the Server→Client boundary. The
+  /// name→component map lives in the client.
+  iconName         String
+  track            WorkshopTrack
+  /// A `/public` path on ported rows; a Blob URL once phase 3 lands. Both are
+  /// just URLs to an `<img>`, so one column serves both.
+  posterUrl        String?
+  /// Explicit kill switch. False closes signups without deleting the session.
+  registrationOpen Boolean       @default(true)
+  /// Its card links straight to the registration form.
+  register         Boolean       @default(false)
+  /// For events living outside the workshop funnel (e.g. the hackathon).
+  externalHref     String?
+  ctaLabel         String?
+  /// Replay and modal content — all arrive after the session runs.
+  youtubeId        String?
+  duration         String?
+  titleAccents     String[]      @default([])
+  takeaways        String[]      @default([])
+  topics           String[]      @default([])
+  /// `{ label, href, kind }[]`.
+  resources        Json?
+  /// Session length in minutes; absent falls back to DEFAULT_DURATION_MIN.
+  durationMinutes  Int?
+  /// Null until an admin publishes. Nothing unpublished is ever public.
+  publishedAt      DateTime?
+  /// Set on all ten ported events. Archived rows keep their registrations and
+  /// stay in the admin console, and are excluded from every public surface.
+  archivedAt       DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([date(sort: Desc)])
+  @@index([publishedAt, archivedAt, date])
+}
 
 /// General AB Talks AI Interview — a standardized, comparable talent signal
 /// built from a candidate's own verified challenge work. Separate from
@@ -3388,36 +3462,50 @@ model OrganizationMember {
 /// through QuizActivityConfig -> Activity -> Module -> LearningProgram, which
 /// would mean inventing a learning program for every recruiter test.
 model RecruiterAssessment {
-  id              String                    @id @default(cuid())
-  organizationId  String
-  createdByUserId String
-  title           String
-  subheading      String?
-  instructions    String?
-  status          RecruiterAssessmentStatus @default(DRAFT)
+  id                       String                    @id @default(cuid())
+  /// Null only for source = PLATFORM (admin-authored). Every recruiter read
+  /// filters on organizationId, so a platform row can never reach a workspace.
+  organizationId           String?
+  /// RECRUITER = built on /hire by a workspace. PLATFORM = built by a platform
+  /// admin on /admin/assessments and sent to an audience (plan 166).
+  source                   AssessmentSource          @default(RECRUITER)
+  createdByUserId          String
+  title                    String
+  subheading               String?
+  instructions             String?
+  status                   RecruiterAssessmentStatus @default(DRAFT)
   /// Null = untimed. Whole minutes; the candidate screen renders the chip.
-  durationMinutes Int?
+  durationMinutes          Int?
   /// Percentage of auto-gradeable points needed to pass.
-  passMarkPercent Int                       @default(60)
+  passMarkPercent          Int                       @default(60)
   /// T-219: fixed at publish. Every assessment published after T-219 ships is
   /// strict: laptop/desktop only, fullscreen required, copy/cut/paste blocked,
   /// page activity recorded. Rows published before stay false and keep the
   /// T-218 behaviour. Only store.publish ever writes true.
-  strictMode      Boolean                   @default(false)
+  strictMode               Boolean                   @default(false)
   /// T-219: recruiter's builder setting — editable while DRAFT, fixed at
   /// publish. The candidate's camera must be on to see the questions. Only
   /// on/off is recorded; no image or video ever leaves the candidate's device.
-  cameraRequired  Boolean                   @default(false)
+  cameraRequired           Boolean                   @default(false)
   /// Read-only provenance: which shortlisted candidates this was drafted for.
   /// Public AB-#### refs, never user ids. Nothing reads this yet — the assign
   /// ticket does. It is captured at draft time because the shortlist changes.
-  shortlistRefs   String[]                  @default([])
-  publishedAt     DateTime?
-  archivedAt      DateTime?
-  createdAt       DateTime                  @default(now())
-  updatedAt       DateTime                  @updatedAt
+  shortlistRefs            String[]                  @default([])
+  /// PLATFORM only, set at send. After it the assessment is closed: STARTED
+  /// attempts auto-submit with their saved answers (endReason DEADLINE) and
+  /// ASSIGNED ones read as "Missed".
+  deadlineAt               DateTime?
+  /// PLATFORM only — the audience picked at send, kept for the admin view.
+  /// The assignment rows themselves are the snapshot of who received it.
+  audienceAll              Boolean                   @default(false)
+  audienceDomains          Domain[]                  @default([])
+  audienceWorkshopEventIds String[]                  @default([])
+  publishedAt              DateTime?
+  archivedAt               DateTime?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
 
-  organization Organization                    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization?                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   createdBy    User                            @relation("RecruiterAssessmentsCreated", fields: [createdByUserId], references: [id], onDelete: Cascade)
   questions    AssessmentQuestion[]
   assignments  RecruiterAssessmentAssignment[]
@@ -3426,6 +3514,12 @@ model RecruiterAssessment {
 
   @@index([organizationId, createdByUserId, updatedAt(sort: Desc)])
   @@index([status])
+  @@index([source, updatedAt(sort: Desc)])
+}
+
+enum AssessmentSource {
+  RECRUITER
+  PLATFORM
 }
 
 model AssessmentQuestion {
@@ -3567,6 +3661,8 @@ enum AssessmentEndReason {
   TAB_SWITCH_LIMIT
   FULLSCREEN_LIMIT
   LEFT_PAGE
+  /// Plan 166: a platform assessment's deadline passed while STARTED.
+  DEADLINE
 }
 
 enum AssessmentAttemptEventType {

@@ -10,6 +10,7 @@ import {
 import { DashboardFooter } from "@/components/dashboard-hub/dashboard-footer";
 import { SiteSearchSlot } from "@/components/dashboard-hub/site-search-slot";
 import { auth } from "@/auth";
+import { listPublicEvents } from "@/repositories/workshop";
 
 export const metadata: Metadata = {
   title: "Upcoming Events | ABTalks Workshop",
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
 export default async function WorkshopEventsPage() {
   // Public route, same as /workshop — the session is read only to decide
   // whether the sidebar shows a user tile or a Log in link.
-  const session = await auth();
+  const [session, events] = await Promise.all([auth(), listPublicEvents()]);
   const shellUser = {
     name: session?.user?.name ?? "",
     email: session?.user?.email ?? "",
@@ -71,7 +72,7 @@ export default async function WorkshopEventsPage() {
             </div>
           </header>
 
-          <EventsTimeline />
+          <EventsTimeline events={events} />
 
           {/* bottom CTA */}
           <div className="mx-auto max-w-3xl px-4 pb-16 text-center">

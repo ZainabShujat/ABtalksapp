@@ -5,40 +5,28 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholde
 
 export const workshopSupabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Workshop REGISTRATIONS moved to Neon/Prisma (see src/features/workshop/).
-// `workshop_config` deliberately stayed here — it is a single hand-edited row,
-// not user-generated data, so it gained nothing from the move.
-
-export interface WorkshopConfig {
-  zoomLink: string;
-  whatsappLink: string;
-  webinarDate: string;
-  webinarTime: string;
-  webinarTargetUtc: string;
-}
-
-const FALLBACK_CONFIG: WorkshopConfig = {
-  zoomLink: "#",
-  whatsappLink: "https://chat.whatsapp.com/LDUvHRIlb5dGHpDJLueR9i?s=cl&p=a&mlu=0&amv=0",
-  webinarDate: "July 11, 2026",
-  webinarTime: "4:00 PM IST",
-  webinarTargetUtc: "2026-07-11T10:30:00Z",
-};
-
-export async function getWorkshopConfig(): Promise<WorkshopConfig> {
-  const { data, error } = await workshopSupabase
-    .from("workshop_config")
-    .select("zoom_link, whatsapp_link, webinar_date, webinar_time, webinar_target_utc")
-    .single();
-  if (error || !data) return FALLBACK_CONFIG;
-  return {
-    zoomLink: data.zoom_link,
-    whatsappLink: data.whatsapp_link,
-    webinarDate: data.webinar_date,
-    webinarTime: data.webinar_time,
-    webinarTargetUtc: data.webinar_target_utc,
-  };
-}
+/*
+ * Workshop REGISTRATIONS moved to Neon/Prisma (see src/features/workshop/).
+ *
+ * `workshop_config` and its reader have now followed. The row held the zoom
+ * link, the WhatsApp link, and a webinar date, time and countdown target —
+ * hand-edited, outside the audit log, and a second source of truth for "when
+ * is the workshop" that drifted from the actual schedule. It showed the wrong
+ * date in the hero and told the chatbot about a webinar that was not happening.
+ *
+ * Replaced by (plan 163 phase 3c):
+ *   zoom_link         -> PlatformConfig `workshop.zoom_link`
+ *   whatsapp_link     -> PlatformConfig `workshop.whatsapp_link`
+ *   webinar_date      -> WorkshopEvent.date
+ *   webinar_time      -> WorkshopEvent.timeLabel
+ *   webinar_target_utc-> derived, `eventStartMs(event)`
+ *
+ * The Supabase ROW still exists and is deliberately left in place until
+ * production confirms the replacements work. Nothing reads it.
+ *
+ * Everything below — the client and the cohort-application readers — is a
+ * separate concern and stays.
+ */
 
 export type CohortRegion = "us" | "india";
 

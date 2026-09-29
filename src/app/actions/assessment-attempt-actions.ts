@@ -170,17 +170,21 @@ export async function submitAssessmentAttemptAction(
     // recruiter who owns the assessment. Wrapped in try/catch by the
     // helper itself; wrapped here again as belt-and-braces so a
     // dispatch that somehow escapes still cannot fail the candidate's
-    // submit reply.
-    try {
-      await fireAssessmentCompletedNotification({
-        assignmentId: parsed.data.assignmentId,
-        candidateUserId: userId,
-      });
-    } catch (err) {
-      logger.warn("[assessment-attempt-actions] notify_wrapper_caught", {
-        assignmentId: parsed.data.assignmentId,
-        err: err instanceof Error ? err.message : String(err),
-      });
+    // submit reply. Plan 166: platform assessments have no recruiter —
+    // the admin who built one reads results on /admin/assessments instead
+    // of receiving one notification per candidate.
+    if (result.data.source === "RECRUITER") {
+      try {
+        await fireAssessmentCompletedNotification({
+          assignmentId: parsed.data.assignmentId,
+          candidateUserId: userId,
+        });
+      } catch (err) {
+        logger.warn("[assessment-attempt-actions] notify_wrapper_caught", {
+          assignmentId: parsed.data.assignmentId,
+          err: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
 
     return {

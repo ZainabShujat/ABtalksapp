@@ -220,7 +220,8 @@ export async function getAdminAttemptDetail(
       passMarkPercent: row.assessment.passMarkPercent,
       strictMode: row.assessment.strictMode,
       cameraRequired: row.assessment.cameraRequired,
-      organizationName: row.assessment.organization.name,
+      // Plan 166: platform assessments belong to no workspace.
+      organizationName: row.assessment.organization?.name ?? "ABTalks (platform)",
       createdByName: row.assessment.createdBy.name,
     },
     status: row.status,

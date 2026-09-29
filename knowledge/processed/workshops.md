@@ -38,11 +38,15 @@ workshop, and not a restatement of either workshop above. It ran on 21
 August 2026, 6:00 PM IST, live on YouTube; registration is closed. See
 `events.md`.
 
-## Create Anything with AI: From Prompt to Published Content
+## Create Anything with AI: From Prompt to Published Content (past)
 
-The current live workshop — **Saturday 5 September 2026, 7:00 PM IST, free,
-live on YouTube, registration OPEN**. Previously listed under the working
-title "AI Post & Video Generation" at 6:00 PM; use the title and time above.
+A past workshop — **Saturday 5 September 2026, 7:00 PM IST, free, live on
+YouTube; registration is closed.** Previously listed under the working title
+"AI Post & Video Generation" at 6:00 PM; use the title and time above.
+
+For which workshop is open for signups now, see `/workshop` — the schedule is
+managed in the admin console and changes without a code release, so naming a
+"current" session here would go stale.
 
 Curriculum: prompt engineering fundamentals; role, context and task; style,
 constraints and output; AI image, video, voice and audio generation; AI
