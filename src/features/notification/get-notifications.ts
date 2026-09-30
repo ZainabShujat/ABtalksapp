@@ -4,7 +4,9 @@ import { HACKATHON } from "@/components/hackathon/hackathon-config";
 import { prisma } from "@/lib/db";
 import { isProgramEnabled } from "@/lib/feature-flags";
 import { deriveEventNotifications } from "./derive-event-notifications";
-import { filterFeedForView } from "./recruiter-feed-filter";
+import { listPublicEvents } from "@/repositories/workshop";
+import { filterFeedForView, type FeedInputRow } from "./recruiter-feed-filter";
+import { VIDEOTHON } from "@/features/hackathon-video/config";
 import { listAiCohortMemberships } from "@/repositories/program-state";
 import type {
   AppNotification,
@@ -35,6 +37,14 @@ const FEED_LIMIT = 5;
 const ANNOUNCEMENT_MAX_AGE_DAYS = 14;
 
 /**
+ * How many active admin rows to scan before audience filtering. Audience is
+ * resolved in memory, so taking only FEED_LIMIT rows here would let five newer
+ * announcements for OTHER audiences hide every announcement meant for this
+ * user. The 14-day age cutoff keeps the real row count far below this.
+ */
+const ANNOUNCEMENT_SCAN_LIMIT = 50;
+
+/**
  * Builds one merged feed from two sources:
  *   - admin-authored `Notification` rows (audience-filtered), and
  *   - automated event notifications derived at read time.
@@ -59,6 +69,7 @@ export async function getNotificationsForUser(
     challengeMembership,
     programMemberships,
     hackathonMembership,
+    videothonRegistration,
     workshopRegistrations,
     userNotifRows,
   ] = await Promise.all([
@@ -78,7 +89,7 @@ export async function getNotificationsForUser(
         publishedAt: true,
       },
       orderBy: { publishedAt: "desc" },
-      take: FEED_LIMIT,
+      take: ANNOUNCEMENT_SCAN_LIMIT,
     }),
     programEnabled
       ? prisma.programCohort.findMany({
@@ -97,6 +108,10 @@ export async function getNotificationsForUser(
     listAiCohortMemberships({ userId }),
     prisma.hackathonParticipant.findFirst({
       where: { eventId: HACKATHON.eventId, userId },
+      select: { id: true },
+    }),
+    prisma.hackathonVideoRegistration.findUnique({
+      where: { eventId_userId: { eventId: VIDEOTHON.eventId, userId } },
       select: { id: true },
     }),
     prisma.workshopRegistration.findMany({
@@ -131,7 +146,11 @@ export async function getNotificationsForUser(
   const audiences = new Set<string>(["ALL"]);
   if (challengeMembership) audiences.add("CHALLENGE");
   if (programMemberships.length > 0) audiences.add("PROGRAM");
-  if (hackathonMembership) audiences.add("HACKATHON");
+  // HACKATHON covers both tracks: code-hackathon participants AND current
+  // VideoThon registrants. Before this, VideoThon registrants were never in
+  // the audience, so "Hackathon participants" pushes about VideoThon reached
+  // nobody who had actually registered for it.
+  if (hackathonMembership || videothonRegistration) audiences.add("HACKATHON");
   if (recruiterProfile) {
     audiences.add("RECRUITER");
   } else {
@@ -143,7 +162,7 @@ export async function getNotificationsForUser(
 
   const readKeys = new Set(readRows.map((r) => r.notificationKey));
 
-  const adminItems = adminRows
+  const adminItems: FeedInputRow[] = adminRows
     .filter((row) => audiences.has(row.audience))
     .map((row) => ({
       key: `admin:${row.id}`,
@@ -152,6 +171,7 @@ export async function getNotificationsForUser(
       href: row.href,
       category: row.category as NotificationCategoryKey,
       publishedAt: row.publishedAt.toISOString(),
+      audience: row.audience,
     }));
 
   const userItems: Omit<AppNotification, "isRead">[] = userNotifRows.map(
@@ -179,6 +199,8 @@ export async function getNotificationsForUser(
     ),
     isHackathonRegistered: Boolean(hackathonMembership),
     joinedCohortIds: new Set(programMemberships.map((m) => m.cohortId)),
+    isVideothonRegistered: Boolean(videothonRegistration),
+    workshopEvents: await listPublicEvents(),
   });
 
   // T-249 recruiter-side gate. Pure function, unit-tested in
@@ -192,12 +214,18 @@ export async function getNotificationsForUser(
     Boolean(recruiterProfile),
   );
 
-  const items: AppNotification[] = [
+  const merged: FeedInputRow[] = [
     ...filtered.adminItems,
     ...filtered.derivedItems,
     ...filtered.userItems,
-  ]
-    .map((item) => ({ ...item, isRead: readKeys.has(item.key) }))
+  ];
+  const items: AppNotification[] = merged
+    // `audience` is server-side targeting metadata — keep it off the client.
+    .map((row) => {
+      const item: AppNotification = { ...row, isRead: readKeys.has(row.key) };
+      delete (item as FeedInputRow).audience;
+      return item;
+    })
     .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
     .slice(0, FEED_LIMIT);
 

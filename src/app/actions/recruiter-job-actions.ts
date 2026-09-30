@@ -47,6 +47,12 @@ const createSchema = z.object({
   workMode: workModeSchema,
   opportunityType: opportunityTypeSchema,
   skills: z.array(z.string().max(60)).max(25).optional().default([]),
+  // Same bounds as `jobSpecSchema.minExperience`, which the scout search
+  // already uses, so the two sides of the product agree on what a plausible
+  // number of years is. Nullable rather than defaulted: "not stated" and
+  // "none needed" are different answers and the card renders them the same
+  // way only by coincidence.
+  minExperience: z.number().int().min(0).max(50).nullable().optional(),
   applyExternalUrl: z
     .union([z.literal(""), z.string().url()])
     .optional()
@@ -93,6 +99,7 @@ export async function createRecruiterJobAction(
       workMode: parsed.data.workMode,
       opportunityType: parsed.data.opportunityType,
       skills: parsed.data.skills,
+      minExperience: parsed.data.minExperience ?? null,
       applyExternalUrl: parsed.data.applyExternalUrl,
     };
     const result = await createRecruiterJob(

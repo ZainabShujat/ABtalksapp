@@ -1,15 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { signIn } from "next-auth/react";
+import { ArrowLeft, Loader2, Mail } from "lucide-react";
 import { toast } from "sonner";
+import { requestEmailCodeAction } from "@/app/actions/email-auth-actions";
+import {
+  PasswordSignIn,
+  toastSignInError,
+} from "@/components/auth/password-sign-in";
 import {
   DEFAULT_LEGAL_CONSENT,
   LegalConsentFields,
   legalConsentAccepted,
   type LegalConsentValues,
 } from "@/components/legal/legal-consent-fields";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -66,6 +72,8 @@ function messageForAuthError(error: string | undefined): string | null {
   switch (error) {
     case "OAuthAccountNotLinked":
       return "That Google account's email is already used by another ABTalks login. Sign in with the original method, or use a different Google account.";
+    case "RecruiterAccount":
+      return "That email belongs to a recruiter account. Sign in at ABTalks Hire instead.";
     case "AccessDenied":
       return "Sign-in was cancelled. Please try again.";
     case "Configuration":
@@ -78,9 +86,12 @@ function messageForAuthError(error: string | undefined): string | null {
   }
 }
 
+const RESEND_COOLDOWN_S = 30;
+
 type LoginClientProps = {
   showGoogle: boolean;
-  showDev: boolean;
+  /** Plan 154: emailed code + password (ENABLE_EMAIL_LOGIN). */
+  showEmail: boolean;
   redirectTo: string;
   /** Captured from ?ref= for future registration / OAuth (informational for now). */
   referralRef?: string;
@@ -89,14 +100,22 @@ type LoginClientProps = {
 
 export function LoginClient({
   showGoogle,
-  showDev,
+  showEmail,
   redirectTo,
   referralRef,
   authError,
 }: LoginClientProps) {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  // Password first: signing in is the common case, and it is the one door
+  // here that cannot create an account, so it needs no consent up front.
+  const [method, setMethod] = useState<"code" | "password">("password");
+  const [codeStep, setCodeStep] = useState<"email" | "code">("email");
+  const [code, setCode] = useState("");
+  const [devCode, setDevCode] = useState<string | null>(null);
+  const [resendUntil, setResendUntil] = useState(0);
+  const [now, setNow] = useState(0);
   const [pending, setPending] = useState(false);
+  const [emailPending, startEmailTransition] = useTransition();
   const [legalConsent, setLegalConsent] =
     useState<LegalConsentValues>(DEFAULT_LEGAL_CONSENT);
 
@@ -106,6 +125,16 @@ export function LoginClient({
   const afterSignIn = /^\/dashboard(?:[/?#]|$)/.test(target)
     ? `/welcome?next=${encodeURIComponent(target)}`
     : target;
+  /**
+   * Google (`events.createUser`) and an emailed code to an unknown address
+   * (`createCandidateFromEmail`) both create the account, and both write the
+   * consent record — so both wait for the box.
+   *
+   * A password never creates anything: `authorizePassword` only ever returns
+   * an account that already exists, and records no consent. Gating it asked
+   * someone to re-accept terms they agreed to at signup, and stored nothing
+   * for the trouble.
+   */
   const canSignIn = legalConsentAccepted(legalConsent);
   const authErrorMessage = messageForAuthError(authError);
 
@@ -127,42 +156,70 @@ export function LoginClient({
     }
   }
 
-  async function handleCredentialsSignIn(e: React.FormEvent) {
-    e.preventDefault();
-    if (!ensureLegalAccepted()) return;
+  useEffect(() => {
+    if (resendUntil <= Date.now()) return;
+    const timer = window.setInterval(() => {
+      const t = Date.now();
+      setNow(t);
+      if (t >= resendUntil) window.clearInterval(timer);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [resendUntil]);
+  const resendIn = Math.max(0, Math.ceil((resendUntil - now) / 1000));
+
+  /**
+   * The emailed-code path only. Terms first, then the newsletter choice rides
+   * along to account creation — a code to an unknown address makes the
+   * account, so neither can be collected afterwards.
+   */
+  function beforeCredentialsSignIn(): boolean {
+    if (!ensureLegalAccepted()) return false;
     writeNewsletterPrefCookie(legalConsent.newsletterOptIn);
-    setPending(true);
-    try {
-      const result = await signIn("dev-credentials", {
-        email,
-        password,
-        redirect: false,
-        // Relative path only — Auth.js may rewrite absolute URLs using AUTH_URL
-        // (often localhost), which breaks login when the app is opened via a LAN IP.
-        callbackUrl: afterSignIn,
-      });
-      if (result?.error) {
-        if (result.error !== "CredentialsSignin") {
-          console.error("NextAuth SignIn Error:", result.error);
-        }
-        toast.error(
-          result.error === "CredentialsSignin"
-            ? "Invalid email or password."
-            : "Sign-in failed. Please try again."
-        );
-        setPending(false);
-        return;
-      }
-      // Always stay on the origin the user opened (LAN IP vs localhost).
-      // Do not follow result.url — it often points at AUTH_URL's host.
-      window.location.assign(afterSignIn);
-    } catch {
-      toast.error("Something went wrong. Try again.");
-      setPending(false);
-    }
+    return true;
   }
 
-  if (!showGoogle && !showDev) {
+  function requestCode() {
+    // A code to an unknown address creates the account, so the Terms come
+    // before the code, not after it.
+    if (!beforeCredentialsSignIn()) return;
+    startEmailTransition(async () => {
+      const res = await requestEmailCodeAction({
+        email,
+        purpose: "candidate-login",
+        audience: "candidate",
+      });
+      if (!res.ok) {
+        toast.error(res.message);
+        return;
+      }
+      setDevCode(res.data.devCode ?? null);
+      setCode("");
+      setCodeStep("code");
+      const t = Date.now();
+      setNow(t);
+      setResendUntil(t + RESEND_COOLDOWN_S * 1000);
+    });
+  }
+
+  function submitCode() {
+    if (!beforeCredentialsSignIn()) return;
+    startEmailTransition(async () => {
+      const res = await signIn("email-code", {
+        email: email.trim(),
+        code,
+        redirect: false,
+      });
+      if (!res || res.error) {
+        toastSignInError(res?.code, "code", email);
+        setCode("");
+        return;
+      }
+      // Same-origin path, full navigation: see signInWithPassword.
+      window.location.assign(afterSignIn);
+    });
+  }
+
+  if (!showGoogle && !showEmail) {
     return (
       <p className="text-center text-sm text-muted-foreground">
         No sign-in methods are configured for this environment.
@@ -189,7 +246,7 @@ export function LoginClient({
               {referralRef}
             </span>{" "}
             when you complete registration (the link won&apos;t carry through
-            Google sign-in).
+            sign-in).
           </p>
         </div>
       ) : null}
@@ -214,66 +271,180 @@ export function LoginClient({
         </div>
       ) : null}
 
-      {showGoogle && showDev ? (
+      {showGoogle && showEmail ? (
         <div className="flex items-center gap-3">
           <Separator className="flex-1" />
-          <span className="text-xs font-medium text-muted-foreground">OR</span>
+          <span className="text-xs font-medium text-muted-foreground">
+            OR USE YOUR EMAIL
+          </span>
           <Separator className="flex-1" />
         </div>
       ) : null}
 
-      {showDev ? (
-        <form
-          method="post"
-          action="#"
-          onSubmit={handleCredentialsSignIn}
-          className="flex flex-col gap-4"
-        >
-          {referralRef ? (
-            <input type="hidden" name="ref" value={referralRef} readOnly />
-          ) : null}
-          <p className="text-sm font-medium text-foreground">Dev Login</p>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="dev-email">Email</Label>
-            <Input
-              id="dev-email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={pending}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="dev-password">Password</Label>
-            <Input
-              id="dev-password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={pending}
-            />
-          </div>
-          <Button
-            type="submit"
-            variant="outline"
-            className={cn(
-              HUB_BUTTON_CLASS,
-              "h-11 w-full bg-white hover:bg-white dark:bg-white dark:text-black dark:hover:bg-white dark:hover:text-[#03535F]",
-            )}
-            disabled={pending || !canSignIn}
+      {showEmail ? (
+        <div className="flex flex-col gap-4">
+          <div
+            role="radiogroup"
+            aria-label="How to sign in with email"
+            className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1"
           >
-            Sign in
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            Dev mode: use test accounts from seed script
-          </p>
-        </form>
+            {(
+              [
+                ["code", "Email code"],
+                ["password", "Password"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={method === value}
+                onClick={() => setMethod(value)}
+                disabled={emailPending}
+                className={cn(
+                  "h-9 rounded-md text-sm font-medium transition-colors",
+                  method === value
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {method === "password" ? (
+            <PasswordSignIn
+              audience="candidate"
+              idPrefix="login"
+              email={email}
+              onEmailChange={setEmail}
+              afterSignIn={afterSignIn}
+              onUseEmailCode={() => {
+                setMethod("code");
+                setCodeStep("email");
+              }}
+            />
+          ) : codeStep === "email" ? (
+            <form
+              noValidate
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (email.trim()) requestCode();
+              }}
+              className="flex flex-col gap-4"
+            >
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="login-code-email">Email</Label>
+                <Input
+                  id="login-code-email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={emailPending}
+                />
+                <p className="text-xs text-muted-foreground">
+                  We&apos;ll email you a 6-digit code. New here? The code
+                  creates your account.
+                </p>
+              </div>
+              <button
+                type="submit"
+                disabled={emailPending || !canSignIn || !email.trim()}
+                className={cn(
+                  buttonVariants({ size: "lg" }),
+                  "h-11 w-full gap-2 disabled:opacity-50",
+                )}
+              >
+                {emailPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Mail className="size-4" aria-hidden="true" />
+                )}
+                Email me a code
+              </button>
+            </form>
+          ) : (
+            <form
+              noValidate
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (code.length === 6) submitCode();
+              }}
+              className="flex flex-col gap-4"
+            >
+              <p className="text-sm text-foreground">
+                Code sent to <span className="font-medium">{email.trim()}</span>.
+                It expires in 10 minutes.
+              </p>
+              {devCode ? (
+                <p className="rounded-lg border border-[#AA821D]/30 bg-[#AA821D]/10 px-3 py-2 text-xs text-[#6B5212]">
+                  <strong className="font-semibold">Development only.</strong>{" "}
+                  No mail provider is configured, so the code is shown here:{" "}
+                  <span className="font-mono text-sm font-bold tracking-widest">
+                    {devCode}
+                  </span>
+                </p>
+              ) : null}
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="login-code">6-digit code</Label>
+                <Input
+                  id="login-code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  autoFocus
+                  maxLength={6}
+                  placeholder="000000"
+                  value={code}
+                  onChange={(e) =>
+                    setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
+                  disabled={emailPending}
+                  className="text-center font-mono text-lg tracking-[0.5em]"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={emailPending || !canSignIn || code.length !== 6}
+                className={cn(
+                  buttonVariants({ size: "lg" }),
+                  "h-11 w-full gap-2 disabled:opacity-50",
+                )}
+              >
+                {emailPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                ) : null}
+                Sign in
+              </button>
+              <div className="flex items-center justify-between text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCodeStep("email");
+                    setCode("");
+                    setDevCode(null);
+                  }}
+                  disabled={emailPending}
+                  className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
+                >
+                  <ArrowLeft className="size-3" aria-hidden="true" />
+                  Use a different email
+                </button>
+                <button
+                  type="button"
+                  onClick={requestCode}
+                  disabled={emailPending || resendIn > 0}
+                  className="text-muted-foreground underline-offset-2 hover:text-foreground hover:underline disabled:no-underline disabled:opacity-60"
+                >
+                  {resendIn > 0 ? `Resend in ${resendIn}s` : "Send a new code"}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
       ) : null}
 
       <LegalConsentFields
@@ -282,7 +453,9 @@ export function LoginClient({
       />
       {!canSignIn ? (
         <p className="text-center text-xs text-muted-foreground">
-          Accept the Terms of Service and Privacy Policy to enable Sign in.
+          {method === "password"
+            ? "Signing in with a password needs no acceptance. Google and emailed codes do — either one creates your account if you're new."
+            : "Accept the Terms of Service and Privacy Policy to enable Sign in."}
         </p>
       ) : null}
     </div>

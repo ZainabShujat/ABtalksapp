@@ -31,7 +31,7 @@ const audiences = [
   { value: "RECRUITER", label: "All recruiters" },
   { value: "CHALLENGE", label: "60-Day Challenge students" },
   { value: "PROGRAM", label: "AI Cohort members" },
-  { value: "HACKATHON", label: "Hackathon participants" },
+  { value: "HACKATHON", label: "Hackathon + VideoThon participants" },
 ] as const;
 
 type Category = (typeof categories)[number]["value"];
@@ -56,7 +56,9 @@ export function NotificationComposer() {
       href: href.trim() || undefined,
       category,
       audience,
-      expiresAt: expiresAt || undefined,
+      // datetime-local has no zone. Resolve it in the admin's browser (IST)
+      // before sending — the server runs in UTC and would shift it 5.5h.
+      expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
     });
     setPending(false);
 

@@ -147,6 +147,11 @@ export default async function RecruiterJobDetailPage({ params }: PageProps) {
               workMode: job.workMode ?? "REMOTE",
               type: job.type,
               skills: job.skills,
+              // Not optional. The client posts the whole form rather than a
+              // diff, so omitting this here would send "" on every edit and
+              // quietly wipe a value the recruiter set when posting.
+              minExperience:
+                job.minExperience === null ? "" : String(job.minExperience),
               applyExternalUrl: job.applyExternalUrl ?? "",
             }}
           />

@@ -17,7 +17,7 @@ export const metadata: Metadata = {
  *
  * Server Component. Resolves the recruiter workspace through the shared
  * boundary, loads the pipeline from the repository, ISO-formats the two
- * date fields, and hands a plain-object array to the client board.
+ * date fields, and hands a plain-object array to the client board .
  */
 export default async function PipelinePage() {
   const workspace = await requireRecruiterWorkspace();

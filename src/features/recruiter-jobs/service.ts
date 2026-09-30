@@ -33,6 +33,7 @@ export type JobRow = {
   workMode: JobWorkMode | null;
   type: JobType;
   skills: string[];
+  minExperience: number | null;
   status: JobStatus;
   isOpen: boolean;
   recruiterId: string | null;
@@ -158,6 +159,7 @@ export async function createRecruiterJob(
       workMode: input.workMode,
       type: input.opportunityType,
       skills: normalizeSkills(input.skills),
+      minExperience: input.minExperience ?? null,
       status: "DRAFT",
       isOpen: false,
       recruiterId: actor.userId,
@@ -240,6 +242,9 @@ export async function updateRecruiterJob(
   if (input.workMode !== undefined) patch.workMode = input.workMode;
   if (input.opportunityType !== undefined) patch.type = input.opportunityType;
   if (input.skills !== undefined) patch.skills = normalizeSkills(input.skills);
+  if (input.minExperience !== undefined) {
+    patch.minExperience = input.minExperience ?? null;
+  }
   if (input.applyExternalUrl !== undefined) {
     patch.applyExternalUrl = input.applyExternalUrl?.trim() || null;
   }

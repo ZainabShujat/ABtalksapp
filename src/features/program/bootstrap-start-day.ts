@@ -17,6 +17,7 @@ import {
   COMMIT_POINTS_PER_DAY,
   PROGRAM_MAX_COMMIT_POINTS,
   PROGRAM_MEMBER_START_DAY,
+  PROGRAM_TOTAL_DAYS,
   PROGRAM_TZ,
 } from "./constants";
 
@@ -37,10 +38,11 @@ async function recomputeTotalScore(
 async function seedEarlyCommitDays(
   tx: Prisma.TransactionClient,
   memberId: string,
-  cohort: { startsAt: Date; endsAt: Date },
+  anchor: { startedAt: Date },
 ): Promise<void> {
-  const startKey = formatInTimeZone(cohort.startsAt, PROGRAM_TZ, "yyyy-MM-dd");
-  const endKey = formatInTimeZone(cohort.endsAt, PROGRAM_TZ, "yyyy-MM-dd");
+  // The learner's own 31-day window, not a shared cohort window (plan 157).
+  const startKey = formatInTimeZone(anchor.startedAt, PROGRAM_TZ, "yyyy-MM-dd");
+  const endKey = addCalendarDaysToKey(startKey, PROGRAM_TOTAL_DAYS - 1);
   const startDate = parseCalendarKeyToUtcDate(startKey);
   const endDate = parseCalendarKeyToUtcDate(endKey);
 
@@ -123,10 +125,10 @@ export async function bootstrapMemberStartDay(
   const pe = await tx.programEnrollment.findUnique({
     where: { id: peIdForMember(memberId) },
     select: {
+      startedAt: true,
       unlockFloorDay: true,
       missionPoints: true,
       cleanPassCount: true,
-      cohort: { select: { startsAt: true, endsAt: true } },
     },
   });
   if (!pe) return;
@@ -135,10 +137,7 @@ export async function bootstrapMemberStartDay(
     highestUnlockedDay: pe.unlockFloorDay ?? 1,
     missionPoints: pe.missionPoints,
     cleanPassCount: pe.cleanPassCount,
-    cohort: {
-      startsAt: pe.cohort.startsAt ?? new Date(0),
-      endsAt: pe.cohort.endsAt ?? new Date(0),
-    },
+    startedAt: pe.startedAt,
   };
 
   const existingPassed =
@@ -305,7 +304,7 @@ export async function bootstrapMemberStartDay(
   }
 
   if (EARLY_COMMIT_DAY_COUNT > 0) {
-    await seedEarlyCommitDays(tx, memberId, member.cohort);
+    await seedEarlyCommitDays(tx, memberId, member);
   }
 
   await recomputeTotalScore(tx, memberId);

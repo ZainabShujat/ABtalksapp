@@ -1,10 +1,13 @@
 "use server";
 
+import { headers } from "next/headers";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/db";
-import { isRecruiterAuthEnabled } from "@/lib/feature-flags";
+import { deliverEmailCode, emailCodeFailureMessage } from "@/lib/email-code";
+import { isEmailLoginEnabled, isRecruiterAuthEnabled } from "@/lib/feature-flags";
+import { hashPassword } from "@/lib/password";
+import { assertRateLimit, rateLimitSubjectFromHeaders } from "@/lib/rate-limit";
 import { provisionRecruiterIdentity } from "@/features/hire/provision-recruiter";
-import { sendEmail } from "@/lib/email";
 import { recordLegalConsents } from "@/features/legal/record-consent";
 import { recordNewsletterOptIn } from "@/features/legal/record-newsletter-optin";
 import { attributeUtmToUser } from "@/features/utm/attribute";
@@ -12,7 +15,6 @@ import {
   findLiveSeat,
   issueRecruiterOtp,
   normaliseEmail,
-  otpDevFallbackEnabled,
   purgeExpiredOtps,
   verifyRecruiterOtp,
   type OtpIntent,
@@ -30,132 +32,6 @@ type ActionResult<T> = { ok: true; data: T } | { ok: false; message: string };
 
 const SUPPORT_EMAIL = "team@abtalks.in";
 
-async function deliverCode(
-  email: string,
-  code: string,
-): Promise<{ devCode?: string }> {
-  // The code leaves the server exactly one way: by email in production, or on
-  // screen in development when there is no mail provider configured.
-  if (otpDevFallbackEnabled()) {
-    // The code is returned to the caller, which is how the dev flow surfaces
-    // it. It used to be logged next to the address as well - a one-time
-    // credential and a private email on one line, which T-259 forbids and
-    // which the return value already made redundant.
-    logger.warn(
-      { event: "recruiter.otp.dev_fallback" },
-      "OTP returned to the caller instead of emailed (dev fallback)",
-    );
-    return { devCode: code };
-  }
-  await sendEmail({
-    to: email,
-    kind: "recruiter.otp",
-    tags: ["recruiter-otp", "transactional"],
-    // Plan 152: code in the subject line. Gmail's snippet expansion shows it
-    // one-tap-copy, and modern spam filters treat "code: NNNNNN" as clearly
-    // transactional. The word "verification" is spam-heavy and is dropped;
-    // "sign-in code" reads the same to a human and better to a filter.
-    subject: `Your ABTalks sign-in code is ${code}`,
-    html: renderOtpHtml(code),
-    text: renderOtpText(code),
-  });
-  return {};
-}
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.abtalks.in";
-const LOGO_URL = `${APP_URL}/abtalks-logo.png`;
-
-/**
- * Plan 152. Full HTML5 transactional email for the recruiter sign-in code.
- *
- * A 3-line HTML fragment (the previous template) is one of the strongest
- * heuristics Gmail and Outlook use to route mail to spam — legit transactional
- * senders always ship a proper HTML document with a preheader, a body, and a
- * footer. The layout borrows the workshop-email conventions so the two feel
- * like the same product.
- */
-function renderOtpHtml(code: string): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="color-scheme" content="light dark">
-  <meta name="supported-color-schemes" content="light dark">
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <title>Your ABTalks sign-in code</title>
-</head>
-<body style="margin:0;padding:0;background-color:#F4F4F4;font-family:Inter,'Segoe UI',Arial,sans-serif;">
-  <!-- Preheader: shown in the inbox snippet next to the subject line. Kept short so it doesn't wrap into the body. -->
-  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#F4F4F4;opacity:0;">
-    Use ${code} to sign in to ABTalks. It expires in 10 minutes.
-  </div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F4F4F4;padding:40px 20px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.06);">
-          <tr>
-            <td style="background:linear-gradient(135deg,#03535F,#076573);padding:28px;text-align:center;">
-              <img src="${LOGO_URL}" alt="ABTalks" width="140" style="display:block;margin:0 auto;height:auto;max-width:140px;border:0;outline:none;text-decoration:none;" />
-              <p style="color:rgba(255,255,255,0.9);font-size:13px;margin:8px 0 0;letter-spacing:0.3px;">Recruiter sign-in</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:32px 32px 8px;">
-              <h1 style="color:#0F1720;font-size:20px;line-height:1.35;margin:0 0 8px;font-weight:600;">Your ABTalks sign-in code</h1>
-              <p style="color:#4b4b4b;font-size:15px;line-height:1.6;margin:0 0 24px;">
-                Enter this code on the sign-in screen to continue. The code is valid for the next 10 minutes.
-              </p>
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#E7F2F3;border-radius:12px;margin-bottom:24px;">
-                <tr>
-                  <td align="center" style="padding:24px;">
-                    <p style="color:#076573;font-size:12px;margin:0 0 6px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;">Sign-in code</p>
-                    <p style="color:#03535F;font-size:34px;font-weight:700;letter-spacing:8px;margin:0;font-family:'Menlo','Consolas',ui-monospace,monospace;">${code}</p>
-                  </td>
-                </tr>
-              </table>
-              <p style="color:#4b4b4b;font-size:14px;line-height:1.6;margin:0 0 16px;">
-                If you didn&rsquo;t try to sign in to ABTalks, you can safely ignore this email &mdash; no changes have been made to any account.
-              </p>
-              <p style="color:#4b4b4b;font-size:14px;line-height:1.6;margin:0 0 24px;">
-                Need a hand? Write to <a href="mailto:team@abtalks.in" style="color:#03535F;text-decoration:underline;">team@abtalks.in</a> and someone from the team will help.
-              </p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:20px 32px 32px;border-top:1px solid #EFEFEF;">
-              <p style="color:#8A8A8A;font-size:12px;line-height:1.6;margin:0 0 6px;">
-                This is a transactional message from ABTalks, sent because someone requested a sign-in code for this address. If that wasn&rsquo;t you, no action is needed.
-              </p>
-              <p style="color:#8A8A8A;font-size:12px;line-height:1.6;margin:0;">
-                ABTalks &middot; <a href="${APP_URL}" style="color:#8A8A8A;text-decoration:underline;">abtalks.in</a>
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
-}
-
-function renderOtpText(code: string): string {
-  return `Your ABTalks sign-in code
-
-Enter this code on the sign-in screen to continue:
-
-  ${code}
-
-The code is valid for the next 10 minutes.
-
-If you didn't try to sign in to ABTalks, you can safely ignore this email — no changes have been made to any account.
-
-Need a hand? Write to team@abtalks.in.
-
-—
-This is a transactional message from ABTalks (${APP_URL}).`;
-}
 
 /**
  * Send a code, for registering or for signing in.
@@ -189,6 +65,14 @@ export async function requestRecruiterOtpAction(
   }
 
   try {
+    // Plan 154: per client as well as per address. The address cap alone lets
+    // one client mail every inbox it can think of.
+    const perClient = await assertRateLimit({
+      bucket: "EMAIL_CODE_IP",
+      subjectId: await rateLimitSubjectFromHeaders(await headers()),
+    });
+    if (!perClient.ok) return { ok: false, message: perClient.message };
+
     void purgeExpiredOtps();
 
     const issued = await issueRecruiterOtp(parsed.data.email, intent);
@@ -212,7 +96,11 @@ export async function requestRecruiterOtpAction(
       };
     }
 
-    const { devCode } = await deliverCode(parsed.data.email, issued.code);
+    const { devCode } = await deliverEmailCode(
+      parsed.data.email,
+      issued.code,
+      "recruiter-signin",
+    );
     return { ok: true, data: { sent: true, ...(devCode ? { devCode } : {}) } };
   } catch (error) {
     logger.error("[recruiter-auth] requestRecruiterOtpAction", {
@@ -250,9 +138,16 @@ export async function registerRecruiterWithOtpAction(
       message: "Recruiter sign-in and registration aren't open yet.",
     };
   }
-  const { fullName, company, phone, email, code, newsletterOptIn } =
+  const { fullName, company, phone, email, code, newsletterOptIn, password } =
     parsed.data;
   const normalised = normaliseEmail(email);
+
+  // Plan 154: an optional password, set in the same commit as the account so
+  // the two can never disagree. Only while email login is switched on — the
+  // password could not be used otherwise.
+  if (password && !isEmailLoginEnabled()) {
+    return { ok: false, message: "Passwords aren't available yet. Leave it blank." };
+  }
 
   // Checked again on the normalised address, at the boundary that actually
   // creates the account. The schema above already refuses this, so reaching
@@ -266,15 +161,7 @@ export async function registerRecruiterWithOtpAction(
       consume: false,
     });
     if (!verified.ok) {
-      return {
-        ok: false,
-        message:
-          verified.reason === "too-many"
-            ? "Too many wrong codes. Request a new one."
-            : verified.reason === "expired"
-              ? "That code expired. Request a new one."
-              : "That code isn't right.",
-      };
+      return { ok: false, message: emailCodeFailureMessage(verified.reason) };
     }
 
     const already = await prisma.user.findFirst({
@@ -289,6 +176,9 @@ export async function registerRecruiterWithOtpAction(
     const seat = await findLiveSeat(normalised);
     const resolvedCompany = seat?.company ?? company;
     const now = new Date();
+    // Hashed before the transaction: scrypt is deliberately slow and must not
+    // eat into the commit window below.
+    const passwordHash = password ? await hashPassword(password) : null;
 
     const userId = await prisma.$transaction(async (tx) => {
       const id =
@@ -301,6 +191,7 @@ export async function registerRecruiterWithOtpAction(
               role: "RECRUITER",
               // The code proved the address. Nothing else here does.
               emailVerified: new Date(),
+              ...(passwordHash ? { password: passwordHash } : {}),
             },
             select: { id: true },
           })
@@ -321,7 +212,14 @@ export async function registerRecruiterWithOtpAction(
       });
 
       if (already) {
-        await tx.user.update({ where: { id }, data: { role: "RECRUITER" } });
+        await tx.user.update({
+          where: { id },
+          data: {
+            role: "RECRUITER",
+            ...(passwordHash ? { password: passwordHash } : {}),
+          },
+          select: { id: true },
+        });
       }
 
       // Always. The workspace — Organization, OrganizationMember, the

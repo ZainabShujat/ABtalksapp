@@ -8,6 +8,13 @@ import {
   updateRecruiterProfileSchema,
   type RecruiterProfileDetails,
 } from "@/lib/validations/recruiter-profile";
+import {
+  deleteCompanyLogoBlob,
+  isCompanyLogoStorageConfigured,
+  isOurCompanyLogoUrl,
+  readLogoUpload,
+  storeCompanyLogoFile,
+} from "@/features/hire/org-logo-storage";
 
 type ActionResult<T> = { ok: true; data: T } | { ok: false; message: string };
 
@@ -42,6 +49,7 @@ export async function getRecruiterProfileAction(): Promise<
           industry: true,
           sizeBucket: true,
           location: true,
+          logoUrl: true,
         },
       }),
       prisma.user.findUnique({
@@ -65,6 +73,7 @@ export async function getRecruiterProfileAction(): Promise<
         industry: org?.industry ?? null,
         companySize: org?.sizeBucket ?? null,
         location: org?.location ?? null,
+        logoUrl: org?.logoUrl ?? null,
       },
     };
   } catch (error) {
@@ -143,4 +152,125 @@ export async function updateRecruiterProfileAction(
       message: "Failed to update profile. Please try again.",
     };
   }
+}
+
+
+/**
+ * Stores a company logo and points `Organization.logoUrl` at it (plan 158).
+ *
+ * Like every other action in this file the workspace is resolved server-side;
+ * the FormData carries a file and nothing else. The blob path is built from the
+ * server's own organization id and a hash of the bytes, so no part of it is
+ * caller-controlled and one workspace cannot overwrite another's logo.
+ */
+export async function uploadCompanyLogoAction(
+  formData: FormData,
+): Promise<{ ok: true; message: string; logoUrl: string } | { ok: false; message: string }> {
+  const workspace = await requireRecruiterWorkspace();
+  if (!workspace.ok) return workspace;
+
+  const { userId, organizationId } = workspace.data;
+
+  if (!isCompanyLogoStorageConfigured()) {
+    logger.warn("[org-logo] upload attempted while storage is unconfigured", {
+      organizationId,
+    });
+    return { ok: false, message: "Logo upload is not available right now." };
+  }
+
+  // Size, MIME, magic bytes and the declared-type equality check all live in
+  // readLogoUpload, which the admin create form (plan 159) shares. One copy.
+  const upload = await readLogoUpload(formData.get("file"));
+  if (!upload.ok) return upload;
+  const { bytes, contentHash } = upload;
+
+  let url: string;
+  try {
+    const existing = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { logoUrl: true },
+    });
+
+    const stored = await storeCompanyLogoFile({
+      organizationId,
+      contentHash,
+      ext: upload.ext,
+      bytes,
+      mimeType: upload.mime,
+    });
+    if (!stored) {
+      return { ok: false, message: "Logo upload is not available right now." };
+    }
+    url = stored;
+
+    await prisma.organization.update({
+      where: { id: organizationId },
+      data: { logoUrl: url },
+      select: { id: true },
+    });
+
+    // After the row points at the new file, never before: a stale blob costs
+    // nothing, a row pointing at a deleted blob is a broken image.
+    if (
+      existing?.logoUrl &&
+      isOurCompanyLogoUrl(existing.logoUrl) &&
+      existing.logoUrl !== url
+    ) {
+      await deleteCompanyLogoBlob(existing.logoUrl);
+    }
+  } catch (error) {
+    logger.error("[org-logo] upload failed", {
+      userId,
+      organizationId,
+      error: safeErrorMessage(error),
+    });
+    return { ok: false, message: "Could not save the logo. Please try again." };
+  }
+
+  revalidatePath("/hire/settings");
+  revalidatePath("/hire");
+
+  return { ok: true, message: "Company logo updated.", logoUrl: url };
+}
+
+/** Clears `Organization.logoUrl` and deletes the stored file (plan 158). */
+export async function removeCompanyLogoAction(): Promise<
+  { ok: true; message: string } | { ok: false; message: string }
+> {
+  const workspace = await requireRecruiterWorkspace();
+  if (!workspace.ok) return workspace;
+
+  const { userId, organizationId } = workspace.data;
+
+  try {
+    const existing = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { logoUrl: true },
+    });
+    if (!existing?.logoUrl) {
+      return { ok: true, message: "Company logo removed." };
+    }
+
+    await prisma.organization.update({
+      where: { id: organizationId },
+      data: { logoUrl: null },
+      select: { id: true },
+    });
+
+    if (isOurCompanyLogoUrl(existing.logoUrl)) {
+      await deleteCompanyLogoBlob(existing.logoUrl);
+    }
+  } catch (error) {
+    logger.error("[org-logo] remove failed", {
+      userId,
+      organizationId,
+      error: safeErrorMessage(error),
+    });
+    return { ok: false, message: "Could not remove the logo. Please try again." };
+  }
+
+  revalidatePath("/hire/settings");
+  revalidatePath("/hire");
+
+  return { ok: true, message: "Company logo removed." };
 }

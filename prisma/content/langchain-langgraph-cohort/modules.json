@@ -1,0 +1,50 @@
+[
+  {
+    "number": 1,
+    "title": "LLM & LangChain Foundations",
+    "subtitle": "Models · Prompts · Structured output · LCEL",
+    "color": "#6366f1",
+    "startDay": 1,
+    "endDay": 5
+  },
+  {
+    "number": 2,
+    "title": "Retrieval-Augmented Generation",
+    "subtitle": "Loaders · Chunking · Embeddings · Hybrid search · Reranking",
+    "color": "#0ea5e9",
+    "startDay": 6,
+    "endDay": 11
+  },
+  {
+    "number": 3,
+    "title": "Tools & Agents",
+    "subtitle": "Tool calling · create_agent · Agentic RAG · MCP",
+    "color": "#14b8a6",
+    "startDay": 12,
+    "endDay": 16
+  },
+  {
+    "number": 4,
+    "title": "LangGraph",
+    "subtitle": "State · Reducers · Routing · Persistence · Interrupts · Multi-agent",
+    "color": "#8b5cf6",
+    "startDay": 17,
+    "endDay": 23
+  },
+  {
+    "number": 5,
+    "title": "Production AI",
+    "subtitle": "LangSmith evaluation · Guardrails · FastAPI · Deployment",
+    "color": "#ef4444",
+    "startDay": 24,
+    "endDay": 26
+  },
+  {
+    "number": 6,
+    "title": "Capstone",
+    "subtitle": "AI Interview & Career Agent · Demo Day",
+    "color": "#22c55e",
+    "startDay": 27,
+    "endDay": 31
+  }
+]

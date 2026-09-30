@@ -24,6 +24,21 @@ function oauthCookieDomain(): string | undefined {
 
 const cookieDomain = oauthCookieDomain();
 
+/**
+ * Plan 154. With email sign-in on, an account can exist without a Google link
+ * (created by an emailed code, or holding only a password). Letting Google
+ * attach to it by email is safe only because every such account proved its
+ * address with a code first; `auth.ts`'s signIn callback refuses the link for
+ * recruiter, frozen and unverified-at-Google cases. Read as raw env — this
+ * file is in the edge bundle and cannot import `@/lib/feature-flags`.
+ */
+const linkGoogleByEmail = process.env.ENABLE_EMAIL_LOGIN === "true";
+
+/** Seconds, like `iat`. */
+function nowSeconds(): number {
+  return Math.floor(Date.now() / 1000);
+}
+
 function oauthCheckCookie(name: string) {
   return {
     name: `${cookiePrefix}${name}`,
@@ -79,6 +94,7 @@ export default {
             authorization: {
               params: { prompt: "select_account" },
             },
+            allowDangerousEmailAccountLinking: linkGoogleByEmail,
           }),
         ]
       : []),
@@ -94,21 +110,28 @@ export default {
       },
       authorize: async () => null,
     }),
-    ...(process.env.ENABLE_DEV_AUTH === "true"
-      ? [
-          Credentials({
-            id: "dev-credentials",
-            name: "Dev Login",
-            credentials: {
-              email: { label: "Email", type: "email" },
-              password: { label: "Password", type: "password" },
-            },
-            // authorize runs only in node context (not edge),
-            // but we leave it empty here — full version in auth.ts
-            authorize: async () => null,
-          }),
-        ]
-      : []),
+    // Plan 154: candidate sign-in by emailed code, and password sign-in for
+    // both doors. Same edge-safe stubs; the real authorize is in auth.ts.
+    // These replace the plain-text "dev-credentials" provider.
+    Credentials({
+      id: "email-code",
+      name: "Email code",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        code: { label: "Code", type: "text" },
+      },
+      authorize: async () => null,
+    }),
+    Credentials({
+      id: "password",
+      name: "Password",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+        audience: { label: "Audience", type: "text" },
+      },
+      authorize: async () => null,
+    }),
   ],
   callbacks: {
     async jwt({ token, user }) {
@@ -116,6 +139,15 @@ export default {
         token.id = user.id;
         token.email = user.email;
         token.role = (user as { role?: string }).role ?? "STUDENT";
+        token.authTime = nowSeconds();
+        token.authTimeEstimated = false;
+      } else if (typeof token.authTime !== "number") {
+        // Tokens from before authTime existed. `iat` is re-stamped on every
+        // refresh, so it is the latest time this session was known good —
+        // never later than a revocation that happens after it. Good enough to
+        // revoke by; not proof of a recent sign-in, hence the flag.
+        token.authTime = typeof token.iat === "number" ? token.iat : nowSeconds();
+        token.authTimeEstimated = true;
       }
       if (token.email) {
         const adminEmails = (process.env.ADMIN_EMAILS ?? "")
@@ -132,6 +164,10 @@ export default {
         (session.user as { role?: string }).role = token.role as string;
         (session.user as { isAdmin?: boolean }).isAdmin = token.isAdmin as boolean;
       }
+      session.authTime =
+        typeof token.authTime === "number" && token.authTimeEstimated !== true
+          ? token.authTime
+          : undefined;
       return session;
     },
   },

@@ -24,6 +24,26 @@ import { prisma } from "@/lib/db";
 /** Where a registration with no stated destination lands. */
 export const REGISTRATION_DEFAULT_NEXT = "/dashboard";
 
+const ADS_CLICK_KEYS = ["gclid", "gbraid", "wbraid"] as const;
+
+/**
+ * Keep Google click ids on a same-origin return path. Other query keys are dropped.
+ */
+export function withAdsClickIds(
+  path: string,
+  searchParams: Record<string, string | string[] | undefined>,
+): string {
+  const extra = new URLSearchParams();
+  for (const key of ADS_CLICK_KEYS) {
+    const raw = searchParams[key];
+    const value = Array.isArray(raw) ? raw[0] : raw;
+    if (value && /^[A-Za-z0-9._-]{1,200}$/.test(value)) extra.set(key, value);
+  }
+  const qs = extra.toString();
+  if (!qs) return path;
+  return path.includes("?") ? `${path}&${qs}` : `${path}?${qs}`;
+}
+
 /**
  * A same-origin path, or the fallback.
  *

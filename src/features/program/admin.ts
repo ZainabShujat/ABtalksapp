@@ -13,7 +13,7 @@ import { getAtRiskMembers, getMemberAtRiskStatus } from "@/features/program/comm
 import {
   collectPassSkipSets,
   getBehindByDays,
-  getCohortCalendarDay,
+  getMemberCalendarDay,
   getMemberProgressDay,
 } from "@/features/program/progression";
 import { askClaudeJson } from "@/lib/anthropic";
@@ -33,7 +33,12 @@ import {
   listAiCohortMemberships,
   listCanonicalProgramMemberIds,
 } from "@/repositories/program-state";
-import { peIdForMember, memberIdFromPe } from "@/repositories/ids";
+import {
+  cohortSlugForProgramCohort,
+  memberIdFromPe,
+  peIdForMember,
+} from "@/repositories/ids";
+import { logger } from "@/lib/logger";
 import { listCanonicalMissionAttempts } from "@/repositories/progress";
 
 export type CohortOverview = {
@@ -45,7 +50,8 @@ export type CohortOverview = {
     status: ProgramCohortStatus;
     startsAt: string;
     endsAt: string;
-    capacity: number;
+    /** Null = unlimited. Read from the canonical Cohort, the row that is enforced. */
+    capacity: number | null;
     resultsPublishedAt: string | null;
     enrolled: number;
     waitlisted: number;
@@ -162,18 +168,67 @@ async function allocateUniqueJoinCode(
   throw new Error("Could not generate a unique join code.");
 }
 
+/**
+ * Placeholder end date for `ProgramCohort`, whose `endsAt` is non-nullable in
+ * the schema. Nothing gates on it any more (plan 157) — the canonical `Cohort`
+ * row members read carries a real null.
+ */
+const ROLLING_COHORT_FAR_END = new Date("2099-12-31T00:00:00.000Z");
+
+/**
+ * Same idea for `ProgramCohort.capacity`, a non-nullable Int that cannot say
+ * "unlimited". Nothing enforces it — `enrollOrWaitlist` and `promoteWaitlisted`
+ * both read the canonical `Cohort.capacity`, where null means unlimited.
+ */
+const UNLIMITED_CAPACITY_PLACEHOLDER = 1_000_000;
+
+/**
+ * Mirror an admin cohort edit onto the canonical `Cohort` row (plan 157).
+ *
+ * Admin writes used to land on `ProgramCohort` alone, which no member-facing
+ * read ever touches — every learner path reads `Cohort` through
+ * `getCohortByJoinCode` / `getOpenEnrollmentCohort` / `findActiveMembership`.
+ * So the cohort dates and status could not be corrected from /admin/program at
+ * all. Anything the admin changes must reach both rows.
+ *
+ * The canonical row is absent only for a `ProgramCohort` created after the 078
+ * migration, which has no `programVersionId` to attach to; we log and skip
+ * rather than invent one.
+ */
+async function mirrorToCanonicalCohort(
+  tx: Prisma.TransactionClient,
+  programCohortId: string,
+  data: Prisma.CohortUpdateInput,
+): Promise<void> {
+  const slug = cohortSlugForProgramCohort(programCohortId);
+  const existing = await tx.cohort.findUnique({
+    where: { slug },
+    select: { slug: true },
+  });
+  if (!existing) {
+    logger.warn("[program] no canonical Cohort to mirror to", {
+      programCohortId,
+      slug,
+    });
+    return;
+  }
+  await tx.cohort.update({ where: { slug }, data });
+}
+
 export async function createOrUpdateCohort(
   adminId: string,
   data: {
     cohortId?: string;
     name: string;
-    startsAt: Date;
-    endsAt: Date;
-    capacity: number;
+    /** Both optional: a rolling cohort has no shared start or end (plan 157). */
+    startsAt: Date | null;
+    endsAt: Date | null;
+    /** Null = unlimited. The canonical Cohort row carries the null (plan 157). */
+    capacity: number | null;
     requiresJoinCode: boolean;
   },
 ): Promise<{ ok: true; cohortId: string } | { ok: false; message: string }> {
-  if (data.startsAt >= data.endsAt) {
+  if (data.startsAt && data.endsAt && data.startsAt >= data.endsAt) {
     return { ok: false, message: "Start date must be before end date." };
   }
 
@@ -189,11 +244,22 @@ export async function createOrUpdateCohort(
           where: { id: data.cohortId },
           data: {
             name: data.name,
-            startsAt: data.startsAt,
-            endsAt: data.endsAt,
-            capacity: data.capacity,
+            // ProgramCohort.startsAt/.endsAt are non-nullable in the schema, so
+            // a blank date keeps whatever is stored there. The canonical row
+            // below is the one members read, and it takes the null.
+            ...(data.startsAt ? { startsAt: data.startsAt } : {}),
+            ...(data.endsAt ? { endsAt: data.endsAt } : {}),
+            capacity: data.capacity ?? UNLIMITED_CAPACITY_PLACEHOLDER,
             requiresJoinCode: data.requiresJoinCode,
           },
+        });
+        await mirrorToCanonicalCohort(tx, data.cohortId, {
+          name: data.name,
+          startsAt: data.startsAt,
+          endsAt: data.endsAt,
+          capacity: data.capacity,
+          requiresJoinCode: data.requiresJoinCode,
+          startMode: "ROLLING",
         });
         await tx.adminAction.create({
           data: {
@@ -215,17 +281,30 @@ export async function createOrUpdateCohort(
       }
 
       const joinCode = await allocateUniqueJoinCode(tx);
+      // ProgramCohort.startsAt/.endsAt are non-nullable in the schema. A rolling
+      // cohort has no real window, so a blank date becomes "now" for the start
+      // and a far date for the end; the canonical row members read carries the
+      // null (plan 157).
       const created = await tx.programCohort.create({
         data: {
           name: data.name,
           joinCode,
-          startsAt: data.startsAt,
-          endsAt: data.endsAt,
-          capacity: data.capacity,
+          startsAt: data.startsAt ?? new Date(),
+          endsAt: data.endsAt ?? ROLLING_COHORT_FAR_END,
+          capacity: data.capacity ?? UNLIMITED_CAPACITY_PLACEHOLDER,
           requiresJoinCode: data.requiresJoinCode,
           status: "ENROLLING",
         },
         select: { id: true },
+      });
+      await mirrorToCanonicalCohort(tx, created.id, {
+        name: data.name,
+        joinCode,
+        startsAt: data.startsAt,
+        endsAt: data.endsAt,
+        capacity: data.capacity,
+        requiresJoinCode: data.requiresJoinCode,
+        startMode: "ROLLING",
       });
       await tx.adminAction.create({
         data: {
@@ -268,6 +347,7 @@ export async function regenerateJoinCode(
         where: { id: cohortId },
         data: { joinCode: next },
       });
+      await mirrorToCanonicalCohort(tx, cohortId, { joinCode: next });
       await tx.adminAction.create({
         data: {
           adminUserId: adminId,
@@ -308,6 +388,7 @@ export async function setCohortStatus(
       where: { id: cohortId },
       data: { status },
     });
+    await mirrorToCanonicalCohort(tx, cohortId, { status });
     await tx.adminAction.create({
       data: {
         adminUserId: adminId,
@@ -339,6 +420,10 @@ export async function publishResults(
       where: { id: cohortId },
       data: { resultsPublishedAt: new Date(), status: "COMPLETED" },
     });
+    await mirrorToCanonicalCohort(tx, cohortId, {
+      resultsPublishedAt: new Date(),
+      status: "COMPLETED",
+    });
     await tx.adminAction.create({
       data: {
         adminUserId: adminId,
@@ -355,6 +440,12 @@ export async function publishResults(
 export async function getCohortOverview(
   cohortId: string,
 ): Promise<CohortOverview | null> {
+  // Capacity comes from the canonical row because that is the one enrolment
+  // enforces; ProgramCohort.capacity is a non-nullable placeholder (plan 157).
+  const canonical = await prisma.cohort.findUnique({
+    where: { slug: cohortSlugForProgramCohort(cohortId) },
+    select: { capacity: true },
+  });
   const cohort = await prisma.programCohort.findUnique({
     where: { id: cohortId },
     select: {
@@ -396,7 +487,7 @@ export async function getCohortOverview(
           },
           commitCount: { gt: 0 },
         },
-        select: { date: true },
+        select: { date: true, programEnrollmentId: true },
       }),
       getAtRiskMembers(cohortId),
     ]);
@@ -456,19 +547,35 @@ export async function getCohortOverview(
     };
   });
 
-  const calendarDay = getCohortCalendarDay(cohort);
+  // Rolling cohort (plan 157): there is no single cohort day, so engagement is
+  // bucketed by each member's own day offset from their `startedAt`, and the
+  // chart runs out to the furthest-along member.
+  const startKeyByMember = new Map(
+    members.map((m) => [
+      m.id,
+      formatInTimeZone(m.startedAt, PROGRAM_TZ, "yyyy-MM-dd"),
+    ]),
+  );
+  const dayOffsetFor = (memberId: string, at: Date): number | null => {
+    const startKey = startKeyByMember.get(memberId);
+    if (!startKey) return null;
+    const key = formatInTimeZone(at, PROGRAM_TZ, "yyyy-MM-dd");
+    return (
+      Math.floor(
+        (new Date(key).getTime() - new Date(startKey).getTime()) / 86_400_000,
+      ) + 1
+    );
+  };
+
+  const calendarDay = members.reduce(
+    (max, m) => Math.max(max, getMemberCalendarDay(m)),
+    1,
+  );
   const dailyEngagement: CohortOverview["dailyEngagement"] = [];
   for (let d = 1; d <= Math.min(PROGRAM_TOTAL_DAYS, calendarDay); d++) {
-    const missionRuns = submissions.filter((s) => {
-      const key = formatInTimeZone(s.createdAt, PROGRAM_TZ, "yyyy-MM-dd");
-      const startKey = formatInTimeZone(cohort.startsAt, PROGRAM_TZ, "yyyy-MM-dd");
-      const dayOffset =
-        Math.floor(
-          (new Date(key).getTime() - new Date(startKey).getTime()) /
-            86_400_000,
-        ) + 1;
-      return dayOffset === d;
-    }).length;
+    const missionRuns = submissions.filter(
+      (s) => dayOffsetFor(s.memberId, s.createdAt) === d,
+    ).length;
     dailyEngagement.push({
       day: d,
       missionRuns,
@@ -476,13 +583,10 @@ export async function getCohortOverview(
     });
   }
   for (const row of commitRows) {
-    const key = formatInTimeZone(row.date, PROGRAM_TZ, "yyyy-MM-dd");
-    const startKey = formatInTimeZone(cohort.startsAt, PROGRAM_TZ, "yyyy-MM-dd");
-    const dayOffset =
-      Math.floor(
-        (new Date(key).getTime() - new Date(startKey).getTime()) / 86_400_000,
-      ) + 1;
-    if (dayOffset >= 1 && dayOffset <= PROGRAM_TOTAL_DAYS) {
+    const memberId = memberIdFromPe(row.programEnrollmentId);
+    if (!memberId) continue;
+    const dayOffset = dayOffsetFor(memberId, row.date);
+    if (dayOffset !== null && dayOffset >= 1 && dayOffset <= PROGRAM_TOTAL_DAYS) {
       const cell = dailyEngagement.find((e) => e.day === dayOffset);
       if (cell) cell.commitDays += 1;
     }
@@ -518,7 +622,7 @@ export async function getCohortOverview(
 
   const atRiskDetailed = await Promise.all(
     atRisk.map(async (m) => {
-      const status = await getMemberAtRiskStatus(m.memberId, cohort.id);
+      const status = await getMemberAtRiskStatus(m.memberId);
       return {
         memberId: m.memberId,
         fullName: m.fullName,
@@ -537,7 +641,7 @@ export async function getCohortOverview(
       status: cohort.status,
       startsAt: formatDateTimeIST(cohort.startsAt),
       endsAt: formatDateTimeIST(cohort.endsAt),
-      capacity: cohort.capacity,
+      capacity: canonical?.capacity ?? null,
       resultsPublishedAt: cohort.resultsPublishedAt
         ? formatDateTimeIST(cohort.resultsPublishedAt)
         : null,
@@ -623,7 +727,7 @@ export async function getCohortMembers(
       status: m.status,
       totalScore: m.totalScore,
       highestUnlockedDay: Math.max(m.highestUnlockedDay, progressDay),
-      behindBy: getBehindByDays(cohort, progressDay),
+      behindBy: getBehindByDays(m, progressDay),
       entryTotalScore: entryByUser.get(m.userId) ?? null,
       interviewStatus: interviewSignals.get(m.id)?.status ?? null,
       interviewOverall: interviewSignals.get(m.id)?.overallScore ?? null,
@@ -643,9 +747,15 @@ export async function promoteWaitlisted(
 
   try {
     await writeClient().$transaction(async (tx) => {
-      const enrolled = await countEnrolledProgramMembers(tx, member.cohortId);
-      if (enrolled >= (member.cohort.capacity ?? 0)) {
-        throw new Error("Cohort is at capacity.");
+      // Null capacity means unlimited (plan 157). This used to read
+      // `capacity ?? 0`, which turned "no cap" into "full" and would have made
+      // every promotion fail with a misleading "Cohort is at capacity."
+      const capacity = member.cohort.capacity;
+      if (capacity !== null) {
+        const enrolled = await countEnrolledProgramMembers(tx, member.cohortId);
+        if (enrolled >= capacity) {
+          throw new Error("Cohort is at capacity.");
+        }
       }
       await applyProgramMembershipChange(tx, {
         memberId,
@@ -795,7 +905,7 @@ export async function regenerateMemberRecommendation(
     select: { moduleNumber: true, adminScore: true, aiScore: true },
   });
 
-  const atRisk = await getMemberAtRiskStatus(memberId, member.cohort.id);
+  const atRisk = await getMemberAtRiskStatus(memberId);
   const behindBy = atRisk.behindBy;
   const missionsPassed = Math.floor(member.missionPoints / 12);
   const cleanPassPct =
@@ -896,7 +1006,7 @@ export async function getMemberAdminDetail(memberId: string) {
         submittedAt: true,
       },
     }),
-    getMemberAtRiskStatus(member.id, member.cohortId),
+    getMemberAtRiskStatus(member.id),
   ]);
 
   const signal = await getInterviewSignal(member.id);
@@ -914,8 +1024,8 @@ export async function getMemberAdminDetail(memberId: string) {
 
   const { passedDays, skippedDays } = collectPassSkipSets(missionSubmissions);
   const progressDay = getMemberProgressDay(passedDays);
-  const calendarDay = getCohortCalendarDay(member.cohort);
-  const behindBy = getBehindByDays(member.cohort, progressDay);
+  const calendarDay = getMemberCalendarDay(member);
+  const behindBy = getBehindByDays(member, progressDay);
 
   const dayStates = Array.from({ length: PROGRAM_TOTAL_DAYS }, (_, i) => {
     const dayNumber = i + 1;

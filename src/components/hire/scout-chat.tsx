@@ -2,7 +2,7 @@
 
 import {
   Fragment,
-  type ReactNode,
+  type CSSProperties,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -12,6 +12,8 @@ import {
 import { useRouter } from "next/navigation";
 import { Search, Sparkles } from "lucide-react";
 import { suggestChips } from "@/features/hire/scout-chips";
+import { detectSpokenBrief } from "@/features/hire/spoken-brief";
+import { NO_FLAGS, type SpokenBriefFlags } from "@/features/hire/hire-brief";
 import { toast } from "sonner";
 import {
   applyHireFiltersAction,
@@ -202,56 +204,20 @@ function displaySalaryChips(): Option[] {
   ];
 }
 
-/** Juicebox-style: ticks go green as the recruiter types, not only after Scout stores the spec. */
-function detectSpoken(raw: string) {
-  const text = raw.toLowerCase();
-  const role =
-    /\b(backend|front-?end|full[-\s]?stack|data\s*\/?\s*ml|ai|ml|software|react|python|node|java|ios|android|mobile|devops|platform|cloud|security|qa|product)\b.{0,20}\b(engineer|developer|designer|scientist|analyst|manager|architect)\b/.test(
-      text,
-    ) ||
-    /\b(hiring|need|looking\s+for|want|recruit)\b.{0,28}\b(engineer|developer|designer|scientist|analyst)\b/.test(
-      text,
-    );
-  const experience =
-    /\b\d{1,2}\s*(\+|plus)?\s*(yrs?|years?)\b/.test(text) ||
-    /\b(fresher|entry[-\s]?level|junior|jr\.?|mid[-\s]?level|senior|sr\.?|staff|principal|lead|intern)\b/.test(
-      text,
-    );
-  const location =
-    /\b(delhi|ncr|mumbai|bangalore|bengaluru|hyderabad|chennai|pune|kolkata|gurgaon|gurugram|noida|india|remote|hybrid|onsite|on-site|wfh|work from home|anywhere)\b/.test(
-      text,
-    );
-  const education =
-    /\b(b\.?\s?tech|m\.?\s?tech|bca|mca|mba|bachelor|master|degree|diploma|graduate|iit|nit)\b/.test(
-      text,
-    );
-  const skills =
-    /\b(python|java|javascript|typescript|react|node|next\.?js|sql|postgres|mongodb|aws|docker|kubernetes|golang|go\b|rust|django|flask|spring|redis|graphql|html|css|tailwind|pytorch|tensorflow|langchain)\b/.test(
-      text,
-    );
-  const availability =
-    /\b(remote|hybrid|onsite|on-site|wfh|immediate|notice|available|full[-\s]?time|contract|intern(ship)?|part[-\s]?time)\b/.test(
-      text,
-    );
-  const compensation =
-    /\b(\d+(\.\d+)?\s*(-\s*\d+(\.\d+)?)?\s*(lpa|lakh|ctc)|salary|budget|₹|inr|compensation|stipend)\b/.test(
-      text,
-    );
-  const abtalks =
-    /\b(ab\s?talks?.{0,40}(recommend|verif|rank|approv|vett|certif|score)|platform[-\s]verified)\b/.test(
-      text,
-    );
-  return {
-    role,
-    experience,
-    location,
-    education,
-    skills,
-    availability,
-    compensation,
-    abtalks,
-  };
-}
+/*
+ * Juicebox-style: ticks go green as the recruiter types, not only after Scout
+ * stores the spec. Primary: Gemini on the server (`/api/hire/brief`), debounced,
+ * the same parse `runScoutTurn` merges into the spec Search ranks on. Fallback:
+ * the local detector in `features/hire/spoken-brief.ts`, whenever the live
+ * parse is unavailable (no key, timeout, rate limit, bad reply).
+ */
+const LIVE_BRIEF_DEBOUNCE_MS = 400;
+const LIVE_BRIEF_MIN_CHARS = 3;
+const CHIP_PROTOCOL = /^(skip|salary|action|edit):/i;
+
+type LiveBriefResponse =
+  | { ok: true; data: { flags: SpokenBriefFlags } }
+  | { ok: false; message: string; disabled?: boolean };
 
 function toLpa(rupees: number): string {
   const lakhs = rupees / 100_000;
@@ -356,6 +322,14 @@ export function ScoutChat({
   const [summary, setSummary] = useState(initialSummary);
   const [readyToSearch, setReadyToSearch] = useState(false);
   const [text, setText] = useState("");
+  /** Gemini's reading of the composer text; null until one arrives for it. */
+  const [liveBrief, setLiveBrief] = useState<SpokenBriefFlags | null>(null);
+  /** "ok" once a live parse has worked; "fallback" after one failed. */
+  const [liveState, setLiveState] = useState<"unknown" | "ok" | "fallback">(
+    "unknown",
+  );
+  /** The server has no key: stop asking for this page view. */
+  const liveDisabled = useRef(false);
   const [pending, startTransition] = useTransition();
   const [searched, setSearched] = useState(
     initialSearched || (results?.length ?? 0) > 0,
@@ -844,6 +818,8 @@ export function ScoutChat({
       setMessages((m) => [...m, { role: "user", content: shown }]);
     }
     setText("");
+    // The sent brief now lives in `spec`; the next one starts unread.
+    setLiveBrief(null);
     startTransition(async () => {
       if (persist) {
         const res = await sendScoutMessageAction({
@@ -1143,13 +1119,66 @@ export function ScoutChat({
     }
     return ladder;
   })();
+  /**
+   * Debounced live parse of the composer. Each keystroke cancels the pending
+   * timer and aborts the request in flight, so only the newest text can land.
+   * A Route Handler, not a Server Action: actions are serialized, and a slow
+   * parse must never queue in front of the recruiter's Search.
+   */
+  useEffect(() => {
+    const q = text.trim();
+    if (
+      liveDisabled.current ||
+      q.length < LIVE_BRIEF_MIN_CHARS ||
+      CHIP_PROTOCOL.test(q)
+    ) {
+      return;
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        const res = await fetch("/api/hire/brief", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ text: q }),
+          signal: controller.signal,
+        });
+        const body = (await res.json()) as LiveBriefResponse;
+        if (controller.signal.aborted) return;
+        if (body.ok) {
+          setLiveBrief(body.data.flags);
+          setLiveState("ok");
+        } else {
+          if (body.disabled) liveDisabled.current = true;
+          setLiveState("fallback");
+        }
+      } catch {
+        if (!controller.signal.aborted) setLiveState("fallback");
+      }
+    }, LIVE_BRIEF_DEBOUNCE_MS);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [text]);
+
   const talked = messages.some((m) => m.role === "user") || searched;
-  const spoken = detectSpoken(
-    [
-      ...messages.filter((m) => m.role === "user").map((m) => m.content),
-      text,
-    ].join(" "),
-  );
+  // Live parse working: it reads the composer, and earlier messages are already
+  // in `spec` (the turn merged the same parse). Not working: the local detector
+  // over everything the recruiter said, as before. Between a keystroke and the
+  // debounced reply, the last reading stays up so ticks do not flicker.
+  const typed = text.trim();
+  const spoken: SpokenBriefFlags =
+    liveState !== "ok"
+      ? detectSpokenBrief(
+          [
+            ...messages.filter((m) => m.role === "user").map((m) => m.content),
+            text,
+          ].join(" "),
+        )
+      : !typed
+        ? NO_FLAGS
+        : (liveBrief ?? detectSpokenBrief(text));
   const criteria = [
     { key: "Role", on: Boolean(spec.title?.trim()) || spoken.role },
     {
@@ -1252,6 +1281,7 @@ export function ScoutChat({
     setMatchCount(null);
     setActiveSearchId("");
     setText("");
+    setLiveBrief(null);
     setDetailsOpen(false);
     setFiltersOpen(false);
     setOpenMatch(null);
@@ -1515,6 +1545,40 @@ export function ScoutChat({
         arriving && "is-arriving",
       )}
       aria-label="Scout assistant"
+      // The desk is locked to the viewport, so `.chat-output` is the only
+      // scroller — a wheel over the empty profile rail or the gutters around
+      // the cards hit nothing that could scroll and the list stood still.
+      // Hand those wheels to the list, unless something under the pointer can
+      // scroll itself (an open profile, a long composer). Portaled dialogs
+      // bubble here through React too; `contains` keeps them out.
+      onWheel={(e) => {
+        const list = scrollRef.current;
+        const target = e.target as HTMLElement;
+        if (
+          !list ||
+          e.ctrlKey ||
+          list.contains(target) ||
+          !e.currentTarget.contains(target)
+        ) {
+          return;
+        }
+        for (
+          let el: HTMLElement | null = target;
+          el && el !== e.currentTarget;
+          el = el.parentElement
+        ) {
+          const { overflowY } = getComputedStyle(el);
+          if (
+            (overflowY === "auto" || overflowY === "scroll") &&
+            el.scrollHeight > el.clientHeight
+          ) {
+            return;
+          }
+        }
+        const unit =
+          e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? list.clientHeight : 1;
+        list.scrollBy({ top: e.deltaY * unit });
+      }}
     >
       {persist && (
         <NewProjectDialog open={newProjectOpen} onOpenChange={setNewProjectOpen} />
@@ -1878,39 +1942,11 @@ export function ScoutChat({
                 );
               })}
 
-              {pending && (
-                <div className="scout-turn">
-                  <ScoutLoader />
-                  <p className="scout-turn__text scout-loader__label">
-                    Looking through verified work…
-                  </p>
-                </div>
-              )}
-              {/* The workspace is on screen before the backend has answered —
-                  the bar has already arrived. Card-shaped placeholders hold
-                  the space the results will take, so they populate into it
-                  rather than pushing the layout around. */}
-              {pending && (
-                <div className="hire-skeletons" aria-hidden="true">
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className="hire-skel">
-                      <div className="hire-skel__head">
-                        <span className="hire-skel__avatar" />
-                        <span className="hire-skel__lines">
-                          <span className="hire-skel__line hire-skel__line--name" />
-                          <span className="hire-skel__line hire-skel__line--meta" />
-                        </span>
-                      </div>
-                      <div className="hire-skel__chips">
-                        {[0, 1, 2, 3, 4].map((c) => (
-                          <span key={c} className="hire-skel__chip" />
-                        ))}
-                      </div>
-                      <span className="hire-skel__summary" />
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* The progress is the loading state on its own. Placeholder
+                  cards used to sit under it, and the thread follows its own
+                  bottom while pending — so the pane scrolled to the empty
+                  cards and pushed the progress out of view. */}
+              {pending && <ScoutProgress />}
               <div ref={bottomRef} className="scout-thread__end" aria-hidden="true" />
             </div>
             </>
@@ -1924,6 +1960,8 @@ export function ScoutChat({
             key={openMatch.candidateRef}
             match={openMatch}
             decision={openDecision}
+            // Grounds the View Details summary in the search on the desk.
+            searchSpec={spec}
             onClose={closeMatchPanel}
             onPrev={
               openIndex > 0
@@ -1974,7 +2012,11 @@ export function ScoutChat({
                 ref={promptRef}
                 rows={1}
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={(e) => {
+                  setText(e.target.value);
+                  // Cleared box: the old reading must not tick the next brief.
+                  if (!e.target.value.trim()) setLiveBrief(null);
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
@@ -2003,8 +2045,25 @@ export function ScoutChat({
               {pending ? "Searching" : "Search"}
             </button>
           </div>
-          {hero && (
-          <div className="scout-criteria-slot is-open">
+          {/* Plan 165: the requirement ticks now ride BOTH composers.
+              They were hero-only, so the moment a recruiter pressed Search the
+              row they had been reading vanished — and the results composer,
+              which is where refinements are actually typed, gave no signal that
+              anything in the sentence had been recognised.
+
+              The hero keeps its existing always-open behaviour. On the results
+              screen the slot opens on the first character and closes when the
+              box is emptied, which is what lifts the bar and settles it back:
+              `.scout-criteria-slot` animates grid-template-rows 0fr → 1fr, so
+              the composer rises as the row makes room for itself. No transform
+              and no absolute positioning — both would fight the rect
+              measurement `hire-stage-flip` takes of this same composer. */}
+          <div
+            className={cn(
+              "scout-criteria-slot",
+              (hero || text.trim().length > 0) && "is-open",
+            )}
+          >
             <div className="scout-criteria-slot__clip">
               <ul
                 className="scout-criteria"
@@ -2028,7 +2087,6 @@ export function ScoutChat({
               </ul>
             </div>
           </div>
-          )}
         </form>
 
         <div className="scout-hero-slot scout-hero-slot--below">
@@ -2061,65 +2119,88 @@ export function ScoutChat({
   );
 }
 
-/*
- * Toolbar glyphs, traced from the design's icon sheet as strokes in
- * `currentColor` so they follow the button's text colour through hover and
- * disabled states — the supplied bitmaps carried a white background that
- * showed as a box on the tinted buttons.
+/** What a search does, and roughly when each part starts (ms after the ask). */
+const SEARCH_STEPS = [
+  {
+    label: "Reading your brief",
+    detail: "Pulling out the role, location and must-have skills",
+    at: 0,
+  },
+  {
+    label: "Matching skills & experience",
+    detail: "Comparing your brief against every opted-in candidate",
+    at: 1400,
+  },
+  {
+    label: "Checking verified projects",
+    detail: "Looking at shipped work, not just what profiles claim",
+    at: 3200,
+  },
+  {
+    label: "Ranking the best fits",
+    detail: "Ordering the strongest matches first",
+    at: 6000,
+  },
+] as const;
+
+/**
+ * The loading state for a search, in place of placeholder cards: the thread
+ * follows its bottom while pending, so anything under this pushed it out of
+ * view. The steps tick off on a timer — the backend reports no progress, so
+ * this paces the wait rather than measuring it — and the last one stays
+ * active until the results land. Mounted only while pending, so every search
+ * starts from the first step.
  */
-function ToolbarIcon({ children }: { children: ReactNode }) {
+function ScoutProgress() {
+  const [active, setActive] = useState(0);
+
+  useEffect(() => {
+    const ids = SEARCH_STEPS.slice(1).map((step, i) =>
+      window.setTimeout(() => setActive(i + 1), step.at),
+    );
+    return () => ids.forEach((id) => window.clearTimeout(id));
+  }, []);
+
+  // Halfway through the active step, so the bar never claims to be finished.
+  const percent = ((active + 0.5) / SEARCH_STEPS.length) * 100;
+
   return (
-    <svg
-      className="scout-action__icon"
-      viewBox="0 0 24 24"
-      width={16}
-      height={16}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
+    <div
+      className="scout-progress"
+      style={{ "--scout-progress": `${percent}%` } as CSSProperties}
     >
-      {children}
-    </svg>
-  );
-}
-
-/** Magnifier with a plus at its shoulder. */
-function NewSearchIcon() {
-  return (
-    <ToolbarIcon>
-      <path d="M6 2.5v7M2.5 6h7" />
-      <path d="M11.2 6.6A5.8 5.8 0 1 1 7.3 11" />
-      <path d="M17.6 17.6 21 21" />
-    </ToolbarIcon>
-  );
-}
-
-/** Open folder with a plus above its spine. */
-function NewProjectIcon() {
-  return (
-    <ToolbarIcon>
-      <path d="M6 2.5v7M2.5 6h7" />
-      <path d="M12 6h2.2l1.8 2.2h3.5a1.5 1.5 0 0 1 1.5 1.5v1.5" />
-      <path d="M6 12.5v6a2 2 0 0 0 2 2h10.4a1.5 1.5 0 0 0 1.4-1l2.1-6.3a1 1 0 0 0-1-1.3H11a1.5 1.5 0 0 0-1.4 1L7 20.2" />
-    </ToolbarIcon>
-  );
-}
-
-/** Three sliders; the line breaks around each knob, as in the design. */
-function FiltersIcon() {
-  return (
-    <ToolbarIcon>
-      <path d="M3 6h2.5M10.5 6H21" />
-      <circle cx="8" cy="6" r="2.5" />
-      <path d="M3 12h10.5M18.5 12H21" />
-      <circle cx="16" cy="12" r="2.5" />
-      <path d="M3 18h2.5M10.5 18H21" />
-      <circle cx="8" cy="18" r="2.5" />
-    </ToolbarIcon>
+      <span className="scout-progress__glow" aria-hidden="true">
+        <i />
+        <i />
+      </span>
+      <div className="scout-progress__head">
+        <ScoutLoader />
+        <div className="scout-progress__heading">
+          <p className="scout-progress__title">Scout is searching</p>
+          <p key={active} className="scout-progress__detail">
+            {SEARCH_STEPS[active].detail}
+          </p>
+        </div>
+      </div>
+      <div className="scout-progress__bar" aria-hidden="true">
+        <span />
+      </div>
+      <ol className="scout-progress__steps">
+        {SEARCH_STEPS.map((step, i) => (
+          <li
+            key={step.label}
+            className="scout-progress__step"
+            data-state={i < active ? "done" : i === active ? "active" : "todo"}
+          >
+            <span className="scout-progress__dot" aria-hidden="true" />
+            <span className="scout-progress__label">{step.label}</span>
+          </li>
+        ))}
+      </ol>
+      <p className="sr-only" role="status">
+        {SEARCH_STEPS[active].label}
+      </p>
+    </div>
   );
 }
 

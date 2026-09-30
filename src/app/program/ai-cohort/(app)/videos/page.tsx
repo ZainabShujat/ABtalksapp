@@ -1,11 +1,11 @@
 import { requireProgramMember } from "@/lib/program-auth";
-import { getCohortCalendarDay } from "@/features/program/progression";
+import { getMemberCalendarDay } from "@/features/program/progression";
 import { VideoLibraryFilters } from "@/components/program/video-library-filters";
 import { listProgramVideos, listProgramModules } from "@/repositories/learning";
 
 export default async function ProgramVideosPage() {
-  const { cohort } = await requireProgramMember();
-  const cohortDay = getCohortCalendarDay(cohort);
+  const { member } = await requireProgramMember();
+  const memberDay = getMemberCalendarDay(member);
 
   const [catalog, modules] = await Promise.all([
     listProgramVideos(),
@@ -13,7 +13,7 @@ export default async function ProgramVideosPage() {
   ]);
   const videos = catalog.map((v) => ({
     ...v,
-    locked: v.dayNumber > cohortDay,
+    locked: v.dayNumber > memberDay,
   }));
 
   return (
@@ -22,7 +22,8 @@ export default async function ProgramVideosPage() {
         <header>
           <h1 className="font-display text-2xl font-bold tracking-tight">Videos</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Content unlocks with the cohort calendar (day {cohortDay}/31).
+            Content unlocks one day at a time from your start date (day{" "}
+            {memberDay}/31).
           </p>
         </header>
 

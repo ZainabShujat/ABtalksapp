@@ -17,6 +17,7 @@ export async function getJobDetail(jobId: string, userId: string) {
       type: true,
       description: true,
       skills: true,
+      minExperience: true,
       applyExternalUrl: true,
       isOpen: true,
       status: true,

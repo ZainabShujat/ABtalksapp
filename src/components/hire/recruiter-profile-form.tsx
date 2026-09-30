@@ -1,8 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { updateRecruiterProfileAction } from "@/app/actions/recruiter-profile-actions";
+import { useRef, useState, useTransition } from "react";
 import {
+  removeCompanyLogoAction,
+  updateRecruiterProfileAction,
+  uploadCompanyLogoAction,
+} from "@/app/actions/recruiter-profile-actions";
+import {
+  LOGO_MAX_BYTES,
+  LOGO_MIME_TYPES,
   type RecruiterProfileDetails,
   isValidRecruiterPhone,
 } from "@/lib/validations/recruiter-profile";
@@ -14,10 +20,19 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
+import { buttonVariants } from "@/components/ui/button";
 import { dsButtonVariants } from "@/components/design/ds-button";
 import { CLAY_CTA } from "@/components/jobs/job-ui";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, AlertCircle, Loader2, Building2, User } from "lucide-react";
+import {
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Building2,
+  Trash2,
+  Upload,
+  User,
+} from "lucide-react";
 
 function validatePhoneInput(val: string): string | null {
   if (!val || val.trim().length === 0) return null;
@@ -53,10 +68,63 @@ function validateWebsiteInput(val: string): string | null {
   }
 }
 
+const LOGO_ACCEPT = LOGO_MIME_TYPES.join(",");
+const LOGO_TYPE_MESSAGE = "Please choose a PNG, JPEG, or WebP image.";
+/** Longest side of the stored file. Enough for a retina 72px tile and any
+ *  header a logo is likely to end up in later. */
+const LOGO_MAX_EDGE = 512;
+
+/**
+ * Downscale to fit inside a {@link LOGO_MAX_EDGE} box, preserving aspect ratio,
+ * and export PNG.
+ *
+ * Two deliberate differences from the candidate avatar, which centre-crops to a
+ * square JPEG: a logo is rarely square, so cropping would cut it; and JPEG has
+ * no alpha, so a transparent logo would come back sitting on a black rectangle.
+ */
+function fitPng(file: File): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(
+        1,
+        LOGO_MAX_EDGE / Math.max(img.width, img.height || 1),
+      );
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Could not prepare the image."));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        if (!blob) reject(new Error("Could not prepare the image."));
+        else resolve(blob);
+      }, "image/png");
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("That file could not be read as an image."));
+    };
+    img.src = url;
+  });
+}
+
 export function RecruiterProfileForm({
   initialData,
+  logoUploadAvailable = false,
 }: {
   initialData: RecruiterProfileDetails;
+  /**
+   * False when no blob token is configured for this environment. The control
+   * still renders, disabled and explained: a missing env var should look like a
+   * temporary gap, not like a company that never had a logo option.
+   */
+  logoUploadAvailable?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
 
@@ -68,10 +136,74 @@ export function RecruiterProfileForm({
   const [companySize, setCompanySize] = useState(initialData.companySize ?? "");
   const [location, setLocation] = useState(initialData.location ?? "");
 
+  const [logoUrl, setLogoUrl] = useState(initialData.logoUrl ?? "");
+  const [logoPending, setLogoPending] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [websiteError, setWebsiteError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  async function onPickLogo(file: File | undefined) {
+    if (!file) return;
+    setLogoError(null);
+    setSuccess(null);
+
+    const name = file.name.toLowerCase();
+    if (
+      file.type === "image/svg+xml" ||
+      name.endsWith(".svg") ||
+      !(LOGO_MIME_TYPES as readonly string[]).includes(file.type)
+    ) {
+      setLogoError(LOGO_TYPE_MESSAGE);
+      return;
+    }
+    if (file.size > LOGO_MAX_BYTES) {
+      setLogoError("That file is too large. Please choose an image under 2 MB.");
+      return;
+    }
+
+    setLogoPending(true);
+    try {
+      const blob = await fitPng(file);
+      const prepared = new File([blob], "logo.png", { type: "image/png" });
+      const form = new FormData();
+      form.set("file", prepared);
+      const res = await uploadCompanyLogoAction(form);
+      if (!res.ok) {
+        setLogoError(res.message);
+        return;
+      }
+      setLogoUrl(res.logoUrl);
+      setSuccess(res.message);
+    } catch (err) {
+      setLogoError(
+        err instanceof Error ? err.message : "Could not upload the logo.",
+      );
+    } finally {
+      setLogoPending(false);
+      if (logoInputRef.current) logoInputRef.current.value = "";
+    }
+  }
+
+  async function onRemoveLogo() {
+    setLogoError(null);
+    setSuccess(null);
+    setLogoPending(true);
+    try {
+      const res = await removeCompanyLogoAction();
+      if (!res.ok) {
+        setLogoError(res.message);
+        return;
+      }
+      setLogoUrl("");
+      setSuccess(res.message);
+    } finally {
+      setLogoPending(false);
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -266,6 +398,105 @@ export function RecruiterProfileForm({
           </div>
         </CardHeader>
         <CardContent className="p-6 pt-2 space-y-5">
+          <div className="hire-logo">
+            <div className="hire-logo__tile">
+              {logoUrl ? (
+                // Blob URLs are not in next.config images.remotePatterns, and
+                // deliberately so — every other blob image in the app renders
+                // through a plain <img> too.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={logoUrl}
+                  alt={`${companyName || "Company"} logo`}
+                  className="hire-logo__img"
+                />
+              ) : (
+                <Building2
+                  className="size-6 text-muted-foreground"
+                  aria-hidden="true"
+                />
+              )}
+            </div>
+
+            <div className="hire-logo__meta">
+              <p className="text-sm font-semibold text-foreground">
+                Company Logo
+              </p>
+              <p className="text-xs text-muted-foreground">
+                PNG, JPEG or WebP · up to 2 MB. Shown beside your company name.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  disabled={logoPending || isPending || !logoUploadAvailable}
+                  title={
+                    logoUploadAvailable
+                      ? undefined
+                      : "Logo upload is unavailable right now."
+                  }
+                  onClick={() => logoInputRef.current?.click()}
+                  className={cn(
+                    buttonVariants({ variant: "outline", size: "sm" }),
+                    "h-9 gap-1.5 px-3",
+                  )}
+                >
+                  {logoPending ? (
+                    <>
+                      <Loader2 className="size-3.5 animate-spin" />
+                      Uploading…
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="size-3.5" aria-hidden="true" />
+                      {logoUrl ? "Replace logo" : "Upload logo"}
+                    </>
+                  )}
+                </button>
+
+                {logoUrl ? (
+                  <button
+                    type="button"
+                    disabled={logoPending || isPending}
+                    onClick={() => void onRemoveLogo()}
+                    className={cn(
+                      buttonVariants({ variant: "ghost", size: "sm" }),
+                      "h-9 gap-1.5 px-3 text-destructive hover:text-destructive",
+                    )}
+                  >
+                    <Trash2 className="size-3.5" aria-hidden="true" />
+                    Remove
+                  </button>
+                ) : null}
+              </div>
+
+              {!logoUploadAvailable && (
+                <p className="text-xs text-muted-foreground">
+                  Logo upload is unavailable right now.
+                </p>
+              )}
+
+              {logoError && (
+                <p
+                  role="alert"
+                  className="flex items-center gap-1 text-xs font-medium text-destructive"
+                >
+                  <AlertCircle className="size-3.5 shrink-0" />
+                  <span>{logoError}</span>
+                </p>
+              )}
+
+              <input
+                ref={logoInputRef}
+                type="file"
+                className="sr-only"
+                accept={LOGO_ACCEPT}
+                disabled={logoPending || !logoUploadAvailable}
+                onChange={(e) => void onPickLogo(e.target.files?.[0])}
+              />
+            </div>
+          </div>
+
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="space-y-2">
               <label

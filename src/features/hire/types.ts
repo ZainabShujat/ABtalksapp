@@ -94,6 +94,8 @@ export type CandidateDossier = {
    *  absence of the id rather than by remembering to check the source. */
   programMemberId: string | null;
   userId: string | null;
+  /** Plan 154: created from an admin-imported résumé; the student has not signed in yet. */
+  importedUnclaimed?: boolean;
 
   roleFamily: Fact<RoleFamily>;
   rawRoleLabel: Fact<string>;

@@ -209,10 +209,12 @@ export async function listRecentSnowflakeAttempts(
   const rows = await prisma.activityAttempt.findMany({
     where: {
       enrollmentId,
+      // Only cleared days belong in VIEW STATS. A day the learner never
+      // passed shows no row at all.
+      passed: true,
       activity: { id: { startsWith: SNF_DAY_ACTIVITY_PREFIX } },
     },
     orderBy: { createdAt: "desc" },
-    take,
     select: {
       id: true,
       activityId: true,
@@ -230,24 +232,30 @@ export async function listRecentSnowflakeAttempts(
       },
     },
   });
-  return rows.flatMap((row) => {
+  // One row per day: newest first, so the first sighting of a day is the
+  // one to keep. A learner who passes, then re-runs and passes again, has
+  // two passing attempts on one day — without this they appear twice.
+  const seen = new Set<number>();
+  const out: SnowflakeAttemptRow[] = [];
+  for (const row of rows) {
     const dn = row.activity.dayNumber;
-    if (dn == null) return [];
-    return [
-      {
-        id: row.id,
-        activityId: row.activityId,
-        dayNumber: dn,
-        attemptNumber: row.attemptNumber,
-        passed: row.passed,
-        lateness: row.lateness,
-        pointsAwarded: row.pointsAwarded,
-        createdAt: row.createdAt,
-        submittedAt: row.submittedAt,
-        verdict: row.evaluations[0]?.detailJson ?? null,
-      },
-    ];
-  });
+    if (dn == null || seen.has(dn)) continue;
+    seen.add(dn);
+    out.push({
+      id: row.id,
+      activityId: row.activityId,
+      dayNumber: dn,
+      attemptNumber: row.attemptNumber,
+      passed: row.passed,
+      lateness: row.lateness,
+      pointsAwarded: row.pointsAwarded,
+      createdAt: row.createdAt,
+      submittedAt: row.submittedAt,
+      verdict: row.evaluations[0]?.detailJson ?? null,
+    });
+    if (out.length === take) break;
+  }
+  return out;
 }
 
 export async function hasPassedSnowflakeActivity(

@@ -1,0 +1,153 @@
+[
+  {
+    "moduleNumber": 1,
+    "title": "Module 1: Resume & JD Analyzer",
+    "criteria": [
+      {
+        "name": "LangChain fundamentals",
+        "weight": 25,
+        "description": "Models created with init_chat_model, prompts built with templates, chains composed with LCEL rather than string concatenation."
+      },
+      {
+        "name": "Structured output",
+        "weight": 30,
+        "description": "Pydantic schemas with clear field descriptions, typed results from with_structured_output, and a sensible handling path for parsing failures."
+      },
+      {
+        "name": "Correct logic split",
+        "weight": 25,
+        "description": "Extraction runs in parallel with RunnableParallel, and the match score is computed deterministically in Python, not by the model."
+      },
+      {
+        "name": "Usability & documentation",
+        "weight": 20,
+        "description": "Runs from the command line with arguments, produces a readable report, and the README explains architecture, usage and limits."
+      }
+    ]
+  },
+  {
+    "moduleNumber": 2,
+    "title": "Module 2: Chat With Your Documents",
+    "criteria": [
+      {
+        "name": "Indexing pipeline",
+        "weight": 20,
+        "description": "Loading, chunking and embedding are separated from chat, metadata is preserved, and duplicate ingestion is avoided."
+      },
+      {
+        "name": "Retrieval quality",
+        "weight": 30,
+        "description": "A test set and hit-rate measurements justify the chosen retrieval method (MMR, hybrid, multi-query or reranking)."
+      },
+      {
+        "name": "Grounded answers",
+        "weight": 25,
+        "description": "Answers cite numbered sources, stay within the context, and return NOT_FOUND honestly when the documents do not cover the question."
+      },
+      {
+        "name": "App experience",
+        "weight": 25,
+        "description": "Streamlit app with upload, chat history, streaming, visible sources, a screenshot and a clear README."
+      }
+    ]
+  },
+  {
+    "moduleNumber": 3,
+    "title": "Module 3: Career Assistant Agent",
+    "criteria": [
+      {
+        "name": "Tool design",
+        "weight": 25,
+        "description": "Small, well-described tools, including earlier projects reused as tools, with errors returned to the model rather than crashing."
+      },
+      {
+        "name": "Agent behaviour",
+        "weight": 25,
+        "description": "Sensible tool selection, no unnecessary retrieval, memory per thread_id, and a system prompt with explicit rules."
+      },
+      {
+        "name": "Testing",
+        "weight": 25,
+        "description": "Scripted conversations with expected tools, a measured tool-choice accuracy and at least one documented fix."
+      },
+      {
+        "name": "Capstone proposal",
+        "weight": 25,
+        "description": "A clear problem, user, inputs and outputs, a first graph sketch, reuse plan and realistic risks."
+      }
+    ]
+  },
+  {
+    "moduleNumber": 4,
+    "title": "Module 4: Corrective RAG Graph",
+    "criteria": [
+      {
+        "name": "Graph design",
+        "weight": 25,
+        "description": "State, nodes and conditional edges match a documented diagram, and every loop has an explicit limit."
+      },
+      {
+        "name": "Self-correction",
+        "weight": 30,
+        "description": "Retrieved chunks are graded, weak queries are rewritten, and answers are checked for groundedness before returning."
+      },
+      {
+        "name": "Comparison with plain RAG",
+        "weight": 25,
+        "description": "A 10-question comparison covering correct, NOT_FOUND and hallucinated answers plus the extra LLM calls per question."
+      },
+      {
+        "name": "Code & documentation",
+        "weight": 20,
+        "description": "Readable node functions, a Mermaid diagram in the README and honest discussion of cost."
+      }
+    ]
+  },
+  {
+    "moduleNumber": 5,
+    "title": "Module 5: Production Readiness",
+    "criteria": [
+      {
+        "name": "Evaluation",
+        "weight": 35,
+        "description": "A LangSmith dataset, a code evaluator and an LLM-as-judge evaluator, two compared experiments and a written diagnosis of failures."
+      },
+      {
+        "name": "Security & guardrails",
+        "weight": 30,
+        "description": "A tested prompt injection defence, input limits, PII redaction, secrets kept out of the repo and a completed checklist."
+      },
+      {
+        "name": "Serving & deployment",
+        "weight": 35,
+        "description": "A FastAPI service with validated input and a streaming endpoint, a Dockerfile and a working deployment documented in DEPLOY.md."
+      }
+    ]
+  },
+  {
+    "moduleNumber": 6,
+    "title": "Module 6: Capstone",
+    "criteria": [
+      {
+        "name": "Architecture & LangGraph use",
+        "weight": 25,
+        "description": "A design document and graph that use state, reducers, conditional routing, interrupts and persistence where they are genuinely needed."
+      },
+      {
+        "name": "Functionality",
+        "weight": 25,
+        "description": "End-to-end interview works: extraction, planning, topic-filtered questions, rubric-based evaluation, bounded follow-ups and a final report."
+      },
+      {
+        "name": "Evaluation & robustness",
+        "weight": 20,
+        "description": "Evaluator band accuracy, persona runs, an injection test inside uploaded documents and documented weaknesses."
+      },
+      {
+        "name": "Deployment & presentation",
+        "weight": 30,
+        "description": "A live deployment, a portfolio-quality README, a 10-point demo video and an honest retrospective."
+      }
+    ]
+  }
+]

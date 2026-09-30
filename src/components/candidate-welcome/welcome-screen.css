@@ -199,8 +199,9 @@
 .cwelcome__title {
   font-size: clamp(30px, 7.5vw, 58px);
   font-weight: 500;
-  line-height: 0.8621; /* 50 / 58 */
+  line-height: 1.15;
   color: #000000;
+  text-wrap: balance;
 }
 
 .cwelcome__subtitle {

@@ -37,7 +37,7 @@ export function Hero({ compact = false, country = "USA" }: Props) {
               <CalendarDays className="size-4 text-primary" aria-hidden />
             </div>
             <span className="text-sm font-medium text-foreground">
-              Launch: 15 Jul 2026
+              Start any day
             </span>
           </div>
           <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-card px-4 py-3 text-left shadow-[var(--shadow-card)]">
@@ -45,7 +45,7 @@ export function Hero({ compact = false, country = "USA" }: Props) {
               <CalendarDays className="size-4 text-primary" aria-hidden />
             </div>
             <span className="text-sm font-medium text-foreground">
-              Completion: 30 Aug 2026
+              31 days, paced from your start
             </span>
           </div>
         </div>

@@ -11,6 +11,15 @@ export const PROFILE_DEFAULT_CONSENT_SOURCE = "platform_default_profile";
 /** Historical ProgramMember.recruiterVisibilityConsentAt copied as a label. */
 export const PROGRAM_APPLY_CONSENT_SOURCE = "program_apply_migrated";
 
+/**
+ * Plan 154: an admin registered this student from an imported résumé, and
+ * attested that the student agreed to recruiter visibility. The student has
+ * not acted yet — `claim_consent` re-stamps the row when they sign in.
+ */
+export const ADMIN_IMPORT_CONSENT_SOURCE = "admin_resume_import";
+/** Plan 154: the imported student signed in with Google and took the account over. */
+export const OAUTH_CLAIM_CONSENT_SOURCE = "oauth_claim";
+
 export const PLATFORM_DEFAULT_CONSENT_SOURCES = [
   ENROLLMENT_DEFAULT_CONSENT_SOURCE,
   PROFILE_DEFAULT_CONSENT_SOURCE,
@@ -20,6 +29,8 @@ export type VisibilityKind =
   | "challenge_enroll"
   | "program_member"
   | "usable_profile"
+  | "admin_import"
+  | "claim_consent"
   | "admin_withdraw"
   | "probe_restore";
 
@@ -182,23 +193,100 @@ export async function applyVisibilityChange(
     };
   }
 
-  if (input.kind === "challenge_enroll" || input.kind === "usable_profile") {
-    if (existing) {
+  if (input.kind === "claim_consent") {
+    // Only an import-sourced row is re-stamped: any other row records a
+    // decision made some other way, and the claim must not rewrite it.
+    if (!existing || existing.consentSource !== ADMIN_IMPORT_CONSENT_SOURCE) {
       return {
         ok: true,
-        searchableByRecruiters: existing.searchableByRecruiters,
-        withdrawnAt: existing.withdrawnAt,
+        searchableByRecruiters: existing?.searchableByRecruiters ?? false,
+        withdrawnAt: existing?.withdrawnAt ?? null,
         created: false,
         updated: false,
         skipped: true,
-        skipReason: "already_exists",
+        skipReason: existing ? "already_exists" : "missing_row",
         mirrorFailed: false,
       };
     }
+    await tx.candidateVisibility.update({
+      where: { userId: input.userId },
+      data: { consentSource: OAUTH_CLAIM_CONSENT_SOURCE, consentedAt: now },
+    });
+    return {
+      ok: true,
+      searchableByRecruiters: existing.searchableByRecruiters,
+      withdrawnAt: existing.withdrawnAt,
+      created: false,
+      updated: true,
+      skipped: false,
+      mirrorFailed: false,
+    };
+  }
+
+  if (
+    input.kind === "challenge_enroll" ||
+    input.kind === "usable_profile" ||
+    input.kind === "admin_import"
+  ) {
     const consentSource =
       input.kind === "usable_profile"
         ? PROFILE_DEFAULT_CONSENT_SOURCE
-        : ENROLLMENT_DEFAULT_CONSENT_SOURCE;
+        : input.kind === "admin_import"
+          ? ADMIN_IMPORT_CONSENT_SOURCE
+          : ENROLLMENT_DEFAULT_CONSENT_SOURCE;
+
+    if (existing) {
+      // These three intents MEAN "this person is discoverable". Refusing to act
+      // on an existing row was create-only for a good reason — a row usually
+      // records a decision and must not be overwritten — but it left one
+      // population permanently unreachable.
+      //
+      // `migrate-2b-visibility` wrote 12,734 rows on 2026-08-24 as
+      // `{ searchableByRecruiters: false, consentSource: null }`, when the
+      // column still defaulted to false. The default was corrected 52 minutes
+      // later by a migration that deliberately did not rewrite existing rows,
+      // and nothing has re-opened them since: an admin résumé import for any
+      // user who pre-dates that window silently answered "already_exists".
+      //
+      // A null `consentSource` is the signature of that artifact and of nothing
+      // else — every real decision stamps one. So a closed, never-decided row
+      // is healed here; anything carrying a decision is still left exactly as
+      // it is. A withdrawn row cannot reach this line: the `withdrawnAt` guard
+      // above returns first, which is what keeps admin moderation durable.
+      // See plan 161 §2c.
+      const neverDecided =
+        existing.consentSource === null && !existing.searchableByRecruiters;
+      if (!neverDecided) {
+        return {
+          ok: true,
+          searchableByRecruiters: existing.searchableByRecruiters,
+          withdrawnAt: existing.withdrawnAt,
+          created: false,
+          updated: false,
+          skipped: true,
+          skipReason: "already_exists",
+          mirrorFailed: false,
+        };
+      }
+      await tx.candidateVisibility.update({
+        where: { userId: input.userId },
+        data: {
+          searchableByRecruiters: true,
+          consentSource,
+          consentedAt: now,
+        },
+      });
+      const healedMirror = await flushMirror(tx, input);
+      return {
+        ok: true,
+        searchableByRecruiters: true,
+        withdrawnAt: null,
+        created: false,
+        updated: true,
+        skipped: false,
+        mirrorFailed: healedMirror,
+      };
+    }
     await tx.candidateVisibility.create({
       data: {
         userId: input.userId,

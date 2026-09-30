@@ -75,31 +75,39 @@ console.log("T-253 instrumentation structure: transport, emit sites, exclusions"
 // ── One transport, one initialisation (T-252 preserved) ──────────────────────
 
 {
-  // Every event ABTalks sends goes through the single gtag('event', …) call in
-  // use-track.ts. A second one anywhere is a second analytics system.
+  // GA4 events and the enrolment-success Ads conversion go through use-track.ts.
+  // The landing page also carries Munna's page-load conversion snippet, pasted
+  // in the same inline script as the Google tag.
   const senders = APP.filter((f) => /gtag\(\s*["']event["']/.test(f.code));
+  const senderPaths = senders.map((f) => f.path).sort();
   assert(
-    senders.length === 1 && senders[0].path === "src/lib/analytics/use-track.ts",
-    `expected one gtag('event') call site, found: ${senders.map((f) => f.path).join(", ") || "none"}`,
+    senderPaths.length === 2 &&
+      senderPaths[0] === "src/app/page.tsx" &&
+      senderPaths[1] === "src/lib/analytics/use-track.ts",
+    `expected gtag('event') on the landing page and in use-track.ts, found: ${senderPaths.join(", ") || "none"}`,
   );
-  ok("transport: gtag('event') is called from use-track.ts and nowhere else");
+  ok("transport: gtag('event') is the landing conversion snippet and use-track.ts");
 }
 
 {
   // T-252 owns loading and configuring GA4. T-253 must not have added a second
   // loader, a second measurement id, or a second consent default.
   const loaders = APP.filter((f) => /googletagmanager\.com/.test(f.code));
+  const loaderPaths = loaders.map((f) => f.path).sort();
   assert(
-    loaders.length === 1 &&
-      loaders[0].path === "src/components/analytics/ga4-loader.tsx",
-    `expected only the T-252 loader to reference googletagmanager, found: ${loaders.map((f) => f.path).join(", ")}`,
+    loaderPaths.length === 2 &&
+      loaderPaths[0] === "src/app/page.tsx" &&
+      loaderPaths[1] === "src/components/analytics/ga4-loader.tsx",
+    `expected the landing Ads tag and the T-252 loader to reference googletagmanager, found: ${loaderPaths.join(", ")}`,
   );
 
   const configurers = APP.filter((f) => /gtag\(\s*["']config["']/.test(f.code));
+  const configurerPaths = configurers.map((f) => f.path).sort();
   assert(
-    configurers.length === 1 &&
-      configurers[0].path === "src/components/analytics/ga4-loader.tsx",
-    `expected one gtag('config') call, found: ${configurers.map((f) => f.path).join(", ")}`,
+    configurerPaths.length === 2 &&
+      configurerPaths[0] === "src/app/page.tsx" &&
+      configurerPaths[1] === "src/components/analytics/ga4-loader.tsx",
+    `expected gtag('config') on the landing page and in the T-252 loader, found: ${configurerPaths.join(", ")}`,
   );
 
   const idReaders = APP.filter((f) =>
@@ -110,7 +118,7 @@ console.log("T-253 instrumentation structure: transport, emit sites, exclusions"
       idReaders[0].path === "src/components/analytics/ga4-loader.tsx",
     `the measurement id must be read only by the T-252 loader, found: ${idReaders.map((f) => f.path).join(", ")}`,
   );
-  ok("T-252 preserved: one loader, one config call, one measurement id reader");
+  ok("T-252 preserved: GA4 loader plus landing Ads tag, one measurement id reader");
 }
 
 {
@@ -305,6 +313,7 @@ const EMIT_SITES: Record<keyof typeof ANALYTICS_EVENTS, readonly string[]> = {
   const allowed = new Set<string>([
     "src/lib/analytics/use-track.ts",
     "src/components/analytics/ga4-loader.tsx",
+    "src/app/page.tsx",
   ]);
   const touchers = APP.filter(
     (f) => /\bgtag\b/.test(f.code) && !allowed.has(f.path),

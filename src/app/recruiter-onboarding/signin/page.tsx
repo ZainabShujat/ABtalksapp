@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import { getRecruiterState } from "@/features/talent-pool/recruiter-registration";
 import { RecruiterAuthClosed } from "@/components/talent/recruiter-auth-closed";
 import { SigninScreen } from "@/components/recruiter-onboarding/signin-screen";
-import { isRecruiterAuthEnabled } from "@/lib/feature-flags";
+import { isEmailLoginEnabled, isRecruiterAuthEnabled } from "@/lib/feature-flags";
 
 export const metadata: Metadata = {
   title: "Recruiter sign-in | ABTalks",
@@ -42,5 +42,10 @@ export default async function RecruiterSigninPage({ searchParams }: Props) {
   // An address, not markup: capped to the RFC maximum and rendered as text.
   const initialEmail = (params.email ?? "").trim().slice(0, 254);
 
-  return <SigninScreen initialEmail={initialEmail} />;
+  return (
+    <SigninScreen
+      initialEmail={initialEmail}
+      passwordEnabled={isEmailLoginEnabled()}
+    />
+  );
 }

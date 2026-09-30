@@ -6,9 +6,8 @@
  * of a query string and an unvalidated one is an open redirect. And source
  * assertions on the invariants that are cheap to break and invisible in a unit
  * test: that no candidate destination waves a profile-less user past the gate,
- * that the résumé requirement is checked against the stored row rather than a
- * client flag, and that the fields the résumé now fills in have actually left
- * the form.
+ * that registration does not require a résumé (optional upload; merge when
+ * present), and that the fields the résumé fills in have actually left the form.
  *
  * Run: npm run test:registration-gate
  */
@@ -203,30 +202,42 @@ suite("the gate is never imported by edge middleware", () => {
 
 suite("register payload drops what the résumé fills in", () => {
   const src = source("src/lib/validations/register.ts");
-  const payload = src.slice(src.indexOf("const studentFields"));
+  const payload = src.slice(src.indexOf("const registerPayloadBase"));
   for (const gone of [
     "linkedinUrl",
     "githubUsername",
     "skills",
     "graduationYear",
+    // Written as education / experience rows, then duplicated by the merge.
+    "college:",
+    "organization:",
+    "yearsExperience:",
+    // Basic-info block: the merge fills headline and city.
+    "headline:",
+    "locationCity:",
+    "locationRegion:",
+    "countryCode:",
   ]) {
     assert(!payload.includes(gone), `${gone} is no longer collected`);
   }
 });
 
-suite("register payload carries the basic-info block", () => {
+suite("register payload keeps name, user type and phone", () => {
   const src = source("src/lib/validations/register.ts");
-  for (const field of [
-    "headline",
-    "locationCity",
-    "locationRegion",
-    "countryCode",
-  ]) {
-    assert(src.includes(field), `${field} is collected`);
-  }
-  // The dialing code and the ISO-2 country are two different facts and were the
-  // same key until the basic-info fields moved onto this form.
-  assert(src.includes("phoneCountryCode"), "dialing code has its own key");
+  const payload = src.slice(src.indexOf("const registerPayloadBase"));
+  assert(payload.includes("fullName:"), "full name is collected");
+  assert(
+    payload.includes('userType: z.enum(["STUDENT", "PROFESSIONAL"]'),
+    "user type is a required choice",
+  );
+  assert(payload.includes("phoneCountryCode"), "dialing code has its own key");
+  assert(payload.includes("referralCode"), "referral links still count");
+
+  const action = source("src/app/actions/registration-actions.ts");
+  assert(
+    !action.includes(": UserType.STUDENT"),
+    "the action no longer defaults a missing user type to STUDENT",
+  );
 });
 
 suite("the form no longer renders the removed fields", () => {
@@ -235,16 +246,24 @@ suite("the form no longer renders the removed fields", () => {
   assert(!src.includes("githubUsername"), "no GitHub input");
   assert(!src.includes("addSkillsFromDraft"), "no skills chips");
   assert(!src.includes("GRADUATION_YEARS"), "no graduation year select");
+  assert(!src.includes("CollegeCombobox"), "no college input");
+  assert(!src.includes('register("organization")'), "no company input");
+  assert(!src.includes('register("headline")'), "no headline input");
+  assert(!src.includes('register("locationCity")'), "no city input");
+  assert(!src.includes('register("countryCode")'), "no country code input");
+  assert(!src.includes('id="referralCode"'), "no visible referral input");
+  assert(src.includes('fd.append("referralCode", initialRef)'), "referral sent silently");
 });
 
-/* ─── Résumé: required, and checked server-side ──────────────────────────── */
+/* ─── Résumé: optional; merge when present ────────────────────────────────── */
 
-suite("the résumé requirement reads the stored row, not a client flag", () => {
+suite("registration does not require a résumé", () => {
   const src = source("src/app/actions/registration-actions.ts");
-  assert(src.includes("getResumeView"), "reads the stored résumé");
-  const gate = src.indexOf("getResumeView");
-  const register = src.indexOf("completeRegistration(");
-  assert(gate > 0 && register > gate, "checked before the profile is created");
+  assert(
+    !src.includes("Please upload your resume before completing registration."),
+    "no mandatory-upload error message",
+  );
+  assert(!src.includes("getResumeView"), "no READY-row gate before register");
   assert(
     !src.includes("formData.get(\"resumeUploaded\")"),
     "no client-supplied résumé flag",
@@ -283,7 +302,10 @@ suite("the deferred merge runs after the profile exists", () => {
 suite("registration writes the CandidateProfile-only basic-info fields", () => {
   const src = source("src/features/registration/complete-registration.ts");
   assert(src.includes("createCandidateIdentity"), "W4-A identity create");
-  assert(src.includes("headline: input.headline"), "headline passed through");
+  // Nothing the résumé merge also writes is created here, or it would be doubled.
+  for (const field of ["college", "organization", "headline", "locationCity"]) {
+    assert(src.includes(`${field}: null`), `${field} left for the résumé merge`);
+  }
 
   assert(
     !existsSync(join(process.cwd(), "src/repositories/dual-write.ts")),

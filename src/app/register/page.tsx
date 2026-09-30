@@ -2,7 +2,12 @@ import { redirect } from "next/navigation";
 import { getRefCookie } from "@/lib/cookies";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { isOtpVerificationRequired } from "@/lib/feature-flags";
+import { isEmailLoginEnabled, isOtpVerificationRequired } from "@/lib/feature-flags";
+import {
+  hasUsablePassword,
+  isFreshSignIn,
+  isGoogleOnlyAccount,
+} from "@/lib/email-auth";
 import {
   CORE_TRACK_PATH,
   createCoreEnrollment,
@@ -41,11 +46,15 @@ export default async function RegisterPage({ searchParams }: PageProps) {
 
   const userExists = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true },
+    select: { id: true, email: true, role: true, password: true },
   });
 
   if (!userExists) {
     redirect("/api/auth/signout?callbackUrl=/login");
+  }
+
+  if (session.user.isAdmin || userExists.role === "ADMIN") {
+    redirect("/admin");
   }
 
   const registered = await isCandidateRegistered(session.user.id);
@@ -105,6 +114,16 @@ export default async function RegisterPage({ searchParams }: PageProps) {
   // or an abandoned first attempt must not ask for the file a second time.
   const resume = await getResumeView(session.user.id);
 
+  // Plan 154: an optional password, offered only where saving it cannot be
+  // refused — no password yet, not an admin, and a sign-in recent enough that
+  // setPasswordAction needs no emailed code. Everyone else can still set one
+  // at /settings/security.
+  const offerPassword =
+    isEmailLoginEnabled() &&
+    !hasUsablePassword(userExists) &&
+    isFreshSignIn(session.authTime) &&
+    !(await isGoogleOnlyAccount(userExists.email, userExists));
+
   return (
     <div className="theme-abtalks-light theme-abtalks-brand flex min-h-svh flex-col bg-[#F4F4F4]">
       <div className="flex flex-1 flex-col items-center justify-center p-6">
@@ -130,6 +149,7 @@ export default async function RegisterPage({ searchParams }: PageProps) {
               resumeReady={resume?.status === "READY"}
               resumeFileName={resume?.fileName ?? null}
               otpVerificationRequired={isOtpVerificationRequired()}
+              offerPassword={offerPassword}
             />
           </CardContent>
         </Card>

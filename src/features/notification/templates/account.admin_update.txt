@@ -1,0 +1,12 @@
+Hi {{recipientName}},
+
+{{title}}
+
+{{body}}
+
+Open ABTalks: {{baseUrl}}{{href}}
+
+If you have questions, just reply to this email.
+
+---
+This is a service message about your ABTalks account.

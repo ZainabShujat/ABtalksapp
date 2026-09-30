@@ -57,8 +57,14 @@ import { cn } from "@/lib/utils";
 type Props = {
   /** `PROGRAM:<id>` / `CLAUDE:<id>` — a name for a candidate, never a key. */
   candidateRef: string;
-  /** For the dialog subtitle only. Never used to address anything. */
-  publicId: string;
+  /**
+   * For the dialog subtitle only. Never used to address anything.
+   *
+   * A name where the surface already shows one, the declared role otherwise.
+   * It used to be the `AB-####` reference, which is a hash of an internal id
+   * and told a recruiter nothing about whose contact they were buying.
+   */
+  candidateLabel: string;
   className?: string;
   onUnlocked?: () => void;
   /**
@@ -82,7 +88,7 @@ type Preview = {
 
 export function UnlockContactDialog({
   candidateRef,
-  publicId,
+  candidateLabel,
   className,
   onUnlocked,
   triggerLabel,
@@ -178,7 +184,7 @@ export function UnlockContactDialog({
             <p className="hire-auth__kicker">ABTalks Hire</p>
             <DialogTitle>Unlock contact details</DialogTitle>
             <DialogDescription>
-              {publicId} — email and phone, visible to you alone.
+              {candidateLabel}: email and phone, visible to you alone.
             </DialogDescription>
           </DialogHeader>
 

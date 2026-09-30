@@ -100,8 +100,11 @@ async function getDayAvailability(
   const member = await findAiCohortMembershipByMemberId(memberId);
   if (!member) return { ok: false, message: "Member not found." };
 
-  if (await isCohortFrozen(member.cohort)) {
-    return { ok: false, message: "This cohort has ended — submissions are closed." };
+  if (isCohortFrozen(member.cohort)) {
+    return {
+      ok: false,
+      message: "This cohort is closed — submissions are no longer accepted.",
+    };
   }
 
   const submissions = await listProgramMissionProgress(memberId);
@@ -111,7 +114,7 @@ async function getDayAvailability(
     memberId,
     member.highestUnlockedDay,
   );
-  const maxContentDay = getMaxContentDay(member.cohort, unlockFloor);
+  const maxContentDay = getMaxContentDay(member, unlockFloor);
 
   const state = deriveDayState(
     dayNumber,
@@ -171,7 +174,7 @@ export async function getMissionState(
   if (!day) return null;
 
   const { passedDays, skippedDays } = collectPassSkipSets(allSubmissions);
-  const maxContentDay = getMaxContentDay(member.cohort, unlockFloor);
+  const maxContentDay = getMaxContentDay(member, unlockFloor);
 
   const dayState = deriveDayState(
     dayNumber,
@@ -297,7 +300,7 @@ export async function submitMissionRun(
       if (memberAfter) {
         const nextDay = Math.min(PROGRAM_TOTAL_DAYS, dayNumber + 1);
         const maxContentDay = getMaxContentDay(
-          memberAfter.cohort,
+          memberAfter,
           memberAfter.highestUnlockedDay,
         );
         const allSubs = await tx.activityAttempt.findMany({

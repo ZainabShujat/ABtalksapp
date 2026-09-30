@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { safeErrorMessage } from "@/lib/observability/redact";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { verifyOtpAction } from "@/app/actions/otp-actions";
+import { checkPhoneAvailableAction, verifyOtpAction } from "@/app/actions/otp-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -168,6 +168,18 @@ type Props = {
   disabled?: boolean;
   /** When false (local next dev), OTP controls are hidden and the field is allowed to continue. */
   verificationRequired?: boolean;
+  /** Marks the label as mandatory. For India (+91) it also hides the "Optional" hint. */
+  required?: boolean;
+  /** Overrides the number input's placeholder. */
+  placeholder?: string;
+  /** Extra classes for the country select, number input and Send OTP button (e.g. a shared height). */
+  controlClassName?: string;
+  /** Overrides the dialing-code list. Values must be unique; +91 is still the only one that needs OTP. */
+  countryOptions?: { code: string; label: string }[];
+  /** Overrides the field label. */
+  label?: string;
+  /** Overrides the hint shown when no OTP is needed; null hides it. */
+  optionalHint?: string | null;
 };
 
 export function PhoneVerifyField({
@@ -178,6 +190,12 @@ export function PhoneVerifyField({
   onVerified,
   disabled,
   verificationRequired = true,
+  required = false,
+  placeholder,
+  controlClassName,
+  countryOptions = COUNTRY_CODES,
+  label = "Phone Number",
+  optionalHint = "Optional. Visible to admins only.",
 }: Props) {
   const [countryCode, setCountryCode] = useState(defaultCountryCode);
   const [phoneNumber, setPhoneNumber] = useState(defaultPhoneNumber);
@@ -186,8 +204,12 @@ export function PhoneVerifyField({
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  /** Set only when the server says this is the team test number: skip the SMS widget. */
+  const [testMode, setTestMode] = useState(false);
 
   const isIndia = countryCode === INDIA_DIALING_CODE;
+  const skipWidget = IS_BYPASS || testMode;
 
   // Keep the parent in sync with the current value.
   useEffect(() => {
@@ -218,6 +240,8 @@ export function PhoneVerifyField({
   const resetVerification = useCallback(() => {
     setStep("idle");
     setOtp("");
+    setPhoneError(null);
+    setTestMode(false);
   }, []);
 
   function handleCountryChange(next: string | null) {
@@ -229,7 +253,7 @@ export function PhoneVerifyField({
   function handleNumberChange(raw: string) {
     const cleaned = raw.replace(/[^\d]/g, "").slice(0, 15);
     setPhoneNumber(cleaned);
-    if (step !== "idle") resetVerification();
+    if (step !== "idle" || phoneError) resetVerification();
   }
 
   const validMobile = indianMobileNumberSchema.safeParse(phoneNumber).success;
@@ -240,7 +264,21 @@ export function PhoneVerifyField({
       return;
     }
     setSending(true);
+    setPhoneError(null);
     try {
+      const available = await checkPhoneAvailableAction({ countryCode, phoneNumber });
+      if (!available.ok) {
+        setPhoneError(available.message);
+        toast.error(available.message);
+        return;
+      }
+      if (available.testNumber) {
+        setTestMode(true);
+        setStep("sent");
+        setCooldown(RESEND_COOLDOWN_SECONDS);
+        toast.message("Test number — enter the team code");
+        return;
+      }
       if (IS_BYPASS) {
         setStep("sent");
         setCooldown(RESEND_COOLDOWN_SECONDS);
@@ -270,6 +308,11 @@ export function PhoneVerifyField({
 
   async function handleResend() {
     if (cooldown > 0) return;
+    if (testMode) {
+      setCooldown(RESEND_COOLDOWN_SECONDS);
+      toast.message("Test number — enter the team code");
+      return;
+    }
     if (IS_BYPASS) {
       setCooldown(RESEND_COOLDOWN_SECONDS);
       toast.message("Dev mode — enter code 1234");
@@ -300,7 +343,7 @@ export function PhoneVerifyField({
     setVerifying(true);
     try {
       let accessToken: string | undefined;
-      if (!IS_BYPASS) {
+      if (!skipWidget) {
         lastAccessToken = null;
         await waitForFn(() => window.verifyOtp);
         const token = await new Promise<string | null>((resolve, reject) => {
@@ -320,7 +363,7 @@ export function PhoneVerifyField({
       const res = await verifyOtpAction({
         countryCode,
         phoneNumber,
-        ...(IS_BYPASS ? { otp } : { accessToken }),
+        ...(skipWidget ? { otp } : { accessToken }),
       });
       if (!res.ok) {
         toast.error(res.message);
@@ -339,18 +382,28 @@ export function PhoneVerifyField({
 
   return (
     <div className="space-y-3">
-      <Label htmlFor="phoneNumber">Phone Number</Label>
+      <Label htmlFor="phoneNumber">
+        {label}
+        {required ? (
+          <span className="-ml-1.5 text-destructive" aria-hidden>
+            *
+          </span>
+        ) : null}
+      </Label>
       <div className="flex gap-2">
         <Select
           value={countryCode}
           onValueChange={handleCountryChange}
           disabled={disabled || step === "verified"}
         >
-          <SelectTrigger className="w-[7.5rem] shrink-0" aria-label="Country code">
+          <SelectTrigger
+            className={cn("w-[7.5rem] shrink-0", controlClassName)}
+            aria-label="Country code"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {COUNTRY_CODES.map((c) => (
+            {countryOptions.map((c) => (
               <SelectItem key={c.code} value={c.code}>
                 {c.label}
               </SelectItem>
@@ -362,11 +415,12 @@ export function PhoneVerifyField({
           type="tel"
           inputMode="numeric"
           autoComplete="tel-national"
-          placeholder={isIndia ? "9876543210" : "Phone number"}
+          placeholder={placeholder ?? (isIndia ? "9876543210" : "Phone number")}
           value={phoneNumber}
           onChange={(e) => handleNumberChange(e.target.value)}
           disabled={disabled || step === "verified"}
-          className="flex-1"
+          aria-required={required && isIndia}
+          className={cn("flex-1", controlClassName)}
         />
         {verificationRequired && isIndia && step !== "verified" ? (
           <Button
@@ -374,7 +428,7 @@ export function PhoneVerifyField({
             variant="outline"
             onClick={handleSend}
             disabled={disabled || sending || !validMobile}
-            className="shrink-0"
+            className={cn("shrink-0", controlClassName)}
           >
             {sending ? (
               <Loader2 className="size-4 animate-spin" aria-hidden />
@@ -386,6 +440,12 @@ export function PhoneVerifyField({
           </Button>
         ) : null}
       </div>
+
+      {phoneError ? (
+        <p role="alert" className="text-sm text-destructive">
+          {phoneError}
+        </p>
+      ) : null}
 
       {verificationRequired && isIndia && step === "verified" ? (
         <p className="flex items-center gap-1.5 text-sm text-[#197E23] dark:text-[#197E23]">
@@ -439,10 +499,10 @@ export function PhoneVerifyField({
         </div>
       ) : null}
 
-      {!verificationRequired || !isIndia ? (
-        <p className="text-xs text-muted-foreground">
-          Optional. Visible to admins only.
-        </p>
+      {optionalHint !== null &&
+      (!verificationRequired || !isIndia) &&
+      !(required && isIndia) ? (
+        <p className="text-xs text-muted-foreground">{optionalHint}</p>
       ) : null}
     </div>
   );

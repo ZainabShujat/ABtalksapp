@@ -3,7 +3,12 @@ export const HACKATHON = {
   name: "ABTalks Vibe Code Hackathon",
   tagline: "48 hours. No boilerplate. Just you, your ideas, and AI.",
   // Manual kill switch (cutover / emergency). Time gate is registrationClosesUtc.
-  registrationOpen: true,
+  // Postponed 2026-09-24: this event is on hold while we run the Video Editors
+  // hackathon (see docs/plans/154-hackathon-video-editors.md and branch
+  // `Hackathon-Video-Editor`). Flipping this to false shuts every write path
+  // (registration action bails before any welcome email fires) and swaps the
+  // header CTA to a disabled "Registration closed" state.
+  registrationOpen: false,
   maxTeamSize: 3,
 
   // Event: Fri 25 Sep 2026 → Sun 27 Sep 2026 (IST). All UTC instants below

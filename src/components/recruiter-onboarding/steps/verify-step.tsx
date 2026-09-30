@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Pencil } from "lucide-react";
 import type { StepMotion } from "../motion";
@@ -204,6 +205,7 @@ export function CodeStep({
   onResend,
   onBack,
   onSubmit,
+  children,
 }: {
   motion: StepMotion;
   focusHeading: boolean;
@@ -225,6 +227,8 @@ export function CodeStep({
   onResend: () => void;
   onBack?: () => void;
   onSubmit: () => void;
+  /** Plan 154: fields below the code, e.g. a password. */
+  children?: ReactNode;
 }) {
   return (
     <OnboardingStep
@@ -271,6 +275,7 @@ export function CodeStep({
           error={error}
         />
       </StaggerItem>
+      {children ? <StaggerItem>{children}</StaggerItem> : null}
     </OnboardingStep>
   );
 }

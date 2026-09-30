@@ -334,6 +334,48 @@ body.pw-profile-page.pw-scrolling .abt-content-scroll::-webkit-scrollbar-thumb {
   color: var(--pw-primary);
 }
 
+/* ---- Account link (plan 154) ----
+   Not a step: it leaves the wizard for /settings/security, so it sits under a
+   hairline instead of in the checklist and never takes the clay active
+   treatment. Everything else matches .pw-check-item. */
+.pw-check-account {
+  flex: none;
+  margin: 10px 32px 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--pw-border-soft);
+}
+.pw-check-link {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+  /* Black like the tabs above it, not muted: the hairline already says this is
+     a different kind of destination, and a grey peer next to a genuinely
+     disabled grey would read as disabled too. */
+  color: #000000;
+  text-align: left;
+  text-decoration: none;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+.pw-check-link:hover {
+  background: var(--pw-primary-tint);
+  color: var(--pw-primary);
+}
+/* An open sheet with unsaved edits: leaving would drop them, and the leave
+   pop only knows how to hold a step, not a route. */
+.pw-check-link[aria-disabled="true"],
+.pw-check-link[aria-disabled="true"]:hover {
+  background: none;
+  color: #9a9a9a;
+  cursor: not-allowed;
+}
+
 /* ---- Profile performance (plan 120) ---- */
 .pw-performance-section {
   margin: 12px 16px 0;
@@ -465,13 +507,18 @@ body.pw-profile-page.pw-scrolling .abt-content-scroll::-webkit-scrollbar-thumb {
   font-size: 19px;
 }
 .pw-rv-hero .pw-avatar-edit {
-  width: 24px;
-  height: 24px;
-  right: -5px;
+  left: 0;
+  bottom: 1px;
+  padding: 3px 8px;
+  gap: 3px;
+  border-radius: 7px;
 }
 .pw-rv-hero .pw-avatar-edit svg {
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
+}
+.pw-rv-hero .pw-avatar-edit-label {
+  font-size: 11px;
 }
 .pw-rv-hero .pw-ring-check {
   width: 21px;
@@ -1133,7 +1180,7 @@ body.pw-profile-page.pw-scrolling .abt-content-scroll::-webkit-scrollbar-thumb {
     inset 0 2px 5px rgba(255, 255, 255, 0.3);
 }
 
-/* ---- change-photo pencil, mid-right of the avatar ---- */
+/* ---- change-photo Edit pill, bottom-left of the avatar ---- */
 .pw-photo-input {
   position: absolute;
   width: 0;
@@ -1142,21 +1189,22 @@ body.pw-profile-page.pw-scrolling .abt-content-scroll::-webkit-scrollbar-thumb {
   pointer-events: none;
 }
 .pw-avatar-edit {
-  /* temporary: photo edit off. AvatarEditor stays in the tree. */
-  display: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   position: absolute;
-  right: -6px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
+  left: 0;
+  bottom: 2px;
+  right: auto;
+  top: auto;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
   background: #ffffff;
   border: 1px solid #e0e0e0;
-  color: #4b4b4b;
+  color: #353535;
   cursor: pointer;
-  place-items: center;
-  padding: 0;
+  padding: 4px 8px;
   box-shadow: 0 1.5px 4px rgba(0, 0, 0, 0.14);
   transition: background-color 0.18s ease, color 0.18s ease,
     border-color 0.18s ease, transform 0.18s ease;
@@ -1166,10 +1214,10 @@ body.pw-profile-page.pw-scrolling .abt-content-scroll::-webkit-scrollbar-thumb {
   background: var(--pw-primary-soft);
   border-color: #a6d2d5;
   color: var(--pw-primary);
-  transform: translateY(-50%) scale(1.06);
+  transform: scale(1.04);
 }
 .pw-avatar-edit:active {
-  transform: translateY(-50%) scale(0.96);
+  transform: scale(0.97);
 }
 /* Photo storage not configured for this environment: the control stays put and
    explains itself on hover instead of vanishing. */
@@ -1182,7 +1230,7 @@ body.pw-profile-page.pw-scrolling .abt-content-scroll::-webkit-scrollbar-thumb {
   background: #f4f4f4;
   border-color: #e0e0e0;
   color: #a5a5a5;
-  transform: translateY(-50%);
+  transform: none;
 }
 .pw-avatar-edit:disabled {
   opacity: 0.65;
@@ -1193,13 +1241,20 @@ body.pw-profile-page.pw-scrolling .abt-content-scroll::-webkit-scrollbar-thumb {
   outline-offset: 2px;
 }
 .pw-avatar-edit svg {
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
+  flex: none;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+.pw-avatar-edit-label {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.01em;
 }
 .pw-avatar-spin {
   width: 12px;

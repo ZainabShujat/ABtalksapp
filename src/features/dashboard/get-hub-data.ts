@@ -3,6 +3,7 @@ import {
   isDatabricksAiEnabled,
   isDatabricksEnabled,
   isDsArchitectEnabled,
+  isLangchainEnabled,
   isPowerBiEnabled,
   isProgramEnabled,
   isSnowflakeEnabled,
@@ -44,6 +45,7 @@ export type HubData = {
   hasPowerBiAccess: boolean;
   hasSnowflakeAccess: boolean;
   hasDatabricksAiAccess: boolean;
+  hasLangchainAccess: boolean;
   isHackathonRegistered: boolean;
   heatmap: ActivityHeatmap;
   streak: ActivityStreak;
@@ -113,6 +115,7 @@ export async function getHubData(
     hasPowerBiAccess: isPowerBiEnabled(),
     hasSnowflakeAccess: isSnowflakeEnabled(),
     hasDatabricksAiAccess: isDatabricksAiEnabled(),
+    hasLangchainAccess: isLangchainEnabled(),
     isHackathonRegistered,
     heatmap,
     streak: heatmap.streak,

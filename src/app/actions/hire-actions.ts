@@ -29,7 +29,10 @@ import {
   type JobSpec,
 } from "@/lib/validations/hire";
 import { runScoutTurn } from "@/features/hire/scout-conversation";
-import { searchCandidates } from "@/features/hire/search-candidates";
+import {
+  SEARCH_RESULT_LIMIT,
+  searchCandidates,
+} from "@/features/hire/search-candidates";
 import { persistableSource } from "@/features/hire/track-loaders";
 import {
   explainMatches,
@@ -371,7 +374,7 @@ async function executeMatchForOwnedRequest(
     sessionId = (await createSession({ requestId: req.id, title: spec.title ?? null, spec })).id;
   }
 
-  const search = await searchCandidates(spec, { limit: 20 });
+  const search = await searchCandidates(spec, { limit: SEARCH_RESULT_LIMIT });
   if (!search.ok) return search;
 
   const explained = await explainMatches(

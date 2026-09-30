@@ -8,9 +8,9 @@ import {
 import {
   collectPassSkipSets,
   getBehindByDays,
-  getCohortCalendarDay,
   getMemberProgressDay,
   isSkippedPayload,
+  type ProgramAnchor,
 } from "@/features/program/progression";
 import { parseRepo } from "@/features/program/verify-mission";
 import {
@@ -69,12 +69,27 @@ function programDateRangeToUtc(
   return { startUtc, endExclusiveUtc };
 }
 
-function isDateKeyInCohortWindow(
+/** The learner's own 31-day window: [startedAt, startedAt + TOTAL_DAYS - 1] in PROGRAM_TZ. */
+function memberWindowKeys(anchor: ProgramAnchor): {
+  startKey: string;
+  endKey: string;
+} {
+  const startKey = formatInTimeZone(anchor.startedAt, PROGRAM_TZ, "yyyy-MM-dd");
+  return {
+    startKey,
+    endKey: addCalendarDaysToKey(startKey, PROGRAM_TOTAL_DAYS - 1),
+  };
+}
+
+/**
+ * Commit credit is windowed on the learner, not on a cohort (plan 157). A shared
+ * cohort window silently stopped crediting everyone the day the cohort "ended".
+ */
+function isDateKeyInMemberWindow(
   dateKey: string,
-  cohort: { startsAt: Date; endsAt: Date },
+  anchor: ProgramAnchor,
 ): boolean {
-  const startKey = formatInTimeZone(cohort.startsAt, PROGRAM_TZ, "yyyy-MM-dd");
-  const endKey = formatInTimeZone(cohort.endsAt, PROGRAM_TZ, "yyyy-MM-dd");
+  const { startKey, endKey } = memberWindowKeys(anchor);
   return dateKey >= startKey && dateKey <= endKey;
 }
 
@@ -143,10 +158,9 @@ export async function fetchGithubCommitCount(
 async function recomputeCommitPointsInTx(
   tx: Prisma.TransactionClient,
   memberId: string,
-  cohort: { startsAt: Date; endsAt: Date },
+  anchor: ProgramAnchor,
 ): Promise<void> {
-  const startKey = formatInTimeZone(cohort.startsAt, PROGRAM_TZ, "yyyy-MM-dd");
-  const endKey = formatInTimeZone(cohort.endsAt, PROGRAM_TZ, "yyyy-MM-dd");
+  const { startKey, endKey } = memberWindowKeys(anchor);
   const startDate = programDateKeyToDbDate(startKey);
   const endDate = programDateKeyToDbDate(endKey);
 
@@ -171,24 +185,24 @@ async function recomputeCommitPointsInTx(
 
 async function recomputeCommitPointsForMember(
   memberId: string,
-  cohort: { startsAt: Date; endsAt: Date },
+  anchor: ProgramAnchor,
 ): Promise<void> {
   await prisma.$transaction(async (tx) => {
-    await recomputeCommitPointsInTx(tx, memberId, cohort);
+    await recomputeCommitPointsInTx(tx, memberId, anchor);
   });
 }
 
 /**
  * Upsert a ProgramCommitDay with commitCount = max(existing, 1).
- * Returns true if the date was inside the cohort window.
+ * Returns true if the date was inside the learner's own 31-day window.
  */
 export async function creditCommitDayInTx(
   tx: Prisma.TransactionClient,
   memberId: string,
   programDateKey: string,
-  cohort: { startsAt: Date; endsAt: Date },
+  anchor: ProgramAnchor,
 ): Promise<boolean> {
-  if (!isDateKeyInCohortWindow(programDateKey, cohort)) {
+  if (!isDateKeyInMemberWindow(programDateKey, anchor)) {
     return false;
   }
 
@@ -231,10 +245,10 @@ export async function creditCommitDayForMember(
         tx,
         memberId,
         programDateKey,
-        member.cohort,
+        member,
       );
       if (credited) {
-        await recomputeCommitPointsInTx(tx, memberId, member.cohort);
+        await recomputeCommitPointsInTx(tx, memberId, member);
       }
     });
     return { ok: true };
@@ -252,26 +266,26 @@ export async function creditCommitDayForMember(
 export const EARLY_COMMIT_DAY_COUNT = PROGRAM_MEMBER_START_DAY - 1;
 
 /**
- * Seed commit activity for cohort calendar days start+0 .. start+(N-1).
+ * Seed commit activity for the learner's own days start+0 .. start+(N-1).
  * Prefer bootstrapMemberStartDay for enroll; this is for callers that already
- * have a transaction and cohort window.
+ * have a transaction and the learner's anchor.
  */
 export async function seedEarlyCommitDaysInTx(
   tx: Prisma.TransactionClient,
   memberId: string,
-  cohort: { startsAt: Date; endsAt: Date },
+  anchor: ProgramAnchor,
 ): Promise<void> {
-  const startKey = formatInTimeZone(cohort.startsAt, PROGRAM_TZ, "yyyy-MM-dd");
+  const { startKey } = memberWindowKeys(anchor);
   let any = false;
 
   for (let i = 0; i < EARLY_COMMIT_DAY_COUNT; i++) {
     const dateKey = addCalendarDaysToKey(startKey, i);
-    const credited = await creditCommitDayInTx(tx, memberId, dateKey, cohort);
+    const credited = await creditCommitDayInTx(tx, memberId, dateKey, anchor);
     if (credited) any = true;
   }
 
   if (any) {
-    await recomputeCommitPointsInTx(tx, memberId, cohort);
+    await recomputeCommitPointsInTx(tx, memberId, anchor);
   }
 }
 
@@ -280,14 +294,14 @@ type MemberRow = {
   githubUsername: string;
   githubRepoUrl: string;
   highestUnlockedDay: number;
+  startedAt: Date;
 };
 
 export async function processMemberCommitDay(
   member: MemberRow,
-  cohort: { startsAt: Date; endsAt: Date },
   programDateKey: string,
 ): Promise<{ ok: true } | { ok: false; memberId: string; reason: string }> {
-  if (!isDateKeyInCohortWindow(programDateKey, cohort)) {
+  if (!isDateKeyInMemberWindow(programDateKey, member)) {
     return { ok: true };
   }
 
@@ -337,7 +351,7 @@ export async function processMemberCommitDay(
     });
   });
 
-  await recomputeCommitPointsForMember(member.id, cohort);
+  await recomputeCommitPointsForMember(member.id, member);
   return { ok: true };
 }
 
@@ -346,25 +360,22 @@ export async function runProgramCommitsCron(): Promise<{
   failures: { memberId: string; reason: string }[];
 }> {
   const cohorts = await prisma.programCohort.findMany({
-    where: { status: "ACTIVE" },
+    where: { status: { in: ["ENROLLING", "ACTIVE"] } },
     orderBy: { createdAt: "desc" },
-    select: { id: true, startsAt: true, endsAt: true },
+    select: { id: true },
   });
 
   if (cohorts.length === 0) {
     return { processed: 0, failures: [] };
   }
 
-  const todayKey = formatInTimeZone(new Date(), PROGRAM_TZ, "yyyy-MM-dd");
   const programDateKey = getProgramDateKeyDaysAgo(1);
   const failures: { memberId: string; reason: string }[] = [];
   let processed = 0;
 
+  // No cohort-level date skip (plan 157): each member carries their own window,
+  // and processMemberCommitDay drops anything outside it.
   for (const cohort of cohorts) {
-    const endKey = formatInTimeZone(cohort.endsAt, PROGRAM_TZ, "yyyy-MM-dd");
-    const graceKey = addCalendarDaysToKey(endKey, 1);
-    if (todayKey > graceKey) continue;
-
     const members = await listAiCohortMemberships({
       programCohortId: cohort.id,
     });
@@ -372,7 +383,7 @@ export async function runProgramCommitsCron(): Promise<{
     for (let i = 0; i < members.length; i += CHUNK_SIZE) {
       const chunk = members.slice(i, i + CHUNK_SIZE);
       const results = await Promise.allSettled(
-        chunk.map((m) => processMemberCommitDay(m, cohort, programDateKey)),
+        chunk.map((m) => processMemberCommitDay(m, programDateKey)),
       );
 
       for (let j = 0; j < results.length; j++) {
@@ -406,9 +417,9 @@ export async function runProgramCommitsCron(): Promise<{
 
 export async function getCommitHeatmap(
   memberId: string,
-  cohort: { startsAt: Date; endsAt: Date },
+  anchor: ProgramAnchor,
 ): Promise<HeatmapCell[]> {
-  const startKey = formatInTimeZone(cohort.startsAt, PROGRAM_TZ, "yyyy-MM-dd");
+  const { startKey } = memberWindowKeys(anchor);
 
   const rows = await prisma.programCommitDay.findMany({
     where: { memberId },
@@ -438,8 +449,8 @@ async function evaluateMemberAtRisk(
   member: {
     id: string;
     highestUnlockedDay: number;
+    startedAt: Date;
   },
-  cohort: { startsAt: Date; endsAt: Date },
 ): Promise<AtRiskMember["reasons"]> {
   const reasons: AtRiskMember["reasons"] = [];
 
@@ -448,7 +459,7 @@ async function evaluateMemberAtRisk(
   });
   const { passedDays } = collectPassSkipSets(submissions);
   const progressDay = getMemberProgressDay(passedDays);
-  const behindBy = getBehindByDays(cohort, progressDay);
+  const behindBy = getBehindByDays(member, progressDay);
 
   if (behindBy > 2) {
     reasons.push("behind_pace");
@@ -482,17 +493,11 @@ async function evaluateMemberAtRisk(
 export async function getAtRiskMembers(
   cohortId: string,
 ): Promise<AtRiskMember[]> {
-  const cohort = await prisma.programCohort.findUnique({
-    where: { id: cohortId },
-    select: { startsAt: true, endsAt: true },
-  });
-  if (!cohort) return [];
-
   const members = await listAiCohortMemberships({ programCohortId: cohortId });
 
   const atRisk: AtRiskMember[] = [];
   for (const member of members) {
-    const reasons = await evaluateMemberAtRisk(member, cohort);
+    const reasons = await evaluateMemberAtRisk(member);
     if (reasons.length > 0) {
       atRisk.push({ memberId: member.id, fullName: member.fullName, reasons });
     }
@@ -502,17 +507,9 @@ export async function getAtRiskMembers(
 
 export async function getMemberAtRiskStatus(
   memberId: string,
-  cohortId: string,
 ): Promise<MemberAtRiskStatus> {
-  const [member, cohort] = await Promise.all([
-    findAiCohortMembershipByMemberId(memberId),
-    prisma.programCohort.findUnique({
-      where: { id: cohortId },
-      select: { startsAt: true, endsAt: true },
-    }),
-  ]);
-
-  if (!member || !cohort) {
+  const member = await findAiCohortMembershipByMemberId(memberId);
+  if (!member) {
     return { atRisk: false, reasons: [], behindBy: 0 };
   }
 
@@ -521,8 +518,8 @@ export async function getMemberAtRiskStatus(
   });
   const { passedDays } = collectPassSkipSets(submissions);
   const progressDay = getMemberProgressDay(passedDays);
-  const behindBy = getBehindByDays(cohort, progressDay);
-  const reasons = await evaluateMemberAtRisk(member, cohort);
+  const behindBy = getBehindByDays(member, progressDay);
+  const reasons = await evaluateMemberAtRisk(member);
 
   return {
     atRisk: reasons.length > 0,

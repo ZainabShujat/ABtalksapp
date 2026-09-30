@@ -1,12 +1,12 @@
 import { formatInTimeZone } from "date-fns-tz";
-import type { LucideIcon } from "lucide-react";
+import { createElement } from "react";
+import type { LucideIcon, LucideProps } from "lucide-react";
 import { IST } from "@/lib/date-utils";
-import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 import {
   BriefcaseBusiness,
   CalendarClock,
   Clapperboard,
-  Code2,
+  CodeXml,
   GitBranch,
   GraduationCap,
   Palette,
@@ -15,6 +15,61 @@ import {
   Users,
   Workflow,
 } from "lucide-react";
+
+/**
+ * Icon name -> component, for events that now come from the database.
+ *
+ * `WorkshopEvent.iconName` stores a NAME because a component cannot be stored
+ * and cannot cross the Server->Client boundary. This map is the other half, and
+ * it lives here beside the type rather than in a component so there is one of
+ * it.
+ *
+ * **Key on the canonical lucide name, not on an import alias.** `Code2` is a
+ * deprecated alias for `CodeXml` - the same component, with
+ * `displayName: "CodeXml"` - so the port derived `"CodeXml"` and a map keyed
+ * `Code2` would miss and render nothing. `assertIconNames` in the port's
+ * verification covers exactly this.
+ */
+const ICONS: Record<string, LucideIcon> = {
+  BriefcaseBusiness,
+  CalendarClock,
+  Clapperboard,
+  CodeXml,
+  GitBranch,
+  GraduationCap,
+  Palette,
+  Rocket,
+  Trophy,
+  Users,
+  Workflow,
+};
+
+/**
+ * The component for a stored icon name, falling back to a neutral calendar
+ * glyph. A miss is a data problem, not a render problem: the card still draws,
+ * and `verify-workshop-events-port.ts` is what catches the bad name.
+ */
+export const iconFor = (name: string): LucideIcon =>
+  ICONS[name] ?? CalendarClock;
+
+/**
+ * Render a stored icon name.
+ *
+ * Goes through `createElement` rather than `const Icon = iconFor(name)` in the
+ * caller: assigning a component to a capitalised local during render trips
+ * `react-hooks/static-components`, which cannot tell a map lookup from a
+ * component defined inline. One component, used everywhere an event icon is
+ * drawn.
+ */
+export function WorkshopIcon({
+  name,
+  ...props
+}: { name: string } & LucideProps) {
+  return createElement(iconFor(name), props);
+}
+
+/** Every name this map knows, for the port's assertion. */
+export const knownIconNames = (): string[] => Object.keys(ICONS);
 
 /** A resource link shown in the past-workshop details modal. */
 export interface WorkshopResource {
@@ -48,9 +103,18 @@ export interface WorkshopEvent {
    * replay modal — everything else navigates to its own track page.
    */
   track: "workshop" | "hackathon" | "cohort" | "challenge";
-  /** Import this module only from Client Components — a component reference
-   *  cannot be serialized across the Server→Client boundary. */
-  Icon: LucideIcon;
+  /**
+   * The lucide icon's canonical NAME, resolved to a component with `iconFor`
+   * at the point of render.
+   *
+   * It used to be the component itself, which forced this module to be
+   * imported only from Client Components — a component reference cannot be
+   * serialized across the Server→Client boundary. Now the schedule comes from
+   * the database, a server parent has to hand these objects to client
+   * children, so the serializable name travels and the component is looked up
+   * on the other side.
+   */
+  iconName: string;
   title: string;
   desc: string;
   host: string;
@@ -120,232 +184,11 @@ export interface WorkshopEvent {
   durationMinutes?: number;
 }
 
-export const EVENTS: WorkshopEvent[] = [
-  {
-    id: "claude-challenge-60day",
-    date: "2026-06-01",
-    time: "Day 1",
-    tag: "Challenge",
-    accent: "#076573",
-    track: "challenge",
-    Icon: Rocket,
-    title: "60-Day Claude AI Challenge begins",
-    desc: "Daily AI tasks across four domains with GitHub and LinkedIn proof of work, streaks, and recruiter discoverability at the finish.",
-    host: "ABTalks",
-    location: "Online · 60 days",
-    href: "/",
-    ctaLabel: "View challenge",
-  },
-  {
-    id: "ai-cohort-2026-07",
-    date: "2026-07-15",
-    time: "Cohort start",
-    tag: "Cohort",
-    accent: "#076573",
-    track: "cohort",
-    Icon: Users,
-    title: "AI Cohort Program — Cohort begins",
-    desc: "31 days of guided missions, concept checks and graded projects for working professionals, ending in a recruiter-facing profile.",
-    host: "ABTalks",
-    location: "Online · 31 days",
-    href: PROGRAM_AI_COHORT_BASE,
-    ctaLabel: "View program",
-  },
-  {
-    id: "ai-workshop-live",
-    youtubeId: "ru5mM1ihdRE",
-    date: "2026-07-18",
-    time: "4:00 PM IST",
-    tag: "Live",
-    accent: "#03535F",
-    track: "workshop",
-    Icon: GraduationCap,
-    title: "FREE AI Bootcamp Live Workshop",
-    desc: "Master ChatGPT, Claude & Gemini in one hands-on live hour - prompt engineering, real workflows, and the tools that 10x your output.",
-    host: "ABTalks",
-    location: "Live · Zoom",
-    takeaways: [
-      "Prompt patterns that carry across ChatGPT, Claude and Gemini",
-      "Pick the right model for the job instead of defaulting to one",
-      "Build a repeatable workflow rather than one-off prompts",
-      "Spot the common failure modes and recover from them",
-    ],
-  },
-  {
-    id: "uiux-ai-workshop",
-    date: "2026-08-01",
-    time: "6:00 PM IST",
-    tag: "Design",
-    accent: "#02434D",
-    track: "workshop",
-    Icon: Palette,
-    title: "Figma × Cursor - AI-Powered UI/UX Workshop",
-    desc: "Design in Figma, ship with Cursor, MCP servers, AI plugins, and a live run from blank canvas to polished screens to working front-end code.",
-    host: "ABTalks",
-    location: "Live · Zoom",
-    register: true,
-    // No `registrationOpen`: this event is past, so registration is closed.
-    // Set it on the next upcoming event to reopen the form.
-    takeaways: [
-      "Wire Figma to Cursor through MCP and drive both from one place",
-      "Go from blank canvas to a usable screen without pixel-pushing",
-      "Turn a finished frame into working front-end code",
-      "Keep design tokens and code in sync as the file changes",
-    ],
-  },
-  {
-    id: "ai-hackathon-48h",
-    date: "2026-08-07",
-    time: "Starts 8:00 PM IST",
-    tag: "Hackathon",
-    accent: "#000000",
-    track: "hackathon",
-    Icon: Trophy,
-    title: "48-Hour AI Hackathon",
-    desc: "Build a working AI product in a weekend. Form a team, ship something real, and pitch it to judges for prizes and recruiter visibility.",
-    host: "ABTalks",
-    location: "Online · Team event",
-    href: "https://www.abtalks.in/hackathon?s=shr",
-    ctaLabel: "View hackathon",
-  },
-  {
-    id: "linkedin-ai-interview",
-    youtubeId: "f4b93W03vaU",
-    date: "2026-08-21",
-    time: "6:00 PM IST",
-    tag: "Career",
-    accent: "#03535F",
-    track: "workshop",
-    Icon: BriefcaseBusiness,
-    title: "Enhance LinkedIn & AI Mock Interview",
-    desc: "Rebuild your LinkedIn profile so recruiters actually find you, then run live AI mock interviews that grill you and score your answers.",
-    host: "ABTalks",
-    location: "Live · YouTube",
-    // Past event (21 Aug): registration closed. The live workshop is
-    // `workshop-2026-09-05` below.
-    posterSrc: "/workshop/posters/linkedin-ai-interview.jpg",
-    takeaways: [
-      "Build a recruiter-friendly LinkedIn profile",
-      "Create content that gets attention",
-      "Use AI to speed up content creation",
-      "Understand growth, analytics & consistency",
-    ],
-    resources: [
-      {
-        label: "Join the WhatsApp community",
-        href: "https://chat.whatsapp.com/LDUvHRIlb5dGHpDJLueR9i?s=cl&p=a&mlu=0&amv=0",
-        kind: "link",
-      },
-    ],
-  },
-  {
-    id: "workshop-2026-09-05",
-    date: "2026-09-05",
-    time: "7:00 PM IST",
-    tag: "Content",
-    accent: "#03535F",
-    track: "workshop",
-    Icon: Clapperboard,
-    title: "AI Image & Video Generation",
-    titleAccents: ["AI", "Video Generation"],
-    desc: "Learn how to create stunning images and videos using modern AI tools, from generating visuals to transforming creative ideas into polished content.",
-    host: "Swarit Ajay",
-    location: "Live · YouTube",
-    // The live workshop: hero, countdown, "What You'll Learn" and the
-    // registration form all read off this entry. Supabase `workshop_config`
-    // independently drives the hero chips and countdown — keep its
-    // webinarDate/webinarTime in step with `date`/`time` above.
-    register: true,
-    registrationOpen: true,
-    posterSrc: "/workshop/posters/create-anything-with-ai.jpg",
-    topics: [
-      "Prompt Engineering Fundamentals",
-      "Role, Context & Task",
-      "Style, Constraints & Output",
-      "AI Image Generation",
-      "AI Video Generation",
-      "AI Voice & Audio Creation",
-      "AI Avatar & Digital Presenters",
-      "Script → Avatar → Voice → Video",
-      "AI + MCP Workflows",
-      "Canva AI & Content Publishing",
-    ],
-  },
-  {
-    // Dated slug, per the `id` convention above. This and the two below occupy
-    // Saturdays that `placeholderSaturdays` would otherwise fill with
-    // "Workshop — TBA"; a real entry on the date simply wins, because that
-    // generator skips any Saturday already in EVENTS. No placeholder logic
-    // changes, and every other Saturday keeps its TBA.
-    //
-    // 7:00 PM, moved off the 6:00 PM the Sep 12 placeholder carried: the
-    // published poster and the Supabase `workshop_config` the hero reads both
-    // say 7:00 PM, and this file was the only place still saying 6.
-    id: "workshop-2026-09-12",
-    date: "2026-09-12",
-    time: "7:00 PM IST",
-    tag: "Build",
-    accent: "#03535F",
-    track: "workshop",
-    Icon: Code2,
-    title: "Vibe Coding Mini Project",
-    desc: "Build a mini project with vibe coding using Cursor, Antigravity, Claude, or the AI coding tool of your choice.",
-    host: "ABTalks",
-    location: "Live · YouTube",
-    // `host` is required by WorkshopEvent, so it carries the same house value
-    // the placeholder generator uses rather than a person's name — no speaker
-    // has been named for this one, and the public surfaces do not render the
-    // field anyway (see the note in UpcomingWorkshops).
-    //
-    // No `register` / `registrationOpen` either — see the note below.
-    posterSrc: "/workshop/posters/vibe_coding.jpeg",
-    topics: [
-      // The five the poster advertises, first and verbatim, then the build
-      // steps that fill out the hour. `TopicsSection` falls back to its own
-      // DEFAULT_TOPICS when this is absent, which is why the live page was
-      // showing the Sep 5 image/video list under a vibe-coding title.
-      "Build Your Mini Project",
-      "Vibe Coding Workflow",
-      "Ideas to Code with Claude",
-      "Live AI Development",
-      "Idea to Reality",
-      "Cursor, Antigravity & Claude",
-      "Prompting Your Way to Working Code",
-      "Debugging & Iterating with AI",
-      "From Prompt to Running App",
-      "Ship & Deploy Your Build",
-    ],
-  },
-  {
-    id: "workshop-2026-09-19",
-    date: "2026-09-19",
-    time: "7:00 PM IST",
-    tag: "Developer",
-    accent: "#076573",
-    track: "workshop",
-    Icon: GitBranch,
-    title: "GitHub Essentials: From Code to Collaboration",
-    desc: "Learn how to use GitHub effectively for version control, collaboration, project management, and building a strong developer workflow.",
-    host: "Sohail",
-    location: "Live · YouTube",
-    // No `register` / `registrationOpen`: signups all land in one table keyed
-    // by `getRegistrableEvent()`, which returns the SOONEST open event. Opening
-    // two at once would silently file both rosters under the earlier workshop.
-  },
-  {
-    id: "workshop-2026-09-26",
-    date: "2026-09-26",
-    time: "7:00 PM IST",
-    tag: "Automation",
-    accent: "#02434D",
-    track: "workshop",
-    Icon: Workflow,
-    title: "AI Workflows, Automation & Model Showdown",
-    desc: "Build practical AI workflows with automation and n8n, while comparing Gemini, GPT, and Claude to understand which model works best for different use cases.",
-    host: "Sarthak Gupta",
-    location: "Live · YouTube",
-  },
-];
+// The EVENTS array lived here. Plan 163 moved the schedule into the
+// `WorkshopEvent` table: a new workshop is an admin action now, not a code
+// change and a deploy. Reads go through `src/repositories/workshop.ts`, and
+// the helpers below take the list as their first argument rather than closing
+// over a module constant.
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00Z`);
 
@@ -370,14 +213,20 @@ export const isPastEvent = (ev: WorkshopEvent, todayKey: string) =>
   ev.date < todayKey;
 
 /** Upcoming events, soonest first. */
-export const upcomingEvents = (todayKey: string) =>
-  EVENTS.filter((e) => !isPastEvent(e, todayKey)).sort((a, b) =>
+export const upcomingEvents = (
+  events: readonly WorkshopEvent[],
+  todayKey: string,
+) =>
+  events.filter((e) => !isPastEvent(e, todayKey)).sort((a, b) =>
     a.date.localeCompare(b.date),
   );
 
 /** Past events, most recent first. */
-export const pastEvents = (todayKey: string) =>
-  EVENTS.filter((e) => isPastEvent(e, todayKey)).sort((a, b) =>
+export const pastEvents = (
+  events: readonly WorkshopEvent[],
+  todayKey: string,
+) =>
+  events.filter((e) => isPastEvent(e, todayKey)).sort((a, b) =>
     b.date.localeCompare(a.date),
   );
 
@@ -408,18 +257,19 @@ export const monthLabel = (year: number, month: number) =>
 
 /**
  * Synthetic "TBA" workshops for every Saturday of the given month that falls
- * on or after SATURDAY_SERIES_START and has no real EVENTS entry that day.
+ * on or after SATURDAY_SERIES_START with no real event that day.
  *
  * Generated per visible month rather than held as a module-level array: the
  * cadence has no end date, so a static list would grow without bound as the
  * user pages forward.
  */
 export const placeholderSaturdays = (
+  events: readonly WorkshopEvent[],
   year: number,
   month: number,
 ): WorkshopEvent[] => {
   const out: WorkshopEvent[] = [];
-  const taken = new Set(EVENTS.map((e) => e.date));
+  const taken = new Set(events.map((e) => e.date));
   const cursor = new Date(Date.UTC(year, month, 1));
 
   while (cursor.getUTCMonth() === month) {
@@ -433,7 +283,7 @@ export const placeholderSaturdays = (
           tag: "Workshop",
           accent: "#8f8f8f",
           track: "workshop",
-          Icon: CalendarClock,
+          iconName: "CalendarClock",
           title: "Workshop — TBA",
           desc: "Topic announced soon. Register to be notified when this session opens.",
           host: "ABTalks",
@@ -453,6 +303,7 @@ export const placeholderSaturdays = (
  * constant time.
  */
 export const eventsForMonth = (
+  events: readonly WorkshopEvent[],
   year: number,
   month: number,
 ): Map<string, WorkshopEvent[]> => {
@@ -464,11 +315,11 @@ export const eventsForMonth = (
     else map.set(ev.date, [ev]);
   };
 
-  for (const ev of EVENTS) {
+  for (const ev of events) {
     const d = utc(ev.date);
     if (d.getUTCFullYear() === year && d.getUTCMonth() === month) push(ev);
   }
-  for (const ev of placeholderSaturdays(year, month)) push(ev);
+  for (const ev of placeholderSaturdays(events, year, month)) push(ev);
 
   return map;
 };
@@ -587,16 +438,22 @@ export const eventStatus = (ev: WorkshopEvent, nowMs: number): EventStatus => {
  * The cut-off is `eventEndMs`, so a session leaves this list the minute it
  * finishes and the next one becomes current with no edit anywhere.
  */
-const openWorkshops = (nowMs: number): WorkshopEvent[] =>
-  EVENTS.filter(
+const openWorkshops = (
+  events: readonly WorkshopEvent[],
+  nowMs: number,
+): WorkshopEvent[] =>
+  events.filter(
     (e) =>
       e.track === "workshop" &&
       !e.placeholder &&
       eventStatus(e, nowMs) !== "PAST",
   ).sort((a, b) => eventStartMs(a) - eventStartMs(b));
 
-export const sidebarEvents = (nowMs: number, limit = 3): WorkshopEvent[] =>
-  openWorkshops(nowMs).slice(0, limit);
+export const sidebarEvents = (
+  events: readonly WorkshopEvent[],
+  nowMs: number,
+  limit = 3,
+): WorkshopEvent[] => openWorkshops(events, nowMs).slice(0, limit);
 
 /**
  * The one event currently accepting signups.
@@ -625,6 +482,7 @@ export const sidebarEvents = (nowMs: number, limit = 3): WorkshopEvent[] =>
  * thread a clock. Tests and the frozen-clock checks pass one explicitly.
  */
 export const getRegistrableEvent = (
+  events: readonly WorkshopEvent[],
   nowMs: number = Date.now(),
 ): WorkshopEvent | undefined =>
-  openWorkshops(nowMs).find((e) => e.registrationOpen !== false);
+  openWorkshops(events, nowMs).find((e) => e.registrationOpen !== false);

@@ -1,11 +1,19 @@
 import { prisma } from "@/lib/db";
 
+/** Recruiter-built assessments only; platform ones are listed by plan 166's store. */
+const RECRUITER = { source: "RECRUITER" } as const;
+
 export async function getAssessmentsConsole() {
   const [total, published, drafts, rows] = await Promise.all([
-    prisma.recruiterAssessment.count(),
-    prisma.recruiterAssessment.count({ where: { status: "PUBLISHED" } }),
-    prisma.recruiterAssessment.count({ where: { status: "DRAFT" } }),
+    prisma.recruiterAssessment.count({ where: RECRUITER }),
+    prisma.recruiterAssessment.count({
+      where: { ...RECRUITER, status: "PUBLISHED" },
+    }),
+    prisma.recruiterAssessment.count({
+      where: { ...RECRUITER, status: "DRAFT" },
+    }),
     prisma.recruiterAssessment.findMany({
+      where: RECRUITER,
       orderBy: { updatedAt: "desc" },
       take: 50,
       select: {

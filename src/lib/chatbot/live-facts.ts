@@ -73,9 +73,11 @@ async function readEvents(todayKey: string): Promise<{
       registrationOpen: Boolean(e.register && e.registrationOpen),
     });
 
-    const upcoming = mod.upcomingEvents(todayKey);
-    const registrable = mod.getRegistrableEvent();
-    const past = mod.pastEvents(todayKey);
+    const { listPublicEvents } = await import("@/repositories/workshop");
+    const events = await listPublicEvents();
+    const upcoming = mod.upcomingEvents(events, todayKey);
+    const registrable = mod.getRegistrableEvent(events);
+    const past = mod.pastEvents(events, todayKey);
 
     return {
       next: upcoming[0] ? toLive(upcoming[0]) : null,
@@ -108,16 +110,29 @@ async function readHackathon(): Promise<string | null> {
 }
 
 /**
- * The workshop date/time row an organiser edits without shipping code. This is
- * the fact most likely to be wrong in the corpus at any given moment.
+ * The next workshop's date and time, from the workshop itself.
+ *
+ * This used to read the Supabase `workshop_config` row, and its own comment
+ * called it "the fact most likely to be wrong in the corpus at any given
+ * moment" — correctly: that row was hand-edited and drifted, so the chatbot
+ * told people about a webinar on a date nothing was scheduled for. The same
+ * phantom the hero carried (plan 163 phase 1c), in a surface nobody thought to
+ * check.
+ *
+ * It now derives from the eligible published event — the same
+ * `getRegistrableEvent` the hero, the sidebar and the registration gate use —
+ * so the chatbot cannot disagree with the page. No workshop, no fact: silence
+ * is better than a stale date.
  */
 async function readWorkshopConfig(): Promise<string | null> {
   try {
-    const { getWorkshopConfig } = await import("@/lib/workshop-supabase");
-    const config = await getWorkshopConfig();
-    return `- Currently configured webinar: ${config.webinarDate} at ${config.webinarTime}.`;
+    const { listPublicEvents } = await import("@/repositories/workshop");
+    const mod = await import("@/components/workshop/events-data");
+    const event = mod.getRegistrableEvent(await listPublicEvents());
+    if (!event) return null;
+    return `- Next workshop: ${event.title} on ${mod.fullDate(event.date)} at ${event.time}.`;
   } catch (error) {
-    logger.warn("Chatbot live facts: workshop config unavailable", {
+    logger.warn("Chatbot live facts: workshop unavailable", {
       error: String(error),
     });
     return null;

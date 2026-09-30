@@ -10,6 +10,7 @@
 import { config } from "dotenv";
 import { Role, CandidatePersona, EnrollmentStatusV2 } from "@prisma/client";
 import { prisma } from "../src/lib/db";
+import { hashPassword } from "../src/lib/password";
 import {
   cohortSlugForProgramCohort,
   mintProgressRowId,
@@ -40,7 +41,7 @@ async function upsertUser(email: string, name: string) {
     create: {
       email,
       name,
-      password: "test",
+      password: await hashPassword("test"),
       role: Role.STUDENT,
       emailVerified: new Date(),
     },
@@ -270,7 +271,7 @@ async function main() {
   const rec = await upsertUser(`recruiter${SUFFIX}`, "Hire Recruiter");
   await prisma.user.update({
     where: { id: rec.id },
-    data: { role: Role.RECRUITER, password: "test" },
+    data: { role: Role.RECRUITER, password: await hashPassword("test") },
   });
   await prisma.recruiterProfile.upsert({
     where: { userId: rec.id },

@@ -10,10 +10,16 @@ import { getCareerGuidance } from "@/features/career-guidance/get-career-guidanc
 import { OtherChallenges } from "@/components/dashboard-hub/other-challenges";
 import { Roadmaps } from "@/components/dashboard-hub/roadmaps";
 import { EventsSection } from "@/components/dashboard-hub/events-section";
+import { listPublicEvents } from "@/repositories/workshop";
 import { FaqSection } from "@/components/dashboard-hub/faq-section";
 import { HUB_CARD_HOVER_CLASS } from "@/components/dashboard-hub/nav-items";
 import { getHubData } from "@/features/dashboard/get-hub-data";
 import { registrationRedirect } from "@/features/registration/registration-gate";
+import {
+  needsImportedProfileReview,
+  needsClaimProfileAcknowledgement,
+} from "@/features/resume/import/claim";
+import { ProfileReviewBanner } from "@/components/dashboard-hub/profile-review-banner";
 import type { Domain } from "@prisma/client";
 
 const TRACK_PATH: Record<Domain, string> = {
@@ -54,7 +60,14 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     redirect("/api/auth/signout?callbackUrl=/login");
   }
 
-  const guidance = await getCareerGuidance(session.user.id, []);
+  const [guidance, reviewPending] = await Promise.all([
+    getCareerGuidance(session.user.id, []),
+    needsImportedProfileReview(session.user.id),
+  ]);
+
+  if (reviewPending && (await needsClaimProfileAcknowledgement(session.user.id))) {
+    redirect("/claim-profile");
+  }
 
   const firstName =
     data.profile?.fullName.split(/\s+/)[0] ??
@@ -100,6 +113,8 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         </div>
       </section>
 
+      {reviewPending ? <ProfileReviewBanner /> : null}
+
       {notice ? (
         <section className="px-4 py-2 sm:px-6 lg:ml-4">
           <div
@@ -131,8 +146,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         showPowerBi={data.hasPowerBiAccess}
         showSnowflake={data.hasSnowflakeAccess}
         showDatabricksAi={data.hasDatabricksAiAccess}
+        showLangchain={data.hasLangchainAccess}
       />
-      <EventsSection />
+      <EventsSection events={await listPublicEvents()} />
       
       <FaqSection />
     </DashboardShell>

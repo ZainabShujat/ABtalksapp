@@ -2,7 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { askClaudeJson } from "@/lib/anthropic";
 import { PROGRAM_TOTAL_DAYS } from "@/features/program/constants";
-import { getCohortCalendarDay } from "@/features/program/progression";
+import { getMemberCalendarDay } from "@/features/program/progression";
 import { getMemberAtRiskStatus } from "@/features/program/commits";
 import {
   applyProgramRecommendationChange,
@@ -84,9 +84,9 @@ export async function generateRecommendations(cohortId: string): Promise<{
       continue;
     }
 
-    const calendarDay = getCohortCalendarDay(member.cohort);
+    const calendarDay = getMemberCalendarDay(member);
     const expectedDay = calendarDay;
-    const atRisk = await getMemberAtRiskStatus(member.id, cohortId);
+    const atRisk = await getMemberAtRiskStatus(member.id);
     const behindBy = atRisk.behindBy;
     const missionsPassed = Math.floor(member.missionPoints / 12);
     const cleanPassPct =

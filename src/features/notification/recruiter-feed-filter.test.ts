@@ -226,5 +226,30 @@ suite("total surviving items on the recruiter view (regression pin)", () => {
   );
 });
 
+suite("recruiter view keeps broadcasts addressed to ALL or RECRUITER, any category", () => {
+  const out = filterFeedForView(
+    {
+      adminItems: [
+        { ...adminRow("videothon-everyone", "HACKATHON"), audience: "ALL" },
+        { ...adminRow("recruiter-workshop", "WORKSHOP"), audience: "RECRUITER" },
+        { ...adminRow("challenge-only", "CHALLENGE"), audience: "CHALLENGE" },
+        { ...adminRow("candidate-cohort", "COHORT"), audience: "CANDIDATE" },
+        { ...adminRow("candidate-general", "GENERAL"), audience: "CANDIDATE" },
+      ],
+      derivedItems: [],
+      userItems: [],
+    },
+    true,
+  );
+  const keys = out.adminItems.map((r) => r.key);
+  assert(keys.includes("admin:videothon-everyone"), "ALL + HACKATHON must reach recruiters");
+  assert(keys.includes("admin:recruiter-workshop"), "RECRUITER + WORKSHOP must reach recruiters");
+  assert(!keys.includes("admin:challenge-only"), "CHALLENGE + CHALLENGE must not reach recruiters");
+  assert(!keys.includes("admin:candidate-cohort"), "CANDIDATE + COHORT must not reach recruiters");
+  // Upstream audience gating already drops CANDIDATE rows for a recruiter;
+  // the filter itself keeps GENERAL rows (pre-existing behaviour).
+  assert(keys.includes("admin:candidate-general"), "GENERAL rows keep the pre-existing pass-through");
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

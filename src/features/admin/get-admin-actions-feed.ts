@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { formatAdminActionType } from "@/features/admin/get-overview-stats";
 import { canonicalFullNameByUserId } from "@/repositories/candidate";
+import { deletedUserSnapshot } from "@/features/admin/audit";
 
 export const ADMIN_ACTIONS_PAGE_SIZE = 20;
 
@@ -59,6 +60,14 @@ function searchWhere(q: string | null | undefined): Prisma.AdminActionWhereInput
       { entityId: term },
       { reason: { contains: term, mode: "insensitive" } },
       { actorUserId: term },
+      // Self-deleted users only exist as this snapshot, so let admins find
+      // them by the address they signed up with.
+      {
+        metadata: {
+          path: ["deletedUser", "email"],
+          string_contains: term.toLowerCase(),
+        },
+      },
     ],
   };
 }
@@ -91,6 +100,50 @@ export async function getAdminActionActors(): Promise<
       name: displayName(names.get(user.id) ?? user.candidateProfile?.fullName, user.email),
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * One audit row for /admin/actions/[id]. Built for ACCOUNT_SELF_DELETE rows,
+ * where the user is gone and the saved snapshot is all there is.
+ */
+export async function getAdminActionDetail(id: string) {
+  const row = await prisma.adminAction.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      actionType: true,
+      reason: true,
+      metadata: true,
+      previousState: true,
+      createdAt: true,
+      entityType: true,
+      entityId: true,
+    },
+  });
+  if (!row) return null;
+
+  const meta =
+    row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+      ? row.metadata
+      : {};
+  const prev =
+    row.previousState &&
+    typeof row.previousState === "object" &&
+    !Array.isArray(row.previousState)
+      ? row.previousState
+      : {};
+
+  return {
+    id: row.id,
+    actionLabel: formatAdminActionType(row.actionType),
+    reason: row.reason,
+    createdAt: row.createdAt,
+    entity: [row.entityType, row.entityId].filter(Boolean).join(" "),
+    deletedUser: deletedUserSnapshot(row.metadata),
+    leaveReason: typeof meta.leaveReason === "string" ? meta.leaveReason : null,
+    feedback: typeof meta.feedback === "string" ? meta.feedback : null,
+    emailDomain: typeof prev.emailDomain === "string" ? prev.emailDomain : null,
+  };
 }
 
 export async function getAdminActionsFeed(input: {
@@ -158,12 +211,15 @@ export async function getAdminActionsFeed(input: {
   return {
     items: rows.map((row) => {
       const targetUserId = row.target?.id ?? null;
+      const deleted = row.target ? null : deletedUserSnapshot(row.metadata);
       const targetName = row.target
         ? displayName(
             names.get(row.target.id) ?? row.target.candidateProfile?.fullName,
             row.target.email,
           )
-        : [row.entityType, row.entityId].filter(Boolean).join(" ") || "—";
+        : deleted
+          ? displayName(deleted.name, deleted.email)
+          : [row.entityType, row.entityId].filter(Boolean).join(" ") || "—";
       return {
         id: row.id,
         actionType: row.actionType,
@@ -176,9 +232,12 @@ export async function getAdminActionsFeed(input: {
               names.get(row.admin.id) ?? row.admin.candidateProfile?.fullName,
               row.admin.email,
             )
-          : row.actorUserId,
+          : deleted
+            ? displayName(deleted.name, deleted.email)
+            : row.actorUserId,
         targetUserId,
         targetName,
+        detailHref: deleted ? `/admin/actions/${row.id}` : null,
       };
     }),
     total,

@@ -5,12 +5,12 @@ import { auth } from "@/auth";
 import { getRecruiterState } from "@/features/talent-pool/recruiter-registration";
 import { RecruiterLoginForm } from "@/components/talent/recruiter-login-form";
 import { RecruiterAuthClosed } from "@/components/talent/recruiter-auth-closed";
-import { isRecruiterAuthEnabled } from "@/lib/feature-flags";
+import { isEmailLoginEnabled, isRecruiterAuthEnabled } from "@/lib/feature-flags";
 
 export const metadata: Metadata = {
   title: "Recruiter sign-in | ABTalks",
   description:
-    "Sign in to ABTalks Hire with your work email. No password, no Google account.",
+    "Sign in to ABTalks Hire with your work email — an emailed code or your password.",
 };
 
 type Props = { searchParams: Promise<{ from?: string; email?: string }> };
@@ -57,7 +57,10 @@ export default async function RecruiterLoginPage({ searchParams }: Props) {
       </header>
 
       <div className="rounded-xl border bg-card p-5">
-        <RecruiterLoginForm initialEmail={params.email ?? ""} />
+        <RecruiterLoginForm
+          initialEmail={params.email ?? ""}
+          passwordEnabled={isEmailLoginEnabled()}
+        />
       </div>
 
       <p className="text-center text-sm text-muted-foreground">

@@ -40,58 +40,26 @@ export const registerSchema = z.object({
 export type RegisterInput = z.infer<typeof registerSchema>;
 
 /**
- * Registration collects the ONE fact the résumé cannot be trusted to give us —
- * where the candidate studies or works — and nothing else about their history.
+ * Registration collects only what the résumé cannot give us: who they are, how
+ * to reach them, and whether they are a student or a working professional.
  *
- * Graduation year, LinkedIn, GitHub and skills used to be asked for here. They
- * are all things the résumé parser fills in (`features/resume/merge/plan.ts`),
- * additively and without overwriting anything the candidate later types, so
- * asking twice bought a longer form and a worse answer.
+ * College, company / role / years, headline, city, state and country used to be
+ * asked for here. College and company were written as `CandidateEducation` /
+ * `CandidateExperience` rows, and the résumé merge straight after registration
+ * (`features/resume/merge/plan.ts`) added its own rows for the same school and
+ * job — so the profile showed each one twice. The merge fills all of these in,
+ * additively, and the profile editor covers anyone who skips the upload.
  */
-const studentFields = z.object({
-  userType: z.literal("STUDENT"),
-  college: z.string().trim().min(1, "College is required").max(200),
-  collegeId: z.union([z.literal(""), z.string().cuid()]).default(""),
-});
-
-const professionalFields = z.object({
-  userType: z.literal("PROFESSIONAL"),
-  organization: z.string().trim().min(1, "Company is required").max(200),
-  role: z.string().trim().min(1, "Role is required").max(200),
-  yearsExperience: z
-    .number({ error: "Years of experience is required" })
-    .int()
-    .min(0)
-    .max(60),
-});
-
 const registerPayloadBase = z
   .object({
-    fullName: z.string().trim().min(1, "Name is required").max(200),
-    /**
-     * The basic-info block. Same fields, same limits and same storage as
-     * `basicInfoSchema` in `validations/candidate-profile.ts` — registration
-     * writes them once and the profile editor edits them afterwards. Required
-     * here where that schema allows null, because a candidate with no city and
-     * no headline is not findable on `/hire`.
-     */
-    headline: z.string().trim().min(1, "Headline is required").max(160),
-    locationCity: z.string().trim().min(1, "City is required").max(120),
-    locationRegion: z
-      .string()
-      .trim()
-      .min(1, "State / region is required")
-      .max(120),
-    /** ISO-3166-1 alpha-2, as stored on `CandidateProfile.countryCode` (char(2)). */
-    countryCode: z
-      .string()
-      .trim()
-      .toUpperCase()
-      .regex(/^[A-Z]{2}$/, "Use a 2-letter country code"),
+    fullName: z.string().trim().min(1, "Full name is required").max(200),
+    userType: z.enum(["STUDENT", "PROFESSIONAL"], {
+      error: "Please select whether you are a student or a working professional",
+    }),
     /**
      * Dialing code, e.g. "+91". Drives whether OTP verification is required.
-     * Named apart from `countryCode` on purpose: one is "+91" and the other is
-     * "IN", and they were the same key until the basic-info fields moved here.
+     * Named `phoneCountryCode` rather than `countryCode` because
+     * `CandidateProfile.countryCode` is the ISO-2 country ("IN"), a different fact.
      */
     phoneCountryCode: z.string().default(INDIA_DIALING_CODE),
     /** National number (no dialing code). Required + valid when +91. */
@@ -104,17 +72,14 @@ const registerPayloadBase = z
 
 /**
  * Server-side registration payload (students + professionals).
- * `completeRegistrationAction` builds this from `FormData` (including default `userType`).
+ * `completeRegistrationAction` builds this from `FormData`. `userType` has no
+ * default: the candidate must pick one.
  *
- * The résumé is NOT in here. It is uploaded by its own action before submit, so
- * the mandatory-résumé check reads the stored row rather than a flag the client
- * could simply omit — see `completeRegistrationAction`.
+ * The résumé is NOT in here. Upload is optional and uses its own action; when a
+ * READY row exists, `completeRegistrationAction` merges it after the profile
+ * is created.
  */
-export const registerPayloadSchema = z
-  .discriminatedUnion("userType", [
-    registerPayloadBase.merge(studentFields),
-    registerPayloadBase.merge(professionalFields),
-  ])
+export const registerPayloadSchema = registerPayloadBase
   .superRefine((val, ctx) => {
     // India (+91) numbers are mandatory and must be a valid 10-digit mobile.
     // OTP verification itself is enforced server-side in completeRegistration.

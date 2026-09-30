@@ -29,7 +29,24 @@ export const RECRUITER_EVENT_TYPES: ReadonlySet<string> = new Set<string>([
   "auth.password_reset",
 ]);
 
-export type FeedInputRow = Omit<AppNotification, "isRead">;
+/**
+ * `audience` is set only on admin broadcast rows (the `NotificationAudience`
+ * the admin picked). It exists for the recruiter filter below and is stripped
+ * before the feed crosses to the client.
+ */
+export type FeedInputRow = Omit<AppNotification, "isRead"> & {
+  audience?: string;
+};
+
+/**
+ * Admin audiences that explicitly include recruiters. A broadcast sent to
+ * "Everyone" or "All recruiters" must reach /hire whatever its category —
+ * the category is only an icon, not a targeting decision.
+ */
+const RECRUITER_ADDRESSED_AUDIENCES: ReadonlySet<string> = new Set<string>([
+  "ALL",
+  "RECRUITER",
+]);
 
 export type FilteredFeedParts = {
   adminItems: FeedInputRow[];
@@ -43,9 +60,10 @@ export type FilteredFeedParts = {
  * - `derivedItems` are removed entirely for a recruiter. Hackathon
  *   registration, workshop invites and cohort enrolment reminders are
  *   candidate-side platform prompts and do not belong on `/hire`.
- * - `adminItems` are narrowed to `category === "GENERAL"` for a
- *   recruiter, so track-flavoured broadcasts (WORKSHOP / HACKATHON /
- *   COHORT / CHALLENGE) stay off `/hire`.
+ * - `adminItems` are kept for a recruiter when the admin addressed them
+ *   to recruiters (audience ALL or RECRUITER, any category), or when the
+ *   category is GENERAL. Track-audience broadcasts with a track category
+ *   (e.g. a CHALLENGE notice to CHALLENGE students) stay off `/hire`.
  * - `userItems` are narrowed to the recruiter-facing eventTypes above,
  *   plus any row with no eventType (defensive — an unrecognised row
  *   would otherwise vanish silently).
@@ -61,7 +79,10 @@ export function filterFeedForView(
 
   return {
     adminItems: input.adminItems.filter(
-      (item) => (item.category as NotificationCategoryKey) === "GENERAL",
+      (item) =>
+        (item.audience !== undefined &&
+          RECRUITER_ADDRESSED_AUDIENCES.has(item.audience)) ||
+        (item.category as NotificationCategoryKey) === "GENERAL",
     ),
     derivedItems: [],
     userItems: input.userItems.filter(

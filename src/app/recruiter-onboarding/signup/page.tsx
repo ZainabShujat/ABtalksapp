@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import { getRecruiterState } from "@/features/talent-pool/recruiter-registration";
 import { RecruiterAuthClosed } from "@/components/talent/recruiter-auth-closed";
 import { RecruiterOnboardingWizard } from "@/components/recruiter-onboarding/recruiter-onboarding-wizard";
-import { isRecruiterAuthEnabled } from "@/lib/feature-flags";
+import { isEmailLoginEnabled, isRecruiterAuthEnabled } from "@/lib/feature-flags";
 
 export const metadata: Metadata = {
   title: "Create a recruiter account | ABTalks",
@@ -31,5 +31,10 @@ export default async function RecruiterSignupPage() {
     return <RecruiterAuthClosed />;
   }
 
-  return <RecruiterOnboardingWizard initialScreen="identity" />;
+  return (
+    <RecruiterOnboardingWizard
+      initialScreen="identity"
+      passwordEnabled={isEmailLoginEnabled()}
+    />
+  );
 }

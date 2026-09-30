@@ -628,6 +628,7 @@ const PE_MEMBERSHIP_SELECT = {
   id: true,
   userId: true,
   status: true,
+  startedAt: true,
   unlockFloorDay: true,
   skipTokensUsed: true,
   githubRepoUrl: true,
@@ -674,15 +675,19 @@ export type AiCohortMembershipRow = ProgramMemberStateSnapshot & {
   linkedinUrl: string | null;
   resumeUrl: string | null;
   phone: string | null;
+  /** The learner's own Day-1 anchor. All 31-day math reads this (plan 157). */
+  startedAt: Date;
   createdAt: Date;
   updatedAt: Date;
   cohort: {
     id: string;
     name: string;
     status: ProgramCohortStatus;
-    startsAt: Date;
-    endsAt: Date;
-    capacity: number;
+    /** Null on a rolling cohort. Never coerce to the epoch — see below. */
+    startsAt: Date | null;
+    endsAt: Date | null;
+    /** Null means unlimited. Never coerce to 0 — that reads as "full" (plan 157). */
+    capacity: number | null;
     joinCode: string;
     resultsPublishedAt: Date | null;
   };
@@ -693,6 +698,7 @@ async function hydrateAiCohortMembership(
     id: string;
     userId: string;
     status: EnrollmentStatusV2;
+    startedAt: Date;
     unlockFloorDay: number | null;
     skipTokensUsed: number;
     githubRepoUrl: string | null;
@@ -789,13 +795,16 @@ async function hydrateAiCohortMembership(
     linkedinUrl: profile?.linkedinUrl ?? null,
     resumeUrl: profile?.resumeUrl ?? null,
     phone: profile?.phone ?? null,
+    startedAt: pe.startedAt,
     cohort: {
       id: cohortId,
       name: pe.cohort.name,
       status: pe.cohort.status as ProgramCohortStatus,
-      startsAt: pe.cohort.startsAt ?? new Date(0),
-      endsAt: pe.cohort.endsAt ?? new Date(0),
-      capacity: pe.cohort.capacity ?? 0,
+      // Never coerce a null cohort date to the epoch — that reads as
+      // "ended in 1970" and froze the whole track (plan 157).
+      startsAt: pe.cohort.startsAt,
+      endsAt: pe.cohort.endsAt,
+      capacity: pe.cohort.capacity,
       joinCode: pe.cohort.joinCode ?? "",
       resultsPublishedAt: pe.cohort.resultsPublishedAt,
     },

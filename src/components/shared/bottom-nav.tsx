@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { showsBottomNav } from "@/components/shared/bottom-nav-routes";
 import { motion } from "framer-motion";
 import { Briefcase, Compass, Gift, Home, User } from "lucide-react";
 import { useSafeReducedMotion } from "@/lib/motion";
@@ -73,38 +74,9 @@ export function BottomNav() {
     return () => window.removeEventListener("resize", measure);
   }, [measure]);
 
-  if (
-    pathname === "/" ||
-    pathname === "/dashboard" ||
-    pathname === "/profile" ||
-    pathname === "/jobs" ||
-    pathname.startsWith("/jobs/") ||
-    pathname === "/achievements" ||
-    // Every challenge track renders inside DashboardShell, which carries its
-    // own sidebar/footer navigation.
-    pathname === "/claude" ||
-    pathname.startsWith("/claude/day") ||
-    pathname === "/ai" ||
-    pathname === "/ds" ||
-    pathname === "/se" ||
-    pathname.startsWith("/challenge/") ||
-    pathname === "/marketplace" ||
-    pathname.startsWith("/marketplace/") ||
-    pathname === "/mock-interviews" ||
-    pathname.startsWith("/mock-interviews/") ||
-    pathname === "/messages" ||
-    pathname.startsWith("/messages/") ||
-    pathname === "/workshop" ||
-    pathname.startsWith("/workshop/") ||
-    pathname === "/hackathon" ||
-    pathname.startsWith("/hackathon/") ||
-    // `hire` belongs here for the same reason `talent` does: the recruiter
-    // portal is not the student app, and Home / Jobs / Rewards / Explore /
-    // Profile are not its tabs. It was also covering the page on mobile.
-    /^\/(login|register|welcome|claude-signup|students|r|program|talent|hire|recruiter-onboarding|verify)(\/|$)/.test(
-      pathname,
-    )
-  ) {
+  // One predicate, shared with MainShell so the bar and the padding it
+  // reserves can never disagree. See bottom-nav-routes.ts.
+  if (!showsBottomNav(pathname)) {
     return null;
   }
 

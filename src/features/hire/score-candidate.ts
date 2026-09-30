@@ -347,7 +347,7 @@ function stackScore(
  * everything available scores 0.7 and one who has passed nothing scores 0.15 —
  * a gap far too small to rank on.
  */
-function missionScore(
+export function missionScore(
   missionsPassed: number,
   cohortDay: number,
   maxEarnable: number = MAX_EARNABLE_MISSIONS,
@@ -357,12 +357,12 @@ function missionScore(
 }
 
 /** Share of earned passes that passed on the first verification run. */
-function cleanPassScore(cleanPassCount: number, missionsPassed: number): number {
+export function cleanPassScore(cleanPassCount: number, missionsPassed: number): number {
   if (missionsPassed <= 0) return 0;
   return clamp01(cleanPassCount / missionsPassed);
 }
 
-function projectScore(scores: number[]): number {
+export function projectScore(scores: number[]): number {
   if (scores.length === 0) return 0;
   const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
   const best = Math.max(...scores);
@@ -371,7 +371,7 @@ function projectScore(scores: number[]): number {
 
 /** Commit days against days elapsed — showing up daily is the signal, and on
  *  day 14 nobody can have 20 of them. */
-function consistencyScore(
+export function consistencyScore(
   commitDays: number,
   cohortDay: number,
   window = 30,
@@ -379,7 +379,7 @@ function consistencyScore(
   return clamp01(commitDays / Math.max(5, Math.min(cohortDay, window)));
 }
 
-function interviewScore(
+export function interviewScore(
   interview: ScoreableMember["interview"],
 ): number {
   if (!interview) return 0;

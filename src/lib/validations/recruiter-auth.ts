@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { workEmailSchema } from "@/lib/validations/work-email";
+import {
+  PASSWORD_IS_EMAIL_MESSAGE,
+  passwordIsNotEmail,
+  passwordSchema,
+} from "@/lib/validations/email-auth";
 
 export const requestRecruiterOtpSchema = z.object({
   email: z.string().trim().email().max(200),
@@ -17,24 +22,34 @@ export const requestRecruiterOtpSchema = z.object({
  */
 const NAME_HAS_DIGIT = /\p{Nd}/u;
 
-export const registerRecruiterSchema = z.object({
-  fullName: z
-    .string()
-    .trim()
-    .min(2, "Enter your full name.")
-    .max(120)
-    .refine((v) => !NAME_HAS_DIGIT.test(v), "Full name cannot contain numbers."),
-  company: z.string().trim().min(2, "Enter your company.").max(200),
-  /** Work domains only — a free consumer mailbox never becomes a recruiter. */
-  email: workEmailSchema,
-  /** Optional, and not verified — it is a contact detail, not a credential. */
-  phone: z.string().trim().max(20).optional(),
-  code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code."),
-  acceptedTerms: z.literal(true, {
-    message: "Please accept the Terms and Privacy Policy.",
-  }),
-  newsletterOptIn: z.boolean(),
-});
+export const registerRecruiterSchema = z
+  .object({
+    fullName: z
+      .string()
+      .trim()
+      .min(2, "Enter your full name.")
+      .max(120)
+      .refine((v) => !NAME_HAS_DIGIT.test(v), "Full name cannot contain numbers."),
+    company: z.string().trim().min(2, "Enter your company.").max(200),
+    /** Work domains only — a free consumer mailbox never becomes a recruiter. */
+    email: workEmailSchema,
+    /** Optional, and not verified — it is a contact detail, not a credential. */
+    phone: z.string().trim().max(20).optional(),
+    code: z
+      .string()
+      .trim()
+      .regex(/^\d{6}$/, "Enter the 6-digit code."),
+    acceptedTerms: z.literal(true, {
+      message: "Please accept the Terms and Privacy Policy.",
+    }),
+    newsletterOptIn: z.boolean(),
+    /** Plan 154: optional. Blank means sign in by emailed code only. */
+    password: passwordSchema.optional(),
+  })
+  .refine((v) => !v.password || passwordIsNotEmail(v.email, v.password), {
+    message: PASSWORD_IS_EMAIL_MESSAGE,
+    path: ["password"],
+  });
 
 export const verifyRecruiterOtpSchema = z.object({
   email: z.string().trim().email().max(200),
@@ -44,4 +59,3 @@ export const verifyRecruiterOtpSchema = z.object({
     .trim()
     .regex(/^\d{6}$/, "Enter the 6-digit code."),
 });
-

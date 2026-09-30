@@ -3,18 +3,23 @@
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AnimatePresence, motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { type Resolver, Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { completeRegistrationAction } from "@/app/actions/registration-actions";
+import { setPasswordAction } from "@/app/actions/email-auth-actions";
+import { PasswordInput } from "@/components/auth/password-input";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CollegeCombobox } from "@/components/shared/college-combobox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PhoneVerifyField } from "@/components/shared/phone-verify-field";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { HUB_BUTTON_CLASS } from "@/components/dashboard-hub/nav-items";
 import {
@@ -23,40 +28,49 @@ import {
   type LegalConsentValues,
 } from "@/components/legal/legal-consent-fields";
 import { registerPayloadSchema } from "@/lib/validations/register";
+import { PASSWORD_MIN_LENGTH } from "@/lib/validations/email-auth";
 import { ResumeUploadField } from "./resume-upload-field";
 
 /**
- * Registration, slimmed to what only the candidate can tell us.
+ * Registration, slimmed to what only the candidate can tell us: their name,
+ * whether they are a student or a working professional, and a phone number.
  *
- * Graduation year, LinkedIn, GitHub and the skills chips are gone. Every one of
- * them is something the résumé parser extracts and merges into the profile
- * additively (`features/resume/merge/plan.ts`), so asking for them here made the
- * form longer and the answer worse. What is left is identity, where they study
- * or work, where they are, one line about themselves, and the résumé itself.
+ * College, company, role, years of experience, headline, city, state and
+ * country are gone. The résumé parser extracts all of them and merges them into
+ * the profile additively (`features/resume/merge/plan.ts`). Asking for college
+ * or company here as well created a second education / experience row next to
+ * the one the résumé produced, so the profile showed duplicates.
  */
 
-/** RHF model includes fields from both branches; Zod still validates via `registerPayloadSchema`. */
 type RegistrationFormValues = {
-  userType: "STUDENT" | "PROFESSIONAL";
+  /** "" until the candidate picks one: there is deliberately no default. */
+  userType: "" | "STUDENT" | "PROFESSIONAL";
   fullName: string;
-  college: string;
-  collegeId: string;
-  organization: string;
-  role: string;
-  yearsExperience: number | undefined;
-  headline: string;
-  locationCity: string;
-  locationRegion: string;
-  countryCode: string;
   phoneCountryCode: string;
   phoneNumber: string;
-  referralCode: string;
   acceptLegal: boolean;
   newsletterOptIn: boolean;
 };
 
+const USER_TYPE_OPTIONS = [
+  { value: "STUDENT", label: "Student" },
+  { value: "PROFESSIONAL", label: "Working Professional" },
+] as const;
+
+/** One height and radius for every control, so the fields line up. */
+const CONTROL_CLASS = "h-10 data-[size=default]:h-10 rounded-xl";
+
+function RequiredMark() {
+  return (
+    <span className="-ml-1.5 text-destructive" aria-hidden>
+      *
+    </span>
+  );
+}
+
 type Props = {
   initialName: string;
+  /** Referral code from `?ref=` or the ref cookie. Sent silently; no visible field. */
   initialRef: string;
   /** Where a successful registration lands. Already validated same-origin. */
   nextPath: string;
@@ -65,6 +79,8 @@ type Props = {
   resumeFileName: string | null;
   /** When false (local `next dev`), OTP is not required to submit. */
   otpVerificationRequired: boolean;
+  /** Plan 154: show the optional password field (see register/page.tsx). */
+  offerPassword: boolean;
 };
 
 export function RegistrationForm({
@@ -74,9 +90,13 @@ export function RegistrationForm({
   resumeReady,
   resumeFileName,
   otpVerificationRequired,
+  offerPassword,
 }: Props) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Plan 154. Outside the RHF model on purpose: it is not part of the
+  // registration payload and is saved by its own action afterwards.
+  const [password, setPassword] = useState("");
   const [resumeUploaded, setResumeUploaded] = useState(resumeReady);
   const [legalConsent, setLegalConsent] = useState<LegalConsentValues>({
     acceptLegal: false,
@@ -86,22 +106,11 @@ export function RegistrationForm({
 
   const form = useForm<RegistrationFormValues>({
     resolver: zodResolver(registerPayloadSchema) as unknown as Resolver<RegistrationFormValues>,
-    shouldUnregister: true,
     defaultValues: {
-      userType: "STUDENT",
+      userType: "",
       fullName: initialName,
-      college: "",
-      collegeId: "",
-      organization: "",
-      role: "",
-      yearsExperience: undefined,
-      headline: "",
-      locationCity: "",
-      locationRegion: "",
-      countryCode: "IN",
       phoneCountryCode: "+91",
       phoneNumber: "",
-      referralCode: initialRef,
       acceptLegal: false,
       newsletterOptIn: true,
     },
@@ -111,13 +120,9 @@ export function RegistrationForm({
     register,
     control,
     handleSubmit,
-    watch,
     setValue,
-    clearErrors,
     formState: { errors },
   } = form;
-
-  const userType = watch("userType");
 
   const handlePhoneChange = useCallback(
     (v: { countryCode: string; phoneNumber: string; e164: string }) => {
@@ -127,28 +132,9 @@ export function RegistrationForm({
     [setValue],
   );
 
-  function handleUserTypeChange(next: "STUDENT" | "PROFESSIONAL") {
-    setValue("userType", next, { shouldValidate: false });
-    if (next === "PROFESSIONAL") {
-      setValue("organization", "");
-      setValue("role", "");
-      setValue("yearsExperience", undefined);
-      setValue("collegeId", "");
-      clearErrors(["college"]);
-    } else {
-      setValue("college", "");
-      setValue("collegeId", "");
-      clearErrors(["organization", "role", "yearsExperience"]);
-    }
-  }
-
   async function onSubmit(values: RegistrationFormValues) {
     if (!legalConsentAccepted(legalConsent)) {
       toast.error("Please accept the Terms of Service and Privacy Policy.");
-      return;
-    }
-    if (!resumeUploaded) {
-      toast.error("Please upload your resume to continue.");
       return;
     }
     if (
@@ -159,37 +145,37 @@ export function RegistrationForm({
       toast.error("Please verify your phone number first.");
       return;
     }
+    if (offerPassword && password && password.length < PASSWORD_MIN_LENGTH) {
+      toast.error(
+        `Use at least ${PASSWORD_MIN_LENGTH} characters for your password, or leave it blank.`,
+      );
+      return;
+    }
     setIsSubmitting(true);
     try {
       const fd = new FormData();
       fd.append("fullName", values.fullName);
       fd.append("userType", values.userType);
-      fd.append("headline", values.headline);
-      fd.append("locationCity", values.locationCity);
-      fd.append("locationRegion", values.locationRegion);
-      fd.append("countryCode", values.countryCode);
       fd.append("phoneCountryCode", values.phoneCountryCode);
       fd.append("phoneNumber", values.phoneNumber ?? "");
-      fd.append("referralCode", values.referralCode ?? "");
+      fd.append("referralCode", initialRef);
       fd.append("acceptLegal", String(legalConsent.acceptLegal));
       fd.append("newsletterOptIn", String(legalConsent.newsletterOptIn));
-
-      if (values.userType === "STUDENT") {
-        fd.append("college", values.college);
-        fd.append("collegeId", values.collegeId);
-      } else {
-        fd.append("organization", values.organization);
-        fd.append("role", values.role);
-        fd.append(
-          "yearsExperience",
-          values.yearsExperience != null ? String(values.yearsExperience) : "",
-        );
-      }
 
       const res = await completeRegistrationAction(fd);
       if (!res.ok) {
         toast.error(res.message);
         return;
+      }
+      // The profile exists at this point, so a password that fails to save
+      // must not undo or block it — say so and carry on.
+      if (offerPassword && password) {
+        const saved = await setPasswordAction({ newPassword: password });
+        if (!saved.ok) {
+          toast.warning(
+            `You're registered, but your password wasn't saved: ${saved.message} You can set one later in Settings.`,
+          );
+        }
       }
       toast.success("Welcome to ABTalks!");
       // Wherever they were headed before Google sent them here — the hackathon
@@ -202,281 +188,73 @@ export function RegistrationForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-      <div className="space-y-3">
-        <Label className="text-base font-semibold">I am a…</Label>
-        <Controller
-          name="userType"
-          control={control}
-          render={({ field }) => (
-            <RadioGroup
-              value={field.value}
-              onValueChange={(v) => {
-                const next = v === "PROFESSIONAL" ? "PROFESSIONAL" : "STUDENT";
-                field.onChange(next);
-                handleUserTypeChange(next);
-              }}
-              className="grid max-w-full grid-cols-1 gap-3 sm:grid-cols-2"
-              required
-            >
-              <Label
-                htmlFor="user-type-student"
-                className="min-w-0 cursor-pointer"
-              >
-                <Card
-                  className={cn(
-                    "h-full p-4 transition-colors",
-                    field.value === "STUDENT" &&
-                      "border-primary bg-primary/5 ring-2 ring-primary/20",
-                  )}
-                >
-                  <div className="flex items-start gap-3">
-                    <RadioGroupItem
-                      value="STUDENT"
-                      id="user-type-student"
-                      className="mt-1"
-                    />
-                    <div className="min-w-0">
-                      <div className="font-display font-semibold">College Student</div>
-                    </div>
-                  </div>
-                </Card>
-              </Label>
-              <Label
-                htmlFor="user-type-professional"
-                className="min-w-0 cursor-pointer"
-              >
-                <Card
-                  className={cn(
-                    "h-full p-4 transition-colors",
-                    field.value === "PROFESSIONAL" &&
-                      "border-primary bg-primary/5 ring-2 ring-primary/20",
-                  )}
-                >
-                  <div className="flex items-start gap-3">
-                    <RadioGroupItem
-                      value="PROFESSIONAL"
-                      id="user-type-professional"
-                      className="mt-1"
-                    />
-                    <div className="min-w-0">
-                      <div className="font-display font-semibold">
-                        Working Professional
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              </Label>
-            </RadioGroup>
-          )}
-        />
-        {errors.userType ? (
-          <p className="text-sm text-destructive">{errors.userType.message}</p>
-        ) : null}
-      </div>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
+      {/* <p className="text-xs text-muted-foreground">
+        Fields marked <span className="text-destructive">*</span> are required.
+      </p> */}
 
-      <div className="space-y-2">
-        <Label htmlFor="fullName">Full name</Label>
-        <Input
-          id="fullName"
-          autoComplete="name"
-          {...register("fullName")}
-          aria-invalid={!!errors.fullName}
-        />
-        {errors.fullName ? (
-          <p className="text-sm text-destructive">{errors.fullName.message}</p>
-        ) : null}
-      </div>
-
-      <AnimatePresence mode="wait">
-        {userType === "STUDENT" ? (
-          <motion.div
-            key="student-fields"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-6"
-          >
-            <div className="space-y-2">
-              <Label htmlFor="college">College</Label>
-              <Controller
-                name="college"
-                control={control}
-                render={({ field }) => (
-                  <CollegeCombobox
-                    id="college"
-                    value={field.value}
-                    onChange={(name, collegeId) => {
-                      field.onChange(name);
-                      setValue("collegeId", collegeId ?? "");
-                    }}
-                    placeholder="e.g. IIT Delhi"
-                    aria-invalid={!!errors.college}
-                  />
-                )}
-              />
-              {errors.college ? (
-                <p className="text-sm text-destructive">
-                  {errors.college.message}
-                </p>
-              ) : null}
-            </div>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="professional-fields"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-6"
-          >
-            <div className="space-y-2">
-              <Label htmlFor="organization">Company</Label>
-              <Input
-                id="organization"
-                placeholder="Company or institution name"
-                maxLength={200}
-                {...register("organization")}
-                aria-invalid={!!errors.organization}
-              />
-              {errors.organization ? (
-                <p className="text-sm text-destructive">
-                  {errors.organization.message}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
-              <Input
-                id="role"
-                placeholder="Your current role"
-                maxLength={200}
-                {...register("role")}
-                aria-invalid={!!errors.role}
-              />
-              {errors.role ? (
-                <p className="text-sm text-destructive">{errors.role.message}</p>
-              ) : null}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="yearsExperience">Years of experience</Label>
-              <Input
-                id="yearsExperience"
-                type="number"
-                inputMode="numeric"
-                min={0}
-                max={60}
-                placeholder="Enter your years of experience"
-                className="max-w-[12rem]"
-                aria-invalid={!!errors.yearsExperience}
-                {...register("yearsExperience", {
-                  setValueAs: (v) => {
-                    if (v === "" || v === null || v === undefined) {
-                      return undefined;
-                    }
-                    const n =
-                      typeof v === "number"
-                        ? v
-                        : Number.parseInt(String(v), 10);
-                    return Number.isFinite(n)
-                      ? Math.min(60, Math.max(0, n))
-                      : undefined;
-                  },
-                })}
-              />
-              {errors.yearsExperience ? (
-                <p className="text-sm text-destructive">
-                  {errors.yearsExperience.message}
-                </p>
-              ) : null}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <ResumeUploadField
-        initialFileName={resumeFileName}
-        uploaded={resumeUploaded}
-        onUploadedChange={setResumeUploaded}
-        disabled={isSubmitting}
-      />
-
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-6 sm:grid-cols-2 sm:gap-4">
         <div className="space-y-2">
-          <Label htmlFor="locationCity">City</Label>
+          <Label htmlFor="fullName">
+            Full Name
+            <RequiredMark />
+          </Label>
           <Input
-            id="locationCity"
-            placeholder="Enter your city"
-            autoComplete="address-level2"
-            maxLength={120}
-            {...register("locationCity")}
-            aria-invalid={!!errors.locationCity}
+            id="fullName"
+            autoComplete="name"
+            placeholder="Enter Full Name"
+            maxLength={200}
+            className={CONTROL_CLASS}
+            aria-required
+            aria-invalid={!!errors.fullName}
+            {...register("fullName")}
           />
-          {errors.locationCity ? (
-            <p className="text-sm text-destructive">
-              {errors.locationCity.message}
-            </p>
+          {errors.fullName ? (
+            <p className="text-sm text-destructive">{errors.fullName.message}</p>
           ) : null}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="locationRegion">State / Region</Label>
-          <Input
-            id="locationRegion"
-            placeholder="Enter your state or region"
-            autoComplete="address-level1"
-            maxLength={120}
-            {...register("locationRegion")}
-            aria-invalid={!!errors.locationRegion}
+          <Label htmlFor="userType">
+            I am a
+            <RequiredMark />
+          </Label>
+          <Controller
+            name="userType"
+            control={control}
+            render={({ field }) => (
+              <Select
+                items={USER_TYPE_OPTIONS}
+                value={field.value === "" ? null : field.value}
+                onValueChange={(v) => {
+                  field.onChange(v ?? "");
+                  field.onBlur();
+                }}
+                disabled={isSubmitting}
+              >
+                <SelectTrigger
+                  id="userType"
+                  ref={field.ref}
+                  className={cn("w-full", CONTROL_CLASS)}
+                  aria-required
+                  aria-invalid={!!errors.userType}
+                >
+                  <SelectValue placeholder="Select Student or Professional" />
+                </SelectTrigger>
+                <SelectContent>
+                  {USER_TYPE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           />
-          {errors.locationRegion ? (
-            <p className="text-sm text-destructive">
-              {errors.locationRegion.message}
-            </p>
+          {errors.userType ? (
+            <p className="text-sm text-destructive">{errors.userType.message}</p>
           ) : null}
         </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="countryCode">Country Code</Label>
-        <Input
-          id="countryCode"
-          maxLength={2}
-          placeholder="Enter your country code(e.g. IN)"
-          autoComplete="country"
-          className="max-w-[8rem] uppercase"
-          {...register("countryCode")}
-          aria-invalid={!!errors.countryCode}
-        />
-        <p className="text-xs text-muted-foreground">
-          Two-letter country code: IN India, US United States.
-        </p>
-        {errors.countryCode ? (
-          <p className="text-sm text-destructive">
-            {errors.countryCode.message}
-          </p>
-        ) : null}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="headline">Profile headline</Label>
-        <Input
-          id="headline"
-          maxLength={160}
-          placeholder="Describe yourself in one line"
-          {...register("headline")}
-          aria-invalid={!!errors.headline}
-        />
-        <p className="text-xs text-muted-foreground">
-          Define yourself in one line. What you do, or what you are working toward.
-        </p>
-        {errors.headline ? (
-          <p className="text-sm text-destructive">{errors.headline.message}</p>
-        ) : null}
       </div>
 
       <div className="space-y-2">
@@ -488,6 +266,9 @@ export function RegistrationForm({
           onVerifiedChange={setPhoneVerified}
           disabled={isSubmitting}
           verificationRequired={otpVerificationRequired}
+          required
+          placeholder="Enter Phone Number"
+          controlClassName={CONTROL_CLASS}
         />
         {errors.phoneNumber ? (
           <p className="text-sm text-destructive">
@@ -496,37 +277,31 @@ export function RegistrationForm({
         ) : null}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="referralCode">Referral code (optional)</Label>
-        <Controller
-          name="referralCode"
-          control={control}
-          render={({ field }) => (
-            <Input
-              id="referralCode"
-              maxLength={6}
-              placeholder="Enter your referral code"
-              className="font-mono uppercase"
-              value={field.value}
-              onChange={(e) => {
-                const v = e.target.value
-                  .toUpperCase()
-                  .replace(/[^A-Z0-9]/g, "")
-                  .slice(0, 6);
-                field.onChange(v);
-              }}
-              onBlur={field.onBlur}
-              ref={field.ref}
-              aria-invalid={!!errors.referralCode}
-            />
-          )}
-        />
-        {errors.referralCode ? (
-          <p className="text-sm text-destructive">
-            {errors.referralCode.message}
+      <ResumeUploadField
+        initialFileName={resumeFileName}
+        uploaded={resumeUploaded}
+        onUploadedChange={setResumeUploaded}
+        disabled={isSubmitting}
+      />
+
+      {offerPassword ? (
+        <div className="space-y-2">
+          <Label htmlFor="registration-password">Password (optional)</Label>
+          <PasswordInput
+            id="registration-password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={isSubmitting}
+            aria-describedby="registration-password-hint"
+          />
+          <p id="registration-password-hint" className="text-xs text-muted-foreground">
+            Sign in with your email and this password next time. At least{" "}
+            {PASSWORD_MIN_LENGTH} characters. Leave blank to keep using Google or
+            an emailed code.
           </p>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       <LegalConsentFields
         values={legalConsent}
@@ -546,9 +321,7 @@ export function RegistrationForm({
           HUB_BUTTON_CLASS,
           "inline-flex h-11 w-full items-center justify-center gap-2 sm:w-auto",
         )}
-        disabled={
-          isSubmitting || !resumeUploaded || !legalConsentAccepted(legalConsent)
-        }
+        disabled={isSubmitting || !legalConsentAccepted(legalConsent)}
       >
         {isSubmitting ? (
           <>
@@ -559,11 +332,6 @@ export function RegistrationForm({
           "Complete Registration"
         )}
       </Button>
-      {!resumeUploaded ? (
-        <p className="text-xs text-muted-foreground">
-          Upload your resume above to complete registration.
-        </p>
-      ) : null}
     </form>
   );
 }

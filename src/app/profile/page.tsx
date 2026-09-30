@@ -30,7 +30,7 @@ import { ResumeSection } from "@/components/profile/resume-section";
 import { PreferencesSection } from "@/components/profile/preferences-section";
 import { buttonVariants } from "@/components/ui/button";
 import { PERSONA_LABELS } from "@/lib/candidate-vocab";
-import { isOtpVerificationRequired } from "@/lib/feature-flags";
+import { isEmailLoginEnabled, isOtpVerificationRequired } from "@/lib/feature-flags";
 import { isAvatarStorageConfigured } from "@/features/profile/avatar-storage";
 
 /**
@@ -43,7 +43,12 @@ export const maxDuration = 60;
 /** Nulls become "" so every input stays controlled from first render. */
 const s = (v: string | null | undefined) => v ?? "";
 
-export default async function ProfilePage() {
+export default async function ProfilePage({
+  searchParams,
+}: {
+  /** `?step=<wizard key>` opens that section. See `initialIndex` below. */
+  searchParams?: Promise<{ step?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/login");
@@ -429,7 +434,20 @@ export default async function ProfilePage() {
   ];
 
   const firstIncomplete = steps.findIndex((step) => !step.complete);
-  const initialIndex = firstIncomplete === -1 ? 0 : firstIncomplete;
+  // `?step=<key>` opens that section directly, which is what the fix buttons on
+  // /profile/recruiter-view link to (plan 155). An absent, empty or unknown key
+  // falls through to the existing first-incomplete default, so nothing about a
+  // plain /profile visit changes.
+  const requestedStep = (await searchParams)?.step;
+  const requestedIndex = requestedStep
+    ? steps.findIndex((step) => step.key === requestedStep)
+    : -1;
+  const initialIndex =
+    requestedIndex >= 0
+      ? requestedIndex
+      : firstIncomplete === -1
+        ? 0
+        : firstIncomplete;
 
   // The report card links back into the wizard by index, so the mapping is
   // derived from `steps` rather than restated — reordering a step here moves
@@ -467,7 +485,24 @@ export default async function ProfilePage() {
         review={review}
         avatarUploadEnabled={isAvatarStorageConfigured()}
         performance={performance}
+        emailLoginEnabled={isEmailLoginEnabled()}
       />
+      {isEmailLoginEnabled() ? (
+        <div className="border-t px-4 py-6">
+          <h2 className="font-display text-base font-semibold">
+            Password &amp; sign-in
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Set or change a password to sign in with your email.
+          </p>
+          <Link
+            href="/settings/security"
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "mt-3")}
+          >
+            Manage password
+          </Link>
+        </div>
+      ) : null}
       <div className="border-t px-4 py-6">
         <h2 className="font-display text-base font-semibold">Delete account</h2>
         <p className="mt-1 text-sm text-muted-foreground">

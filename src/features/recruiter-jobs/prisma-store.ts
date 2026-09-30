@@ -17,6 +17,7 @@ const SELECT = {
   workMode: true,
   type: true,
   skills: true,
+  minExperience: true,
   status: true,
   isOpen: true,
   recruiterId: true,

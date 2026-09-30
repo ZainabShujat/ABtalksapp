@@ -6,6 +6,7 @@ import {
   getRegistrationDatesSince,
 } from "@/features/admin/get-registration-dates";
 import { canonicalFullNameByUserId } from "@/repositories/candidate";
+import { deletedUserSnapshot } from "@/features/admin/audit";
 import { listCanonicalChallengeFeed, countChallengeEnrollmentsWithDaysGte } from "@/repositories/progress";
 
 const IST = "Asia/Kolkata";
@@ -128,6 +129,7 @@ export async function getOverviewStats() {
         actorUserId: true,
         entityType: true,
         entityId: true,
+        metadata: true,
         admin: {
           select: {
             id: true,
@@ -393,26 +395,34 @@ export async function getOverviewStats() {
       submittedAt: row.submittedAt,
       submittedAtRelative: formatDistanceToNow(row.submittedAt, { addSuffix: true }),
     })),
-    recentAdminActions: recentAdminActionsRaw.map((row) => ({
-      id: row.id,
-      adminName:
-        (row.admin?.id ? names.get(row.admin.id)?.trim() : undefined) ||
-        row.admin?.candidateProfile?.fullName?.trim() ||
-        row.admin?.email ||
-        row.actorUserId ||
-        "Admin",
-      actionType: row.actionType,
-      actionLabel: formatAdminActionType(row.actionType),
-      targetUserId: row.target?.id ?? null,
-      targetName: row.target
-        ? names.get(row.target.id)?.trim() ||
-          row.target.candidateProfile?.fullName?.trim() ||
-          row.target.email ||
-          "Unknown"
-        : [row.entityType, row.entityId].filter(Boolean).join(" ") || "—",
-      createdAt: row.createdAt,
-      createdAtRelative: formatDistanceToNow(row.createdAt, { addSuffix: true }),
-    })),
+    recentAdminActions: recentAdminActionsRaw.map((row) => {
+      const deleted = row.target ? null : deletedUserSnapshot(row.metadata);
+      const deletedName = deleted ? deleted.name?.trim() || deleted.email : null;
+      return {
+        id: row.id,
+        adminName:
+          (row.admin?.id ? names.get(row.admin.id)?.trim() : undefined) ||
+          row.admin?.candidateProfile?.fullName?.trim() ||
+          row.admin?.email ||
+          deletedName ||
+          row.actorUserId ||
+          "Admin",
+        actionType: row.actionType,
+        actionLabel: formatAdminActionType(row.actionType),
+        targetUserId: row.target?.id ?? null,
+        targetName: row.target
+          ? names.get(row.target.id)?.trim() ||
+            row.target.candidateProfile?.fullName?.trim() ||
+            row.target.email ||
+            "Unknown"
+          : deletedName ||
+            [row.entityType, row.entityId].filter(Boolean).join(" ") ||
+            "—",
+        detailHref: deleted ? `/admin/actions/${row.id}` : null,
+        createdAt: row.createdAt,
+        createdAtRelative: formatDistanceToNow(row.createdAt, { addSuffix: true }),
+      };
+    }),
     recentRecruiters: recentRecruitersRaw.map((row) => ({
       id: row.id,
       fullName: row.fullName,

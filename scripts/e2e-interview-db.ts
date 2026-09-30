@@ -23,6 +23,7 @@
  */
 import { PrismaClient } from "@prisma/client";
 import { config as loadEnv } from "dotenv";
+import { hashPassword } from "../src/lib/password";
 
 // Shell-provided values win. `override: true` is needed so .env.local beats
 // .env, but it would otherwise also clobber variables set on the command line —
@@ -153,13 +154,14 @@ async function main() {
   });
 
   const user = await prisma.user.create({
-    // A plaintext dev password so the seeded member can sign in through the
-    // ENABLE_DEV_AUTH credentials provider and open the report in a browser.
-    // This is a disposable test database; nothing here ever reaches production.
+    // A dev password (hashed — plan 154) so the seeded member can sign in
+    // through the password provider (ENABLE_EMAIL_LOGIN) and open the report in
+    // a browser. This is a disposable test database; nothing here ever reaches
+    // production.
     data: {
       email: TEST_EMAIL,
       name: "Priya Raman (E2E)",
-      password: TEST_PASSWORD,
+      password: await hashPassword(TEST_PASSWORD),
     },
     select: { id: true },
   });

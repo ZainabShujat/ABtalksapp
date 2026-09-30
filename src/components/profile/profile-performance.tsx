@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 const PERFORMANCE_TOOLTIP =
   "How often recruiters opened your details and unlocked your resume on Hire, over the last 90 days.";
 
@@ -55,6 +57,27 @@ export function ProfilePerformance({
         <div className="pw-grid-divider" aria-hidden />
         <PerfColumn label="Recruiter actions" value={recruiterActions} />
       </div>
+      {/* Plan 155. The numbers above say how often recruiters looked; this says
+          what they saw. Deliberately here rather than in the page chrome — this
+          panel is already the one place on /profile that is about recruiters.
+          Utility classes rather than a new `pw-*` rule, so profile-wizard.css is
+          untouched. */}
+      <Link
+        href="/profile/recruiter-view"
+        className="group mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#03535f] transition-colors duration-200 hover:text-[#076573]"
+      >
+        See how recruiters see you
+        <svg
+          viewBox="0 0 24 24"
+          className="size-3.5 fill-none stroke-current stroke-[2.2] transition-transform duration-200 motion-safe:group-hover:translate-x-0.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M5 12h14" />
+          <path d="m13 6 6 6-6 6" />
+        </svg>
+      </Link>
     </div>
   );
 }

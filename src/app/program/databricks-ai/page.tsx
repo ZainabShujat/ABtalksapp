@@ -11,6 +11,7 @@ import {
 } from "@/features/databricks-ai/constants";
 import { getDatabricksAiDashboard } from "@/features/databricks-ai/dashboard";
 import { getDatabricksAiEntryState } from "@/features/databricks-ai/enroll";
+import { registerHref, withAdsClickIds } from "@/features/registration/registration-gate";
 import { findDatabricksAiEnrollment } from "@/repositories/databricks-ai";
 import { listCurriculumForProgramSlug } from "@/repositories/learning";
 
@@ -60,16 +61,40 @@ function BreadcrumbHeader() {
   );
 }
 
-export default async function DatabricksAiPage() {
+export default async function DatabricksAiPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const clickIds = await searchParams;
+  const returnTo = withAdsClickIds(DATABRICKS_AI_BASE, clickIds);
   const session = await auth();
   if (!session?.user?.id) {
-    redirect(`/login?from=${DATABRICKS_AI_BASE}`);
+    const catalog = await listCurriculumForProgramSlug(DATABRICKS_AI_PROGRAM_SLUG);
+    const days = catalog.days.map((d) => ({ ...d, state: "LOCKED" as const }));
+    return (
+      <div className="-mx-4 -my-6 min-h-[calc(100svh-4.25rem)] bg-[#F4F4F4] px-5 py-8 font-content text-[#000000] md:px-[50px]">
+        <div className="mx-auto w-full max-w-[1500px] space-y-8">
+          <DatabricksAiEnrolHero
+            registerHref={`/login?from=${encodeURIComponent(returnTo)}`}
+          />
+          <section>
+            <ProgramModuleList
+              modules={catalog.modules}
+              days={days}
+              lockAllDays
+              basePath="/program/databricks-ai"
+            />
+          </section>
+        </div>
+      </div>
+    );
   }
 
   const state = await getDatabricksAiEntryState(session.user.id);
 
   if (state.screen === "needs_profile") {
-    redirect("/register");
+    redirect(registerHref(returnTo));
   }
 
   if (state.screen === "closed") {

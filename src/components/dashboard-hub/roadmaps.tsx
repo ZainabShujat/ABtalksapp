@@ -8,6 +8,10 @@ import {
 } from "@/components/dashboard-hub/nav-items";
 import { cn } from "@/lib/utils";
 
+/** Prep Kit card: fixed width so the row scrolls horizontally instead of wrapping. */
+const PREP_CARD_CLASS =
+  "flex w-[272px] shrink-0 snap-start flex-col justify-between rounded-2xl border border-[#E0E0E0] bg-white p-5 sm:w-[300px] sm:p-6";
+
 const ROADMAPS: { domain: Domain; label: string; path: string }[] = [
   { domain: "AI", label: "Artificial Intelligence", path: "/ai" },
   { domain: "DS", label: "Data Science", path: "/ds" },
@@ -23,6 +27,7 @@ type RoadmapsProps = {
   showPowerBi?: boolean;
   showSnowflake?: boolean;
   showDatabricksAi?: boolean;
+  showLangchain?: boolean;
 };
 
 export function Roadmaps({
@@ -34,6 +39,7 @@ export function Roadmaps({
   showPowerBi = false,
   showSnowflake = false,
   showDatabricksAi = false,
+  showLangchain = false,
 }: RoadmapsProps) {
   const joined = new Set(joinedDomains);
   const abandoned = new Set(abandonedDomains);
@@ -91,17 +97,23 @@ export function Roadmaps({
       {showProgramPrepKit ? (
         <section
           id="prep-kit"
-          className="scroll-mt-20 px-4 py-2 sm:px-6 sm:py-4 lg:ml-4"
+          className="min-w-0 scroll-mt-20 px-4 py-2 sm:px-6 sm:py-4 lg:ml-4"
         >
           <h2 className="font-heading text-xl font-semibold uppercase text-[#03535F] lg:ml-2">
             Prep Kit
           </h2>
-          {/* Wraps by breakpoint — never a horizontal scroller. 1 col on
-              mobile, 2 at sm, 3 at lg, 4 per row at xl; further cards wrap. */}
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {/* Horizontal scroller: fixed-width cards in one row, snap to each
+              card, scrolls inside this row only (never the page). Vertical
+              padding keeps the hover shadow from being clipped. */}
+          <div
+            role="region"
+            aria-label="Prep Kit cohorts"
+            tabIndex={0}
+            className="-mx-1 mt-2 flex snap-x snap-mandatory scroll-px-1 gap-3 overflow-x-auto px-1 py-3 [scrollbar-width:thin] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#03535F]"
+          >
             <div
               className={cn(
-                "flex flex-col justify-between rounded-2xl border border-[#E0E0E0] bg-white p-5 sm:p-6",
+                PREP_CARD_CLASS,
                 HUB_CARD_HOVER_CLASS,
               )}
             >
@@ -127,7 +139,7 @@ export function Roadmaps({
             {showDatabricks ? (
               <div
                 className={cn(
-                  "flex flex-col justify-between rounded-2xl border border-[#E0E0E0] bg-white p-5 sm:p-6",
+                  PREP_CARD_CLASS,
                   HUB_CARD_HOVER_CLASS,
                 )}
               >
@@ -151,7 +163,7 @@ export function Roadmaps({
             {showDsArchitect ? (
               <div
                 className={cn(
-                  "flex flex-col justify-between rounded-2xl border border-[#E0E0E0] bg-white p-5 sm:p-6",
+                  PREP_CARD_CLASS,
                   HUB_CARD_HOVER_CLASS,
                 )}
               >
@@ -174,7 +186,7 @@ export function Roadmaps({
             {showPowerBi ? (
               <div
                 className={cn(
-                  "flex flex-col justify-between rounded-2xl border border-[#E0E0E0] bg-white p-5 sm:p-6",
+                  PREP_CARD_CLASS,
                   HUB_CARD_HOVER_CLASS,
                 )}
               >
@@ -197,7 +209,7 @@ export function Roadmaps({
             {showSnowflake ? (
               <div
                 className={cn(
-                  "flex flex-col justify-between rounded-2xl border border-[#E0E0E0] bg-white p-5 sm:p-6",
+                  PREP_CARD_CLASS,
                   HUB_CARD_HOVER_CLASS,
                 )}
               >
@@ -220,7 +232,7 @@ export function Roadmaps({
             {showDatabricksAi ? (
               <div
                 className={cn(
-                  "flex flex-col justify-between rounded-2xl border border-[#E0E0E0] bg-white p-5 sm:p-6",
+                  PREP_CARD_CLASS,
                   HUB_CARD_HOVER_CLASS,
                 )}
               >
@@ -234,6 +246,29 @@ export function Roadmaps({
                 </div>
                 <Link
                   href="/program/databricks-ai"
+                  className={cn(HUB_CARD_CTA_CLASS, "mt-2 self-end")}
+                >
+                  Open
+                </Link>
+              </div>
+            ) : null}
+            {showLangchain ? (
+              <div
+                className={cn(
+                  PREP_CARD_CLASS,
+                  HUB_CARD_HOVER_CLASS,
+                )}
+              >
+                <div className="min-w-0">
+                  <p className="font-inter text-lg font-bold text-black">
+                    LangChain &amp; LangGraph Cohort
+                  </p>
+                  <p className="mt-1 line-clamp-2 text-sm text-[#4B4B4B]">
+                    Go from your first LLM call to a deployed LangGraph agent in 31 days.
+                  </p>
+                </div>
+                <Link
+                  href="/program/langchain"
                   className={cn(HUB_CARD_CTA_CLASS, "mt-2 self-end")}
                 >
                   Open

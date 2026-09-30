@@ -2,14 +2,12 @@ import "server-only";
 import type { ProgramCohortStatus, ProgramMissionType } from "@prisma/client";
 import { differenceInCalendarDays } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
-import { prisma } from "@/lib/db";
 import {
   addCalendarDaysToKey,
   parseCalendarKeyToUtcDate,
 } from "@/lib/date-utils";
 import { isDayLockBypassEnabled } from "@/lib/feature-flags";
-import { listCanonicalProgramMemberIds, findAiCohortMembershipByMemberId } from "@/repositories/program-state";
-import { peIdForMember } from "@/repositories/ids";
+import { findAiCohortMembershipByMemberId } from "@/repositories/program-state";
 import {
   listProgramModules,
   listProgramDayCatalog,
@@ -19,11 +17,21 @@ import {
   listProgramMissionProgress,
 } from "@/repositories/progress";
 import {
-  PROGRAM_HOLD_OPEN_COHORT_NAME,
   PROGRAM_MEMBER_START_DAY,
   PROGRAM_TOTAL_DAYS,
   PROGRAM_TZ,
 } from "@/features/program/constants";
+
+/**
+ * The learner's own Day-1 anchor (`ProgramEnrollment.startedAt`).
+ *
+ * Every AI-cohort day boundary derives from this, not from a shared cohort
+ * `startsAt` (plan 157). The track is rolling: people join on any day, so a
+ * cohort-wide calendar either gives a late joiner no pacing at all (when the
+ * cohort started long ago and the day clamp pins them at 31) or locks them out
+ * of days they should already have (when it started recently).
+ */
+export type ProgramAnchor = { startedAt: Date };
 
 export type DayState = "LOCKED" | "AVAILABLE" | "PASSED" | "SKIPPED";
 
@@ -62,25 +70,25 @@ export function isWaivedPayload(payload: unknown): boolean {
 }
 
 /**
- * Calendar unlock ceiling from cohort pace + start-day offset.
- * Cohort calendar day 1 → content day PROGRAM_MEMBER_START_DAY.
+ * Calendar unlock ceiling from the learner's pace + start-day offset.
+ * Member calendar day 1 → content day PROGRAM_MEMBER_START_DAY.
  * Used for unlock only — not for behind-pace (see getBehindByDays).
  */
 export function getCalendarDerivedMaxContentDay(
-  cohortCalendarDay: number,
+  memberCalendarDay: number,
 ): number {
   return Math.min(
     PROGRAM_TOTAL_DAYS,
-    PROGRAM_MEMBER_START_DAY - 1 + cohortCalendarDay,
+    PROGRAM_MEMBER_START_DAY - 1 + memberCalendarDay,
   );
 }
 
 /** PROGRAM_TZ calendar key (`yyyy-MM-dd`) on which `dayNumber` becomes unlockable. */
 export function getContentDayUnlockKey(
-  cohort: { startsAt: Date },
+  anchor: ProgramAnchor,
   dayNumber: number,
 ): string {
-  const startKey = formatInTimeZone(cohort.startsAt, PROGRAM_TZ, "yyyy-MM-dd");
+  const startKey = formatInTimeZone(anchor.startedAt, PROGRAM_TZ, "yyyy-MM-dd");
   const offset = dayNumber - PROGRAM_MEMBER_START_DAY;
   return addCalendarDaysToKey(startKey, Math.max(0, offset));
 }
@@ -99,11 +107,11 @@ function effectiveUnlockFloor(highestUnlockedDay: number): number {
 
 /** Effective unlock ceiling: calendar-derived, raised by admin `highestUnlockedDay`. */
 export function getMaxContentDay(
-  cohort: { startsAt: Date },
+  anchor: ProgramAnchor,
   highestUnlockedDay: number,
 ): number {
   const calendarDerived = getCalendarDerivedMaxContentDay(
-    getCohortCalendarDay(cohort),
+    getMemberCalendarDay(anchor),
   );
   return Math.min(
     PROGRAM_TOTAL_DAYS,
@@ -113,7 +121,7 @@ export function getMaxContentDay(
 
 /**
  * Day availability: calendar cap + sequential (prev must be PASSED).
- * `maxContentDay` is the unlock ceiling (calendar + admin floor).
+ * `maxContentDay` is the unlock ceiling (the learner's calendar + admin floor).
  */
 export function deriveDayState(
   dayNumber: number,
@@ -133,9 +141,9 @@ export function deriveDayState(
   return "AVAILABLE";
 }
 
-/** PROGRAM_TZ calendar days since cohort `startsAt`, clamped 1..PROGRAM_TOTAL_DAYS. */
-export function getCohortCalendarDay(cohort: { startsAt: Date }): number {
-  const startKey = formatInTimeZone(cohort.startsAt, PROGRAM_TZ, "yyyy-MM-dd");
+/** PROGRAM_TZ calendar days since the learner's `startedAt`, clamped 1..PROGRAM_TOTAL_DAYS. */
+export function getMemberCalendarDay(anchor: ProgramAnchor): number {
+  const startKey = formatInTimeZone(anchor.startedAt, PROGRAM_TZ, "yyyy-MM-dd");
   const nowKey = formatInTimeZone(new Date(), PROGRAM_TZ, "yyyy-MM-dd");
   const startUtc = parseCalendarKeyToUtcDate(startKey);
   const nowUtc = parseCalendarKeyToUtcDate(nowKey);
@@ -143,38 +151,19 @@ export function getCohortCalendarDay(cohort: { startsAt: Date }): number {
   return Math.min(PROGRAM_TOTAL_DAYS, Math.max(1, diff + 1));
 }
 
-export function isCohortPastEndsAt(cohort: { endsAt: Date }): boolean {
-  return new Date() > cohort.endsAt;
-}
-
-/** Frozen when endsAt has passed, except the live US cohort which waits for all Day 31 passes. */
-export async function isCohortFrozen(cohort: {
-  id: string;
-  name: string;
+/**
+ * A cohort freezes only when an admin archives or completes it.
+ *
+ * Never on a date. This track is rolling (plan 157): every member runs their own
+ * 31-day calendar from `startedAt`, so a shared end date cuts late joiners off
+ * mid-programme — which is exactly what happened to the open cohort after
+ * 2026-09-02, and what `PROGRAM_HOLD_OPEN_COHORT_NAME` used to paper over for
+ * one cohort by matching its literal name.
+ */
+export function isCohortFrozen(cohort: {
   status: ProgramCohortStatus;
-  endsAt: Date;
-}): Promise<boolean> {
-  if (
-    cohort.name === PROGRAM_HOLD_OPEN_COHORT_NAME &&
-    (cohort.status === "ENROLLING" || cohort.status === "ACTIVE")
-  ) {
-    const liveIds = await listCanonicalProgramMemberIds({
-      programCohortId: cohort.id,
-    });
-    if (liveIds.length === 0) return true;
-    const passed = await prisma.activityAttempt.findMany({
-      where: {
-        enrollmentId: { in: liveIds.map(peIdForMember) },
-        id: { startsWith: "aa_ms_" },
-        passed: true,
-        activity: { dayNumber: PROGRAM_TOTAL_DAYS },
-      },
-      select: { enrollmentId: true },
-      distinct: ["enrollmentId"],
-    });
-    return passed.length === liveIds.length;
-  }
-  return isCohortPastEndsAt(cohort);
+}): boolean {
+  return cohort.status === "ARCHIVED" || cohort.status === "COMPLETED";
 }
 
 /** Highest day number the member has PASSED (0 if none). */
@@ -197,14 +186,14 @@ export async function getMissionHeatmap(
 }
 
 /**
- * How many days behind cohort calendar pace (Mission Control “Cohort day”).
+ * How many days behind the learner's own calendar pace (Mission Control “Day”).
  * Does not use the Day-4 unlock ceiling — that only gates availability.
  */
 export function getBehindByDays(
-  cohort: { startsAt: Date },
+  anchor: ProgramAnchor,
   progressDay: number,
 ): number {
-  const expected = getCohortCalendarDay(cohort);
+  const expected = getMemberCalendarDay(anchor);
   return Math.max(0, expected - progressDay);
 }
 
@@ -244,7 +233,7 @@ export async function getMemberDayStates(
     getProgramUnlockFloor(memberId, member.highestUnlockedDay),
   ]);
 
-  const maxContentDay = getMaxContentDay(member.cohort, unlockFloor);
+  const maxContentDay = getMaxContentDay(member, unlockFloor);
 
   const { passedDays, skippedDays } = collectPassSkipSets(submissions);
 
@@ -276,7 +265,7 @@ export async function getMemberCurrentModuleNumber(
     memberId,
     member.highestUnlockedDay,
   );
-  const dayNumber = getMaxContentDay(member.cohort, unlockFloor);
+  const dayNumber = getMaxContentDay(member, unlockFloor);
   const days = await listProgramDayCatalog();
   const day = days.find((d) => d.dayNumber === dayNumber);
   return day?.moduleNumber ?? 1;

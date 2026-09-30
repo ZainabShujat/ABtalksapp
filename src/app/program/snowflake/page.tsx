@@ -11,6 +11,7 @@ import {
 } from "@/features/snowflake/constants";
 import { getSnowflakeDashboard } from "@/features/snowflake/dashboard";
 import { getSnowflakeEntryState } from "@/features/snowflake/enroll";
+import { registerHref, withAdsClickIds } from "@/features/registration/registration-gate";
 import { findSnowflakeEnrollment } from "@/repositories/snowflake";
 import { listCurriculumForProgramSlug } from "@/repositories/learning";
 
@@ -60,16 +61,40 @@ function BreadcrumbHeader() {
   );
 }
 
-export default async function SnowflakePage() {
+export default async function SnowflakePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const clickIds = await searchParams;
+  const returnTo = withAdsClickIds(SNOWFLAKE_BASE, clickIds);
   const session = await auth();
   if (!session?.user?.id) {
-    redirect(`/login?from=${SNOWFLAKE_BASE}`);
+    const catalog = await listCurriculumForProgramSlug(SNOWFLAKE_PROGRAM_SLUG);
+    const days = catalog.days.map((d) => ({ ...d, state: "LOCKED" as const }));
+    return (
+      <div className="-mx-4 -my-6 min-h-[calc(100svh-4.25rem)] bg-[#F4F4F4] px-5 py-8 font-content text-[#000000] md:px-[50px]">
+        <div className="mx-auto w-full max-w-[1500px] space-y-8">
+          <SnowflakeEnrolHero
+            registerHref={`/login?from=${encodeURIComponent(returnTo)}`}
+          />
+          <section>
+            <ProgramModuleList
+              modules={catalog.modules}
+              days={days}
+              lockAllDays
+              basePath="/program/snowflake"
+            />
+          </section>
+        </div>
+      </div>
+    );
   }
 
   const state = await getSnowflakeEntryState(session.user.id);
 
   if (state.screen === "needs_profile") {
-    redirect("/register");
+    redirect(registerHref(returnTo));
   }
 
   if (state.screen === "closed") {

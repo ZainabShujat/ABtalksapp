@@ -1,4 +1,3 @@
-import { UserType } from "@prisma/client";
 import { clearRefCookie } from "@/lib/cookies";
 import { isOtpVerificationRequired } from "@/lib/feature-flags";
 import type { RegisterPayloadInput } from "@/lib/validations/register";
@@ -112,11 +111,12 @@ export async function completeRegistration(
       // Frozen StudentProfile.synergyPoints stays at the column default.
       const synergyPoints = 0;
 
-      // `graduationYear`, `skills`, `linkedinUrl` and `githubUsername` are left
-      // empty on purpose: the form no longer asks for them and the résumé merge
-      // fills them in straight after this, through the candidate tables. Writing
-      // a placeholder here would make the merge think the candidate had already
-      // answered — the merge only ever fills what is empty.
+      // Education, experience and the basic-info block are left empty on
+      // purpose: the form no longer asks for them and the résumé merge fills
+      // them in straight after this. A college or company written here became
+      // its own `CandidateEducation` / `CandidateExperience` row, and the merge
+      // then added the résumé's row for the same school or job, so the profile
+      // showed it twice. The merge only ever fills what is empty.
       const created = await createCandidateIdentity(tx, {
         userId,
         fullName: input.fullName,
@@ -124,20 +124,15 @@ export async function completeRegistration(
         referralCode: newReferralCode,
         phone,
         phoneVerified,
-        college: input.userType === UserType.STUDENT ? input.college : null,
-        collegeId:
-          input.userType === UserType.STUDENT ? input.collegeId || null : null,
-        organization:
-          input.userType === UserType.PROFESSIONAL ? input.organization : null,
-        role: input.userType === UserType.PROFESSIONAL ? input.role : null,
-        yearsExperience:
-          input.userType === UserType.PROFESSIONAL
-            ? input.yearsExperience
-            : null,
-        headline: input.headline,
-        locationCity: input.locationCity,
-        locationRegion: input.locationRegion,
-        countryCode: input.countryCode,
+        college: null,
+        collegeId: null,
+        organization: null,
+        role: null,
+        yearsExperience: null,
+        headline: null,
+        locationCity: null,
+        locationRegion: null,
+        countryCode: null,
         synergyPoints,
       });
 

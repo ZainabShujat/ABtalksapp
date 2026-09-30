@@ -3,40 +3,23 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { showsBottomNav } from "@/components/shared/bottom-nav-routes";
 
 export function MainShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isHackathon =
-    pathname === "/hackathon" || pathname.startsWith("/hackathon/");
-  const isDashboardShellRoute =
-    pathname === "/dashboard" ||
-    pathname === "/profile" ||
-    pathname === "/marketplace" ||
-    pathname.startsWith("/marketplace/") ||
-    pathname === "/messages" ||
-    pathname.startsWith("/messages/") ||
-    pathname === "/mock-interviews" ||
-    pathname.startsWith("/mock-interviews/") ||
-    pathname === "/claude" ||
-    pathname.startsWith("/claude/day") ||
-    pathname === "/ai" ||
-    pathname === "/ds" ||
-    pathname === "/se" ||
-    pathname.startsWith("/challenge/");
-  const isLanding = pathname === "/";
-  /**
-   * `pb-16` below reserves room for the fixed mobile BottomNav. That component
-   * returns null on /workshop (see its own hide list), so on this route the
-   * padding was 64px of blank page under the footer and nothing else.
+  /*
+   * The padding is the nav's own answer, not a second opinion.
+   *
+   * This used to keep its own list of routes purely to reserve `pb-16` for
+   * the fixed BottomNav, and the two lists drifted: 38 routes reserved 64px
+   * for a bar that never rendered, and /assessments rendered the bar on top
+   * of its side panel. Asking `showsBottomNav` means the space is reserved
+   * exactly when something occupies it.
    */
-  const isWorkshop =
-    pathname === "/workshop" || pathname.startsWith("/workshop/");
-  const isHire = pathname === "/hire" || pathname.startsWith("/hire/");
-  // Fills exactly one viewport and must not scroll; BottomNav is hidden there too.
-  const isRecruiterOnboarding =
-    pathname === "/recruiter-onboarding" ||
-    pathname.startsWith("/recruiter-onboarding/");
-  const isWelcome = pathname === "/welcome";
+  const reservesBottomNav = showsBottomNav(pathname);
+
+  /** Drives the `landing-page` body class. Unrelated to the nav. */
+  const isLanding = pathname === "/";
 
   useEffect(() => {
     document.body.classList.toggle("landing-page", isLanding);
@@ -49,13 +32,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
     <main
       className={cn(
         "theme-abtalks-light theme-abtalks-brand flex-1",
-        !isHackathon &&
-          !isDashboardShellRoute &&
-          !isWorkshop &&
-          !isHire &&
-          !isRecruiterOnboarding &&
-          !isWelcome &&
-          "pb-16 md:pb-0",
+        reservesBottomNav && "pb-16 md:pb-0",
       )}
     >
       {children}

@@ -45,16 +45,41 @@ export type SearchCandidatesResult =
 export const MIN_RESULTS = 5;
 
 /**
- * How many challenge candidates are loaded before ranking.
+ * How many matches one signed-in search returns.
+ *
+ * Was 20, which is why the results pager stopped at two pages no matter how
+ * large the pool: 20 results over `MATCHES_PER_PAGE = 10` is exactly two
+ * (plan 161 §2f).
+ *
+ * Not unbounded, and the reason is below this line rather than in the pager:
+ * every returned match is upserted as a `TalentRequestMatch` row by this same
+ * function and is run through `explainMatches`. Sixty is six real pages for a
+ * recruiter without turning one search into hundreds of rows and an LLM pass
+ * over all of them.
+ *
+ * The signed-out preview stays at 20 (`hire-guest-actions.ts`) and the alert
+ * run stays at 5 (`run-hire-alerts.ts`) — both are deliberate and different.
+ */
+export const SEARCH_RESULT_LIMIT = 60;
+
+/**
+ * How many candidates are loaded before ranking.
  *
  * Scoring is a pure function over an in-memory array, so the cost of the pool
- * is the dossier assembly. Six hundred is comfortably above the whole eligible
- * cohort today (320 at a ten-day floor) and low enough that a future track with
- * thousands of enrolments cannot turn one Server Action into a full table scan.
- * Rows are ordered by days submitted before the cap, so the ceiling can only
- * ever trim the least-evidenced people.
+ * is the dossier assembly. This was 600, justified as "comfortably above the
+ * whole eligible cohort today (320 at a ten-day floor)" — true while 86
+ * candidates were searchable, and false the moment plan 161's backfill opens
+ * the ~10.8K legacy rows.
+ *
+ * Two thousand keeps one Server Action away from a full table scan while
+ * leaving real headroom. The cap is no longer the selection for PROFILE either:
+ * that track now filters on the brief's skills in SQL, so the ceiling trims the
+ * least relevant rather than merely the least recent.
+ *
+ * Challenge rows are ordered by days submitted before the cap, so there the
+ * ceiling can still only ever trim the least-evidenced people.
  */
-export const CHALLENGE_POOL_CAP = 600;
+export const CHALLENGE_POOL_CAP = 2000;
 
 
 /**
@@ -77,11 +102,19 @@ export async function searchCandidates(
         ? extra.sources.filter((s) => isKnownTrack(s))
         : enabledTracks().map((t) => t.slug);
 
+    // What the brief actually asks for. The PROFILE track uses this to pick who
+    // is considered; every other track ignores it (plan 161 §2g).
+    const briefSkills = [
+      ...(spec.mustHaveStack ?? []),
+      ...(spec.niceToHaveStack ?? []),
+    ];
+
     const loads = await Promise.all(
       wanted.map((slug) =>
         loadTrack(slug, {
           minEvidenceDays: extra.minEvidenceDays ?? 0,
           limit: CHALLENGE_POOL_CAP,
+          skills: briefSkills,
         }),
       ),
     );

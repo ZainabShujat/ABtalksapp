@@ -39,6 +39,7 @@ import {
 export type UnlockRefusal =
   | "NOT_A_RECRUITER"
   | "CANDIDATE_UNAVAILABLE"
+  /** Plan 154: imported from a résumé and not yet signed in — no consent to share contact. */
   | "INSUFFICIENT_CREDITS"
   | "UNAVAILABLE";
 
@@ -145,6 +146,25 @@ export async function unlockResolvedContact(
       engagementId: existing.id,
     };
   }
+
+  // Plan 164: there is deliberately no unclaimed-import gate here.
+  //
+  // Plan 154 refused any candidate whose résumé an admin had imported until
+  // that candidate signed in — "a student an admin imported from a résumé has
+  // not signed in, so has not agreed to their contact details going to anyone.
+  // Paying cannot stand in for that." That reasoning was not refuted; it was
+  // overridden. The platform's position is that an admin's decision to import
+  // a résumé is itself the basis for passing on the details in it, so an
+  // imported candidate unlocks like anyone else.
+  //
+  // Do not reinstate the gate from plan 154's comment without reading plan 164
+  // first. `hasUnclaimedImportForUser` still exists and is still correct — it
+  // is what `claim.ts` uses to decide whether a Google sign-in may claim the
+  // account, and only this path stopped consulting it.
+  //
+  // The remaining stop, if a candidate objects, is `admin_withdraw`:
+  // `CandidateVisibility.withdrawnAt` removes them from every recruiter
+  // surface, so they become neither findable nor unlockable.
 
   const costMinor = await getIntConfig(CONTACT_UNLOCK_COST_KEY);
 

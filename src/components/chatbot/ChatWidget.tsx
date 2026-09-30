@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Send, ThumbsDown, ThumbsUp, X, MessageSquarePlus, List, ChevronLeft, Minus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -65,7 +66,29 @@ function renderMenuText(): string {
   return `Here's what I can help you with:\n${lines.join("\n")}\n\nType a topic, number, or ask anything!`;
 }
 
+/**
+ * Recruiter-side route trees. Rudra is a candidate assistant, so it is not
+ * shown (or mounted) anywhere a recruiter works: the /hire desk, the
+ * /talent recruiter portal, and recruiter onboarding.
+ */
+const RECRUITER_PATH_PREFIXES = ["/hire", "/talent", "/recruiter-onboarding"];
+
+function isRecruiterPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return RECRUITER_PATH_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
+}
+
 export function ChatWidget() {
+  const pathname = usePathname();
+  // Gate before the widget mounts, so none of its state, effects or
+  // network calls run on recruiter pages.
+  if (isRecruiterPath(pathname)) return null;
+  return <ChatWidgetInner />;
+}
+
+function ChatWidgetInner() {
   const [open, setOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
   

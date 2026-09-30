@@ -22,6 +22,8 @@ import {
 import { readPoolExtra } from "@/features/hire/pool-brief";
 import { trackLabels } from "@/features/hire/track-registry";
 import { runScoutAgent } from "@/features/hire/scout-agent";
+import { extractHireBrief } from "@/features/hire/gemini-brief";
+import { mergeBriefPatch } from "@/features/hire/hire-brief";
 import { readOfferedChips, suggestChips, type ScoutChip } from "@/features/hire/scout-chips";
 import { searchable, shouldAutoSearch, stampSearchFingerprint, type ScoutToolDeps } from "@/features/hire/scout-tools";
 
@@ -559,21 +561,38 @@ export async function runScoutTurn(args: {
   const unchanged = turnFor(priorSpec, "");
 
   // 1 — chip protocol. No model, no tokens.
-  if (isChipValue(priorSpec, msg)) {
+  const chip = isChipValue(priorSpec, msg);
+  if (chip) {
     const direct = engineAction(priorSpec, msg);
     if (direct) return checked(direct, unchanged);
   }
 
   // 2 — the agent. It reads the message, decides, and acts only through tools.
-  const out = await runScoutAgent({
-    priorSpec,
-    history: args.history,
-    userMessage: msg,
-    deps: toolDeps,
-  });
+  // The Gemini brief parses the same message in parallel (usually a cache hit
+  // from the composer's live ticks), so what lit a tick is what Search filters
+  // on. A chip value is not free text, and a failed parse changes nothing:
+  // the agent's spec stands, which is the regex/tool fallback.
+  const [out, brief] = await Promise.all([
+    runScoutAgent({
+      priorSpec,
+      history: args.history,
+      userMessage: msg,
+      deps: toolDeps,
+    }),
+    // Tighter than the live default: this one can hold the recruiter's turn.
+    chip ? Promise.resolve(null) : extractHireBrief(msg, { timeoutMs: 3000 }),
+  ]);
+
+  let spec = out.spec;
+  if (brief?.ok && out.action !== "reset" && Object.keys(brief.patch).length > 0) {
+    spec = mergeBriefPatch(out.spec, brief.patch);
+    // The fingerprint must describe what is actually searched, or the next
+    // turn's duplicate check compares against a brief that never ran.
+    if (out.action === "search") spec = stampSearchFingerprint(spec);
+  }
 
   return checked(
-    turnFor(out.spec, out.text, {
+    turnFor(spec, out.text, {
       action: out.action,
       offeredChips: out.offeredChips,
     }),

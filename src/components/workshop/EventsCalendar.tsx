@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
+  WorkshopIcon,
   type WorkshopEvent,
   eventsForMonth,
   fullDate,
@@ -335,10 +336,17 @@ function NavButton({ dir, onClick }: { dir: -1 | 1; onClick: () => void }) {
  * Month-grid calendar of every ABTalks activity — workshops, the hackathon,
  * and the challenge / cohort start days. Figma node 1:192.
  *
- * Takes no props and reads EVENTS itself, so nothing crosses the Server→Client
- * boundary (events carry a LucideIcon, which cannot be serialized).
+ * `events` arrives from the server parent — the schedule lives in the database
+ * now, and a Client Component cannot read it. The objects stay serializable
+ * because the icon travels as `iconName` and is resolved by `iconFor` at
+ * render; passing the component itself is what the Server→Client boundary
+ * forbids.
  */
-export default function EventsCalendar() {
+export default function EventsCalendar({
+  events,
+}: {
+  events: WorkshopEvent[];
+}) {
   // Resolved on the client only. This page is statically prerendered, so a
   // build-time date would freeze the calendar on whatever month shipped.
   const [todayKey, setTodayKey] = useState<string | null>(null);
@@ -431,8 +439,11 @@ export default function EventsCalendar() {
   }, []);
 
   const byDate = useMemo(
-    () => (cursor ? eventsForMonth(cursor.y, cursor.m) : new Map<string, WorkshopEvent[]>()),
-    [cursor],
+    () =>
+      cursor
+        ? eventsForMonth(events, cursor.y, cursor.m)
+        : new Map<string, WorkshopEvent[]>(),
+    [events, cursor],
   );
 
   const closeModal = useCallback(() => {
@@ -891,7 +902,7 @@ export default function EventsCalendar() {
             cell is just a wrapper and the aside flows normally.
           */}
           <div className="relative min-w-0">
-            <UpcomingWorkshops nowMs={nowMs} />
+            <UpcomingWorkshops nowMs={nowMs} allEvents={events} />
           </div>
         </div>
       </div>
@@ -972,7 +983,6 @@ function EventBar({
   onOpen: (ev: WorkshopEvent, el: HTMLElement) => void;
   compact?: boolean;
 }) {
-  const Icon = event.Icon;
   const label = `${event.title} — ${fullDate(event.date)}`;
   const fill = TRACK_FILL[event.track];
 
@@ -1040,7 +1050,8 @@ function EventBar({
         boxShadow: "0 1px 2px rgba(var(--wk-ink-a),0.10)",
       }}
     >
-      <Icon
+      <WorkshopIcon
+        name={event.iconName}
         size={compact ? 9 : 13}
         strokeWidth={1.9}
         style={{

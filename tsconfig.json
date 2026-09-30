@@ -41,6 +41,7 @@
     "node_modules",
     "scripts",
     "prisma/scripts",
+    "scratch",
     "docs",
     ".next/dev"
   ]

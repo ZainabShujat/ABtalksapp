@@ -7,19 +7,22 @@ import {
   isDatabricksAiEnabled,
   isDatabricksEnabled,
   isDsArchitectEnabled,
+  isLangchainEnabled,
   isPowerBiEnabled,
   isProgramEnabled,
   isSnowflakeEnabled,
 } from "@/lib/feature-flags";
 import { loadAvailableInterviews } from "@/features/dashboard/load-available-interviews";
+import { listPublicEvents } from "@/repositories/workshop";
 import {
   buildHubSearchIndex,
   type HubSearchItem,
 } from "@/features/dashboard/hub-search-index";
 import type { HubEnrollment } from "@/features/dashboard/get-hub-data";
 
-function guestCatalog(): HubSearchItem[] {
+async function guestCatalog(): Promise<HubSearchItem[]> {
   return buildHubSearchIndex({
+    workshopEvents: await listPublicEvents(),
     enrollments: [],
     joinedDomains: [],
     abandonedDomains: [],
@@ -29,6 +32,7 @@ function guestCatalog(): HubSearchItem[] {
     hasPowerBiAccess: isPowerBiEnabled(),
     hasSnowflakeAccess: isSnowflakeEnabled(),
     hasDatabricksAiAccess: isDatabricksAiEnabled(),
+    hasLangchainAccess: isLangchainEnabled(),
     isAdmin: false,
     claudeEnabled: isClaudeEnabled(),
     programEnabled: isProgramEnabled(),
@@ -73,6 +77,7 @@ export const getSiteSearchItems = cache(async (): Promise<HubSearchItem[]> => {
   }));
 
   return buildHubSearchIndex({
+    workshopEvents: await listPublicEvents(),
     enrollments,
     joinedDomains: [...new Set(joined.map((r) => r.domain))],
     abandonedDomains: [
@@ -86,6 +91,7 @@ export const getSiteSearchItems = cache(async (): Promise<HubSearchItem[]> => {
     hasPowerBiAccess: isPowerBiEnabled(),
     hasSnowflakeAccess: isSnowflakeEnabled(),
     hasDatabricksAiAccess: isDatabricksAiEnabled(),
+    hasLangchainAccess: isLangchainEnabled(),
     isAdmin: session.user.isAdmin ?? false,
     claudeEnabled: isClaudeEnabled(),
     programEnabled,

@@ -1,10 +1,9 @@
 import "server-only";
-import { prisma } from "@/lib/db";
 import { formatInTimeZone } from "date-fns-tz";
 import {
   getBehindByDays,
-  getCohortCalendarDay,
   getContentDayUnlockKey,
+  getMemberCalendarDay,
   getMaxContentDay,
   getMemberDayStates,
   getMemberProgressDay,
@@ -28,7 +27,8 @@ export type MemberDashboard = {
   totalScore: number;
   rank: number | null;
   memberDay: number;
-  cohortDay: number;
+  /** The learner's own day 1..31 from `startedAt` — not a shared cohort day (plan 157). */
+  memberCalendarDay: number;
   behindBy: number;
   cleanPassCount: number;
   scoreBreakdown: {
@@ -90,13 +90,9 @@ export async function getMemberDashboard(
   memberId: string,
   cohortId: string,
 ): Promise<MemberDashboard | null> {
-  const [member, cohort, { modules, days }, rank, recentRuns, passedRows] =
+  const [member, { modules, days }, rank, recentRuns, passedRows] =
     await Promise.all([
       findAiCohortMembershipByMemberId(memberId),
-      prisma.programCohort.findUnique({
-        where: { id: cohortId },
-        select: { startsAt: true },
-      }),
       getMemberDayStates(memberId),
       getMemberRank(cohortId, memberId),
       listProgramRecentMissionAttempts(memberId, 5),
@@ -105,17 +101,17 @@ export async function getMemberDashboard(
       ),
     ]);
 
-  if (!member || !cohort) return null;
+  if (!member) return null;
   const [overlaid] = await overlayProgramMemberState([member]);
   if (!overlaid) return null;
 
-  const cohortDay = getCohortCalendarDay(cohort);
+  const memberCalendarDay = getMemberCalendarDay(member);
   const passedDays = new Set(
     days.filter((d) => d.state === "PASSED").map((d) => d.dayNumber),
   );
   const progressDay = getMemberProgressDay(passedDays);
   const memberDay = progressDay;
-  const behindBy = getBehindByDays(cohort, progressDay);
+  const behindBy = getBehindByDays(member, progressDay);
 
   const missionHeatmap: MissionHeatmapCell[] = days.map((d) => ({
     dayNumber: d.dayNumber,
@@ -137,12 +133,12 @@ export async function getMemberDashboard(
     memberId,
     overlaid.highestUnlockedDay,
   );
-  const maxContentDay = getMaxContentDay(cohort, unlockFloor);
+  const maxContentDay = getMaxContentDay(member, unlockFloor);
   const nextUnlockDateLabel =
     nextLockedDay !== null && nextLockedDay > maxContentDay
       ? formatInTimeZone(
           parseCalendarKeyToUtcDate(
-            getContentDayUnlockKey(cohort, nextLockedDay),
+            getContentDayUnlockKey(member, nextLockedDay),
           ),
           "UTC",
           "d MMM",
@@ -195,7 +191,7 @@ export async function getMemberDashboard(
     totalScore: overlaid.totalScore,
     rank,
     memberDay,
-    cohortDay,
+    memberCalendarDay,
     behindBy,
     cleanPassCount: overlaid.cleanPassCount,
     scoreBreakdown: {

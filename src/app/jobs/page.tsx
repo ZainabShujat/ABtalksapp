@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { DashboardShell } from "@/components/dashboard-hub/dashboard-shell";
 import { JobsBrowser } from "@/components/jobs/jobs-browser";
 import {
+  formatExperienceLabel,
   formatPostedLabel,
   type ApplicationCardRow,
   type JobCardRow,
@@ -56,6 +57,7 @@ export default async function JobsPage({ searchParams }: PageProps) {
     type: job.type,
     skills: job.skills,
     postedLabel: formatPostedLabel(job.publishedAt ?? job.createdAt, now),
+    experienceLabel: formatExperienceLabel(job.minExperience),
     applied: appliedJobIds.has(job.id),
   }));
 

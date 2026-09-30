@@ -8,6 +8,7 @@ import { ProgramModuleList } from "@/components/program/program-module-list";
 import { DATABRICKS_BASE, DATABRICKS_PROGRAM_SLUG } from "@/features/databricks/constants";
 import { getDatabricksDashboard } from "@/features/databricks/dashboard";
 import { getDatabricksEntryState } from "@/features/databricks/enroll";
+import { registerHref } from "@/features/registration/registration-gate";
 import { findDatabricksEnrollment } from "@/repositories/databricks";
 import { listCurriculumForProgramSlug } from "@/repositories/learning";
 
@@ -62,13 +63,31 @@ function BreadcrumbHeader() {
 export default async function DatabricksPage() {
   const session = await auth();
   if (!session?.user?.id) {
-    redirect(`/login?from=${DATABRICKS_BASE}`);
+    const catalog = await listCurriculumForProgramSlug(DATABRICKS_PROGRAM_SLUG);
+    const days = catalog.days.map((d) => ({ ...d, state: "LOCKED" as const }));
+    return (
+      <div className="-mx-4 -my-6 min-h-[calc(100svh-4.25rem)] bg-[#F4F4F4] px-5 py-8 font-content text-[#000000] md:px-[50px]">
+        <div className="mx-auto w-full max-w-[1500px] space-y-8">
+          <DatabricksEnrolHero
+            registerHref={`/login?from=${encodeURIComponent(DATABRICKS_BASE)}`}
+          />
+          <section>
+            <ProgramModuleList
+              modules={catalog.modules}
+              days={days}
+              lockAllDays
+              basePath="/program/databricks"
+            />
+          </section>
+        </div>
+      </div>
+    );
   }
 
   const state = await getDatabricksEntryState(session.user.id);
 
   if (state.screen === "needs_profile") {
-    redirect("/register");
+    redirect(registerHref(DATABRICKS_BASE));
   }
 
   if (state.screen === "closed") {

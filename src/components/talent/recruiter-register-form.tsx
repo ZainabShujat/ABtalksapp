@@ -11,10 +11,12 @@ import {
 } from "@/app/actions/recruiter-auth-actions";
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events";
 import { useTrack } from "@/lib/analytics/use-track";
+import { PasswordInput } from "@/components/auth/password-input";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { PASSWORD_MIN_LENGTH } from "@/lib/validations/email-auth";
 
 /**
  * Recruiter registration, open to anyone.
@@ -24,13 +26,19 @@ import { cn } from "@/lib/utils";
  * whole point of the review step that follows. Phone is a contact detail, not a
  * credential, so it is optional and unverified.
  */
-export function RecruiterRegisterForm() {
+export function RecruiterRegisterForm({
+  passwordEnabled = false,
+}: {
+  /** Plan 154: offer an optional password alongside the emailed code. */
+  passwordEnabled?: boolean;
+}) {
   const track = useTrack();
   const [step, setStep] = useState<"form" | "code">("form");
   const [fullName, setFullName] = useState("");
   const [company, setCompany] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [newsletterOptIn, setNewsletterOptIn] = useState(true);
   const [code, setCode] = useState("");
@@ -41,6 +49,7 @@ export function RecruiterRegisterForm() {
     fullName.trim().length >= 2 &&
     company.trim().length >= 2 &&
     email.trim().length > 3 &&
+    (!password || password.length >= PASSWORD_MIN_LENGTH) &&
     acceptedTerms;
 
   function sendCode() {
@@ -68,6 +77,7 @@ export function RecruiterRegisterForm() {
         code,
         acceptedTerms: true,
         newsletterOptIn,
+        ...(password ? { password } : {}),
       });
       if (!res.ok) {
         toast.error(res.message);
@@ -201,10 +211,29 @@ export function RecruiterRegisterForm() {
           placeholder="you@company.com"
         />
         <p className="text-xs text-muted-foreground">
-          We&apos;ll send a code here to verify it. This is also how you sign in
-          later — no password.
+          {passwordEnabled
+            ? "We’ll send a code here to verify it. You can sign in later with an emailed code or the password below."
+            : "We’ll send a code here to verify it. This is also how you sign in later — no password."}
         </p>
       </div>
+
+      {passwordEnabled ? (
+        <div className="space-y-2">
+          <Label htmlFor="reg-password">Password (optional)</Label>
+          <PasswordInput
+            id="reg-password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={pending}
+            aria-describedby="reg-password-hint"
+          />
+          <p id="reg-password-hint" className="text-xs text-muted-foreground">
+            At least {PASSWORD_MIN_LENGTH} characters. Leave blank to sign in
+            with emailed codes only.
+          </p>
+        </div>
+      ) : null}
 
       <div className="space-y-2">
         <Label htmlFor="reg-phone">Phone (optional)</Label>

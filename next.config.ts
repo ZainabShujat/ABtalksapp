@@ -47,6 +47,19 @@ const nextConfig: NextConfig = {
       // sets no cookies, unlike the youtube.com player iframe, which stays
       // click-to-load behind the consent gate.
       { protocol: "https", hostname: "i.ytimg.com", pathname: "/vi/**" },
+      // Workshop posters (plan 163 phase 3b). The public Blob store serves
+      // them from `<storeId>.public.blob.vercel-storage.com`, and the store id
+      // differs per environment, so the subdomain is a wildcard rather than
+      // one host that would work in dev and 500 in production.
+      //
+      // Scoped to `/workshops/**`: this pattern must not become a general
+      // allow-list for every Blob store the project has. Résumés live in a
+      // PRIVATE store and are never served through next/image at all.
+      {
+        protocol: "https",
+        hostname: "*.public.blob.vercel-storage.com",
+        pathname: "/workshops/**",
+      },
     ],
   },
   // Next 16 blocks /_next/* from non-localhost origins unless listed here.

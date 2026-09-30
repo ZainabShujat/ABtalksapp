@@ -10,6 +10,7 @@ import {
   Bold,
   Briefcase,
   Check,
+  Clock,
   Eye,
   FileText,
   Italic,
@@ -29,6 +30,11 @@ import {
   updateRecruiterJobAction,
 } from "@/app/actions/recruiter-job-actions";
 import { JOB_TYPE_LABEL, WORK_MODE_LABEL } from "@/components/jobs/job-ui";
+import {
+  applyListEnter,
+  applyListToggle,
+  type ListKind,
+} from "@/components/hire/jobs/markdown-list";
 
 type Initial = {
   jobId?: string;
@@ -38,6 +44,10 @@ type Initial = {
   workMode: JobWorkMode;
   type: JobType;
   skills: string[];
+  /** Held as a string because an empty input is "" and must stay distinct
+   *  from 0 — "not stated" and "no experience needed" are different answers.
+   *  Coerced once, in `payload()`. */
+  minExperience: string;
   applyExternalUrl: string;
 };
 
@@ -48,6 +58,7 @@ const DEFAULT_INITIAL: Initial = {
   workMode: "REMOTE",
   type: "FULL_TIME",
   skills: [],
+  minExperience: "",
   applyExternalUrl: "",
 };
 
@@ -124,24 +135,31 @@ export function JobFormClient({
     });
   }
 
-  function prefixLine(prefix: string) {
+  function toggleList(kind: ListKind) {
     const el = descRef.current;
+    const text = values.description;
     if (!el) {
-      set("description", `${values.description}\n${prefix}`);
+      const sep = text && !text.endsWith("\n") ? "\n" : "";
+      set("description", `${text}${sep}${kind === "number" ? "1. " : "- "}`);
       return;
     }
-    const start = el.selectionStart;
-    const lineStart = values.description.lastIndexOf("\n", start - 1) + 1;
-    const next =
-      values.description.slice(0, lineStart) +
-      prefix +
-      values.description.slice(lineStart);
-    set("description", next);
+    const edit = applyListToggle(text, el.selectionStart, el.selectionEnd, kind);
+    set("description", edit.text);
     requestAnimationFrame(() => {
       el.focus();
-      const pos = start + prefix.length;
-      el.setSelectionRange(pos, pos);
+      el.setSelectionRange(edit.selStart, edit.selEnd);
     });
+  }
+
+  function handleDescKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing) return;
+    const el = e.currentTarget;
+    if (el.selectionStart !== el.selectionEnd) return;
+    const edit = applyListEnter(values.description, el.selectionStart);
+    if (!edit || edit.text.length > descMax) return;
+    e.preventDefault();
+    set("description", edit.text);
+    requestAnimationFrame(() => el.setSelectionRange(edit.selStart, edit.selEnd));
   }
 
   function payload() {
@@ -152,6 +170,12 @@ export function JobFormClient({
       workMode: values.workMode,
       opportunityType: values.type,
       skills: parseSkills(skillsInput),
+      // "" means the recruiter left it alone, which is a real answer and must
+      // reach the server as null rather than as 0.
+      minExperience:
+        values.minExperience.trim() === ""
+          ? null
+          : Number(values.minExperience),
       applyExternalUrl: values.applyExternalUrl,
     };
   }
@@ -256,6 +280,23 @@ export function JobFormClient({
                 onChange={(e) => set("location", e.target.value)}
                 placeholder="e.g. Bengaluru, India"
                 maxLength={200}
+              />
+            </span>
+          </label>
+
+          <label className="hire-jobs-form__field">
+            <span>Minimum experience</span>
+            <span className="hire-jobs-form__control">
+              <Clock aria-hidden="true" />
+              <input
+                id="job-min-experience"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={50}
+                value={values.minExperience}
+                onChange={(e) => set("minExperience", e.target.value)}
+                placeholder="e.g. 2"
               />
             </span>
           </label>
@@ -372,14 +413,14 @@ export function JobFormClient({
               </button>
               <button
                 type="button"
-                onClick={() => prefixLine("- ")}
+                onClick={() => toggleList("bullet")}
                 aria-label="Bullet list"
               >
                 <List />
               </button>
               <button
                 type="button"
-                onClick={() => prefixLine("1. ")}
+                onClick={() => toggleList("number")}
                 aria-label="Numbered list"
               >
                 <ListOrdered />
@@ -415,6 +456,7 @@ export function JobFormClient({
                 id="job-description"
                 value={values.description}
                 onChange={(e) => set("description", e.target.value)}
+                onKeyDown={handleDescKeyDown}
                 placeholder="What the role is, who it's for, what they'll build…"
                 maxLength={descMax}
                 required

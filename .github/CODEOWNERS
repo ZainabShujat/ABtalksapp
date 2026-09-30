@@ -1,0 +1,103 @@
+# ==============================================================================
+# GitHub Code Owners Configuration
+#
+# Any Pull Request modifying files in these paths will automatically request
+# review from @zainabshujat. When "Require review from Code Owners" is enabled
+# in GitHub repository branch protection rules, PRs cannot be merged without
+# approval from @zainabshujat.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Resume Parsing & Import Domain
+# ------------------------------------------------------------------------------
+/src/features/resume/                               @zainabshujat
+/src/repositories/resume-import.ts                  @zainabshujat
+/src/repositories/candidate-resume.ts               @zainabshujat
+/src/app/admin/resume-imports/                      @zainabshujat
+/src/app/api/admin/resume-imports/                  @zainabshujat
+/src/app/api/cron/resume-imports/                   @zainabshujat
+/src/app/api/internal/resume-imports/               @zainabshujat
+/src/app/api/profile/resume/                        @zainabshujat
+/src/app/actions/admin-resume-import-actions.ts     @zainabshujat
+/src/app/actions/resume-actions.ts                  @zainabshujat
+
+# ------------------------------------------------------------------------------
+# 2. Hire Side & Recruiter Domain
+# ------------------------------------------------------------------------------
+/src/app/hire/                                      @zainabshujat
+/src/app/admin/hire/                                @zainabshujat
+/src/app/admin/recruiter-seats/                     @zainabshujat
+/src/app/admin/recruiters/                          @zainabshujat
+/src/app/admin/program/recruiters/                  @zainabshujat
+/src/app/api/hire/                                  @zainabshujat
+/src/app/api/cron/hire-alerts/                      @zainabshujat
+/src/app/recruiter-onboarding/                      @zainabshujat
+/src/features/hire/                                 @zainabshujat
+/src/features/recruiter/                            @zainabshujat
+/src/features/recruiter-assessments/                @zainabshujat
+/src/features/recruiter-auth/                       @zainabshujat
+/src/features/recruiter-jobs/                       @zainabshujat
+/src/features/recruiter-notifications/              @zainabshujat
+/src/features/recruiter-workspace/                  @zainabshujat
+/src/components/hire/                               @zainabshujat
+/src/components/recruiter-onboarding/               @zainabshujat
+/src/components/profile/recruiter-view/             @zainabshujat
+/src/repositories/hire.ts                           @zainabshujat
+/src/repositories/talent-pipeline.ts                @zainabshujat
+/src/repositories/talent.ts                         @zainabshujat
+/src/app/actions/hire-actions.ts                    @zainabshujat
+/src/app/actions/hire-guest-actions.ts              @zainabshujat
+/src/app/actions/hire-request-actions.ts            @zainabshujat
+/src/app/actions/hire-unlock-actions.ts             @zainabshujat
+/src/app/actions/hire-view-actions.ts               @zainabshujat
+/src/app/actions/recruiter-assessment-actions.ts    @zainabshujat
+/src/app/actions/recruiter-auth-actions.ts          @zainabshujat
+/src/app/actions/recruiter-job-actions.ts           @zainabshujat
+/src/app/actions/recruiter-pipeline-actions.ts      @zainabshujat
+/src/app/actions/recruiter-profile-actions.ts       @zainabshujat
+/src/app/actions/recruiter-review-actions.ts        @zainabshujat
+/src/app/actions/recruiter-seat-actions.ts          @zainabshujat
+
+# ------------------------------------------------------------------------------
+# 3. Mock Interviews Domain
+# ------------------------------------------------------------------------------
+/src/app/mock-interviews/                           @zainabshujat
+/src/app/interview/                                 @zainabshujat
+/src/app/admin/mock-interview/                      @zainabshujat
+/src/app/api/mock-interview/                        @zainabshujat
+/src/app/api/interview/                             @zainabshujat
+/src/components/mock-interview/                     @zainabshujat
+/src/components/interview/                          @zainabshujat
+/src/features/interview/                            @zainabshujat
+/src/app/actions/mock-interview-actions.ts          @zainabshujat
+/src/app/actions/interview-actions.ts               @zainabshujat
+/src/app/actions/admin-mock-interview-actions.ts    @zainabshujat
+/src/app/actions/dev-interview-agent-actions.ts     @zainabshujat
+/src/app/dev/interview-agent/                       @zainabshujat
+/src/app/dev/mock-voice-poc/                        @zainabshujat
+/src/app/program/ai-cohort/(interview)/             @zainabshujat
+
+# ------------------------------------------------------------------------------
+# 4. Platform Admin / Candidate Search Domain
+# ------------------------------------------------------------------------------
+# Deliberately narrow: claiming /src/app/admin/ or /src/features/admin/ wholesale
+# would override the resume-imports, hire, recruiters and mock-interview lines
+# above (last match wins).
+/src/app/api/admin/candidates/                      @byteninjaa0
+/src/app/admin/search/                              @byteninjaa0
+/src/features/admin/search-admin-console.ts         @byteninjaa0
+/src/features/admin/admin-resume-download.test.ts   @byteninjaa0
+
+# ------------------------------------------------------------------------------
+# 5. Workshop Domain (plan 163)
+#
+# The schedule is database-backed: WorkshopEvent + src/repositories/workshop.ts.
+# The public pages are visual surfaces — loop in UI/UX for design changes.
+# ------------------------------------------------------------------------------
+/src/app/workshop/                                  @byteninjaa0
+/src/app/admin/workshop/                            @byteninjaa0
+/src/components/workshop/                           @byteninjaa0
+/src/features/workshop/                             @byteninjaa0
+/src/repositories/workshop.ts                       @byteninjaa0
+/src/app/actions/workshop-actions.ts                @byteninjaa0
+/prisma/content/workshop-events.json                @byteninjaa0

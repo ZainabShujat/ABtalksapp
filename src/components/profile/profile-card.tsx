@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { WizardStep } from "./profile-wizard";
 import { ProfilePerformance } from "./profile-performance";
 
@@ -16,12 +17,18 @@ export function ProfileCard({
   activeIndex,
   onJump,
   performance,
+  emailLoginEnabled,
+  blocked,
 }: {
   steps: Pick<WizardStep, "title" | "complete" | "attention" | "optional">[];
   /** -1 when no sheet is open, so no tab is left looking selected. */
   activeIndex: number;
   onJump: (index: number) => void;
   performance: { searchAppearances: number; recruiterActions: number };
+  /** Plan 154 (ENABLE_EMAIL_LOGIN). Off: the account has no password to manage. */
+  emailLoginEnabled: boolean;
+  /** An open sheet holds unsaved edits — navigating away would lose them. */
+  blocked: boolean;
 }) {
   return (
     <section className="pw-profile-card">
@@ -73,6 +80,24 @@ export function ProfileCard({
           );
         })}
       </ul>
+
+      {emailLoginEnabled ? (
+        <div className="pw-check-account">
+          {blocked ? (
+            <span
+              className="pw-check-link"
+              aria-disabled="true"
+              title="Save or discard your changes first."
+            >
+              Password &amp; sign-in
+            </span>
+          ) : (
+            <Link href="/settings/security" className="pw-check-link">
+              Password &amp; sign-in
+            </Link>
+          )}
+        </div>
+      ) : null}
 
       <ProfilePerformance
         searchAppearances={performance.searchAppearances}

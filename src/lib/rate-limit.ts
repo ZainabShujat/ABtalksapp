@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import {
   RATE_LIMIT_MAX,
+  RATE_LIMIT_UNAVAILABLE_MESSAGE,
   RATE_LIMIT_WINDOW_MS,
   isRateLimited,
   rateLimitMessage,
@@ -17,6 +18,10 @@ type ActionErr = { ok: false; message: string };
  * Sliding-window limiter. Inserts a hit, then counts hits in the window.
  * Fail closed on database errors for money/contact buckets; search/export
  * also fail closed so harvest/replay cannot bypass a down limiter.
+ *
+ * A limiter that cannot count still refuses — but it says so in its own
+ * words. Answering an outage with "too many attempts" sends whoever is
+ * debugging it off to wait out a window that was never counting.
  */
 export async function assertRateLimit(input: {
   bucket: RateLimitBucketName;
@@ -54,12 +59,12 @@ export async function assertRateLimit(input: {
     });
     return { ok: true };
   } catch (error) {
-    logger.error("[rate-limit] assertRateLimit", {
+    logger.error("[rate-limit] limiter unavailable, refusing", {
       bucket,
       subjectId,
       error: String(error),
     });
-    return { ok: false, message: rateLimitMessage(bucket) };
+    return { ok: false, message: RATE_LIMIT_UNAVAILABLE_MESSAGE };
   }
 }
 

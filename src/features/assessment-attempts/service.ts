@@ -75,6 +75,10 @@ export type AttemptRow = {
   endReason: AssessmentEndReason | null;
   assessment: {
     status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+    /** Plan 166: PLATFORM = sent by ABTalks admins, RECRUITER = by a recruiter. */
+    source: AssessmentSource;
+    /** Plan 166: PLATFORM only. The assessment closes at this instant. */
+    closesAt: Date | null;
     title: string;
     subheading: string | null;
     instructions: string | null;
@@ -87,12 +91,19 @@ export type AttemptRow = {
   answers: AnswerRow[];
 };
 
+export type AssessmentSource = "RECRUITER" | "PLATFORM";
+
 export type AttemptListRow = {
   assignmentId: string;
   title: string;
+  subheading: string | null;
+  source: AssessmentSource;
   status: AttemptStatus;
   assignedAt: Date;
+  startedAt: Date | null;
   submittedAt: Date | null;
+  /** Platform only — when the assessment closes. */
+  closesAt: Date | null;
   durationMinutes: number | null;
   questionCount: number;
   strictMode: boolean;
@@ -168,6 +179,14 @@ export type AttemptStore = {
   findAttempt(assignmentId: string, candidateUserId: string): Promise<AttemptRow | null>;
   /** This candidate's assignments on PUBLISHED assessments, newest first. */
   listAttempts(candidateUserId: string): Promise<AttemptListRow[]>;
+  /**
+   * Plan 166: STARTED attempts on one platform assessment whose closing time
+   * has passed — what the admin view closes before counting results.
+   */
+  listStartedPastClose(
+    assessmentId: string,
+    now: Date,
+  ): Promise<{ assignmentId: string; candidateUserId: string; closesAt: Date }[]>;
   /** ASSIGNED → STARTED in one guarded write. False when nothing moved. */
   start(assignmentId: string, candidateUserId: string, at: Date): Promise<boolean>;
   /** Upsert one answer under the row lock, only while STARTED. */
@@ -407,22 +426,59 @@ export const TIME_UP_GRACE_MS = 15_000;
 export const TIME_UP_EARLY_TOLERANCE_MS = 5_000;
 const TIME_UP_MSG = "Time is up — your answers were submitted.";
 
+/**
+ * When a STARTED attempt closes: the earlier of its timer and (plan 166) the
+ * platform assessment's closing time. Untimed recruiter attempts never close.
+ */
 export function attemptDeadline(row: {
   startedAt: Date | null;
-  assessment: { durationMinutes: number | null };
+  assessment: { durationMinutes: number | null; closesAt?: Date | null };
 }): Date | null {
-  if (!row.startedAt || row.assessment.durationMinutes == null) return null;
-  return new Date(row.startedAt.getTime() + row.assessment.durationMinutes * 60_000);
+  if (!row.startedAt) return null;
+  const timer =
+    row.assessment.durationMinutes == null
+      ? null
+      : row.startedAt.getTime() + row.assessment.durationMinutes * 60_000;
+  const closes = row.assessment.closesAt?.getTime() ?? null;
+  const limits = [timer, closes].filter((t): t is number => t !== null);
+  return limits.length === 0 ? null : new Date(Math.min(...limits));
 }
+
+/** Which limit ended it: the assessment closing, or the attempt's own timer. */
+function expiryReason(row: {
+  startedAt: Date | null;
+  assessment: { durationMinutes: number | null; closesAt: Date | null };
+}): AssessmentEndReason {
+  const deadline = attemptDeadline(row);
+  return deadline && row.assessment.closesAt?.getTime() === deadline.getTime()
+    ? "DEADLINE"
+    : "TIME_UP";
+}
+
+/** Plan 166: a platform assessment past its closing time. */
+export function isClosed(
+  assessment: { closesAt: Date | null },
+  now: Date = new Date(),
+): boolean {
+  return assessment.closesAt !== null && now.getTime() >= assessment.closesAt.getTime();
+}
+
+const CLOSED_MSG = "The deadline for this assessment has passed.";
 
 /** Close a STARTED attempt whose time ran out: incomplete answers are allowed. */
 async function closeExpiredAttempt(
   store: AttemptStore,
   candidateUserId: string,
-  assignmentId: string,
+  row: AttemptRow,
   at: Date,
 ): Promise<SubmitOutcome | { outcome: "ALREADY" }> {
-  return store.submitForced(assignmentId, candidateUserId, at, finishAttemptForced, "TIME_UP");
+  return store.submitForced(
+    row.assignmentId,
+    candidateUserId,
+    at,
+    finishAttemptForced,
+    expiryReason(row),
+  );
 }
 
 /** The strict-mode penalty a strike count has reached, if any. */
@@ -448,6 +504,11 @@ export type LoadedAttempt = {
   view: CandidateAssessmentView;
   answers: Record<string, CandidateAnswer>;
   rules: { strictMode: boolean; cameraRequired: boolean };
+  source: AssessmentSource;
+  /** Plan 166: when a platform assessment closes (null for recruiter ones). */
+  closesAt: Date | null;
+  /** Plan 166: never started and now closed — it can no longer be taken. */
+  missed: boolean;
 };
 
 export async function loadAttempt(
@@ -466,7 +527,7 @@ export async function loadAttempt(
     deadline &&
     now.getTime() > deadline.getTime() + TIME_UP_GRACE_MS
   ) {
-    await closeExpiredAttempt(store, candidateUserId, assignmentId, deadline);
+    await closeExpiredAttempt(store, candidateUserId, row, deadline);
     row = await store.findAttempt(assignmentId, candidateUserId);
     if (!isOpen(row)) return NOT_FOUND(NOT_FOUND_MSG);
   }
@@ -504,6 +565,9 @@ export async function loadAttempt(
       strictMode: row.assessment.strictMode,
       cameraRequired: row.assessment.cameraRequired,
     },
+    source: row.assessment.source,
+    closesAt: row.assessment.closesAt,
+    missed: row.status === "ASSIGNED" && isClosed(row.assessment, now),
   });
 }
 
@@ -584,6 +648,7 @@ export async function startAttempt(
     return CONFLICT("You've already submitted this assessment.");
   }
   if (row.status === "STARTED") return OK({ alreadyStarted: true });
+  if (isClosed(row.assessment)) return CONFLICT(CLOSED_MSG);
 
   const moved = await store.start(assignmentId, candidateUserId, new Date());
   if (!moved) {
@@ -622,7 +687,7 @@ export async function saveAnswer(
 
   const deadline = attemptDeadline(row);
   if (deadline && Date.now() > deadline.getTime() + TIME_UP_GRACE_MS) {
-    await closeExpiredAttempt(store, candidateUserId, assignmentId, deadline);
+    await closeExpiredAttempt(store, candidateUserId, row, deadline);
     return CONFLICT(TIME_UP_MSG);
   }
 
@@ -669,7 +734,7 @@ export async function submitAttempt(
   candidateUserId: string,
   input: unknown,
   device: DeviceHint = { mobile: false },
-): Promise<Result<{ submittedAt: Date }>> {
+): Promise<Result<{ submittedAt: Date; source: AssessmentSource }>> {
   const parsed = attemptActionSchema.safeParse(input);
   if (!parsed.success) return INVALID("Invalid input");
   const { assignmentId } = parsed.data;
@@ -681,7 +746,9 @@ export async function submitAttempt(
   }
   // TC-C-013: the duplicate refusal, as a message rather than an error.
   if (row.status === "SUBMITTED") return CONFLICT(ALREADY_SUBMITTED_MSG);
+  if (row.status === "ASSIGNED" && isClosed(row.assessment)) return CONFLICT(CLOSED_MSG);
 
+  const source = row.assessment.source;
   const at = new Date();
 
   // Time is up: the screen submits at 0:00 and whatever is saved is final, so
@@ -693,8 +760,8 @@ export async function submitAttempt(
     at.getTime() >= deadline.getTime() - TIME_UP_EARLY_TOLERANCE_MS
   ) {
     const closeAt = at.getTime() > deadline.getTime() ? deadline : at;
-    const forced = await closeExpiredAttempt(store, candidateUserId, assignmentId, closeAt);
-    if (forced.outcome === "SUBMITTED") return OK({ submittedAt: closeAt });
+    const forced = await closeExpiredAttempt(store, candidateUserId, row, closeAt);
+    if (forced.outcome === "SUBMITTED") return OK({ submittedAt: closeAt, source });
     const again = await store.findAttempt(assignmentId, candidateUserId);
     if (again?.status === "SUBMITTED") return CONFLICT(ALREADY_SUBMITTED_MSG);
     return NOT_FOUND(NOT_FOUND_MSG);
@@ -711,7 +778,7 @@ export async function submitAttempt(
     return INVALID(incompleteMessage(out.missingRequired, out.overLimit));
   }
   // No score in the result: the candidate sees "Submitted" only (D-1).
-  return OK({ submittedAt: at });
+  return OK({ submittedAt: at, source });
 }
 
 /**
@@ -748,7 +815,7 @@ export async function endAttempt(
   const deadline = attemptDeadline(row);
   if (deadline && at.getTime() > deadline.getTime()) {
     at = deadline;
-    reason = "TIME_UP";
+    reason = expiryReason(row);
   }
 
   const out = await store.submitForced(assignmentId, candidateUserId, at, finishAttemptForced, reason);
@@ -761,8 +828,51 @@ export async function endAttempt(
 export async function listCandidateAttempts(
   store: AttemptStore,
   candidateUserId: string,
+  now: Date = new Date(),
 ): Promise<Result<AttemptListRow[]>> {
+  const rows = await store.listAttempts(candidateUserId);
+
+  // Plan 166: a platform attempt left STARTED past its closing time is closed
+  // here with its saved answers, so the list never shows it as still open.
+  const expired = rows.filter(
+    (r) => r.status === "STARTED" && r.closesAt && isClosed(r, now),
+  );
+  if (expired.length === 0) return OK(rows);
+  for (const r of expired) {
+    await store.submitForced(
+      r.assignmentId,
+      candidateUserId,
+      r.closesAt ?? now,
+      finishAttemptForced,
+      "DEADLINE",
+    );
+  }
   return OK(await store.listAttempts(candidateUserId));
+}
+
+/**
+ * Plan 166: close every STARTED attempt on one platform assessment whose
+ * closing time has passed, grading the saved answers. Idempotent — the store's
+ * guarded flip skips anything already SUBMITTED. Returns how many closed.
+ */
+export async function closeAttemptsPastDeadline(
+  store: AttemptStore,
+  assessmentId: string,
+  now: Date = new Date(),
+): Promise<number> {
+  const rows = await store.listStartedPastClose(assessmentId, now);
+  let closed = 0;
+  for (const r of rows) {
+    const out = await store.submitForced(
+      r.assignmentId,
+      r.candidateUserId,
+      r.closesAt,
+      finishAttemptForced,
+      "DEADLINE",
+    );
+    if (out.outcome === "SUBMITTED") closed++;
+  }
+  return closed;
 }
 
 const SUBMIT_GRACE_MS = 60_000;

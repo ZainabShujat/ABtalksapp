@@ -127,6 +127,43 @@ export async function notifyApplicationStatusChanged(input: {
 }
 
 /**
+ * Candidate side of #4 — the recruiter moved an applicant on the pipeline
+ * board and their JobApplication.status changed (sync-application-status.ts).
+ * Lives here because the T-249 shape test only allows
+ * `application.status_changed` to be dispatched from this aggregator.
+ *
+ * Copy is deliberately plain and one-to-one (no hype, one link): Gmail's
+ * Promotions classifier keys on marketing-style wording and layout.
+ * The dedupe key carries the status, so each distinct transition notifies
+ * once and a repeat of the same status is a no-op.
+ */
+export async function notifyCandidateApplicationStatus(input: {
+  candidateUserId: string;
+  applicationId: string;
+  status: "REVIEWING" | "ACCEPTED" | "REJECTED";
+  jobTitle: string;
+  company: string;
+}): Promise<void> {
+  const { jobTitle, company } = input;
+  const body =
+    input.status === "REVIEWING"
+      ? `${company} has shortlisted your application for ${jobTitle} and is reviewing it. You can track its status on ABTalks.`
+      : input.status === "ACCEPTED"
+        ? `${company} has accepted your application for ${jobTitle}. The recruiter will contact you about next steps.`
+        : `${company} has decided not to move forward with your application for ${jobTitle}. Thank you for applying.`;
+
+  await fire({
+    eventType: "application.status_changed",
+    recipientUserId: input.candidateUserId,
+    primaryEntityId: input.applicationId,
+    dedupeKey: `application.status_changed:${input.candidateUserId}:${input.applicationId}:${input.status}`,
+    title: `Update on your application: ${jobTitle} at ${company}`,
+    body,
+    href: "/jobs?tab=applications",
+  });
+}
+
+/**
  * T-249 #5 — Admin-initiated system notice targeted at one recruiter's
  * workspace. Emit site is `broadcastRecruiterSystemNoticeAction`,
  * guarded by `requireAdmin()`. Content is admin-authored, so the

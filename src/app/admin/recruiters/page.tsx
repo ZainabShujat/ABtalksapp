@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { listRecruiters } from "@/features/talent-pool/recruiter-registration";
 import { AdminRecruitersPanel } from "@/components/talent/admin-recruiters-panel";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { CreateRecruiterForm } from "@/components/admin/create-recruiter-form";
+import { isEmailLoginEnabled } from "@/lib/feature-flags";
 import {
   RecruiterSeatsPanel,
   type SeatRow,
@@ -54,8 +56,12 @@ export default async function AdminRecruitersPage() {
     <div className="space-y-10">
       <AdminPageHeader
         title="Recruiters"
-        description="Everyone who has registered to hire. Disable / restore / secure is on each row. There is no approval queue."
+        description="Everyone who has registered to hire, plus admin-created accounts. Disable / restore / secure is on each row. There is no approval queue."
       />
+
+      <section className="space-y-3">
+        <CreateRecruiterForm emailLoginEnabled={isEmailLoginEnabled()} />
+      </section>
 
       <section className="space-y-3">
         <h2 className="font-display text-lg font-semibold">

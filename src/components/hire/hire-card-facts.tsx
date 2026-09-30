@@ -1,4 +1,5 @@
 import type { CandidateSource } from "@/features/hire/candidate-ref";
+import { missionsLine } from "@/features/hire/candidate-summary";
 import type { MatchCardData } from "@/components/hire/match-card";
 
 export function trackLabel(source?: CandidateSource): string | null {
@@ -128,7 +129,7 @@ export function OpenToWorkBadge({ openToWork }: { openToWork?: boolean }) {
   if (openToWork !== true) return null;
   return (
     <span
-      className="inline-flex items-center rounded-full bg-[#18D39B]/10 px-2 py-0.5 text-xs font-semibold text-[#197E23] dark:text-[#D6F7EC]"
+      className="hire-open-to-work inline-flex items-center rounded-full bg-[#18D39B]/10 px-2 py-0.5 text-xs font-semibold text-[#197E23] dark:text-[#D6F7EC]"
       title="This candidate has told us they are actively looking. It does not change who can find them."
     >
       Open to work
@@ -191,8 +192,6 @@ export function buildCardPills(
   const skills = e.skills ?? [];
   const needles = match.highlightSkills ?? [];
   const track = trackLabel(match.source);
-  const isChallenge = match.source === "CLAUDE" || match.source === "CHALLENGE_60";
-  const workLabel = isChallenge ? "days shipped" : "missions passed";
 
   const isHit = (s: string) =>
     needles.some((n) => s.toLowerCase().includes(n.toLowerCase()));
@@ -200,6 +199,9 @@ export function buildCardPills(
   const ranked = [...skills.filter(isHit), ...skills.filter((s) => !isHit(s))];
 
   const out: CardPill[] = [];
+  // Set once the mission pill has already named the track, so the row does not
+  // then print "60-day" beside "42 of 60 missions of 60-Day Challenge".
+  let namedTrack = false;
   const push = (key: string, label: string, className: string) =>
     out.push({ key, label, className });
 
@@ -213,9 +215,19 @@ export function buildCardPills(
 
   if (match.source === "HACKATHON") {
     push("shipped", "Shipped project", "desk-pill desk-pill--good");
-  } else if (typeof e.missionsPassed === "number") {
-    const total = e.totalTrackDays ? ` of ${e.totalTrackDays}` : "";
-    push("missions", `${e.missionsPassed}${total} ${workLabel}`, "desk-pill desk-pill--good");
+  } else {
+    // One wording for the mission count, shared with the evidence section and
+    // the summaries: "42 of 60 missions of 60-Day Challenge". Null when there
+    // is nothing passed, so a bare "0" never reads as a result.
+    const missions = missionsLine({
+      source: match.source,
+      missionsPassed: e.missionsPassed ?? null,
+      totalTrackDays: e.totalTrackDays ?? null,
+    });
+    if (missions) {
+      push("missions", missions, "desk-pill desk-pill--good");
+      namedTrack = true;
+    }
   }
 
   if (match.availabilityUnknown) {
@@ -232,7 +244,7 @@ export function buildCardPills(
     const prefix = match.compensationDeclared ? "" : "est. ";
     push("band", `${prefix}${match.compensationBand}`, "desk-pill");
   }
-  if (track) push("track", track, "desk-pill");
+  if (track && !namedTrack) push("track", track, "desk-pill");
 
   return out.slice(0, Math.max(0, max));
 }
@@ -294,8 +306,10 @@ export function coverageLede(match: MatchCardData): string {
   }
   const verb = missing.length === 1 ? "has" : "have";
   const they = missing.length === 1 ? "it is" : "they are";
+  const absent = joinList(missing);
   return (
-    `Ranked on ${have.length} of 7 evidence dimensions — ${joinList(missing)} ` +
+    `Ranked on ${have.length} of 7 evidence dimensions. ` +
+    `${absent.charAt(0).toUpperCase()}${absent.slice(1)} ` +
     `${verb} not been recorded for this candidate yet, so ${they} excluded rather than counted as zero.`
   );
 }

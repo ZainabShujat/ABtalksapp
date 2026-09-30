@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
+import { isUsablePasswordHash } from "@/lib/password";
 import { getCreditBalance } from "@/repositories/credits";
 import { candidatePublicId } from "@/features/hire/public-id";
 import { searchDeliveries } from "@/features/notification/delivery-diagnosis";
@@ -53,7 +54,7 @@ export type AdminRecruiterDetail = {
     state: RecruiterAccountState;
     /** Which providers this account can sign in with. */
     signInProviders: string[];
-    /** Has a dev-login password set — never the password itself. */
+    /** Has a usable (hashed) password — never the password itself. */
     hasPassword: boolean;
     /** Unexpired NextAuth sessions. */
     liveSessions: number;
@@ -473,7 +474,7 @@ export async function getAdminRecruiterDetail(
       sessionInvalidatedAt: user.sessionInvalidatedAt,
       state: accountState(user),
       signInProviders: [...new Set(user.accounts.map((a) => a.provider))],
-      hasPassword: Boolean(user.password),
+      hasPassword: isUsablePasswordHash(user.password),
       liveSessions: user.sessions.length,
       lastSessionExpires: user.sessions[0]?.expires ?? null,
     },

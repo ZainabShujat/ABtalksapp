@@ -88,6 +88,18 @@ const APPLICATION_STATE: Record<
 const CARD_CLASS = "rounded-xl border border-[#E0E0E0] bg-white";
 const PILL_CLASS =
   "inline-flex items-center gap-1.5 rounded-[7px] bg-[#EEF6F6] px-2.5 py-1.5 text-xs text-[#03535F]";
+/**
+ * Experience gets its own fill rather than joining `meta`.
+ *
+ * The meta pills are all the same muted tint, and a candidate scanning a list
+ * needs "3+ years" to register before location or work mode do. Same radius,
+ * padding and size as PILL_CLASS so the row still lines up; brand teal at
+ * semibold, which is the weight the "Applied" badge already uses — but teal,
+ * because this describes the job rather than the candidate's status.
+ */
+const EXPERIENCE_PILL_CLASS =
+  "inline-flex items-center rounded-[7px] bg-[#03535F] px-2.5 py-1.5 text-xs font-semibold text-white";
+
 const SKILL_CLASS =
   "inline-flex rounded-[7px] border border-[#E0E0E0] px-2 py-1 text-xs text-[#4B4B4B]";
 
@@ -789,6 +801,9 @@ function JobCard({
         </h3>
 
         <div className="mt-3 flex flex-wrap gap-2">
+          {job.experienceLabel ? (
+            <span className={EXPERIENCE_PILL_CLASS}>{job.experienceLabel}</span>
+          ) : null}
           {meta.map((value) => (
             <span key={value} className={PILL_CLASS}>
               {value}

@@ -80,6 +80,14 @@ export type MatchCardData = {
    * `OpenToWorkBadge` in hire-card-facts.tsx.
    */
   openToWork: boolean;
+  /**
+   * Plan 154: built from a résumé an admin imported; the student has not
+   * signed in to confirm it, so everything on the card is only what the résumé
+   * says. The badge is why that is worth showing — plan 164 made these
+   * candidates unlockable like any other, so a recruiter can now buy contact
+   * details attached to data nobody has confirmed.
+   */
+  importedUnclaimed?: boolean;
   shortlisted?: boolean;
   /** Status of this recruiter's live engagement request, if any. */
   engagementStatus?: string | null;
@@ -281,6 +289,14 @@ function RealMatchCard({
               </span>
             )}
             <OpenToWorkBadge openToWork={match.openToWork} />
+            {match.importedUnclaimed && (
+              <span
+                className="rounded-full border px-2 py-0.5 text-sm font-medium text-muted-foreground"
+                title="Built from a résumé ABTalks imported. The candidate hasn’t signed in to confirm it yet."
+              >
+                Imported résumé · not yet claimed
+              </span>
+            )}
             {isTop && (
               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-sm font-semibold text-primary">
                 Top match
@@ -288,7 +304,10 @@ function RealMatchCard({
             )}
           </div>
           <p className="mt-0.5 text-base text-muted-foreground">
-            {[match.locationLabel, publicId].filter(Boolean).join(" · ")}
+            {/* The `AB-####` reference used to sit here. It is a hash of an
+                internal id, it addresses nothing a recruiter can use, and it is
+                no longer printed on any search surface. */}
+            {match.locationLabel}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-3">
@@ -469,12 +488,12 @@ function RealMatchCard({
         {match.engagementStatus === "CONTACT_SHARED" ? (
           <OutreachComposeDialog
             candidateRef={match.candidateRef}
-            candidateLabel={match.displayName ?? publicId}
+            candidateLabel={match.displayName ?? match.jobRole}
           />
         ) : (
           <UnlockContactDialog
             candidateRef={match.candidateRef}
-            publicId={publicId}
+            candidateLabel={match.displayName ?? match.jobRole}
           />
         )}
         <RequestIntroButton
@@ -561,7 +580,6 @@ function RealMatchCard({
               label="Est. compensation"
               value={match.compensationBand ?? "—"}
             />
-            <Stat label="Reference" value={publicId} />
           </dl>
 
           <p className="text-sm leading-relaxed text-muted-foreground">

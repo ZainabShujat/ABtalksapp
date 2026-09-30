@@ -11,6 +11,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { LoginClient } from "./login-client";
+import { isEmailLoginEnabled } from "@/lib/feature-flags";
 import {
   postRegisterDestination,
   registerHref,
@@ -46,6 +47,10 @@ export default async function LoginPage({ searchParams }: Props) {
 
   const session = await auth();
   if (session?.user?.id) {
+    if (session.user.isAdmin || (session.user as { role?: string }).role === "ADMIN") {
+      redirect("/admin");
+    }
+
     if (!from) redirect("/");
 
     // Recruiters and program applicants have their own funnels and their own
@@ -88,7 +93,7 @@ export default async function LoginPage({ searchParams }: Props) {
       : undefined;
 
   const showGoogle = Boolean(process.env.AUTH_GOOGLE_ID);
-  const showDev = process.env.ENABLE_DEV_AUTH === "true";
+  const showEmail = isEmailLoginEnabled();
 
   return (
     <div className="theme-abtalks-light theme-abtalks-brand flex min-h-svh flex-col bg-[#F4F4F4] text-foreground">
@@ -105,7 +110,7 @@ export default async function LoginPage({ searchParams }: Props) {
           <CardContent>
             <LoginClient
               showGoogle={showGoogle}
-              showDev={showDev}
+              showEmail={showEmail}
               redirectTo={redirectTo}
               referralRef={referralRef}
               authError={params.error}

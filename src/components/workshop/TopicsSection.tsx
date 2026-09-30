@@ -162,22 +162,12 @@ function useRevealState(ref: React.RefObject<Element | null>): Reveal {
   return state;
 }
 
-/**
- * Used when the promoted workshop carries no `topics` of its own, so this
- * section can never render empty mid-swap between weeks.
+/*
+ * DEFAULT_TOPICS lived here, for "the promoted workshop carries no topics".
+ * With nothing scheduled it described a workshop that did not exist, so it is
+ * gone with the hero's defaults — the page renders Coming Soon instead of
+ * inventing a curriculum. Plan 163 phase 1c.
  */
-const DEFAULT_TOPICS = [
-  "Prompt Engineering Fundamentals",
-  "Role, Context & Task",
-  "Style, Constraints & Output",
-  "AI Image Generation",
-  "AI Video Generation",
-  "AI Voice & Audio Creation",
-  "AI Avatar & Digital Presenters",
-  "Script → Avatar → Voice → Video",
-  "AI + MCP Workflows",
-  "Canva AI & Content Publishing",
-];
 
 /**
  * Passed in from the page, which resolves the current workshop on the server.
@@ -186,7 +176,7 @@ const DEFAULT_TOPICS = [
  */
 
 
-export default function TopicsSection({ topics }: { topics: string[] | null }) {
+export default function TopicsSection({ topics }: { topics: string[] }) {
   const { ref: canvasRef, scale: canvasScale } = useCanvasScale(CANVAS_W);
 
   /**
@@ -210,7 +200,7 @@ export default function TopicsSection({ topics }: { topics: string[] | null }) {
   // Was solved once at module load. It now depends on a prop, so it is memoised
   // per topic list instead — layoutTopics is a pure function of its input, and
   // the list only changes when the current workshop does.
-  const PLACED = useMemo(() => layoutTopics(topics ?? DEFAULT_TOPICS), [topics]);
+  const PLACED = useMemo(() => layoutTopics(topics), [topics]);
 
   /**
    * Each capsule's turn, keyed by its text.

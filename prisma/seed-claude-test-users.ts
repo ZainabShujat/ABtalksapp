@@ -1,4 +1,5 @@
 import { config } from "dotenv";
+import { hashPassword } from "../src/lib/password";
 import {
   Domain,
   EnrollmentStatus,
@@ -480,7 +481,7 @@ async function seedClaudeTestUsers() {
     const user = await prisma.user.create({
       data: {
         email,
-        password: DEV_TEST_PASSWORD,
+        password: await hashPassword(DEV_TEST_PASSWORD),
         name: displayName,
         emailVerified: new Date(),
         candidateProfile: {
@@ -555,7 +556,7 @@ async function seedClaudeTestUsers() {
   const completedUser = await prisma.user.create({
     data: {
       email: COMPLETED_TEST_EMAIL,
-      password: DEV_TEST_PASSWORD,
+      password: await hashPassword(DEV_TEST_PASSWORD),
       name: "Claude Completed 60",
       emailVerified: new Date(),
       candidateProfile: {

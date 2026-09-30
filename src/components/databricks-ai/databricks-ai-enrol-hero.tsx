@@ -7,7 +7,14 @@ const LEARN = [
   "MLflow, Feature Store, Model Registry, AI Search RAG and the Mosaic AI Agent Framework",
 ];
 
-export function DatabricksAiEnrolHero() {
+const REGISTER_CLASS =
+  "mt-6 inline-flex h-10 items-center justify-center rounded-lg bg-[#03535F] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#076573] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#03535F]";
+
+export function DatabricksAiEnrolHero({
+  registerHref = "#databricks-ai-register",
+}: {
+  registerHref?: string;
+}) {
   return (
     <div className="space-y-8 font-content text-[#000000]">
       <nav aria-label="Breadcrumb">
@@ -52,12 +59,15 @@ export function DatabricksAiEnrolHero() {
                   </li>
                 ))}
               </ul>
-              <a
-                href="#databricks-ai-register"
-                className="mt-6 inline-flex h-10 items-center justify-center rounded-lg bg-[#03535F] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#076573] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#03535F]"
-              >
-                Register now
-              </a>
+              {registerHref.startsWith("/") ? (
+                <Link href={registerHref} className={REGISTER_CLASS}>
+                  Register now
+                </Link>
+              ) : (
+                <a href={registerHref} className={REGISTER_CLASS}>
+                  Register now
+                </a>
+              )}
             </div>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}

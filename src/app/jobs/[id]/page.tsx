@@ -9,6 +9,7 @@ import {
   formatPostedLabel,
   JOB_TYPE_LABEL,
   WORK_MODE_LABEL,
+  formatExperienceLabel,
 } from "@/components/jobs/job-ui";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,7 @@ export default async function JobDetailPage({ params }: PageProps) {
     ["Location", job.location ?? "Not specified"],
     ["Work mode", job.workMode ? WORK_MODE_LABEL[job.workMode] : "Not specified"],
     ["Type", JOB_TYPE_LABEL[job.type]],
+    ["Experience", formatExperienceLabel(job.minExperience) ?? "Not specified"],
     ["Posted", formatDateIST(job.publishedAt ?? job.createdAt)],
   ];
 
@@ -70,7 +72,12 @@ export default async function JobDetailPage({ params }: PageProps) {
             <p className="font-heading text-[13px] font-semibold uppercase tracking-[0.08em] text-[#03535F]">
               {JOB_TYPE_LABEL[job.type]}
             </p>
-            <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-black sm:text-[40px] sm:leading-[48px]">
+            {/* Sized against the job card it opens from, which is
+                `text-xl font-semibold` / `sm:text-2xl`. At 40px bold this
+                heading was roughly twice its own card and a real job title
+                wrapped to two outsized lines. Standard scale tokens rather
+                than an arbitrary [40px], still a step above the card. */}
+            <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight text-black sm:text-3xl sm:leading-[40px]">
               {job.title}
             </h1>
             <p className="mt-1.5 text-sm text-[#4B4B4B]">
@@ -93,7 +100,7 @@ export default async function JobDetailPage({ params }: PageProps) {
             <h2 className="mt-7 font-heading text-2xl font-semibold text-black">
               About the role
             </h2>
-            <div className="prose prose-sm dark:prose-invert mt-3 max-w-none text-[#4B4B4B] [&_p]:mb-3">
+            <div className="prose prose-sm dark:prose-invert mt-3 max-w-none text-[#4B4B4B] [&_p]:mb-3 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:mb-1">
               <ReactMarkdown>{job.description}</ReactMarkdown>
             </div>
 

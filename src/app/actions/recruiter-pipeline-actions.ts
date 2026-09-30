@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
+import { syncApplicationsForStageChange } from "@/features/pipeline-convergence/sync-application-status";
 import { requireRecruiterWorkspace } from "@/features/recruiter-workspace/workspace";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/db";
@@ -191,16 +193,26 @@ export async function moveCandidateStageAction(
     };
   }
 
-  const result = await moveStage(
-    {
-      userId: workspace.data.userId,
-      recruiterProfileId: workspace.data.recruiterProfileId,
-      organizationId: workspace.data.organizationId,
-    },
-    parsed.data,
-  );
+  const pipelineWorkspace = {
+    userId: workspace.data.userId,
+    recruiterProfileId: workspace.data.recruiterProfileId,
+    organizationId: workspace.data.organizationId,
+  };
+  const result = await moveStage(pipelineWorkspace, parsed.data);
 
   if (!result.ok) return { ok: false, message: result.message, status: 404 };
+
+  // Write the move back to the candidate's job application(s) and notify
+  // them — after the response, so the board never waits on the email.
+  // Owned by the applications/notifications module; never throws.
+  const { itemId, stage } = parsed.data;
+  after(() =>
+    syncApplicationsForStageChange({
+      workspace: pipelineWorkspace,
+      itemId,
+      stage,
+    }),
+  );
 
   revalidatePath("/hire/pipeline");
   return { ok: true };

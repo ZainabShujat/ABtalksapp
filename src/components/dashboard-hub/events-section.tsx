@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { formatInTimeZone } from "date-fns-tz";
 import { IST } from "@/lib/date-utils";
-import { EVENTS } from "@/components/workshop/events-data";
+import type { WorkshopEvent } from "@/components/workshop/events-data";
 import {
   HUB_CARD_CTA_CLASS,
   HUB_CARD_HOVER_CLASS,
@@ -14,13 +14,14 @@ function todayIstKey(): string {
   return formatInTimeZone(new Date(), IST, "yyyy-MM-dd");
 }
 
-export function EventsSection() {
+/** `events` comes from the server parent; the schedule is database-backed. */
+export function EventsSection({ events }: { events: WorkshopEvent[] }) {
   const today = todayIstKey();
 
-  const upcoming = EVENTS.filter((e) => e.date >= today).sort((a, b) =>
+  const upcoming = events.filter((e) => e.date >= today).sort((a, b) =>
     a.date.localeCompare(b.date),
   );
-  const past = EVENTS.filter((e) => e.date < today).sort((a, b) =>
+  const past = events.filter((e) => e.date < today).sort((a, b) =>
     b.date.localeCompare(a.date),
   );
 
@@ -47,7 +48,7 @@ function EventRail({
   past = false,
 }: {
   title: string;
-  events: (typeof EVENTS)[number][];
+  events: WorkshopEvent[];
   past?: boolean;
 }) {
   return (
@@ -75,7 +76,7 @@ function EventCard({
   event,
   past = false,
 }: {
-  event: (typeof EVENTS)[number];
+  event: WorkshopEvent;
   past?: boolean;
 }) {
   const href =

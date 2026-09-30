@@ -62,7 +62,7 @@ export async function getDayShell(
   ]);
 
   const { passedDays, skippedDays } = collectPassSkipSets(submissions);
-  const maxContentDay = getMaxContentDay(member.cohort, unlockFloor);
+  const maxContentDay = getMaxContentDay(member, unlockFloor);
 
   const state = deriveDayState(
     dayNumber,

@@ -2,7 +2,7 @@
  * Dev-only demo fixture for T-229 and T-230 browser validation.
  *
  * Sets up an approved recruiter with a completed T-226 workspace and the
- * T-228 $200 starting balance using the real `provisionRecruiterIdentity`
+ * $20,000 starting balance using the real `provisionRecruiterIdentity`
  * application helper. Also ensures `strong@hire.abtalks.dev` has
  * `CandidateVisibility` (searchable by recruiters) and a phone number on
  * `CandidateProfile` so the real $10 unlock and contact reveal can be demoed.
@@ -17,6 +17,7 @@ import Module from "node:module";
 import { config } from "dotenv";
 import { Role } from "@prisma/client";
 import { prisma } from "../src/lib/db";
+import { hashPassword } from "../src/lib/password";
 
 function neutralizeServerOnly(): void {
   const require = createRequire(import.meta.url);
@@ -68,18 +69,18 @@ async function main() {
 
   console.log("\n─── Setting up T-229/T-230 Demo Recruiter & Candidate ───\n");
 
-  // 1. Recruiter User (with password for dev login)
+  // 1. Recruiter User (with a hashed password for the password provider)
   const recruiterUser = await prisma.user.upsert({
     where: { email: RECRUITER_EMAIL },
     create: {
       email: RECRUITER_EMAIL,
       name: "Hire Recruiter",
-      password: "test",
+      password: await hashPassword("test"),
       role: Role.RECRUITER,
       emailVerified: new Date(),
     },
     update: {
-      password: "test",
+      password: await hashPassword("test"),
       role: Role.RECRUITER,
       emailVerified: new Date(),
     },
@@ -110,7 +111,7 @@ async function main() {
     `  ✓ Recruiter profile: approved=${profile.approved}, setupCompletedAt=${profile.setupCompletedAt?.toISOString()}`,
   );
 
-  // 3. Workspace Provisioning + T-228 Onboarding Credit ($200)
+  // 3. Workspace Provisioning + onboarding credit ($20,000)
   // Calls the canonical application helper in an interactive transaction.
   const { provisionRecruiterIdentity } = await import(
     "../src/features/hire/provision-recruiter"

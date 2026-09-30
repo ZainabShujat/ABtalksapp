@@ -9,6 +9,7 @@ import { hasPlatformAdmin, requireAdmin } from "@/lib/admin-auth";
 import { getCurrentDayNumber } from "@/lib/date-utils";
 import { computeStreakStats, daysCompletedFromCanonical, listCanonicalChallengeDays } from "@/features/submission/streak-utils";
 import { sendChallengeResetEmail } from "@/features/email/challenge-reset-email";
+import { notifyAdminAction } from "@/features/notification/admin-action-notify";
 import { applyCandidateIdentityChange } from "@/repositories/candidate-identity";
 import { getCandidateProfile } from "@/repositories/candidate";
 import {
@@ -181,6 +182,9 @@ export async function resetProgressAction(input: {
           });
         });
       }
+    } else {
+      // Every other track: generic notice (CLAUDE already has its own mail above).
+      after(() => notifyAdminAction(targetUserId, { kind: "progress_reset" }));
     }
 
     return { ok: true as const };
@@ -232,6 +236,12 @@ export async function toggleReadyForInterviewAction(input: {
     });
 
     revalidateAdminViews(targetUserId);
+    after(() =>
+      notifyAdminAction(targetUserId, {
+        kind: "ready_for_interview",
+        ready: newValue,
+      }),
+    );
     return { ok: true as const, newValue };
   } catch (e) {
     return {
@@ -294,6 +304,9 @@ export async function removeFromChallengeAction(input: {
     });
 
     revalidateAdminViews(targetUserId);
+    after(() =>
+      notifyAdminAction(targetUserId, { kind: "removed_from_challenge" }),
+    );
     return { ok: true as const };
   } catch (e) {
     return {
@@ -339,6 +352,13 @@ export async function deleteUserAccountAction(input: {
   }
 
   try {
+    // Read the address BEFORE anonymizing — anonymizeUser overwrites it, so
+    // afterwards there is nowhere left to tell the person.
+    const contact = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { email: true, name: true },
+    });
+
     await writeClient().$transaction(
       async (tx) => {
         await anonymizeUser(tx, {
@@ -353,6 +373,16 @@ export async function deleteUserAccountAction(input: {
     );
 
     revalidateAdminViews(targetUserId);
+    if (contact?.email) {
+      const { email, name } = contact;
+      after(() =>
+        notifyAdminAction(targetUserId, {
+          kind: "account_deleted",
+          email,
+          name,
+        }),
+      );
+    }
     return { ok: true as const };
   } catch (e) {
     if (e instanceof AnonymizeUserError) {
@@ -575,6 +605,9 @@ export async function grantSynergyAction(input: {
     }),
     );
     revalidateAdminViews(targetUserId);
+    after(() =>
+      notifyAdminAction(targetUserId, { kind: "synergy_granted", points }),
+    );
     return { ok: true as const };
   } catch (error) {
     const message =

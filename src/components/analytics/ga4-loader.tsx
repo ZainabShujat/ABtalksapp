@@ -1,6 +1,7 @@
 "use client";
 
 import Script from "next/script";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useCookieConsent } from "@/components/legal/cookie-consent-provider";
 import {
@@ -18,6 +19,7 @@ declare global {
 }
 
 export function GA4Loader() {
+  const pathname = usePathname();
   const { choice, ready } = useCookieConsent();
   const measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
   const isProd = isProduction();
@@ -49,18 +51,29 @@ gtag('js', new Date());
 // means this loader only mounts when the user has affirmatively granted
 // analytics_storage, so every page_view fires with a legitimate consent
 // signal (never a cookieless ping under our gate).
-gtag('config', ${JSON.stringify(state.measurementId)}, { anonymize_ip: true, send_page_view: true });`;
+gtag('config', ${JSON.stringify(state.measurementId)}, { anonymize_ip: true, send_page_view: true });${
+    state.defaults.ad_storage === "granted"
+      ? "\ngtag('config', 'AW-18456978326');"
+      : ""
+  }`;
+
+  // The public home page loads gtag.js for Google Ads. A second library
+  // request on the same page is a second Google tag; queue the GA4 config
+  // on the dataLayer the Ads snippet already owns.
+  const adsTagProvidesGtag = pathname === "/";
 
   return (
     <>
       <Script id="ga4-consent-default" strategy="afterInteractive">
         {initScript}
       </Script>
-      <Script
-        id="ga4-gtag"
-        strategy="afterInteractive"
-        src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(state.measurementId)}`}
-      />
+      {adsTagProvidesGtag ? null : (
+        <Script
+          id="ga4-gtag"
+          strategy="afterInteractive"
+          src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(state.measurementId)}`}
+        />
+      )}
     </>
   );
 }

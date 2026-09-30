@@ -133,7 +133,9 @@ export type ProgramCandidateRow = {
   graduationYear: number | null;
   skills: string[];
   updatedAt: Date;
-  cohort: { id: string; startsAt: Date };
+  /** The learner's own Day-1 anchor. Day math reads this, not cohort.startsAt (plan 157). */
+  startedAt: Date;
+  cohort: { id: string; startsAt: Date | null };
   commitDays: { date: Date }[];
   projects: {
     aiScore: number | null;
@@ -255,6 +257,7 @@ export async function listProgramCandidates(
       graduationYear: idn?.graduationYear ?? m.graduationYear,
       skills: idn?.skills.length ? idn.skills : m.skills,
       updatedAt: m.updatedAt,
+      startedAt: m.startedAt,
       cohort: { id: m.cohort.id, startsAt: m.cohort.startsAt },
       commitDays: commitsByPe.get(peId) ?? [],
       projects: (projectsByPe.get(peId) ?? []).map((p) => ({
@@ -581,18 +584,36 @@ export type ProfileCandidateRow = {
  */
 export async function listProfileCandidates(
   take = 200,
+  opts?: { skills?: string[] },
 ): Promise<ProfileCandidateRow[]> {
+  // When the brief names skills, the POOL is people who hold them.
+  //
+  // Without this the query is `orderBy createdAt desc, take N` — a recency
+  // window, not a search. That was harmless while 86 candidates were
+  // searchable; with the whole pool open it means an older candidate is
+  // unrankable no matter how well they match, because scoring never sees them
+  // (plan 161 §2g). Ranking still belongs to score-candidate.ts — this only
+  // decides who is considered.
+  const wanted = [...new Set((opts?.skills ?? []).map((s) => s.trim()).filter(Boolean))];
+  const skillWhere = wanted.length
+    ? {
+        claimedByCandidate: true,
+        skill: { name: { in: wanted, mode: "insensitive" as const } },
+      }
+    : { claimedByCandidate: true };
+
   const rows = await prisma.user.findMany({
     where: {
       ...searchableUserWhere(),
       candidateProfile: {
         is: {
           fullName: { not: "" },
-          skills: { some: { claimedByCandidate: true } },
+          skills: { some: skillWhere },
         },
       },
     },
     select: { id: true, name: true },
+    // A stable tiebreaker within the filtered set, no longer the selection.
     orderBy: { createdAt: "desc" },
     take,
   });

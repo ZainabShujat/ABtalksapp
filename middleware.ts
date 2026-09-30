@@ -78,6 +78,7 @@ const protectedPaths = [
   "/program/powerbi",
   "/program/snowflake",
   "/program/databricks-ai",
+  "/program/langchain",
   "/talent",
   "/hire",
   "/hackathon/dashboard",
@@ -202,8 +203,20 @@ export default auth((req) => {
     pathname === "/talent/login" ||
     pathname === "/talent/register";
 
+  // Marketing landings only. The protectedPaths prefixes stay, so
+  // /program/databricks/day/*, /program/snowflake/day/*, and
+  // /program/databricks-ai/day/* and /program/langchain/day/* still require a
+  // session. Exact match: `/program/databricks` must not open
+  // `/program/databricks-ai`.
+  const isPublicCohortLanding =
+    pathname === "/program/databricks" ||
+    pathname === "/program/snowflake" ||
+    pathname === "/program/databricks-ai" ||
+    pathname === "/program/langchain";
+
   const isProtected =
     !isPublicRecruiterEntry &&
+    !isPublicCohortLanding &&
     (protectedPaths.some((p) => pathname.startsWith(p)) ||
       exactProtectedPaths.includes(pathname));
   const isAuthPage = pathname === "/login";

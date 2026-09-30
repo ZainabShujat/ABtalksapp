@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { z } from "zod";
 import { enrollInDatabricksAiAction } from "@/app/actions/databricks-ai-actions";
+import { useProgramRegistrationConversion } from "@/lib/analytics/use-track";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +26,7 @@ function FieldError({ message }: { message?: string }) {
 
 export function DatabricksAiEnrollForm() {
   const router = useRouter();
+  const reportRegistration = useProgramRegistrationConversion();
   const [submitting, setSubmitting] = useState(false);
   const [skillInput, setSkillInput] = useState("");
 
@@ -89,6 +91,7 @@ export function DatabricksAiEnrollForm() {
         return;
       }
       toast.success("You're enrolled.");
+      reportRegistration();
       router.refresh();
     } catch {
       toast.error("Something went wrong. Please try again.");

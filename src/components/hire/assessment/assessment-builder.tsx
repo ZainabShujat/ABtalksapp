@@ -9,6 +9,18 @@ import {
   saveRecruiterAssessmentAction,
 } from "@/app/actions/recruiter-assessment-actions";
 import {
+  createAndSendPlatformAssessmentAction,
+  savePlatformAssessmentAction,
+} from "@/app/actions/admin-assessment-actions";
+import {
+  PlatformAudiencePicker,
+  audienceEstimate,
+  defaultDeadlineLocal,
+  istLocalToIso,
+  type PlatformAudienceOptions,
+  type PlatformAudienceValue,
+} from "@/components/admin/platform-audience-picker";
+import {
   MAX_ASSIGN_PER_CALL,
   assessmentDraftSchema,
   type AssessmentDraftInput,
@@ -76,7 +88,15 @@ type Props = {
   projectId?: string | null;
   /** Rendered under the template picker: an h2 instead of the page h1. */
   embedded?: boolean;
+  /**
+   * Plan 166: set on /admin/assessments. The builder saves through the admin
+   * actions and the send step picks an audience + deadline instead of a
+   * Shortlist (`candidates` is then empty and unused).
+   */
+  platform?: { audienceOptions: PlatformAudienceOptions };
 };
+
+const EMPTY_AUDIENCE: PlatformAudienceValue = { all: false, domains: [], workshopEventIds: [] };
 
 export function AssessmentBuilder({
   candidates,
@@ -84,6 +104,7 @@ export function AssessmentBuilder({
   presetLocked = false,
   projectId = null,
   embedded = false,
+  platform,
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -119,6 +140,13 @@ export function AssessmentBuilder({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [confirming, setConfirming] = useState(false);
+  const [audience, setAudience] = useState<PlatformAudienceValue>(EMPTY_AUDIENCE);
+  const [deadlineLocal, setDeadlineLocal] = useState(() =>
+    platform ? defaultDeadlineLocal() : "",
+  );
+  const audienceCount = platform ? audienceEstimate(platform.audienceOptions, audience) : 0;
+  const hasAudience =
+    audience.all || audience.domains.length > 0 || audience.workshopEventIds.length > 0;
 
   // Provenance only (nothing reads it — plan 128 §2): the Shortlist this was
   // built against.
@@ -157,8 +185,15 @@ export function AssessmentBuilder({
   const picked = candidates.filter((c) => selected.has(c.candidateRef));
   const pickedCount = picked.length;
   const allPicked = candidates.length > 0 && pickedCount === candidates.length;
-  const createBlockedReason =
-    candidates.length === 0
+  const createBlockedReason = platform
+    ? !hasAudience
+      ? "Pick who this assessment goes to."
+      : audienceCount === 0
+        ? "Nobody is in the groups you picked yet."
+        : !istLocalToIso(deadlineLocal)
+          ? "Set a deadline."
+          : null
+    : candidates.length === 0
       ? "Your Shortlist is empty — shortlist candidates on Hire to send this. You can still save a draft."
       : pickedCount === 0
         ? "Select at least one shortlisted candidate to send this to."
@@ -230,7 +265,9 @@ export function AssessmentBuilder({
     if (!draft) return;
     setPendingAction("save");
     startTransition(async () => {
-      const res = await saveRecruiterAssessmentAction(draft);
+      const res = platform
+        ? await savePlatformAssessmentAction(draft)
+        : await saveRecruiterAssessmentAction(draft);
       setPendingAction(null);
       if (!res.ok) {
         toast.error(res.message);
@@ -238,7 +275,7 @@ export function AssessmentBuilder({
       }
       setAssessmentId(res.data.id);
       toast.success("Draft saved");
-      router.push("/hire/assessments");
+      router.push(platform ? "/admin/assessments" : "/hire/assessments");
     });
   }
 
@@ -257,6 +294,10 @@ export function AssessmentBuilder({
     if (!draft || createBlockedReason) {
       setConfirming(false);
       if (createBlockedReason) toast.error(createBlockedReason);
+      return;
+    }
+    if (platform) {
+      createPlatform(draft);
       return;
     }
     const candidateRefs = picked.map((c) => c.candidateRef);
@@ -297,6 +338,31 @@ export function AssessmentBuilder({
     });
   }
 
+  function createPlatform(draft: AssessmentDraftInput) {
+    const deadlineAt = istLocalToIso(deadlineLocal);
+    if (!deadlineAt) {
+      setConfirming(false);
+      toast.error("Set a deadline.");
+      return;
+    }
+    setPendingAction("create");
+    startTransition(async () => {
+      const res = await createAndSendPlatformAssessmentAction({ draft, audience, deadlineAt });
+      setPendingAction(null);
+      if (!res.ok) {
+        if (res.assessmentId) setAssessmentId(res.assessmentId);
+        setConfirming(false);
+        toast.error(res.message);
+        return;
+      }
+      const n = res.data.assigned;
+      toast.success(
+        `Published and sent to ${n.toLocaleString("en-IN")} candidate${n === 1 ? "" : "s"}.`,
+      );
+      router.push(`/admin/assessments/${res.data.id}`);
+    });
+  }
+
   const heading = presetLocked
     ? "Customize a template"
     : assessmentId
@@ -322,11 +388,14 @@ export function AssessmentBuilder({
             </>
           ) : (
             <>
-              <p className="hire-assess__kicker">Assessment builder</p>
+              <p className="hire-assess__kicker">
+                {platform ? "Platform assessment" : "Assessment builder"}
+              </p>
               <h1>{heading}</h1>
               <p className="hire-assess__sub">
-                For {candidates.length} shortlisted candidate
-                {candidates.length === 1 ? "" : "s"}
+                {platform
+                  ? "Sent by ABTalks to the candidates you choose below"
+                  : `For ${candidates.length} shortlisted candidate${candidates.length === 1 ? "" : "s"}`}
               </p>
             </>
           )}
@@ -376,6 +445,7 @@ export function AssessmentBuilder({
           Published assessments run in strict mode: laptop or desktop only,
           fullscreen required, copy and paste blocked, and page activity
           recorded for you to review.
+          {platform ? " Candidates never see their score." : null}
         </p>
       </div>
 
@@ -553,56 +623,67 @@ export function AssessmentBuilder({
             ) : null}
           </section>
 
-          <section className="hire-assess__send" aria-labelledby="assess-send-heading">
-            <div className="hire-assess__send-head">
-              <h2 id="assess-send-heading">Send to shortlisted candidates</h2>
-              {candidates.length > 0 && (
-                <button
-                  type="button"
-                  className="hire-assess-linkbtn"
-                  disabled={pending}
-                  onClick={() =>
-                    setSelected(allPicked ? new Set() : new Set(shortlistRefs))
-                  }
-                >
-                  {allPicked ? "Clear selection" : "Select all"}
-                </button>
-              )}
-            </div>
-            <p className="hire-assess-hint">
-              Create publishes this assessment and sends it to the candidates
-              you tick. Each one is notified and finds it on their Assessments
-              page.
-            </p>
-            {candidates.length === 0 ? (
-              <p className="hire-assess__send-empty">
-                Your Shortlist is empty. Shortlist candidates on Hire first — you
-                can still save this as a draft.
+          {platform ? (
+            <PlatformAudiencePicker
+              options={platform.audienceOptions}
+              audience={audience}
+              onAudienceChange={setAudience}
+              deadlineLocal={deadlineLocal}
+              onDeadlineChange={setDeadlineLocal}
+              disabled={pending}
+            />
+          ) : (
+            <section className="hire-assess__send" aria-labelledby="assess-send-heading">
+              <div className="hire-assess__send-head">
+                <h2 id="assess-send-heading">Send to shortlisted candidates</h2>
+                {candidates.length > 0 && (
+                  <button
+                    type="button"
+                    className="hire-assess-linkbtn"
+                    disabled={pending}
+                    onClick={() =>
+                      setSelected(allPicked ? new Set() : new Set(shortlistRefs))
+                    }
+                  >
+                    {allPicked ? "Clear selection" : "Select all"}
+                  </button>
+                )}
+              </div>
+              <p className="hire-assess-hint">
+                Create publishes this assessment and sends it to the candidates
+                you tick. Each one is notified and finds it on their Assessments
+                page.
               </p>
-            ) : (
-              <fieldset className="hire-assess-assign__fieldset" aria-busy={pending}>
-                <legend className="sr-only">Shortlisted candidates</legend>
-                <ul className="hire-assess-assign__list">
-                  {candidates.map((c) => (
-                    <li key={c.candidateRef}>
-                      <label className="hire-assess-assign__row">
-                        <input
-                          type="checkbox"
-                          checked={selected.has(c.candidateRef)}
-                          disabled={pending}
-                          onChange={() => toggle(c.candidateRef)}
-                        />
-                        <span className="hire-assess-assign__who">
-                          <span>{c.label}</span>
-                          <span className="hire-assess-detail__role">{c.jobRole}</span>
-                        </span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-              </fieldset>
-            )}
-          </section>
+              {candidates.length === 0 ? (
+                <p className="hire-assess__send-empty">
+                  Your Shortlist is empty. Shortlist candidates on Hire first — you
+                  can still save this as a draft.
+                </p>
+              ) : (
+                <fieldset className="hire-assess-assign__fieldset" aria-busy={pending}>
+                  <legend className="sr-only">Shortlisted candidates</legend>
+                  <ul className="hire-assess-assign__list">
+                    {candidates.map((c) => (
+                      <li key={c.candidateRef}>
+                        <label className="hire-assess-assign__row">
+                          <input
+                            type="checkbox"
+                            checked={selected.has(c.candidateRef)}
+                            disabled={pending}
+                            onChange={() => toggle(c.candidateRef)}
+                          />
+                          <span className="hire-assess-assign__who">
+                            <span>{c.label}</span>
+                            <span className="hire-assess-detail__role">{c.jobRole}</span>
+                          </span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                </fieldset>
+              )}
+            </section>
+          )}
 
           <div className="hire-assess__save">
             {confirming ? (
@@ -611,11 +692,19 @@ export function AssessmentBuilder({
                 role="group"
                 aria-label="Confirm create"
               >
-                <p>
-                  Publish and send to {pickedCount} candidate
-                  {pickedCount === 1 ? "" : "s"}? Publishing locks the questions
-                  and the pass mark, and each candidate is notified.
-                </p>
+                {platform ? (
+                  <p>
+                    Publish and send to up to {audienceCount.toLocaleString("en-IN")}{" "}
+                    candidate{audienceCount === 1 ? "" : "s"}? Publishing locks the
+                    questions, the pass mark and the deadline.
+                  </p>
+                ) : (
+                  <p>
+                    Publish and send to {pickedCount} candidate
+                    {pickedCount === 1 ? "" : "s"}? Publishing locks the questions
+                    and the pass mark, and each candidate is notified.
+                  </p>
+                )}
                 <div className="hire-assess-assign__confirm-actions">
                   <button
                     type="button"
@@ -639,7 +728,9 @@ export function AssessmentBuilder({
               <>
                 <p id="assess-create-hint" className="hire-assess-hint hire-assess__save-hint">
                   {createBlockedReason ??
-                    `Sends to ${pickedCount} selected candidate${pickedCount === 1 ? "" : "s"}.`}
+                    (platform
+                      ? `Sends to up to ${audienceCount.toLocaleString("en-IN")} candidate${audienceCount === 1 ? "" : "s"}.`
+                      : `Sends to ${pickedCount} selected candidate${pickedCount === 1 ? "" : "s"}.`)}
                 </p>
                 <div className="hire-assess__save-actions">
                   <button

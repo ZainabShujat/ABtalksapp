@@ -6,6 +6,7 @@ import { signIn } from "next-auth/react";
 import { ArrowLeft, Loader2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { requestRecruiterOtpAction } from "@/app/actions/recruiter-auth-actions";
+import { PasswordSignIn } from "@/components/auth/password-sign-in";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -17,9 +18,19 @@ import { cn } from "@/lib/utils";
  * server does, and both answers look the same from here. Only "we haven't
  * verified this company" is different, because that is the one case where they
  * need to do something about it.
+ *
+ * Plan 154: with `passwordEnabled`, a recruiter who has set a password can use
+ * it instead of a code, and "Forgot password?" sets one by emailed code.
  */
-export function RecruiterLoginForm({ initialEmail = "" }: { initialEmail?: string }) {
+export function RecruiterLoginForm({
+  initialEmail = "",
+  passwordEnabled = false,
+}: {
+  initialEmail?: string;
+  passwordEnabled?: boolean;
+}) {
   const router = useRouter();
+  const [method, setMethod] = useState<"code" | "password">("code");
   const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState("");
@@ -61,9 +72,61 @@ export function RecruiterLoginForm({ initialEmail = "" }: { initialEmail?: strin
     });
   }
 
+  const methodToggle = passwordEnabled && step === "email" ? (
+    <div
+      role="radiogroup"
+      aria-label="How to sign in"
+      className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1"
+    >
+      {(
+        [
+          ["code", "Email code"],
+          ["password", "Password"],
+        ] as const
+      ).map(([value, label]) => (
+        <button
+          key={value}
+          type="button"
+          role="radio"
+          aria-checked={method === value}
+          onClick={() => setMethod(value)}
+          disabled={pending}
+          className={cn(
+            "h-9 rounded-md text-sm font-medium transition-colors",
+            method === value
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  ) : null;
+
+  if (passwordEnabled && method === "password") {
+    return (
+      <div className="space-y-4">
+        {methodToggle}
+        <PasswordSignIn
+          audience="recruiter"
+          idPrefix="recruiter-login"
+          email={email}
+          onEmailChange={setEmail}
+          afterSignIn="/hire"
+          onUseEmailCode={() => {
+            setMethod("code");
+            setStep("email");
+          }}
+        />
+      </div>
+    );
+  }
+
   if (step === "email") {
     return (
       <div className="space-y-4">
+        {methodToggle}
         <div className="space-y-2">
           <label htmlFor="recruiter-email" className="text-sm font-medium">
             Work email
@@ -82,7 +145,9 @@ export function RecruiterLoginForm({ initialEmail = "" }: { initialEmail?: strin
             disabled={pending}
           />
           <p className="text-xs text-muted-foreground">
-            We&apos;ll email you a 6-digit code. No password, no Google account.
+            {passwordEnabled
+              ? "We’ll email you a 6-digit code. Set a password? Use the Password tab."
+              : "We’ll email you a 6-digit code. No password, no Google account."}
           </p>
         </div>
 

@@ -1,4 +1,4 @@
-import { EVENTS } from "@/components/workshop/events-data";
+import type { WorkshopEvent } from "@/components/workshop/events-data";
 import {
   CERTIFICATE_TYPES,
   HACKATHON_VARIANT_LABELS,
@@ -213,6 +213,14 @@ export type EvidenceSourceRows = {
     submission: Submission;
   }[];
   workshops: { id: string; userId: string; eventId: string; createdAt: Date }[];
+  /**
+   * The workshop catalogue, for turning a registration's `eventId` into a
+   * title. Optional: absent, a row falls back to `Workshop <eventId>`, which
+   * is what this builder already did for an unknown id. Plan 163 moved the
+   * schedule into the database, so it can no longer be read from a module
+   * constant here.
+   */
+  workshopEvents?: readonly WorkshopEvent[];
   certificates: {
     id: string;
     userId: string;
@@ -472,7 +480,7 @@ export function buildEvidenceProvenance(
     const w = workshopById.get(id);
     if (!w) return missing("WorkshopRegistration");
     if (w.userId !== userId) return foreign("WorkshopRegistration");
-    const event = EVENTS.find((e) => e.id === w.eventId);
+    const event = (rows.workshopEvents ?? []).find((e) => e.id === w.eventId);
     return {
       kind: "WORKSHOP",
       name: event?.title ?? `Workshop ${w.eventId}`,

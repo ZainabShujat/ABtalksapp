@@ -10,6 +10,8 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import {
+  LOGO_MAX_BYTES,
+  isAllowedLogoMimeType,
   updateRecruiterProfileSchema,
 } from "@/lib/validations/recruiter-profile";
 import { registerRecruiterSchema } from "@/lib/validations/recruiter-auth";
@@ -364,6 +366,202 @@ suite("the onboarding wizard mirrors the server rule", () => {
   assert(
     src.includes("Full name cannot contain numbers."),
     "the wizard must use the same message as the schema",
+  );
+});
+
+// =========================================================================
+// Company logo (plan 158)
+// =========================================================================
+
+suite("the logo is NOT settable through the text form schema", () => {
+  // The whole point: Organization.logoUrl may only ever hold a URL the upload
+  // action got back from blob storage. If it became a text field, a recruiter
+  // could point their company logo at any URL on the internet.
+  const parsed = updateRecruiterProfileSchema.safeParse({
+    fullName: "Jane Recruiter",
+    phone: null,
+    companyName: "Acme Technologies",
+    website: null,
+    industry: null,
+    companySize: null,
+    location: null,
+    logoUrl: "https://evil.example.com/tracker.png",
+  });
+  assert(parsed.success, "an extra key must not fail the parse");
+  if (parsed.success) {
+    assert(
+      !("logoUrl" in parsed.data),
+      "logoUrl must be stripped by the schema, never carried into the update",
+    );
+  }
+});
+
+suite("the logo mime allow-list excludes SVG", () => {
+  assert(!isAllowedLogoMimeType("image/svg+xml"), "SVG must be refused");
+  assert(!isAllowedLogoMimeType("text/html"), "HTML must be refused");
+  assert(!isAllowedLogoMimeType("application/pdf"), "PDF must be refused");
+  for (const ok of ["image/png", "image/jpeg", "image/webp"]) {
+    assert(isAllowedLogoMimeType(ok), `${ok} must be allowed`);
+  }
+  assert(LOGO_MAX_BYTES === 2 * 1024 * 1024, "the cap is 2 MB");
+});
+
+suite("uploadCompanyLogoAction takes no caller-supplied user or org IDs", () => {
+  const src = source("src/app/actions/recruiter-profile-actions.ts");
+  const action = src.slice(src.indexOf("export async function uploadCompanyLogoAction"));
+  assert(
+    action.includes("await requireRecruiterWorkspace()"),
+    "the upload must resolve the workspace server-side",
+  );
+  assert(
+    !action.includes('formData.get("organizationId")') &&
+      !action.includes('formData.get("userId")'),
+    "identity must never come from the FormData",
+  );
+});
+
+suite("the logo blob path is built only from server-resolved values", () => {
+  const src = source("src/features/hire/org-logo-storage.ts");
+  assert(
+    src.includes("`org-logos/${organizationId}/${contentHash}.${ext}`"),
+    "path must be org-logos/<organizationId>/<sha256>.<ext>",
+  );
+  assert(
+    !src.includes("file.name") && !src.includes("originalName"),
+    "the uploaded filename must never reach the path — that is traversal",
+  );
+});
+
+suite("the upload sniffs magic bytes and requires them to match the declared type", () => {
+  // Plan 159 moved these checks into org-logo-storage.readLogoUpload so the
+  // recruiter's own control and the admin create form share ONE copy of them.
+  const src = source("src/features/hire/org-logo-storage.ts");
+  assert(src.includes("function sniffImageType"), "a byte sniff must exist");
+  assert(
+    src.includes("sniffed.mime !== file.type"),
+    "the sniffed type must be required to equal the declared type",
+  );
+  assert(
+    src.includes('file.type === "image/svg+xml"'),
+    "SVG must be refused explicitly, before the allow-list",
+  );
+  assert(
+    src.includes("file.size > LOGO_MAX_BYTES"),
+    "the size cap must be enforced on the server, not just in the browser",
+  );
+});
+
+suite("both logo upload paths go through the one shared validation", () => {
+  const recruiter = source("src/app/actions/recruiter-profile-actions.ts");
+  const admin = source("src/app/actions/admin-recruiter-actions.ts");
+  for (const [label, src] of [
+    ["the recruiter's own control", recruiter],
+    ["the admin create form", admin],
+  ] as const) {
+    assert(src.includes("readLogoUpload("), `${label} must call readLogoUpload`);
+    assert(
+      !src.includes("function sniffImageType"),
+      `${label} must not carry its own copy of the byte sniff`,
+    );
+  }
+});
+
+suite("the logo store is public and is never the private résumé store", () => {
+  const src = source("src/features/hire/org-logo-storage.ts");
+  assert(src.includes('access: "public"'), "logos are rendered by <img src>");
+  // The env list, not the prose — the header comment names the résumé token in
+  // order to explain why it is NOT used.
+  const envs = src.slice(
+    src.indexOf("const TOKEN_ENVS"),
+    src.indexOf("function blobToken"),
+  );
+  assert(envs.length > 0, "TOKEN_ENVS must be declared");
+  assert(
+    !envs.includes("resume2_READ_WRITE_TOKEN") &&
+      !envs.includes("BLOB_READ_WRITE_TOKEN"),
+    "the résumé store is private and must not be used or fallen back to",
+  );
+  assert(
+    src.includes("...options()") && src.includes("token: blobToken()"),
+    "the token must be passed explicitly so the SDK cannot pick another store",
+  );
+  assert(
+    src.includes('import "server-only"'),
+    "blob credentials must never be reachable from a client component",
+  );
+});
+
+suite("the old blob is deleted only after the row stops pointing at it", () => {
+  const src = source("src/app/actions/recruiter-profile-actions.ts");
+  const action = src.slice(src.indexOf("export async function uploadCompanyLogoAction"));
+  const update = action.indexOf("prisma.organization.update");
+  const del = action.indexOf("deleteCompanyLogoBlob");
+  assert(update > 0 && del > 0, "both the update and the delete must be present");
+  assert(
+    update < del,
+    "a row pointing at a deleted blob is a broken image; a stale blob is not",
+  );
+});
+
+suite("removeCompanyLogoAction clears the column and is workspace-scoped", () => {
+  const src = source("src/app/actions/recruiter-profile-actions.ts");
+  const action = src.slice(src.indexOf("export async function removeCompanyLogoAction"));
+  assert(
+    action.includes("await requireRecruiterWorkspace()"),
+    "remove must resolve the workspace server-side",
+  );
+  assert(action.includes("logoUrl: null"), "remove must null the column");
+});
+
+suite("the profile read returns the logo", () => {
+  const src = source("src/app/actions/recruiter-profile-actions.ts");
+  assert(src.includes("logoUrl: true"), "the org select must include logoUrl");
+  assert(
+    src.includes("logoUrl: org?.logoUrl ?? null"),
+    "the details payload must carry logoUrl",
+  );
+});
+
+suite("the settings form renders the logo control and degrades when unconfigured", () => {
+  const page = source("src/app/hire/settings/page.tsx");
+  assert(
+    page.includes("logoUploadAvailable={isCompanyLogoStorageConfigured()}"),
+    "the page must resolve storage availability on the server",
+  );
+  const form = source("src/components/hire/recruiter-profile-form.tsx");
+  assert(form.includes("Company Logo"), "the form must label the control");
+  assert(
+    form.includes("Logo upload is unavailable right now."),
+    "a missing env var must read as a temporary gap, not a missing feature",
+  );
+  assert(
+    !form.includes("org-logo-storage"),
+    "a client component must never import the server-only storage module",
+  );
+});
+
+suite("the logo buttons cannot submit the surrounding profile form", () => {
+  const form = source("src/components/hire/recruiter-profile-form.tsx");
+  const block = form.slice(
+    form.indexOf('className="hire-logo"'),
+    form.indexOf('htmlFor="companyName"'),
+  );
+  const buttons = block.split("<button").length - 1;
+  const typed = block.split('type="button"').length - 1;
+  assert(buttons >= 1, "the logo block must render buttons");
+  assert(
+    typed >= buttons,
+    `${buttons} logo buttons but ${typed} type="button" — these sit inside the ` +
+      "profile <form>, so a default-submit button would save on every click",
+  );
+});
+
+suite("the logo is fitted, not centre-cropped, and keeps its alpha", () => {
+  const form = source("src/components/hire/recruiter-profile-form.tsx");
+  assert(form.includes('"image/png"'), "export PNG — JPEG would black out alpha");
+  assert(
+    !form.includes("squareJpeg"),
+    "the avatar's centre-crop would cut a non-square logo",
   );
 });
 

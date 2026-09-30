@@ -14,6 +14,7 @@ import {
   Role,
 } from "@prisma/client";
 import { prisma } from "../src/lib/db";
+import { hashPassword } from "../src/lib/password";
 import {
   activityIdForDailyTask,
   activityIdForQuiz,
@@ -721,7 +722,7 @@ export async function seedTestUsers() {
     const created = await prisma.user.create({
       data: {
         email: u.email,
-        password: u.password,
+        password: await hashPassword(u.password),
         name: u.name,
         role: u.role,
         candidateProfile: {

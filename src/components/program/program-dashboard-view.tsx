@@ -205,7 +205,7 @@ export function ProgramDashboardView({
 
 function progressLines(
   data: MemberDashboard,
-  opts: { includeCohortPace: boolean },
+  opts: { includePace: boolean },
 ): string[] {
   if (data.clearedCount === 0) return [];
   let cleared = `You've cleared ${data.clearedCount} of ${PROGRAM_TOTAL_DAYS} days`;
@@ -214,8 +214,11 @@ function progressLines(
   }
   cleared += ".";
   const lines = [cleared];
-  if (opts.includeCohortPace && data.clearedCount < data.cohortDay) {
-    lines.push(`The cohort is on day ${data.cohortDay}.`);
+  // Pace is the learner's own calendar, not a shared cohort day (plan 157).
+  if (opts.includePace && data.clearedCount < data.memberCalendarDay) {
+    lines.push(
+      `You're on day ${data.memberCalendarDay} of ${PROGRAM_TOTAL_DAYS}.`,
+    );
   }
   return lines;
 }
@@ -247,14 +250,14 @@ function ContinueCard({ data }: { data: MemberDashboard }) {
     cta = `Continue Day ${currentDay.dayNumber}`;
     showMissionChip = true;
     missionType = currentDay.missionType;
-    supporting = progressLines(data, { includeCohortPace: true });
+    supporting = progressLines(data, { includePace: true });
   } else if (nextDay) {
     eyebrow = "UP NEXT";
     title = `Day ${nextDay.dayNumber}: ${nextDay.title}`;
     showMissionChip = true;
     missionType = nextDay.missionType;
     lockedPreview = true;
-    supporting = progressLines(data, { includeCohortPace: false });
+    supporting = progressLines(data, { includePace: false });
     supporting.push(
       data.nextUnlockDateLabel
         ? `Unlocks ${data.nextUnlockDateLabel}. Nothing to submit today.`
@@ -263,7 +266,7 @@ function ContinueCard({ data }: { data: MemberDashboard }) {
   } else {
     eyebrow = "ALL CAUGHT UP";
     title = `You've completed all ${PROGRAM_TOTAL_DAYS} days.`;
-    supporting = progressLines(data, { includeCohortPace: false });
+    supporting = progressLines(data, { includePace: false });
   }
 
   return (

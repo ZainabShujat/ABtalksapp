@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { DashboardSidebar } from "@/components/dashboard-hub/dashboard-sidebar";
+import { NotificationBellButton } from "@/components/shared/notification-bell-button";
 
 export type HackathonShellUser = {
   name: string;
@@ -92,16 +93,10 @@ export function HackathonShell({
               </svg>
               <span>Discover events</span>
             </Link>
-            <button
-              className="ab-icon-btn"
-              type="button"
-              aria-label="Notifications"
-            >
-              <svg viewBox="0 0 24 24" aria-hidden>
-                <path d="M18 8.5a6 6 0 1 0-12 0c0 5-2 6.5-2 6.5h16s-2-1.5-2-6.5z" />
-                <path d="M10.3 19a2 2 0 0 0 3.4 0" />
-              </svg>
-            </button>
+            {/* The real bell (was a static, click-dead SVG button, so no
+                notification ever opened on /hackathon). Renders nothing for
+                signed-out guests. */}
+            {isAuthed ? <NotificationBellButton className="ab-icon-btn" /> : null}
             {headerCta}
           </div>
         </header>

@@ -113,16 +113,19 @@ export function AvatarEditor({ unavailable }: { unavailable?: boolean } = {}) {
         {pending ? (
           <span className="pw-avatar-spin" aria-hidden />
         ) : (
-          <svg viewBox="0 0 24 24" aria-hidden>
-            <path
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"
-            />
-          </svg>
+          <>
+            <svg viewBox="0 0 24 24" aria-hidden>
+              <path
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"
+              />
+            </svg>
+            
+          </>
         )}
       </button>
       <input

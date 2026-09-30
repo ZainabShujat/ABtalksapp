@@ -84,32 +84,32 @@ export function NotificationsTable({ rows }: { rows: AdminNotificationRow[] }) {
         <TableBody>
           {rows.map((row) => (
             <TableRow key={row.id}>
-              <TableCell>
-                <div className="font-medium">{row.title}</div>
+              <TableCell className="min-w-72 max-w-md align-top whitespace-normal">
+                <div className="font-medium wrap-break-word">{row.title}</div>
                 {row.body ? (
-                  <p className="mt-0.5 max-w-md text-xs text-muted-foreground">
+                  <p className="mt-0.5 text-xs wrap-break-word text-muted-foreground">
                     {row.body}
                   </p>
                 ) : null}
                 {row.href ? (
-                  <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                  <p className="mt-0.5 font-mono text-xs break-all text-muted-foreground">
                     {row.href}
                   </p>
                 ) : null}
               </TableCell>
-              <TableCell className="text-sm">{row.audience}</TableCell>
-              <TableCell className="text-sm">
+              <TableCell className="align-top text-sm">{row.audience}</TableCell>
+              <TableCell className="align-top text-sm">
                 {formatWhen(row.publishedAt)}
               </TableCell>
-              <TableCell className="text-sm">
+              <TableCell className="align-top text-sm">
                 {formatWhen(row.expiresAt)}
               </TableCell>
-              <TableCell>
+              <TableCell className="align-top">
                 <Badge variant={row.isActive ? "default" : "secondary"}>
                   {row.isActive ? "Active" : "Inactive"}
                 </Badge>
               </TableCell>
-              <TableCell>
+              <TableCell className="align-top">
                 <div className="flex items-center gap-1">
                   {row.isActive ? (
                     <Button

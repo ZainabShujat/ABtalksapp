@@ -14,9 +14,9 @@ export class DeleteOwnAccountError extends Error {
 
 export async function deleteOwnCandidateAccount(
   tx: Tx,
-  input: { userId: string },
-): Promise<void> {
-  const { userId } = input;
+  input: { userId: string; leaveReason: string; feedback: string | null },
+): Promise<{ email: string; name: string | null }> {
+  const { userId, leaveReason, feedback } = input;
 
   const adminRow = await tx.userRoleAssignment.findFirst({
     where: {
@@ -46,9 +46,11 @@ export async function deleteOwnCandidateAccount(
     select: {
       id: true,
       email: true,
+      name: true,
       role: true,
       deletedAt: true,
       password: true,
+      candidateProfile: { select: { fullName: true } },
     },
   });
   if (!user) {
@@ -61,6 +63,8 @@ export async function deleteOwnCandidateAccount(
   const emailDomain = user.email.includes("@")
     ? (user.email.split("@")[1] ?? null)
     : null;
+  const displayName =
+    user.candidateProfile?.fullName?.trim() || user.name?.trim() || null;
 
   await writeAudit(tx, {
     actorUserId: userId,
@@ -69,13 +73,25 @@ export async function deleteOwnCandidateAccount(
     entityType: "User",
     entityId: userId,
     actionType: "ACCOUNT_SELF_DELETE",
-    reason: "Candidate requested account deletion",
+    // Reason + feedback go in `reason` so they show (and are searchable) on
+    // /admin/actions; `metadata` keeps them structured.
+    reason: feedback
+      ? `Candidate requested account deletion. Reason: ${leaveReason}. Feedback: "${feedback}"`
+      : `Candidate requested account deletion. Reason: ${leaveReason}.`,
     previousState: {
       emailDomain,
       role: user.role,
       hadPassword: Boolean(user.password),
     },
     newState: { deleted: true },
+    // Product decision (2026-09-29): keep who left so admins can follow up.
+    // The user row is hard-deleted below, so this snapshot is the only
+    // record of the name and address. Pending security-owner review.
+    metadata: {
+      leaveReason,
+      feedback,
+      deletedUser: { name: displayName, email: user.email },
+    },
   });
 
   await tx.creditTransaction.updateMany({
@@ -88,4 +104,6 @@ export async function deleteOwnCandidateAccount(
   });
 
   await tx.user.delete({ where: { id: userId } });
+
+  return { email: user.email, name: displayName };
 }

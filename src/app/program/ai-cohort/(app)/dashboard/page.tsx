@@ -17,7 +17,7 @@ export default async function ProgramDashboardPage() {
   const [data, atRisk, projects, aiRec, cohortInterviewState] =
     await Promise.all([
       getMemberDashboard(member.id, cohort.id),
-      getMemberAtRiskStatus(member.id, cohort.id),
+      getMemberAtRiskStatus(member.id),
       getMemberProjectsSummary(member.id),
       getMemberRecommendation(member.id),
       // Server-authoritative: unlocks are derived from the member's actual

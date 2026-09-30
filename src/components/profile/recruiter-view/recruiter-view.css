@@ -1,0 +1,1000 @@
+/* ============================================================
+   /profile/recruiter-view — the candidate's own profile as a
+   recruiter's search returns it (plan 155). Scoped to .rv-root.
+
+   Deliberately self-contained. The recruiter surfaces it mirrors
+   live in src/app/hire/hire-scout.css, which is ~16k lines and is
+   imported only by the /hire layout; pulling that onto a candidate
+   route would couple candidate UI to recruiter internals in both
+   directions. And --pw-* is scoped to .pw-root in
+   profile-wizard.css, so this declares its own tokens on the same
+   ABTalks UI Design System v2 (forest green) palette rather than
+   reaching into another component's scope.
+
+   Layout:
+     .rv-shell       page column, 1040px max
+     .rv-frame       the "recruiter's screen" surround
+     .rv-card        the ranked search card
+     .rv-meter       one ranking dimension
+     .rv-panel       the four-tab detail panel
+     .rv-find        the findability list
+   ============================================================ */
+
+.rv-root {
+  --rv-primary: #03535f;
+  --rv-primary-rgb: 3, 83, 95;
+  --rv-primary-hover: #076573;
+  --rv-primary-light: #d4ebec;
+  --rv-primary-tint: #eef6f6;
+  --rv-primary-soft: #e7f2f3;
+
+  --rv-text: #000000;
+  --rv-text-2: #353535;
+  --rv-muted: #626262;
+  --rv-faint: #8a8a8a;
+
+  --rv-border: #e0e0e0;
+  --rv-border-soft: #e9e9e9;
+  --rv-bg: #f4f4f4;
+  --rv-white: #ffffff;
+
+  --rv-ok: #197e23;
+  --rv-ok-soft: #d6f7ec;
+  --rv-warn: #aa821d;
+  --rv-warn-soft: #ffedb0;
+  --rv-lock: #626262;
+  --rv-lock-soft: #efefef;
+
+  --rv-radius: 16px;
+  --rv-radius-sm: 12px;
+
+  color: var(--rv-text-2);
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+.rv-shell {
+  margin: 0 auto;
+  display: flex;
+  max-width: 1040px;
+  flex-direction: column;
+  gap: 28px;
+  padding: 24px 16px 72px;
+}
+
+/* ── Page header ─────────────────────────────────────────────── */
+
+.rv-head {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rv-back {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  margin-inline-start: -8px;
+  padding: 0 8px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--rv-muted);
+  transition: color 180ms ease;
+}
+
+.rv-back:hover {
+  color: var(--rv-primary);
+}
+
+.rv-back svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+.rv-title {
+  font-family: var(--font-outfit), var(--font-inter), system-ui, sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--rv-text);
+}
+
+.rv-lede {
+  max-width: 62ch;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--rv-muted);
+}
+
+/* ── Section ─────────────────────────────────────────────────── */
+
+.rv-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rv-section__head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rv-section__num {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rv-primary);
+}
+
+.rv-section__num::before {
+  content: "";
+  display: block;
+  width: 18px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--rv-primary);
+}
+
+.rv-section__title {
+  font-family: var(--font-outfit), var(--font-inter), system-ui, sans-serif;
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--rv-text);
+}
+
+.rv-section__note {
+  max-width: 68ch;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--rv-muted);
+}
+
+/* ── The "recruiter's screen" frame ──────────────────────────── */
+
+.rv-frame {
+  overflow: hidden;
+  border: 1px solid var(--rv-border);
+  border-radius: var(--rv-radius);
+  background: var(--rv-bg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+}
+
+.rv-frame__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--rv-border-soft);
+  background: var(--rv-white);
+  padding: 10px 14px;
+}
+
+.rv-frame__dots {
+  display: flex;
+  gap: 5px;
+}
+
+.rv-frame__dots span {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #dcdcdc;
+}
+
+.rv-frame__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rv-faint);
+}
+
+.rv-frame__body {
+  padding: 18px;
+}
+
+/* ── The ranked search card ──────────────────────────────────── */
+
+.rv-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border: 1px solid var(--rv-border);
+  border-radius: var(--rv-radius-sm);
+  background: var(--rv-white);
+  padding: 18px;
+}
+
+.rv-card__top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.rv-card__avatar {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--rv-primary-light);
+  font-family: var(--font-outfit), var(--font-inter), system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--rv-primary);
+}
+
+.rv-card__ident {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rv-card__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-outfit), var(--font-inter), system-ui, sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--rv-text);
+}
+
+/*
+  The surname placeholder. The real surname is NEVER in the DOM here — the
+  server sends a run of blocks, the same discipline splitName() follows on the
+  recruiter card, where the text under the blur is a decoy.
+*/
+.rv-card__masked {
+  display: inline-block;
+  border-radius: 4px;
+  background: repeating-linear-gradient(
+    90deg,
+    #d8d8d8 0 6px,
+    #e6e6e6 6px 9px
+  );
+  padding: 0 2px;
+  color: transparent;
+  user-select: none;
+}
+
+.rv-card__role {
+  font-size: 13px;
+  color: var(--rv-muted);
+}
+
+.rv-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.rv-badge--open {
+  background: var(--rv-ok-soft);
+  color: var(--rv-ok);
+}
+
+.rv-badge--track {
+  background: var(--rv-primary-tint);
+  color: var(--rv-primary);
+}
+
+.rv-badge--quiet {
+  background: var(--rv-lock-soft);
+  color: var(--rv-muted);
+}
+
+.rv-card__metas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rv-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--rv-border);
+  border-radius: 8px;
+  background: var(--rv-white);
+  padding: 4px 9px;
+  font-size: 12px;
+  color: var(--rv-text-2);
+}
+
+.rv-meta svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  stroke: var(--rv-faint);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.rv-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rv-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--rv-border);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--rv-text-2);
+}
+
+.rv-chip--verified {
+  border-color: rgba(var(--rv-primary-rgb), 0.28);
+  background: var(--rv-primary-tint);
+  color: var(--rv-primary);
+  font-weight: 500;
+}
+
+.rv-chip__tick {
+  width: 11px;
+  height: 11px;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.rv-card__evidence {
+  border-top: 1px dashed var(--rv-border);
+  padding-top: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--rv-text-2);
+}
+
+.rv-card__evidence strong {
+  font-weight: 600;
+  color: var(--rv-text);
+}
+
+/* ── Callout ─────────────────────────────────────────────────── */
+
+.rv-callout {
+  display: flex;
+  gap: 9px;
+  border-radius: var(--rv-radius-sm);
+  background: var(--rv-primary-tint);
+  padding: 12px 14px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--rv-text-2);
+}
+
+.rv-callout svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  stroke: var(--rv-primary);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  fill: none;
+}
+
+/* ── Ranking dimensions ──────────────────────────────────────── */
+
+.rv-meters {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--rv-border);
+  border-radius: var(--rv-radius);
+  background: var(--rv-white);
+  overflow: hidden;
+}
+
+.rv-meter {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  border-bottom: 1px solid var(--rv-border-soft);
+  padding: 16px 18px;
+}
+
+.rv-meter:last-child {
+  border-bottom: 0;
+}
+
+.rv-meter--rel {
+  background: #fbfbfb;
+}
+
+.rv-meter__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rv-meter__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--rv-text);
+}
+
+.rv-meter__value {
+  font-family: var(--font-outfit), var(--font-inter), system-ui, sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--rv-primary);
+}
+
+.rv-meter__none {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--rv-faint);
+}
+
+.rv-meter__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  background: var(--rv-primary-light);
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--rv-primary);
+}
+
+.rv-meter__tag svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+.rv-bar {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #ededed;
+}
+
+.rv-bar__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--rv-primary) 0%, #0a8494 100%);
+  transform-origin: left center;
+  animation: rv-grow 620ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+.rv-bar--dashed {
+  height: 7px;
+  border-radius: 999px;
+  border: 1px dashed var(--rv-border);
+  background: transparent;
+}
+
+@keyframes rv-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rv-bar__fill {
+    animation: none;
+  }
+}
+
+.rv-meter__caption {
+  max-width: 76ch;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--rv-muted);
+}
+
+.rv-meter__fact {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--rv-text-2);
+}
+
+/* ── The detail panel ────────────────────────────────────────── */
+
+.rv-panel {
+  border: 1px solid var(--rv-border);
+  border-radius: var(--rv-radius);
+  background: var(--rv-white);
+  overflow: hidden;
+}
+
+.rv-tabs {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--rv-border-soft);
+  padding: 0 8px;
+  scrollbar-width: none;
+}
+
+.rv-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.rv-tab {
+  position: relative;
+  flex-shrink: 0;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  padding: 14px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--rv-muted);
+  cursor: pointer;
+  transition: color 180ms ease;
+}
+
+.rv-tab:hover {
+  color: var(--rv-text);
+}
+
+.rv-tab[aria-selected="true"] {
+  font-weight: 600;
+  color: var(--rv-primary);
+}
+
+.rv-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset-inline: 10px;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--rv-primary);
+}
+
+.rv-tab:focus-visible {
+  outline: 2px solid var(--rv-primary);
+  outline-offset: -4px;
+  border-radius: 6px;
+}
+
+.rv-tabpanel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+}
+
+.rv-empty {
+  border: 1px dashed var(--rv-border);
+  border-radius: var(--rv-radius-sm);
+  padding: 22px 16px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--rv-muted);
+}
+
+.rv-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-left: 2px solid var(--rv-primary-light);
+  padding-left: 14px;
+}
+
+.rv-item__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.rv-item__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--rv-text);
+}
+
+.rv-item__where {
+  font-size: 13px;
+  color: var(--rv-text-2);
+}
+
+.rv-item__span {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--rv-faint);
+}
+
+.rv-item__body {
+  max-width: 76ch;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--rv-muted);
+  white-space: pre-line;
+}
+
+.rv-award {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--rv-border);
+  border-radius: var(--rv-radius-sm);
+  padding: 13px 14px;
+}
+
+.rv-award__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.rv-award__pill {
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--rv-ok-soft);
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--rv-ok);
+}
+
+.rv-kv {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.rv-kv__k {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--rv-faint);
+}
+
+.rv-kv__v {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--rv-text);
+}
+
+.rv-kv__pair {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* ── Findability ─────────────────────────────────────────────── */
+
+.rv-find {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rv-verdict {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  border: 1px solid var(--rv-border);
+  border-radius: var(--rv-radius);
+  background: var(--rv-white);
+  padding: 16px 18px;
+}
+
+.rv-verdict--yes {
+  border-color: rgba(25, 126, 35, 0.3);
+  background: #f4fdf7;
+}
+
+.rv-verdict--no {
+  border-color: rgba(170, 130, 29, 0.35);
+  background: #fffbf0;
+}
+
+.rv-verdict__icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+}
+
+.rv-verdict--yes .rv-verdict__icon {
+  background: var(--rv-ok);
+}
+
+.rv-verdict--no .rv-verdict__icon {
+  background: var(--rv-warn);
+}
+
+.rv-verdict__icon svg {
+  width: 14px;
+  height: 14px;
+  stroke: var(--rv-white);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.rv-verdict__text {
+  max-width: 62ch;
+  padding-top: 3px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--rv-text);
+}
+
+.rv-rows {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--rv-border);
+  border-radius: var(--rv-radius);
+  background: var(--rv-white);
+  overflow: hidden;
+}
+
+/*
+  Grid rather than flex so the fix button can drop under the text on a phone
+  instead of being squeezed beside it — at 375px the flex version left the
+  detail copy in a ~150px column and pushed the row past 230px tall.
+*/
+.rv-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: start;
+  gap: 4px 12px;
+  border-bottom: 1px solid var(--rv-border-soft);
+  padding: 15px 18px;
+}
+
+.rv-row:last-child {
+  border-bottom: 0;
+}
+
+.rv-row__icon {
+  grid-column: 1;
+  grid-row: 1;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  margin-top: 1px;
+}
+
+.rv-row__icon svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.rv-row--ok .rv-row__icon {
+  background: var(--rv-ok-soft);
+}
+.rv-row--ok .rv-row__icon svg {
+  stroke: var(--rv-ok);
+}
+
+.rv-row--gap .rv-row__icon {
+  background: var(--rv-warn-soft);
+}
+.rv-row--gap .rv-row__icon svg {
+  stroke: var(--rv-warn);
+}
+
+.rv-row--blocked .rv-row__icon {
+  background: var(--rv-lock-soft);
+}
+.rv-row--blocked .rv-row__icon svg {
+  stroke: var(--rv-lock);
+  stroke-width: 2;
+}
+
+.rv-row__body {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.rv-row__label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--rv-text);
+}
+
+.rv-row__detail {
+  max-width: 70ch;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--rv-muted);
+}
+
+.rv-row__fix {
+  grid-column: 2;
+  grid-row: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  justify-self: start;
+  margin-top: 8px;
+  min-height: 40px;
+  border-radius: 10px;
+  text-decoration: none;
+  background: var(--rv-primary-light);
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--rv-primary);
+  box-shadow: inset 0 -3px 11px 0 #a6d2d5;
+  transition: background-color 200ms ease;
+}
+
+.rv-row__fix:hover {
+  background: #c8e5e7;
+}
+
+.rv-row__fix:focus-visible {
+  outline: 2px solid var(--rv-primary);
+  outline-offset: 2px;
+}
+
+.rv-row__fix svg {
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+/* ── 90-day counters ─────────────────────────────────────────── */
+
+.rv-perf {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.rv-perf__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--rv-border);
+  border-radius: var(--rv-radius-sm);
+  background: var(--rv-white);
+  padding: 15px 16px;
+}
+
+.rv-perf__n {
+  font-family: var(--font-outfit), var(--font-inter), system-ui, sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--rv-primary);
+}
+
+.rv-perf__k {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--rv-text);
+}
+
+.rv-perf__sub {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--rv-muted);
+}
+
+/* ── Desktop ─────────────────────────────────────────────────── */
+
+@media (min-width: 768px) {
+  .rv-shell {
+    gap: 36px;
+    padding: 32px 24px 96px;
+  }
+
+  .rv-title {
+    font-size: 32px;
+  }
+
+  .rv-frame__body {
+    padding: 24px;
+  }
+
+  /* 236px, not 210: "Stack match" plus its "Set by the search" pill needs 223,
+     and at 210 that label and "Graded projects" both wrapped to two lines. */
+  .rv-meter {
+    grid-template-columns: 236px 1fr;
+    gap: 6px 22px;
+    align-items: center;
+    padding: 17px 22px;
+  }
+
+  .rv-meter__row {
+    grid-column: 1;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  .rv-meter__track {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .rv-meter__caption {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .rv-meter__label {
+    flex: 1;
+  }
+
+  /* Room for the fix button beside the text again. */
+  .rv-row {
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .rv-row__icon {
+    margin-top: 0;
+  }
+
+  .rv-row__fix {
+    grid-column: 3;
+    grid-row: 1;
+    margin-top: 0;
+  }
+}

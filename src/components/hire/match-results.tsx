@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { rememberEvidence } from "@/components/hire/evidence-cache";
 import Link from "next/link";
-import { ArrowRight, ShoppingCart } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
 import {
   MatchCard,
   type MatchCardData,
@@ -13,6 +13,12 @@ import {
 import { DeskMatchCard } from "@/components/hire/desk-match-card";
 import { VirtualCandidateCard } from "@/components/hire/virtual-candidate-card";
 import type { SampleDemand } from "@/components/hire/sample-card-notice";
+import {
+  MATCHES_PER_PAGE,
+  clampPage,
+  pageCount,
+  pageItems,
+} from "@/components/hire/match-pagination";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -68,12 +74,54 @@ export function MatchResults({
   // every render double-counted: the toggle moved it, and the refresh that
   // followed moved it again.
   const [count, setCount] = useState(cartCount);
+  const [page, setPage] = useState(1);
+  const listRef = useRef<HTMLUListElement>(null);
+  // The whole list, never the visible page: the evidence cache backs the
+  // inspector, which must still open a candidate the recruiter paged past.
   useEffect(() => {
     rememberEvidence(matches);
   }, [matches]);
-  const visible = viewAllHref ? matches.slice(0, INITIAL_VISIBLE) : matches;
-  const hidden = matches.length - visible.length;
+  // Back to page 1 whenever the underlying result set changes — a new search, a
+  // search-tab switch, the "Hide rejected" toggle.
+  //
+  // Two deliberate choices. The key is the refs, not the array: `scout-chat`
+  // rebuilds `matches` with .map() on every render, so anything keyed on the
+  // array itself would fire forever. And the reset is an adjustment during
+  // render rather than an effect — React re-runs this component before
+  // committing, with no cascading render and no flash of the wrong page.
+  const refsKey = useMemo(
+    () => matches.map((m) => m.candidateRef).join("|"),
+    [matches],
+  );
+  const [seenRefsKey, setSeenRefsKey] = useState(refsKey);
+  if (seenRefsKey !== refsKey) {
+    setSeenRefsKey(refsKey);
+    setPage(1);
+  }
+
+  // Paging applies to the FULL list only. The `viewAllHref` branch is a
+  // different product decision — one card plus a link to the rest — and its
+  // "View N more" count must keep meaning "what this link hides", not "what is
+  // on the other pages".
+  const paged = !viewAllHref && matches.length > MATCHES_PER_PAGE;
+  const totalPages = paged ? pageCount(matches.length) : 1;
+  const current = clampPage(page, totalPages);
+  const start = paged ? (current - 1) * MATCHES_PER_PAGE : 0;
+  const visible = viewAllHref
+    ? matches.slice(0, INITIAL_VISIBLE)
+    : paged
+      ? matches.slice(start, start + MATCHES_PER_PAGE)
+      : matches;
+  const hidden = viewAllHref ? matches.length - visible.length : 0;
   const showSamples = matches.length === 0 && (samples?.length ?? 0) > 0;
+
+  function goTo(next: number) {
+    setPage(clampPage(next, totalPages));
+    // In the click handler rather than an effect on `page`: the refsKey reset
+    // above also moves `page`, and scrolling there would yank the desk around
+    // after every search.
+    listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   return (
     <div className={desk ? "scout-results" : "space-y-4"}>
@@ -114,13 +162,13 @@ export function MatchResults({
       )}
 
       {visible.length > 0 && (
-        <ul className={desk ? "scout-results" : "space-y-4"}>
+        <ul ref={listRef} className={desk ? "scout-results" : "space-y-4"}>
           {visible.map((m, i) => (
             <li key={m.candidateRef}>
               {desk ? (
                 <DeskMatchCard
                   match={m}
-                  rank={i + 1}
+                  rank={start + i + 1}
                   selected={selectedRef === m.candidateRef}
                   onOpen={() => onOpen?.(m)}
                   onDecision={
@@ -134,7 +182,7 @@ export function MatchResults({
               ) : (
                 <MatchCard
                   match={m}
-                  rank={i + 1}
+                  rank={start + i + 1}
                   onCartToggle={(inCart) =>
                     setCount((c) => Math.max(0, c + (inCart ? 1 : -1)))
                   }
@@ -143,6 +191,54 @@ export function MatchResults({
             </li>
           ))}
         </ul>
+      )}
+
+      {paged && (
+        <nav className="scout-pager" aria-label="Search results pages">
+          <button
+            type="button"
+            className="scout-pager__step"
+            disabled={current === 1}
+            aria-label="Previous page"
+            onClick={() => goTo(current - 1)}
+          >
+            <ChevronLeft className="size-4" aria-hidden="true" />
+          </button>
+          {pageItems(current, totalPages).map((item, i) =>
+            item === "gap" ? (
+              <span key={`gap-${i}`} className="scout-pager__gap" aria-hidden="true">
+                &hellip;
+              </span>
+            ) : (
+              <button
+                key={item}
+                type="button"
+                className={cn(
+                  "scout-pager__n",
+                  item === current && "is-current",
+                )}
+                aria-current={item === current ? "page" : undefined}
+                aria-label={`Page ${item}`}
+                onClick={() => goTo(item)}
+              >
+                {item}
+              </button>
+            ),
+          )}
+          <button
+            type="button"
+            className="scout-pager__step"
+            disabled={current === totalPages}
+            aria-label="Next page"
+            onClick={() => goTo(current + 1)}
+          >
+            <ChevronRight className="size-4" aria-hidden="true" />
+          </button>
+          <span className="scout-pager__count">
+            {start + 1}&ndash;{Math.min(start + MATCHES_PER_PAGE, matches.length)} of{" "}
+            {matches.length}
+          </span>
+        </nav>
       )}
 
       {viewAllHref && hidden > 0 && (

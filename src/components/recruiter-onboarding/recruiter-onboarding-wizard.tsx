@@ -31,6 +31,9 @@ import { CompanyStep, COMPANY_FIELD_IDS, validateCompany } from "./steps/company
 import { CompleteStep } from "./steps/complete-step";
 import { IdentityStep, IDENTITY_FIELD_IDS, validateIdentity } from "./steps/identity-step";
 import { CodeStep, VerifyReviewStep } from "./steps/verify-step";
+import { Field, INPUT_CLASS } from "./onboarding-fields";
+import { PasswordInput } from "@/components/auth/password-input";
+import { PASSWORD_MIN_LENGTH } from "@/lib/validations/email-auth";
 import { WelcomeStep } from "./steps/welcome-step";
 
 /*
@@ -123,9 +126,12 @@ async function saveCompanyExtras(draft: OnboardingDraft): Promise<boolean> {
 
 export function RecruiterOnboardingWizard({
   initialScreen = "welcome",
+  passwordEnabled = false,
 }: {
   /** /recruiter-onboarding/signup starts at the first question. */
   initialScreen?: "welcome" | "identity";
+  /** Plan 154: offer an optional password on the code card. */
+  passwordEnabled?: boolean;
 }) {
   const track = useTrack();
   const motionMode = useMotionMode();
@@ -144,6 +150,9 @@ export function RecruiterOnboardingWizard({
   // Consent is given in the session it counts for, so it is not restored.
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [code, setCode] = useState("");
+  // Plan 154. Memory only: the draft goes to sessionStorage, a password never
+  // does.
+  const [password, setPassword] = useState("");
   const [devCode, setDevCode] = useState<string | null>(null);
   const [codeError, setCodeError] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -306,6 +315,12 @@ export function RecruiterOnboardingWizard({
       setCodeError("Enter the 6-digit code.");
       return;
     }
+    if (password && password.length < PASSWORD_MIN_LENGTH) {
+      setCodeError(
+        `Use at least ${PASSWORD_MIN_LENGTH} characters, or leave the password blank.`,
+      );
+      return;
+    }
     setCodeError(null);
     startTransition(async () => {
       const res = await registerRecruiterWithOtpAction({
@@ -315,12 +330,14 @@ export function RecruiterOnboardingWizard({
         code,
         acceptedTerms: true,
         newsletterOptIn: draft.newsletterOptIn,
+        ...(password ? { password } : {}),
       });
       if (!res.ok) {
         setCodeError(res.message);
         setCode("");
         return;
       }
+      setPassword("");
       track(ANALYTICS_EVENTS.recruiterRegSubmitted, { method: "otp" });
       update({ registered: true });
 
@@ -481,12 +498,32 @@ export function RecruiterOnboardingWizard({
             onResend={() => resendCode("register")}
             onBack={() => {
               setCode("");
+              setPassword("");
               setDevCode(null);
               setCodeError(null);
               go("verify", -1);
             }}
             onSubmit={register}
-          />
+          >
+            {passwordEnabled ? (
+              <Field
+                id="ob-register-password"
+                label="Password"
+                optional
+                hint={`Sign in with it next time instead of a code. At least ${PASSWORD_MIN_LENGTH} characters.`}
+              >
+                <PasswordInput
+                  id="ob-register-password"
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={pending}
+                  className={INPUT_CLASS}
+                  aria-describedby="ob-register-password-hint"
+                />
+              </Field>
+            ) : null}
+          </CodeStep>
         );
       case "signin-code":
         return (

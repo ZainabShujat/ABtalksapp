@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, X } from "lucide-react";
 import {
-  EVENTS,
+  WorkshopIcon,
   fullDate,
   isPastEvent,
   istTodayKey,
+  type WorkshopEvent,
 } from "@/components/workshop/events-data";
 
 // Bump the version suffix to show the popup again after changing its content.
@@ -21,10 +22,16 @@ const EVENT_ID = "ai-hackathon-48h";
  * Server -> Client boundary, and it lives inside `.wk-root` so the page's
  * brand custom properties cascade into it.
  */
-export default function HackathonPromoModal() {
+
+
+export default function HackathonPromoModal({
+  events,
+}: {
+  events: WorkshopEvent[];
+}) {
   const [open, setOpen] = useState(false);
 
-  const event = EVENTS.find((e) => e.id === EVENT_ID);
+  const event = events.find((e) => e.id === EVENT_ID);
 
   useEffect(() => {
     if (!event?.href) return;
@@ -117,7 +124,7 @@ export default function HackathonPromoModal() {
                 border: `1px solid ${event.accent}45`,
               }}
             >
-              <event.Icon size={12} strokeWidth={2.25} />
+              <WorkshopIcon name={event.iconName} size={12} strokeWidth={2.25} />
               {event.tag}
             </span>
 

@@ -25,6 +25,7 @@ import {
   type PrismaClient,
 } from "@prisma/client";
 import { prisma } from "../src/lib/db";
+import { hashPassword } from "../src/lib/password";
 import {
   cohortSlugForProgramCohort,
   mintProgressRowId,
@@ -189,14 +190,14 @@ async function ensureUser(
   if (existing) {
     await db.user.update({
       where: { id: existing.id },
-      data: { password: DEV_PASSWORD, name, role },
+      data: { password: await hashPassword(DEV_PASSWORD), name, role },
     });
     return existing.id;
   }
   const created = await db.user.create({
     data: {
       email,
-      password: DEV_PASSWORD,
+      password: await hashPassword(DEV_PASSWORD),
       name,
       role,
       emailVerified: new Date(),

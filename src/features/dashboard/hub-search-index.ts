@@ -6,7 +6,7 @@ import type {
 } from "@/components/dashboard-hub/mock-interviews";
 import { NAV_ITEMS } from "@/components/dashboard-hub/nav-items";
 import { DASHBOARD_FAQ } from "@/components/dashboard-hub/faq-content";
-import { EVENTS } from "@/components/workshop/events-data";
+import type { WorkshopEvent } from "@/components/workshop/events-data";
 import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 
 export const HUB_SEARCH_GROUPS = [
@@ -69,11 +69,14 @@ export type HubSearchIndexInput = {
   hasPowerBiAccess: boolean;
   hasSnowflakeAccess: boolean;
   hasDatabricksAiAccess: boolean;
+  hasLangchainAccess: boolean;
   isAdmin: boolean;
   claudeEnabled: boolean;
   programEnabled: boolean;
   mock: AvailableMockInterview[];
   cohort: AvailableCohortInterview[];
+  /** The workshop catalogue; the schedule is database-backed since plan 163. */
+  workshopEvents: readonly WorkshopEvent[];
 };
 
 function trackHref(
@@ -301,7 +304,19 @@ export function buildHubSearchIndex(input: HubSearchIndexInput): HubSearchItem[]
     });
   }
 
-  for (const event of EVENTS) {
+  if (input.hasLangchainAccess) {
+    items.push({
+      id: "prep:langchain",
+      group: "Prep Kit",
+      title: "LangChain & LangGraph Cohort",
+      subtitle: "Go from your first LLM call to a deployed LangGraph agent in 31 days.",
+      href: "/program/langchain",
+      keywords:
+        "prep kit langchain langgraph llm rag agents agentic ai langsmith mcp generative ai 31 days",
+    });
+  }
+
+  for (const event of input.workshopEvents) {
     items.push({
       id: `event:${event.id}`,
       group: "Events",

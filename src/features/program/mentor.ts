@@ -70,8 +70,8 @@ export async function reviewMission(
 > {
   const member = await findAiCohortMembershipByMemberId(memberId);
   if (!member) return { ok: false, message: "Member not found." };
-  if (await isCohortFrozen(member.cohort)) {
-    return { ok: false, message: "This cohort has ended." };
+  if (isCohortFrozen(member.cohort)) {
+    return { ok: false, message: "This cohort is closed." };
   }
 
   const submission = await findPassedCanonicalMission(memberId, dayNumber);

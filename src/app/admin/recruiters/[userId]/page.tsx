@@ -159,7 +159,7 @@ export default async function AdminRecruiterDetailPage({
             value={
               [
                 ...account.signInProviders,
-                ...(account.hasPassword ? ["dev password"] : []),
+                ...(account.hasPassword ? ["password"] : []),
               ].join(", ") || "Email code only"
             }
           />

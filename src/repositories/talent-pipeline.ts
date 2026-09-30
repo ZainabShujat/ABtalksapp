@@ -380,6 +380,26 @@ export async function moveStage(
 }
 
 /**
+ * The candidate on one of this recruiter's pipeline cards, or null. Same
+ * ownership scope as `moveStage` — an itemId on another recruiter's list
+ * resolves to null. Read-only; used by the applications write-back
+ * (features/pipeline-convergence/sync-application-status.ts).
+ */
+export async function getPipelineItemCandidateId(
+  workspace: PipelineWorkspace,
+  itemId: string,
+): Promise<string | null> {
+  const item = await prisma.talentListItem.findFirst({
+    where: {
+      id: itemId,
+      talentList: { ownerRecruiterId: workspace.recruiterProfileId },
+    },
+    select: { candidateUserId: true },
+  });
+  return item?.candidateUserId ?? null;
+}
+
+/**
  * Remove a candidate from the recruiter's pipeline. Same ownership guard as
  * `moveStage` — deleteMany scopes through the parent list, so an itemId from
  * a different recruiter's list is a silent no-op we surface as not-found.

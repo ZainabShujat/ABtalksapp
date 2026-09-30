@@ -123,4 +123,27 @@ export type RecruiterProfileDetails = {
   industry: string | null;
   companySize: string | null;
   location: string | null;
+  /**
+   * The company logo (plan 158). Read-only as far as this schema is concerned:
+   * it is absent from `updateRecruiterProfileSchema` on purpose, so the only
+   * value that can ever reach `Organization.logoUrl` is a blob URL the upload
+   * action itself got back from storage — never text a client sent.
+   */
+  logoUrl: string | null;
 };
+
+/** 2 MB, the same ceiling as a candidate avatar. */
+export const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+
+/**
+ * SVG is excluded deliberately: it is a script-bearing document format and the
+ * logo store is public. PNG and WebP cover transparent logos, which is the only
+ * thing SVG would have been wanted for here.
+ */
+export const LOGO_MIME_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
+
+export type LogoMimeType = (typeof LOGO_MIME_TYPES)[number];
+
+export function isAllowedLogoMimeType(value: string): value is LogoMimeType {
+  return (LOGO_MIME_TYPES as readonly string[]).includes(value);
+}

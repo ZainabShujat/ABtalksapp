@@ -17,6 +17,7 @@ import {
   countEnrolledProgramMembers,
   findAiCohortMembershipByUserCohort,
 } from "@/repositories/program-state";
+import { cohortSlugForProgramCohort } from "@/repositories/ids";
 import {
   findAppliedMembership,
   findWaitlistedMembership,
@@ -96,6 +97,15 @@ export type EntryState =
   | { screen: "enrolled" }
   | { screen: "waitlisted" };
 
+/**
+ * Open to join while an admin keeps the cohort enrolling or active (plan 157).
+ * A rolling cohort keeps taking joiners after kickoff; closing it is an admin
+ * act on the status, never a date.
+ */
+function isCohortOpen(status: string): boolean {
+  return status === "ENROLLING" || status === "ACTIVE";
+}
+
 function shuffle<T>(items: T[]): T[] {
   const arr = [...items];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -120,18 +130,32 @@ async function getWaitlistedMembership(userId: string) {
   return findWaitlistedMembership(userId);
 }
 
-/** Capacity-checked enroll or waitlist + Day-start bootstrap when enrolled. */
+/**
+ * Enroll, or waitlist when the admin has set an explicit cap.
+ *
+ * Capacity is read from the canonical `Cohort` row — the same row every other
+ * member-facing read uses — where **null means unlimited** (plan 157). This is
+ * the only capacity gate on the platform: the challenge track and the
+ * snowflake / databricks / databricks-ai / powerbi / ds-architect tracks have
+ * never had one, and an open rolling cohort should not either. `ProgramCohort`
+ * is not consulted; its `capacity` is a non-nullable admin-facing column that
+ * cannot express "unlimited".
+ */
 async function enrollOrWaitlist(
   tx: Prisma.TransactionClient,
   userId: string,
   cohortId: string,
 ): Promise<"ENROLLED" | "WAITLISTED"> {
-  const cohort = await tx.programCohort.findUnique({
-    where: { id: cohortId },
+  const cohort = await tx.cohort.findUnique({
+    where: { slug: cohortSlugForProgramCohort(cohortId) },
     select: { capacity: true },
   });
-  const enrolledCount = await countEnrolledProgramMembers(tx, cohortId);
-  const hasRoom = !!cohort && enrolledCount < cohort.capacity;
+  const capacity = cohort?.capacity ?? null;
+  let hasRoom = true;
+  if (capacity !== null) {
+    const enrolledCount = await countEnrolledProgramMembers(tx, cohortId);
+    hasRoom = enrolledCount < capacity;
+  }
 
   const memberAfter = await applyProgramMembershipChange(tx, {
     userId,
@@ -180,7 +204,7 @@ export async function getEntryState(
       return { screen: "in_progress", attemptId: inProgress.id };
     }
 
-    if (cohort.status !== "ENROLLING") {
+    if (!isCohortOpen(cohort.status)) {
       return { screen: "closed", cohortName: cohort.name };
     }
 
@@ -218,7 +242,7 @@ export async function getEntryState(
 
   const cohort = await getCohortByJoinCode(rawCode);
   if (!cohort) return { screen: "invalid_code" };
-  if (cohort.status !== "ENROLLING") {
+  if (!isCohortOpen(cohort.status)) {
     return { screen: "closed", cohortName: cohort.name };
   }
 
@@ -239,7 +263,7 @@ export async function createApplication(
   if (!cohort) {
     return { ok: false, message: "Invalid cohort join code." };
   }
-  if (cohort.status !== "ENROLLING") {
+  if (!isCohortOpen(cohort.status)) {
     return { ok: false, message: "Applications for this cohort are closed." };
   }
 
@@ -372,7 +396,7 @@ export async function startEntryAttempt(
   const resumable = await getActiveAssessment(userId);
   if (resumable) return { ok: true, ...resumable };
 
-  if (cohort.status !== "ENROLLING") {
+  if (!isCohortOpen(cohort.status)) {
     return { ok: false, message: "Applications for this cohort are closed." };
   }
 
@@ -455,7 +479,7 @@ export async function peekJoinCode(code: string) {
   if (!cohort) {
     return { ok: false as const, message: "Invalid cohort join code." };
   }
-  if (cohort.status !== "ENROLLING") {
+  if (!isCohortOpen(cohort.status)) {
     return {
       ok: false as const,
       message: "Applications for this cohort are closed.",

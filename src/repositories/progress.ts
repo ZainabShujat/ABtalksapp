@@ -339,10 +339,22 @@ async function listDatabricksAiAttemptTimes(userId: string): Promise<Date[]> {
   return rows.map((r) => r.submittedAt ?? r.createdAt);
 }
 
+/** LangChain & LangGraph mission runs — every run, pass or fail. */
+async function listLangchainAttemptTimes(userId: string): Promise<Date[]> {
+  const rows = await prisma.activityAttempt.findMany({
+    where: {
+      enrollment: { userId },
+      activityId: { startsWith: "act_lcg_day_" },
+    },
+    select: { submittedAt: true, createdAt: true },
+  });
+  return rows.map((r) => r.submittedAt ?? r.createdAt);
+}
+
 /**
  * Every submission the hub heatmap and streak card count, across all tracks
  * the user can be in: 60-Day Challenge, AI Cohort, Databricks, DS Architect,
- * Power BI, Snowflake, Databricks Data & AI.
+ * Power BI, Snowflake, Databricks Data & AI, LangChain & LangGraph.
  */
 export async function listHubSubmissionTimes(
   userId: string,
@@ -355,6 +367,7 @@ export async function listHubSubmissionTimes(
     powerBi,
     snowflake,
     databricksAi,
+    langchain,
   ] = await Promise.all([
     listChallengeSubmissionTimes(userId),
     listProgramMissionTimes(userId),
@@ -363,6 +376,7 @@ export async function listHubSubmissionTimes(
     listPowerBiAttemptTimes(userId),
     listSnowflakeAttemptTimes(userId),
     listDatabricksAiAttemptTimes(userId),
+    listLangchainAttemptTimes(userId),
   ]);
   return [
     ...challenge,
@@ -372,6 +386,7 @@ export async function listHubSubmissionTimes(
     ...powerBi,
     ...snowflake,
     ...databricksAi,
+    ...langchain,
   ];
 }
 
@@ -727,22 +742,37 @@ export async function listProgramRecentMissionAttempts(
       },
     },
     orderBy: { submittedAt: "desc" },
-    take,
   });
 
-  return rows.flatMap((row) => {
+  // Only cleared days belong in VIEW STATS, one row per day, newest first.
+  // Unlike the per-track repositories this cannot filter on
+  // `ActivityAttempt.passed` in the query: the authoritative evaluation is the
+  // source of truth here and can disagree with the attempt row in either
+  // direction, so the verdict has to be derived first and filtered after.
+  const seen = new Set<number>();
+  const out: Array<{
+    dayNumber: number;
+    passed: boolean;
+    verdict: Prisma.JsonValue | null;
+    createdAt: Date;
+    payload: unknown;
+  }> = [];
+  for (const row of rows) {
     const dayNumber = row.activity.dayNumber;
-    if (dayNumber == null) return [];
-    return [
-      {
-        dayNumber,
-        passed: row.evaluations[0]?.passed ?? row.passed,
-        verdict: row.evaluations[0]?.detailJson ?? null,
-        createdAt: row.submittedAt ?? row.createdAt,
-        payload: row.payload,
-      },
-    ];
-  });
+    if (dayNumber == null || seen.has(dayNumber)) continue;
+    const passed = row.evaluations[0]?.passed ?? row.passed;
+    if (!passed) continue;
+    seen.add(dayNumber);
+    out.push({
+      dayNumber,
+      passed,
+      verdict: row.evaluations[0]?.detailJson ?? null,
+      createdAt: row.submittedAt ?? row.createdAt,
+      payload: row.payload,
+    });
+    if (out.length === take) break;
+  }
+  return out;
 }
 
 export async function getProgramUnlockFloor(

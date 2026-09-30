@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { RecruiterAccountOps } from "@/components/admin/account-ops-dialog";
+import { DeleteRecruiterDialog } from "@/components/admin/delete-recruiter-dialog";
 
 type RecruiterRow = {
   id: string;
@@ -20,7 +21,9 @@ type RecruiterRow = {
  * The recruiter directory.
  *
  * Server Component: each row mounts RecruiterAccountOps (client) for disable /
- * restore / secure. No password field.
+ * restore / secure, and DeleteRecruiterDialog for permanent deletion. Disable
+ * is the reversible operation; the delete is not. No password field — an
+ * admin-issued password is shown once at creation and never again.
  */
 export function AdminRecruitersPanel({
   recruiters,
@@ -66,11 +69,16 @@ export function AdminRecruitersPanel({
                   year: "numeric",
                 })}
               </p>
-              <div className="mt-3">
+              <div className="mt-3 flex flex-wrap items-center gap-2">
                 <RecruiterAccountOps
                   userId={row.userId}
                   name={row.fullName}
                   disabledAt={row.disabledAt}
+                />
+                <DeleteRecruiterDialog
+                  userId={row.userId}
+                  name={row.fullName}
+                  company={row.company}
                 />
               </div>
             </div>

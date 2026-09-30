@@ -1,0 +1,122 @@
+[
+  {
+    "slug": "lc-word-count",
+    "title": "Rough token estimate (Python)",
+    "language": "PYTHON",
+    "moduleNumber": 1,
+    "order": 1,
+    "description": "Count the words in a prompt as a rough stand-in for tokens.",
+    "starterCode": "text = \"LangChain makes LLM apps easier to build\"\nprint(len(text.split()))\n",
+    "expectedOutput": "7"
+  },
+  {
+    "slug": "lc-format-messages",
+    "title": "Format chat messages (Python)",
+    "language": "PYTHON",
+    "moduleNumber": 1,
+    "order": 2,
+    "description": "Print each role and text pair joined by a separator, the way a prompt log looks.",
+    "starterCode": "messages = [(\"system\", \"Be brief\"), (\"human\", \"Hi\")]\nprint(\" | \".join(f\"{role}: {text}\" for role, text in messages))\n",
+    "expectedOutput": "system: Be brief | human: Hi"
+  },
+  {
+    "slug": "lc-chunk-overlap",
+    "title": "Chunk with overlap (Python)",
+    "language": "PYTHON",
+    "moduleNumber": 2,
+    "order": 3,
+    "description": "Split a string into chunks of 4 characters with 1 character of overlap.",
+    "starterCode": "text = \"abcdefghij\"\nsize, overlap = 4, 1\nstep = size - overlap\nchunks = [text[i:i + size] for i in range(0, len(text) - overlap, step)]\nprint(chunks)\n",
+    "expectedOutput": "['abcd', 'defg', 'ghij']"
+  },
+  {
+    "slug": "lc-cosine",
+    "title": "Cosine similarity (Python)",
+    "language": "PYTHON",
+    "moduleNumber": 2,
+    "order": 4,
+    "description": "Compute the cosine similarity of two vectors that point in the same direction.",
+    "starterCode": "import math\na = [1, 2, 3]\nb = [2, 4, 6]\ndot = sum(x * y for x, y in zip(a, b))\nnorm = math.sqrt(sum(x * x for x in a)) * math.sqrt(sum(y * y for y in b))\nprint(round(dot / norm, 2))\n",
+    "expectedOutput": "1.0"
+  },
+  {
+    "slug": "lc-rrf",
+    "title": "Reciprocal Rank Fusion (Python)",
+    "language": "PYTHON",
+    "moduleNumber": 2,
+    "order": 5,
+    "description": "Fuse two ranked result lists with RRF (k = 60) and print the final order.",
+    "starterCode": "lists = [[\"a\", \"b\", \"c\"], [\"b\", \"c\", \"d\"]]\nscores = {}\nfor results in lists:\n    for rank, doc in enumerate(results, start=1):\n        scores[doc] = scores.get(doc, 0) + 1 / (60 + rank)\nprint(sorted(scores, key=scores.get, reverse=True))\n",
+    "expectedOutput": "['b', 'c', 'a', 'd']"
+  },
+  {
+    "slug": "lc-skill-gap",
+    "title": "Skill gap (Python)",
+    "language": "PYTHON",
+    "moduleNumber": 3,
+    "order": 6,
+    "description": "Return the required skills the candidate does not have, ignoring case.",
+    "starterCode": "have = {s.lower() for s in [\"Python\", \"SQL\"]}\nrequired = [\"Python\", \"Docker\", \"AWS\"]\nprint([s for s in required if s.lower() not in have])\n",
+    "expectedOutput": "['Docker', 'AWS']"
+  },
+  {
+    "slug": "lc-tool-dispatch",
+    "title": "Dispatch a tool call (Python)",
+    "language": "PYTHON",
+    "moduleNumber": 3,
+    "order": 7,
+    "description": "Run the tool named in a model-style tool call with its arguments.",
+    "starterCode": "tools = {\"add\": lambda a, b: a + b, \"mul\": lambda a, b: a * b}\ncall = {\"name\": \"mul\", \"args\": {\"a\": 6, \"b\": 7}}\nprint(tools[call[\"name\"]](**call[\"args\"]))\n",
+    "expectedOutput": "42"
+  },
+  {
+    "slug": "lc-reducer",
+    "title": "Apply a list reducer (Python)",
+    "language": "PYTHON",
+    "moduleNumber": 4,
+    "order": 8,
+    "description": "Merge node updates into state by adding lists, like operator.add in LangGraph.",
+    "starterCode": "state = {\"steps\": [\"start\"]}\nupdates = [{\"steps\": [\"a\"]}, {\"steps\": [\"b\"]}]\nfor u in updates:\n    state[\"steps\"] = state[\"steps\"] + u[\"steps\"]\nprint(state[\"steps\"])\n",
+    "expectedOutput": "['start', 'a', 'b']"
+  },
+  {
+    "slug": "lc-router",
+    "title": "Loop router (Python)",
+    "language": "PYTHON",
+    "moduleNumber": 4,
+    "order": 9,
+    "description": "Route back to the writer while the score is below 8 and fewer than 3 attempts were used.",
+    "starterCode": "def route(score, attempts):\n    return \"write\" if score < 8 and attempts < 3 else \"end\"\nprint(route(6, 1), route(9, 1), route(5, 3))\n",
+    "expectedOutput": "write end end"
+  },
+  {
+    "slug": "lc-redact-email",
+    "title": "Redact an email (Python)",
+    "language": "PYTHON",
+    "moduleNumber": 5,
+    "order": 10,
+    "description": "Replace an email address with a redaction token.",
+    "starterCode": "import re\ntext = \"Contact asha.k@example.com today\"\nprint(re.sub(r\"[\\w.+-]+@[\\w-]+\\.[\\w.-]+\", \"[REDACTED_EMAIL]\", text))\n",
+    "expectedOutput": "Contact [REDACTED_EMAIL] today"
+  },
+  {
+    "slug": "lc-average-score",
+    "title": "Overall interview score (Python)",
+    "language": "PYTHON",
+    "moduleNumber": 6,
+    "order": 11,
+    "description": "Average the answer scores and round to 1 decimal place.",
+    "starterCode": "scores = [7, 4, 9, 6]\nprint(round(sum(scores) / len(scores), 1))\n",
+    "expectedOutput": "6.5"
+  },
+  {
+    "slug": "lc-score-band",
+    "title": "Score bands (Python)",
+    "language": "PYTHON",
+    "moduleNumber": 6,
+    "order": 12,
+    "description": "Map scores to low (1 to 4), mid (5 to 7) or high (8 to 10).",
+    "starterCode": "def band(s):\n    return \"low\" if s <= 4 else \"mid\" if s <= 7 else \"high\"\nprint([band(s) for s in [3, 5, 8, 10]])\n",
+    "expectedOutput": "['low', 'mid', 'high', 'high']"
+  }
+]

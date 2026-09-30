@@ -66,6 +66,8 @@ export type JobCardRow = {
   type: JobType;
   skills: string[];
   postedLabel: string;
+  /** "2+ years", or null when the posting does not say. Pre-formatted, as above. */
+  experienceLabel: string | null;
   /** True when this candidate already has an application row for the job. */
   applied: boolean;
 };
@@ -98,4 +100,18 @@ export function formatPostedLabel(posted: Date, now: Date = new Date()): string 
   if (weeks < 5) return `${weeks} weeks ago`;
   const months = Math.floor(days / 30);
   return months <= 1 ? "1 month ago" : `${months} months ago`;
+}
+
+/**
+ * "2+ years" for a job card, or null when there is nothing worth showing.
+ *
+ * Null below one year on purpose. A posting that asks for 0 is saying "no
+ * experience needed", and "0+ years" states that badly — the card shows no
+ * pill instead, which is also what a posting that never answered does. The two
+ * are stored differently and only render the same way.
+ */
+export function formatExperienceLabel(min: number | null): string | null {
+  if (min === null || !Number.isFinite(min) || min < 1) return null;
+  const years = Math.floor(min);
+  return years === 1 ? "1+ year" : `${years}+ years`;
 }

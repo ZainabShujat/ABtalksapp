@@ -1,6 +1,7 @@
 "use server";
 
 import { Domain } from "@prisma/client";
+import { z } from "zod";
 import { HACKATHON } from "@/components/hackathon/hackathon-config";
 import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
@@ -13,10 +14,21 @@ import { getMissingStudentsForDay } from "@/features/admin/get-missing-by-day";
 import { getReferrersInRange } from "@/features/admin/get-referrals-report";
 import { getSubmissionsFeed } from "@/features/admin/get-submissions-feed";
 import { getHackathonSubmissionsFeed } from "@/features/admin/get-hackathon-submissions-feed";
+import {
+  COHORT_STATUSES,
+  getCohortDetail,
+} from "@/features/admin/get-cohorts";
 import { listCandidateProfiles } from "@/repositories/candidate";
 import { listChallengePeRows } from "@/repositories/enrollment-state";
 
 const SUBMISSIONS_EXPORT_CAP = 10_000;
+const COHORT_EXPORT_CAP = 10_000;
+
+const cohortExportSchema = z.object({
+  cohortId: z.string().min(1).max(64),
+  status: z.enum([...COHORT_STATUSES, "ALL"]).optional(),
+  search: z.string().max(200).optional(),
+});
 
 async function requireAdminExport() {
   const admin = await requireAdmin();
@@ -344,5 +356,41 @@ export async function getReferrersForExport(range: {
     Name: r.fullName,
     Email: r.email,
     "Referral Count": r.referralCount,
+  }));
+}
+
+/**
+ * Plan 156 — full roster for one cohort. `Joined At` is
+ * ProgramEnrollment.joinedAt; createdAt is the plan-078 backfill date and is
+ * deliberately not exported.
+ */
+export async function getCohortRosterForExport(filters: {
+  cohortId: string;
+  status?: string;
+  search?: string;
+}) {
+  await requireAdminExport();
+  const parsed = cohortExportSchema.parse(filters);
+
+  const detail = await getCohortDetail({
+    cohortId: parsed.cohortId,
+    status: parsed.status ?? "ALL",
+    search: parsed.search,
+    limit: COHORT_EXPORT_CAP,
+  });
+  if (!detail) return [];
+
+  return detail.rows.map((r) => ({
+    Name: r.fullName,
+    Email: r.email,
+    Status: r.status,
+    "Joined At (IST)": r.joinedAtLabel,
+    "Joined At (UTC)": r.joinedAtIso,
+    "Completed Activities": r.completedActivities,
+    "Total Activities": r.totalActivities,
+    "Current Streak": r.currentStreak,
+    "Repo URL": r.githubRepoUrl ?? "",
+    "User ID": r.userId,
+    "Enrollment ID": r.enrollmentId,
   }));
 }

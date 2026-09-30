@@ -62,3 +62,20 @@ export function useTrack() {
     [choice, ready],
   );
 }
+
+const PROGRAM_REGISTRATION_SEND_TO = "AW-18456978326/NG4TCOnlroMdEJbH_OBE";
+
+/**
+ * Google Ads "Program registration completed".
+ * Call only after a Snowflake or Databricks AI enrolment action returns ok.
+ */
+export function useProgramRegistrationConversion() {
+  const { choice, ready } = useCookieConsent();
+
+  return useCallback(() => {
+    if (!ready || choice !== "all") return;
+    const gtag = typeof window === "undefined" ? undefined : window.gtag;
+    if (typeof gtag !== "function") return;
+    gtag("event", "conversion", { send_to: PROGRAM_REGISTRATION_SEND_TO });
+  }, [choice, ready]);
+}

@@ -41,8 +41,14 @@ export async function createOrUpdateCohortAction(
   const result = await createOrUpdateCohort(admin.userId, {
     cohortId: parsed.data.cohortId,
     name: parsed.data.name,
-    startsAt: fromZonedTime(parsed.data.startsAt, PROGRAM_TZ),
-    endsAt: fromZonedTime(parsed.data.endsAt, PROGRAM_TZ),
+    // Blank means rolling — no shared window (plan 157).
+    startsAt: parsed.data.startsAt
+      ? fromZonedTime(parsed.data.startsAt, PROGRAM_TZ)
+      : null,
+    endsAt: parsed.data.endsAt
+      ? fromZonedTime(parsed.data.endsAt, PROGRAM_TZ)
+      : null,
+    // null = unlimited (plan 157).
     capacity: parsed.data.capacity,
     requiresJoinCode: parsed.data.requiresJoinCode,
   });

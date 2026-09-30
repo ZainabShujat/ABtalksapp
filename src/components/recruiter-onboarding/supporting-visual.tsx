@@ -80,11 +80,11 @@ const SCENE = { w: 600, h: 540 } as const;
 const BASE_TILT = { x: 4, y: -6 } as const;
 
 const CAPTIONS: Record<VisualStage, string> = {
-  welcome: "Search, shortlist and reach out — one workspace",
+  welcome: "Search, shortlist and reach out in one workspace",
   identity: "How you appear when you reach out to candidates",
   company: "Your company card on outreach and job posts",
   verify: "A verified work email keeps the talent pool trusted",
-  account: "Account created — one sign-in code to go",
+  account: "Account created. One sign-in code to go",
   complete: "Your recruiting workspace",
   signin: "Your workspace, where you left it",
 };

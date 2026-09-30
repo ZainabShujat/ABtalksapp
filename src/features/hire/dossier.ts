@@ -22,7 +22,7 @@ import type {
   ScoreDimension,
 } from "@/features/hire/types";
 import { PROGRAM_TOTAL_DAYS } from "@/features/program/constants";
-import { getCohortCalendarDay } from "@/features/program/progression";
+import { getMemberCalendarDay } from "@/features/program/progression";
 
 /**
  * The identifying fields a dossier deliberately refuses to carry.
@@ -286,7 +286,8 @@ export async function buildDossierSet(
           }
         : null;
 
-    const cohortDay = getCohortCalendarDay({ startsAt: m.cohort.startsAt });
+    // Each member's own day, from their enrollment anchor (plan 157).
+    const cohortDay = getMemberCalendarDay({ startedAt: m.startedAt });
     cohortDayByMember.set(m.id, cohortDay);
 
     const av = availability.get(m.userId) ?? null;

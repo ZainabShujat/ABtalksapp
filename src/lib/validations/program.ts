@@ -160,15 +160,26 @@ export const cohortFormSchema = z
   .object({
     cohortId: z.string().cuid().optional(),
     name: z.string().trim().min(1).max(120),
-    startsAt: z.string().min(1),
-    endsAt: z.string().min(1),
-    capacity: z.coerce.number().int().min(1).max(100),
+    // Both blank on a rolling cohort: every member runs their own 31 days from
+    // the day they join, so there is no shared window to record (plan 157).
+    startsAt: z.string().default(""),
+    endsAt: z.string().default(""),
+    // Blank means unlimited (plan 157). Was a required max(100), which silently
+    // waitlisted the 101st applicant to an open-enrollment cohort.
+    capacity: z
+      .union([z.literal(""), z.coerce.number().int().min(1).max(1_000_000)])
+      .optional()
+      .transform((v) => (v === "" || v === undefined ? null : v)),
     requiresJoinCode: z.boolean().default(true),
   })
-  .refine((d) => new Date(d.startsAt) < new Date(d.endsAt), {
-    message: "Start must be before end.",
-    path: ["endsAt"],
-  });
+  .refine(
+    (d) =>
+      !d.startsAt || !d.endsAt || new Date(d.startsAt) < new Date(d.endsAt),
+    {
+      message: "Start must be before end.",
+      path: ["endsAt"],
+    },
+  );
 
 export const cohortStatusSchema = z.object({
   cohortId: z.string().cuid(),

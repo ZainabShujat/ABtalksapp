@@ -84,6 +84,15 @@ export type TrackLoadOpts = {
   minEvidenceDays: number;
   /** Ceiling on rows pulled before ranking. */
   limit: number;
+  /**
+   * The brief's skills, used by the PROFILE track to choose WHO is considered
+   * rather than loading the newest `limit` candidates and ranking those
+   * (plan 161 §2g). Empty or absent keeps the previous behaviour.
+   *
+   * Only PROFILE reads it: the cohort tracks are already bounded by enrolment,
+   * so recency is not the selection there.
+   */
+  skills?: string[];
 };
 
 const emptyLoad = (slug: string): TrackLoad => ({
@@ -289,7 +298,10 @@ async function loadHackathon(): Promise<TrackLoad> {
  * would be reporting a bar nobody was being measured against.
  */
 async function loadProfile(opts: TrackLoadOpts): Promise<TrackLoad> {
-  const set = await buildProfileDossierSet({ limit: opts.limit });
+  const set = await buildProfileDossierSet({
+    limit: opts.limit,
+    skills: opts.skills,
+  });
   const dossiers = set.dossiers;
 
   return {

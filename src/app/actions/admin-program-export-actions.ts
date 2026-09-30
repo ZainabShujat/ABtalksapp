@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { assertRateLimit } from "@/lib/rate-limit";
 import { getInterviewSignals } from "@/features/interview/read-model";
 import { getAtRiskMembers } from "@/features/program/commits";
-import { getCohortCalendarDay } from "@/features/program/progression";
+import { getMemberCalendarDay } from "@/features/program/progression";
 import { getAdminProgramCohort } from "@/features/program/admin";
 import { cohortIdSchema } from "@/lib/validations/program";
 import {
@@ -68,13 +68,6 @@ export async function exportProgramAtRiskAction(input: unknown) {
   const parsed = cohortIdSchema.safeParse(input);
   if (!parsed.success) return { ok: false as const, message: "Invalid cohort." };
 
-  const cohort = await prisma.programCohort.findUnique({
-    where: { id: parsed.data.cohortId },
-    select: { startsAt: true },
-  });
-  if (!cohort) return { ok: false as const, message: "Cohort not found." };
-
-  const cohortDay = getCohortCalendarDay(cohort);
   const atRisk = await getAtRiskMembers(parsed.data.cohortId);
   const members = await listAiCohortMemberships({
     memberIds: atRisk.map((a) => a.memberId),
@@ -95,7 +88,10 @@ export async function exportProgramAtRiskAction(input: unknown) {
         email: m ? (emailByUser.get(m.userId) ?? "") : "",
         company: m?.company ?? "",
         reasons: a.reasons.join("; "),
-        behindBy: m ? Math.max(0, cohortDay - m.highestUnlockedDay) : 0,
+        // Each member is measured against their own calendar (plan 157).
+        behindBy: m
+          ? Math.max(0, getMemberCalendarDay(m) - m.highestUnlockedDay)
+          : 0,
       };
     }),
   };

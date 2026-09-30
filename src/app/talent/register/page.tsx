@@ -5,7 +5,7 @@ import { auth } from "@/auth";
 import { getRecruiterState } from "@/features/talent-pool/recruiter-registration";
 import { RecruiterRegisterForm } from "@/components/talent/recruiter-register-form";
 import { RecruiterAuthClosed } from "@/components/talent/recruiter-auth-closed";
-import { isRecruiterAuthEnabled } from "@/lib/feature-flags";
+import { isEmailLoginEnabled, isRecruiterAuthEnabled } from "@/lib/feature-flags";
 
 export const metadata: Metadata = {
   title: "Register as a recruiter | ABTalks",
@@ -62,7 +62,7 @@ export default async function TalentRegisterPage({ searchParams }: Props) {
           We verify your work email with a code. Your workspace opens straight
           away — there is nothing to wait for.
         </p>
-        <RecruiterRegisterForm />
+        <RecruiterRegisterForm passwordEnabled={isEmailLoginEnabled()} />
       </div>
 
       <p className="text-center text-sm text-muted-foreground">

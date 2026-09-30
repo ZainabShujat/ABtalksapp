@@ -61,6 +61,15 @@ export function isDatabricksAiEnabled(): boolean {
 }
 
 /**
+ * LangChain & LangGraph cohort at /program/langchain.
+ * Unset/false 404s the route and hides the Prep Kit card.
+ * Set to true in Vercel to launch.
+ */
+export function isLangchainEnabled(): boolean {
+  return process.env.ENABLE_LANGCHAIN === "true";
+}
+
+/**
  * Entry assessment quiz is removed from the program cohort product surface.
  * Apply enrolls/waitlists directly. Kept as a always-on flag for call sites.
  */
@@ -116,6 +125,20 @@ export function isChatbotEnabled(): boolean {
  */
 export function isRecruiterAuthEnabled(): boolean {
   return process.env.ENABLE_RECRUITER_AUTH === "true";
+}
+
+/**
+ * Plan 154: password sign-in and emailed-code sign-in on top of Google.
+ *
+ * Off unless `ENABLE_EMAIL_LOGIN=true`. Covers the candidate `/login` email
+ * options (code, password, forgot password), open email signup, recruiter
+ * password sign-in (which also needs `ENABLE_RECRUITER_AUTH`), the password
+ * field at recruiter registration, `/settings/security`, and Google account
+ * linking by verified email. Read directly as `process.env` in
+ * `auth.config.ts`, which cannot import this file (edge bundle).
+ */
+export function isEmailLoginEnabled(): boolean {
+  return process.env.ENABLE_EMAIL_LOGIN === "true";
 }
 
 /**

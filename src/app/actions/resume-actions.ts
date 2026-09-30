@@ -5,11 +5,20 @@ import { auth } from "@/auth";
 import { logger } from "@/lib/logger";
 import { resumeLinkSchema } from "@/lib/validations/resume";
 import {
+  getResumeView,
   removeResume,
   saveResumeLink,
   saveResumeUpload,
+  applyStoredResumeToProfile,
 } from "@/features/resume/service";
-import { MAX_RESUME_BYTES, type ResumeView } from "@/features/resume/types";
+import { MAX_RESUME_BYTES, type ParsedResume, type ResumeView } from "@/features/resume/types";
+import { prisma, writeClient } from "@/lib/db";
+import { UserType } from "@prisma/client";
+import { isCandidateRegistered } from "@/features/registration/registration-gate";
+import { createCandidateIdentity } from "@/repositories/candidate-identity";
+import { generateUniqueReferralCode } from "@/features/registration/generate-referral-code";
+import { identityFromParsedResume } from "@/features/resume/import/identity-mapping";
+import { applyVisibilityChange } from "@/repositories/visibility";
 
 /**
  * Résumé server actions.
@@ -27,7 +36,7 @@ import { MAX_RESUME_BYTES, type ResumeView } from "@/features/resume/types";
  */
 
 export type ResumeActionResult =
-  | { ok: true; data: ResumeView }
+  | { ok: true; data: ResumeView; autoRegistered?: boolean }
   | { ok: false; message: string };
 
 const GENERIC_FAILURE = "Something went wrong. Please try again.";
@@ -70,7 +79,58 @@ export async function uploadResumeAction(
       // Only the display name survives; it never reaches a filesystem path.
       fileName: file.name.slice(0, 120) || null,
     });
-    if (result.ok) revalidatePath("/profile");
+    if (result.ok) {
+      revalidatePath("/profile");
+      const registered = await isCandidateRegistered(authed.userId);
+      if (!registered) {
+        const candidateResume = await prisma.candidateResume.findUnique({
+          where: { userId: authed.userId },
+          select: { parsedData: true },
+        });
+        if (candidateResume?.parsedData) {
+          const user = await prisma.user.findUnique({
+            where: { id: authed.userId },
+            select: { name: true, email: true },
+          });
+          const mapped = identityFromParsedResume(candidateResume.parsedData as ParsedResume);
+          const fullName = mapped.ok ? mapped.identity.fullName : (user?.name || "Candidate");
+          const userType = mapped.ok ? mapped.identity.userType : UserType.STUDENT;
+          const headline = mapped.ok ? mapped.identity.headline : null;
+          const referralCode = await generateUniqueReferralCode();
+
+          await writeClient().$transaction(async (tx) => {
+            await createCandidateIdentity(tx, {
+              userId: authed.userId,
+              fullName,
+              userType,
+              referralCode,
+              phone: null,
+              phoneVerified: false,
+              college: null,
+              collegeId: null,
+              organization: null,
+              role: null,
+              yearsExperience: null,
+              headline,
+              locationCity: null,
+              locationRegion: null,
+              countryCode: null,
+              synergyPoints: 0,
+            });
+            await tx.candidateProfile.update({
+              where: { userId: authed.userId },
+              data: { reviewPendingSince: new Date() },
+              select: { id: true },
+            });
+            await applyVisibilityChange(tx, { userId: authed.userId, kind: "usable_profile" });
+          });
+          await applyStoredResumeToProfile(authed.userId);
+          revalidatePath("/dashboard");
+          return { ok: true, data: result.data, autoRegistered: true };
+        }
+      }
+      return result;
+    }
     return result;
   } catch (error) {
     logger.error("[resume] upload action failed", {
@@ -105,6 +165,42 @@ export async function saveResumeLinkAction(
       error: String(error),
     });
     return { ok: false, message: GENERIC_FAILURE };
+  }
+}
+
+/**
+ * What is actually stored for this user right now.
+ *
+ * The upload path replaces the stored résumé before it parses, so a failed
+ * upload can leave the row FAILED with the previous file already deleted. The
+ * client cannot infer that from an error message, so after a failure it asks.
+ *
+ * `ready` mirrors exactly what `register/page.tsx` computes for `resumeReady`,
+ * so the two agree by construction. It is the only truth signal: a FAILED row
+ * can still carry a `fileName`, which is why that is returned for display only.
+ *
+ * Read-only, and like every action here it takes no argument and works only
+ * from the session.
+ */
+export async function getResumeStateAction(): Promise<{
+  ready: boolean;
+  fileName: string | null;
+}> {
+  const authed = await requireUserId();
+  if (!authed.ok) return { ready: false, fileName: null };
+
+  try {
+    const view = await getResumeView(authed.userId);
+    return {
+      ready: view?.status === "READY",
+      fileName: view?.fileName ?? null,
+    };
+  } catch (error) {
+    logger.error("[resume] state action failed", {
+      userId: authed.userId,
+      error: String(error),
+    });
+    return { ready: false, fileName: null };
   }
 }
 

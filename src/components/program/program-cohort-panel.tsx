@@ -23,7 +23,7 @@ import {
   setCohortStatusAction,
 } from "@/app/actions/admin-program-actions";
 import type { CohortOverview } from "@/features/program/admin";
-import { PROGRAM_AI_COHORT_BASE, PROGRAM_HOLD_OPEN_COHORT_NAME } from "@/features/program/constants";
+import { PROGRAM_AI_COHORT_BASE } from "@/features/program/constants";
 
 const STATUSES = [
   "DRAFT",
@@ -37,7 +37,8 @@ const emptyForm = {
   name: "",
   startsAt: "",
   endsAt: "",
-  capacity: 100,
+  // Blank = unlimited, and that is the default for a new cohort (plan 157).
+  capacity: "",
   requiresJoinCode: true,
 };
 
@@ -60,7 +61,7 @@ export function ProgramCohortPanel({
     name: overview?.name ?? "",
     startsAt: rawStartsAt ?? "",
     endsAt: rawEndsAt ?? "",
-    capacity: overview?.capacity ?? 100,
+    capacity: overview?.capacity == null ? "" : String(overview.capacity),
     requiresJoinCode: overview?.requiresJoinCode ?? true,
   });
 
@@ -73,7 +74,7 @@ export function ProgramCohortPanel({
       name: overview?.name ?? "",
       startsAt: rawStartsAt ?? "",
       endsAt: rawEndsAt ?? "",
-      capacity: overview?.capacity ?? 100,
+      capacity: overview?.capacity == null ? "" : String(overview.capacity),
       requiresJoinCode: overview?.requiresJoinCode ?? true,
     });
   }, [overview, rawStartsAt, rawEndsAt, createMode]);
@@ -253,20 +254,20 @@ export function ProgramCohortPanel({
           />
         </div>
         <div className="space-y-1">
-          <Label htmlFor="cohort-capacity">Capacity</Label>
+          <Label htmlFor="cohort-capacity">Capacity — blank for unlimited</Label>
           <Input
             id="cohort-capacity"
             type="number"
             min={1}
-            max={100}
+            max={100000}
             value={form.capacity}
             onChange={(e) =>
-              setForm((f) => ({ ...f, capacity: Number(e.target.value) }))
+              setForm((f) => ({ ...f, capacity: e.target.value }))
             }
           />
         </div>
         <div className="space-y-1">
-          <Label htmlFor="cohort-start">Starts (IST)</Label>
+          <Label htmlFor="cohort-start">Starts (IST) — optional</Label>
           <Input
             id="cohort-start"
             type="datetime-local"
@@ -277,7 +278,7 @@ export function ProgramCohortPanel({
           />
         </div>
         <div className="space-y-1">
-          <Label htmlFor="cohort-end">Ends (IST)</Label>
+          <Label htmlFor="cohort-end">Ends (IST) — optional</Label>
           <Input
             id="cohort-end"
             type="datetime-local"
@@ -286,14 +287,11 @@ export function ProgramCohortPanel({
               setForm((f) => ({ ...f, endsAt: e.target.value }))
             }
           />
-          {!createMode &&
-          overview?.name === PROGRAM_HOLD_OPEN_COHORT_NAME &&
-          (overview.status === "ENROLLING" || overview.status === "ACTIVE") ? (
-            <p className="text-xs text-muted-foreground">
-              Submissions stay open until every enrolled member has passed Day
-              31.
-            </p>
-          ) : null}
+          <p className="text-xs text-muted-foreground">
+            Optional. This cohort is rolling — each member runs their own 31 days
+            from the day they join, and submissions close only when you set the
+            status to Completed or Archived.
+          </p>
         </div>
         <div className="space-y-2 sm:col-span-2">
           <Label>Enrollment</Label>

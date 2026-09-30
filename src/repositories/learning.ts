@@ -45,13 +45,16 @@ export type ProgramMembership = {
     fullName: string;
     highestUnlockedDay: number;
     cohortId: string;
+    /** The learner's own Day-1 anchor. All 31-day math reads this (plan 157). */
+    startedAt: Date;
   };
   cohort: {
     id: string;
     name: string;
     status: string;
-    startsAt: Date;
-    endsAt: Date;
+    /** Null on a rolling cohort. Never coerce to the epoch (plan 157). */
+    startsAt: Date | null;
+    endsAt: Date | null;
     capacity: number | null;
     resultsPublishedAt: Date | null;
     joinCode: string;
@@ -121,8 +124,9 @@ export type ProgramCohortCatalog = {
   id: string;
   name: string;
   status: string;
-  startsAt: Date;
-  endsAt: Date;
+  /** Null on a rolling cohort. Never coerce to the epoch (plan 157). */
+  startsAt: Date | null;
+  endsAt: Date | null;
   capacity: number | null;
   resultsPublishedAt: Date | null;
   joinCode: string;
@@ -657,6 +661,7 @@ async function membershipFromPe(
     id: string;
     userId: string;
     status: EnrollmentStatusV2;
+    startedAt: Date;
     unlockFloorDay: number | null;
     githubRepoUrl: string | null;
     cohort: {
@@ -689,13 +694,15 @@ async function membershipFromPe(
         pe.unlockFloorDay ?? 1,
       ),
       cohortId,
+      startedAt: pe.startedAt,
     },
     cohort: {
       id: cohortId,
       name: pe.cohort.name,
       status: pe.cohort.status,
-      startsAt: pe.cohort.startsAt ?? new Date(0),
-      endsAt: pe.cohort.endsAt ?? new Date(0),
+      // Never coerce a null cohort date to the epoch (plan 157).
+      startsAt: pe.cohort.startsAt,
+      endsAt: pe.cohort.endsAt,
       capacity: pe.cohort.capacity,
       resultsPublishedAt: pe.cohort.resultsPublishedAt,
       joinCode: pe.cohort.joinCode ?? "",
@@ -729,6 +736,7 @@ export async function findActiveMembership(
       id: true,
       userId: true,
       status: true,
+      startedAt: true,
       unlockFloorDay: true,
       githubRepoUrl: true,
       enrolledAt: true,
@@ -874,8 +882,8 @@ export async function getCohortByJoinCode(
     id,
     name: cohort.name,
     status: cohort.status,
-    startsAt: cohort.startsAt ?? new Date(0),
-    endsAt: cohort.endsAt ?? new Date(0),
+    startsAt: cohort.startsAt,
+    endsAt: cohort.endsAt,
     capacity: cohort.capacity,
     resultsPublishedAt: cohort.resultsPublishedAt,
     joinCode: cohort.joinCode,
@@ -887,7 +895,9 @@ export async function getOpenEnrollmentCohort(): Promise<OpenEnrollmentCohort | 
 
   const cohort = await prisma.cohort.findFirst({
     where: {
-      status: "ENROLLING",
+      // ACTIVE counts as open: a rolling cohort keeps taking joiners after
+      // kickoff, the same way getSnowflakeCohort treats it (plan 157).
+      status: { in: ["ENROLLING", "ACTIVE"] },
       requiresJoinCode: false,
       programVersion: { program: { slug: AI_COHORT_SLUG } },
     },

@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
+import { notifyAdminAction } from "@/features/notification/admin-action-notify";
 import { requireAdmin } from "@/lib/admin-auth";
 import {
   AccountOpsError,
@@ -33,6 +35,8 @@ async function runAccountOp(
     reason: string;
   }) => Promise<void>,
   label: string,
+  /** Tells the account holder after the op succeeds. The reason stays internal. */
+  noticeKind: "account_disabled" | "account_restored" | "account_secured",
 ): Promise<ActionResult> {
   const admin = await requireAdmin();
   const parsed = accountOpsSchema.safeParse(input);
@@ -50,6 +54,8 @@ async function runAccountOp(
       reason: parsed.data.reason,
     });
     revalidateAccountViews(parsed.data.targetUserId);
+    const { targetUserId } = parsed.data;
+    after(() => notifyAdminAction(targetUserId, { kind: noticeKind }));
     return { ok: true };
   } catch (error) {
     if (error instanceof AccountOpsError) {
@@ -63,17 +69,32 @@ async function runAccountOp(
 export async function disableAccountAction(
   input: unknown,
 ): Promise<ActionResult> {
-  return runAccountOp(input, disableAccount, "disableAccountAction");
+  return runAccountOp(
+    input,
+    disableAccount,
+    "disableAccountAction",
+    "account_disabled",
+  );
 }
 
 export async function restoreAccountAction(
   input: unknown,
 ): Promise<ActionResult> {
-  return runAccountOp(input, restoreAccount, "restoreAccountAction");
+  return runAccountOp(
+    input,
+    restoreAccount,
+    "restoreAccountAction",
+    "account_restored",
+  );
 }
 
 export async function secureAccountAction(
   input: unknown,
 ): Promise<ActionResult> {
-  return runAccountOp(input, secureAccount, "secureAccountAction");
+  return runAccountOp(
+    input,
+    secureAccount,
+    "secureAccountAction",
+    "account_secured",
+  );
 }

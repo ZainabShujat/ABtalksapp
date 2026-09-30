@@ -111,6 +111,8 @@ function endedNote(reason: AssessmentEndReason | null): string | null {
       return `This assessment ended automatically because you left fullscreen ${STRIKE_LIMIT} times. It can't be retaken.`;
     case "LEFT_PAGE":
       return "This assessment ended when you left the page.";
+    case "DEADLINE":
+      return "The deadline passed, so the answers you had saved were submitted.";
     default:
       return null;
   }

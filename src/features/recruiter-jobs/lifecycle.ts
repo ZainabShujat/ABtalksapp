@@ -67,6 +67,8 @@ export type JobDraftInput = {
   workMode: JobWorkMode;
   opportunityType: JobType;
   company: string;
+  /** Years of experience asked for; null or absent when the posting is silent. */
+  minExperience?: number | null;
 };
 
 export function normalizeSkills(input: readonly string[] | undefined): string[] {

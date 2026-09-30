@@ -2,16 +2,19 @@ import Link from "next/link";
 import { WorkshopAnalyticsPanel } from "@/components/admin/workshop-analytics";
 import { WorkshopEventPicker } from "@/components/admin/workshop-event-picker";
 import { WorkshopRegistrationsView } from "@/components/admin/workshop-registrations-view";
-import { EVENTS } from "@/components/workshop/events-data";
 import {
   getWorkshopEventCounts,
   getWorkshopRegistrations,
 } from "@/features/workshop/get-admin-data";
 import { getWorkshopAnalytics } from "@/features/workshop/get-workshop-analytics";
 import { requireAdmin } from "@/lib/admin-auth";
+import { getEventTitles, getEventForAdmin, listEventsForAdmin } from "@/repositories/workshop";
+import { WorkshopEventsTab } from "@/components/admin/workshop-events-tab";
+import type { WorkshopFormValues } from "@/components/admin/workshop-event-form";
 import { cn } from "@/lib/utils";
 
 const TABS = [
+  { value: "events", label: "Events" },
   { value: "registrations", label: "Registrations" },
   { value: "analytics", label: "Analytics" },
 ] as const;
@@ -32,7 +35,7 @@ export default async function AdminWorkshopPage({
 
   const counts = await getWorkshopEventCounts();
 
-  const titleById = new Map(EVENTS.map((e) => [e.id, e.title]));
+  const titleById = await getEventTitles(counts.map((c) => c.eventId));
   const pickerEvents = counts.map((c) => ({
     eventId: c.eventId,
     label: titleById.get(c.eventId) ?? c.eventId,
@@ -87,7 +90,64 @@ export default async function AdminWorkshopPage({
       )}
 
       {tab === "analytics" && <AnalyticsTab eventLabels={eventLabels} />}
+
+      {tab === "events" && <EventsTab />}
     </div>
+  );
+}
+
+/**
+ * Plan 163 phase 2. Reads every event plus its roster size, and the full
+ * editable values so Edit opens without a second round trip — there are ten of
+ * them plus whatever an admin adds, so fetching the lot is cheaper than a
+ * request per row.
+ */
+async function EventsTab() {
+  const rows = await listEventsForAdmin();
+
+  const editable: Record<string, WorkshopFormValues> = {};
+  for (const row of rows) {
+    const full = await getEventForAdmin(row.id);
+    if (!full) continue;
+    editable[row.id] = {
+      id: full.id,
+      date: full.date.toISOString().slice(0, 10),
+      timeLabel: full.timeLabel,
+      title: full.title,
+      description: full.description,
+      host: full.host,
+      location: full.location,
+      tag: full.tag,
+      accent: full.accent,
+      iconName: full.iconName,
+      track: full.track,
+      registrationOpen: full.registrationOpen,
+      register: full.register,
+      externalHref: full.externalHref ?? "",
+      ctaLabel: full.ctaLabel ?? "",
+      youtubeId: full.youtubeId ?? "",
+      duration: full.duration ?? "",
+      titleAccents: full.titleAccents.join("\n"),
+      takeaways: full.takeaways.join("\n"),
+      topics: full.topics.join("\n"),
+      posterUrl: full.posterUrl,
+    };
+  }
+
+  return (
+    <WorkshopEventsTab
+      rows={rows.map((r) => ({
+        id: r.id,
+        date: r.date.toISOString().slice(0, 10),
+        title: r.title,
+        track: r.track,
+        registrationOpen: r.registrationOpen,
+        publishedAt: r.publishedAt?.toISOString() ?? null,
+        archivedAt: r.archivedAt?.toISOString() ?? null,
+        registrations: r.registrations,
+      }))}
+      editable={editable}
+    />
   );
 }
 
